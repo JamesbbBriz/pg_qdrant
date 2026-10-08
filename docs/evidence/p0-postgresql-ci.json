@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_postgresql_ci_evidence",
+  "source": {
+    "head_commit": "f5bda3519421ef294bac82b17c17957f9727b648",
+    "checkout_merge_commit": "982adef4faaadd9831c2144b14bf155e89928ce0",
+    "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+    "checkout_tree_equals_head_tree": true
+  },
+  "ci": {
+    "run_id": 37716391262,
+    "job_id": 113113694758,
+    "status": "success",
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37716391262",
+    "artifact_id": 11524053293,
+    "artifact_digest_sha256": "8463bba5a99fb26d75e86b867ebe6032611fbad4ca1e821f368217b97920b616",
+    "records_source": "Completed job logs and official run/artifact metadata"
+  },
+  "environment": {
+    "container": "Ubuntu 24.04",
+    "architecture": "x86_64",
+    "postgres": "17.11",
+    "rust": "1.96.0",
+    "pgrx": "0.19.3",
+    "cargo_pgrx": "0.19.3",
+    "edge": "0.8.0",
+    "runtime_os_uid": 10001,
+    "container_memory_limit": "5 GiB",
+    "container_cpu_limit": 2
+  },
+  "checks": {
+    "normal": [
+      {
+        "name": "install_and_honest_capabilities",
+        "status": "passed",
+        "count": 54,
+        "postgres_major": 17
+      },
+      {
+        "name": "concurrent_start_unique_owner",
+        "status": "passed"
+      },
+      {
+        "name": "acl_runtime_superuser_and_input_validation",
+        "status": "passed"
+      },
+      {
+        "name": "two_sql_sessions_single_execution_owner",
+        "status": "passed"
+      },
+      {
+        "name": "caller_cancel_retains_active_owner",
+        "status": "passed",
+        "native_call_cancelled": false
+      },
+      {
+        "name": "request_deadline_and_statement_timeout",
+        "status": "passed"
+      },
+      {
+        "name": "cancelled_queued_request_never_executes",
+        "status": "passed"
+      },
+      {
+        "name": "bounded_queue_admission",
+        "status": "passed",
+        "outcomes": [
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "rejected",
+          "completed",
+          "rejected"
+        ],
+        "queue_limit": 8
+      },
+      {
+        "name": "real_sql_to_edge_smoke",
+        "status": "passed",
+        "checks": 16
+      },
+      {
+        "name": "fault_entrypoint_absent_in_normal_build",
+        "status": "passed"
+      }
+    ],
+    "faults": [
+      {
+        "name": "install_and_honest_capabilities",
+        "status": "passed",
+        "count": 54,
+        "postgres_major": 17
+      },
+      {
+        "name": "concurrent_start_unique_owner",
+        "status": "passed"
+      },
+      {
+        "name": "acl_runtime_superuser_and_input_validation",
+        "status": "passed"
+      },
+      {
+        "name": "two_sql_sessions_single_execution_owner",
+        "status": "passed"
+      },
+      {
+        "name": "caller_cancel_retains_active_owner",
+        "status": "passed",
+        "native_call_cancelled": false
+      },
+      {
+        "name": "request_deadline_and_statement_timeout",
+        "status": "passed"
+      },
+      {
+        "name": "cancelled_queued_request_never_executes",
+        "status": "passed"
+      },
+      {
+        "name": "bounded_queue_admission",
+        "status": "passed",
+        "outcomes": [
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "completed",
+          "rejected",
+          "rejected"
+        ],
+        "queue_limit": 8
+      },
+      {
+        "name": "real_sql_to_edge_smoke",
+        "status": "passed",
+        "checks": 16
+      },
+      {
+        "name": "caught_engine_thread_panic",
+        "status": "passed",
+        "worker_survived": true
+      },
+      {
+        "name": "worker_sigkill_collateral_recovery",
+        "status": "passed",
+        "companion_session_terminated": true,
+        "committed_postgresql_marker_retained": true
+      },
+      {
+        "name": "worker_abort_collateral_recovery",
+        "status": "passed",
+        "companion_session_terminated": true,
+        "committed_postgresql_marker_retained": true
+      }
+    ]
+  },
+  "findings": {
+    "actual_sql_to_edge_verified": true,
+    "caught_rust_panic_worker_survives": true,
+    "worker_sigkill_terminates_companion_session": true,
+    "worker_abort_terminates_companion_session": true,
+    "committed_postgresql_marker_survives_recovery": true,
+    "native_in_flight_cancellation": false,
+    "bgworker_isolation_adequate_for_production_default": false,
+    "packaged_helper_comparison": "required_before_topology_acceptance"
+  },
+  "unverified": [
+    "Source-table indexing, outbox, backfill and committed-change tickets",
+    "PostgreSQL source identity/revalidation and RLS/tenant support",
+    "Helper-process failure isolation",
+    "Bounded OOM, disk-full and corrupted-index behavior",
+    "Full analyzer/quality, advanced capability and model contracts",
+    "Index upgrade/rollback and platform/release support"
+  ],
+  "performance_benchmark": false,
+  "p0_exit_passed": false,
+  "release_supported": false
+}

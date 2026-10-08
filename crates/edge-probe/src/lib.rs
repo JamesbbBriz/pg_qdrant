@@ -293,11 +293,33 @@ fn upsert_fixtures(shard: &EdgeShard, bm25: &EdgeBm25) -> ProbeResult<()> {
 /// Keeping the returned shard alive prevents a graceful Drop from substituting
 /// for the explicit persistence boundary being tested.
 pub fn persistence_fixture(path: &std::path::Path, flush: bool) -> ProbeResult<EdgeShard> {
+    persistence_fixture_config(path, flush, shard_config())
+}
+
+/// The same eight source identities and representations with a small WAL for
+/// disposable fault experiments. This does not change the normal smoke fixture.
+pub fn bounded_persistence_fixture(path: &std::path::Path) -> ProbeResult<EdgeShard> {
+    let mut config = shard_config();
+    // WalOptions is exposed as a field type but not a nameable public export.
+    // Keep the exact-version serde constant confined to this private harness.
+    config.wal_options = Some(context(
+        serde_json::from_value(json!({
+            "segment_capacity": 65_536,
+            "segment_queue_len": 0,
+            "retain_closed": 1
+        })),
+        "bounded fixture WAL options",
+    )?);
+    persistence_fixture_config(path, true, config)
+}
+
+fn persistence_fixture_config(
+    path: &std::path::Path,
+    flush: bool,
+    config: EdgeConfig,
+) -> ProbeResult<EdgeShard> {
     let bm25 = neutral_bm25()?;
-    let shard = context(
-        EdgeShard::new(path, shard_config()),
-        "create persistence fixture",
-    )?;
+    let shard = context(EdgeShard::new(path, config), "create persistence fixture")?;
     prepare_payload_indexes(&shard)?;
     upsert_fixtures(&shard, &bm25)?;
     if flush {

@@ -15,10 +15,13 @@ default = ["pg17"]
 pg17 = ["pgrx/pg17"]
 # Private disposable-cluster experiments. Never enabled in a release build.
 p0-fault-injection = []
+# Separate P0 comparison. The direct PostgreSQL-worker experiment stays default.
+p0-managed-helper = []
 
 [dependencies]
 pgrx = { version = "=0.19.3", default-features = false, features = ["cshim"] }
 pg-qdrant-edge-probe = { path = "../edge-probe" }
+pg-qdrant-protocol = { path = "../pg_qdrant-protocol" }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
 libc = "=0.2.189"

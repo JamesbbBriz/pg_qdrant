@@ -61,7 +61,7 @@ Typo tolerance, synonyms, query syntax, proximity, highlighting, and autocomplet
 
 ## Dependencies and upstream upgrades
 
-The design depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. The initial exact-version candidates are Edge `0.8.0` and pgrx/cargo-pgrx `0.19.3`; validation of the combined build and PostgreSQL runtime is tracked in the version baseline.
+The implementation depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. Edge `0.8.0`, pgrx/cargo-pgrx `0.19.3`, and Rust `1.96.0` have passed a combined Linux PostgreSQL 17.11 build and scoped SQL feasibility tests. This establishes an executable baseline; production capability and upgrade support remain separate gates in the version baseline.
 
 Use released public APIs through an engine adapter. Track tokenizer configuration, model contracts, SQL API versions, and on-disk generations separately from dependency versions. An upstream update must pass capability, quality, authorization, lifecycle, and migration checks before it becomes a supported release.
 
@@ -82,6 +82,16 @@ The probe uses the published Edge crate directly. Synthetic fixtures exercise
 local BM25, dense/sparse/MaxSim, fusion, text constraints, grouping and persistence;
 they do not establish production retrieval quality. See the [probe inventory](crates/edge-probe/README.md)
 and [PostgreSQL prototype](crates/pg_qdrant/README.md) for exact scope and commands.
+
+The [first PostgreSQL CI result](docs/evidence/p0-postgresql-ci.json) records
+successful installation, real SQL-to-Edge calls, two-session ownership,
+permissions on private diagnostics, cancellation, deadlines and queue bounds.
+It also records a negative architecture result: killing or aborting the direct
+engine background worker terminated an unrelated SQL session. Committed
+PostgreSQL data survived recovery, but the worker was not a sufficient native
+failure boundary. An optional, packaged helper comparison now tests engine
+execution in an exec'ed process supervised by PostgreSQL. Its current evidence
+and remaining gates are recorded in the P0 report.
 
 [User journeys](docs/user-journeys.md), [phase acceptance](docs/acceptance.md),
 the [P0 evidence report](docs/p0-report.md), and the [work ledger](docs/work-items.json) retain all 54 formal capabilities and
@@ -179,8 +189,8 @@ flowchart TD
     A[Application: existing PostgreSQL driver] --> B[qdrant SQL API]
     B --> C[Validate inputs, authorization, models and budgets]
     C --> D[Bounded IPC with cancellation and deadlines]
-    D --> E[Database owner worker]
-    E --> F[Qdrant Edge: derived index generations]
+    D --> E[PostgreSQL supervisor]
+    E --> F[Managed helper: Edge and index generations]
     F --> E
     E --> G[SQL backend: source visibility and version checks]
     G --> A
@@ -190,13 +200,24 @@ flowchart TD
     E --> J
 ```
 
-The first process-layout candidate gives each database a managed owner worker. Each index generation has one shard owner; SQL sessions do not independently open the same shard directory.
+The current process-layout proposal gives each database a PostgreSQL supervisor
+and a managed engine helper in the same installation. The direct-worker
+experiment remains available for comparison. Each index generation must have
+one shard owner; SQL sessions do not independently open the same shard directory.
+The complete source-table architecture shown above is still a product design,
+not the scope of the diagnostic prototype.
 
 Engine threads receive owned data and must not use PostgreSQL pointers, memory contexts, or SPI. PostgreSQL-facing work remains on the appropriate process thread. This boundary follows [pgrx's documented threading constraints](https://github.com/pgcentralfoundation/pgrx#caveats--known-issues).
 
 Queues, candidate counts, token matrices, response sizes, engine threads, memory, and execution time need explicit limits. An engine runtime, if required, must be initialized in its owning child process rather than inherited from postmaster initialization.
 
-Worker crash behavior and threaded-engine integration are feasibility gates. A PostgreSQL background worker is not an unconditional fault-isolation guarantee. A packaged Rust helper process remains an alternative if experiments require a stronger process boundary; the intended installation experience remains one managed package.
+Worker crash behavior and threaded-engine integration are feasibility gates.
+The direct-worker experiment demonstrated collateral session termination, so
+topology acceptance now requires the managed-helper comparison. The helper
+loads the Edge library directly and exposes no Qdrant network-service API;
+the intended installation experience remains one managed package. A successful
+helper crash experiment still does not establish OOM, durable indexing, or
+backup/recovery support.
 
 Applications are intended to keep using standard PostgreSQL drivers from Rust, Go, Python, JavaScript, or other languages. No language-specific Qdrant client is required for the SQL interface. A pgvector type adapter may be added later; pgvector is not a required engine dependency in the proposed design.
 

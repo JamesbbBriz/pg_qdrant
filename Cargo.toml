@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/edge-probe", "crates/pg_qdrant"]
+members = ["crates/edge-probe", "crates/pg_qdrant", "crates/pg_qdrant-protocol", "crates/pg_qdrant-helper"]
 default-members = ["crates/edge-probe"]
 resolver = "3"
 

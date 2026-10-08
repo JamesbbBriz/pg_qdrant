@@ -28,7 +28,7 @@ jobs:
         run: docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .
       - name: Run PostgreSQL integration probes as a non-root user
         run: |
-          docker create --name pg-qdrant-p0-run --memory=5g --cpus=2 pg-qdrant-p0
+          docker create --name pg-qdrant-p0-run --memory=5g --cpus=2 --network=none pg-qdrant-p0
           docker start --attach pg-qdrant-p0-run
       - name: Collect integration evidence
         if: always()
@@ -41,7 +41,7 @@ jobs:
         run: docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .
       - name: Measure worker crash and PostgreSQL collateral recovery
         run: |
-          docker create --name pg-qdrant-p0-fault-run --memory=5g --cpus=2 pg-qdrant-p0-faults bash crates/pg_qdrant/tests/run-faults.sh
+          docker create --name pg-qdrant-p0-fault-run --memory=5g --cpus=2 --network=none pg-qdrant-p0-faults bash crates/pg_qdrant/tests/run-faults.sh
           docker start --attach pg-qdrant-p0-fault-run
       - name: Collect fault-test evidence
         if: always()
@@ -49,6 +49,50 @@ jobs:
           mkdir -p artifacts/faults
           if docker inspect pg-qdrant-p0-fault-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-fault-run:/src/artifacts/. artifacts/faults/
+          fi
+      - name: Build the managed-helper comparison without fault injection
+        run: docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal .
+      - name: Test the normal helper protocol and SQL profile
+        run: |
+          docker create --name pg-qdrant-p0-helper-normal-run --memory=5g --cpus=2 --network=none \
+            pg-qdrant-p0-helper-normal bash -c \
+            'python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --out /src/artifacts/helper-pipes.json && bash crates/pg_qdrant/tests/run-p0.sh'
+          docker start --attach pg-qdrant-p0-helper-normal-run
+      - name: Collect normal managed-helper evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/helper-normal
+          if docker inspect pg-qdrant-p0-helper-normal-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-helper-normal-run:/src/artifacts/. artifacts/helper-normal/
+          fi
+      - name: Build the explicit managed-helper fault comparison
+        run: docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper .
+      - name: Test helper SQL behavior and process isolation
+        run: |
+          docker create --name pg-qdrant-p0-helper-run --memory=5g --cpus=2 --network=none \
+            pg-qdrant-p0-helper bash -c \
+            'python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --faults --out /src/artifacts/helper-fault-pipes.json && bash crates/pg_qdrant/tests/run-faults.sh'
+          docker start --attach pg-qdrant-p0-helper-run
+      - name: Collect managed-helper evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/helper
+          if docker inspect pg-qdrant-p0-helper-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-helper-run:/src/artifacts/. artifacts/helper/
+          fi
+      - name: Test Edge ENOSPC on a dedicated 32 MiB tmpfs
+        run: |
+          docker create --name pg-qdrant-p0-disk-run --memory=5g --cpus=2 --network=none \
+            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \
+            --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+            pg-qdrant-p0 python3 scripts/run_disk_probe.py
+          docker start --attach pg-qdrant-p0-disk-run
+      - name: Collect bounded disk-failure evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/enospc
+          if docker inspect pg-qdrant-p0-disk-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-disk-run:/src/artifacts/. artifacts/enospc/
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()

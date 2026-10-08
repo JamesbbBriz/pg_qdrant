@@ -6,11 +6,11 @@
     "pg_qdrant/pg17",
     "pgrx/cshim"
   ],
-  "cargo_lock_sha256": "4e733bca0696a21e126783f5b6c0088fee326820110524d27f18ffaf01aaee17",
+  "cargo_lock_sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f",
   "manifest_inputs": [
     {
       "path": "Cargo.toml",
-      "sha256": "140a29205f639aa60493be7f96b9fcac168a026b46273523454c965e7156110b"
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
     },
     {
       "path": "crates/edge-probe/Cargo.toml",
@@ -18,7 +18,15 @@
     },
     {
       "path": "crates/pg_qdrant/Cargo.toml",
-      "sha256": "f9f193b9fdce783bd91cac6ce1c566a58f519e8ac91433a5a37e992ccd53ce34"
+      "sha256": "6ab793bb104fe7b9913d0691fb6b4cb7ffc085acfc9910039186adcf9fe9e72f"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/Cargo.toml",
+      "sha256": "674a1166a52c7664bb4a523f4141e6381c62a2d4b8ac60ebf204bee7eb777ff9"
+    },
+    {
+      "path": "crates/pg_qdrant-protocol/Cargo.toml",
+      "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
     },
     {
       "path": "rust-toolchain.toml",
@@ -3539,6 +3547,32 @@
       ]
     },
     {
+      "package": "pg-qdrant-helper@0.0.1",
+      "source": "workspace",
+      "checksum": null,
+      "license_expression": "Apache-2.0",
+      "license_file_sha256": null,
+      "features": [],
+      "dependencies": [
+        "libc@0.2.189",
+        "pg-qdrant-edge-probe@0.0.1",
+        "pg-qdrant-protocol@0.0.1",
+        "serde_json@1.0.151"
+      ]
+    },
+    {
+      "package": "pg-qdrant-protocol@0.0.1",
+      "source": "workspace",
+      "checksum": null,
+      "license_expression": "Apache-2.0",
+      "license_file_sha256": null,
+      "features": [],
+      "dependencies": [
+        "serde@1.0.229",
+        "serde_json@1.0.151"
+      ]
+    },
+    {
       "package": "pg_qdrant@0.0.1",
       "source": "workspace",
       "checksum": null,
@@ -3550,6 +3584,7 @@
       "dependencies": [
         "libc@0.2.189",
         "pg-qdrant-edge-probe@0.0.1",
+        "pg-qdrant-protocol@0.0.1",
         "pgrx@0.19.3",
         "serde@1.0.229",
         "serde_json@1.0.151"

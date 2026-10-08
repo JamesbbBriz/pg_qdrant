@@ -17,28 +17,38 @@ pub fn start(timeout_ms: i32) -> Result<Value, ProbeError> {
     let deadline = Instant::now() + ipc::validate_timeout(timeout_ms)?;
     // Scalar database identity only; no backend pointer is sent to a worker.
     let database_oid = unsafe { pg_sys::MyDatabaseId };
+    let mut existing_owner = false;
     if ipc::socket_path(database_oid.to_u32())?.exists() {
         if let Ok(mut status) = ipc::call(Operation::Ping, timeout_ms.min(250)) {
-            status["worker_reused"] = json!(true);
-            return Ok(status);
+            if status["engine_ready"] == true {
+                status["worker_reused"] = json!(true);
+                return Ok(status);
+            }
+            existing_owner = true;
         }
     }
-    let handle = BackgroundWorkerBuilder::new("pg_qdrant P0 owner")
-        .set_type("pg_qdrant P0 owner")
-        .set_library("pg_qdrant")
-        .set_function("pg_qdrant_p0_worker")
-        .enable_spi_access()
-        .set_argument(Some(pg_sys::Datum::from(database_oid)))
-        .set_notify_pid(unsafe { pg_sys::MyProcPid })
-        .set_restart_time(None)
-        .load_dynamic()
-        .map_err(|_| {
-            ProbeError::new(
-                "worker_unavailable",
-                "PostgreSQL could not register a P0 owner worker",
-                "Check max_worker_processes and the PostgreSQL server log.",
-            )
-        })?;
+    let handle = if existing_owner {
+        None
+    } else {
+        Some(
+            BackgroundWorkerBuilder::new("pg_qdrant P0 owner")
+                .set_type("pg_qdrant P0 owner")
+                .set_library("pg_qdrant")
+                .set_function("pg_qdrant_p0_worker")
+                .enable_spi_access()
+                .set_argument(Some(pg_sys::Datum::from(database_oid)))
+                .set_notify_pid(unsafe { pg_sys::MyProcPid })
+                .set_restart_time(None)
+                .load_dynamic()
+                .map_err(|_| {
+                    ProbeError::new(
+                        "worker_unavailable",
+                        "PostgreSQL could not register a P0 owner worker",
+                        "Check max_worker_processes and the PostgreSQL server log.",
+                    )
+                })?,
+        )
+    };
 
     // Registration does not mean the socket, DB connection, or engine is ready.
     // A concurrent starter can win ownership; both callers then use that owner.
@@ -48,12 +58,16 @@ pub fn start(timeout_ms: i32) -> Result<Value, ProbeError> {
             .as_millis()
             .max(1) as i32;
         match ipc::call(Operation::Ping, remaining.min(100)) {
-            Ok(mut status) => {
-                let registered_pid = handle.pid().ok().map(|pid| pid as u64);
+            Ok(mut status) if status["engine_ready"] == true => {
+                let registered_pid = handle
+                    .as_ref()
+                    .and_then(|handle| handle.pid().ok())
+                    .map(|pid| pid as u64);
                 status["worker_reused"] =
                     json!(registered_pid != status.get("worker_pid").and_then(Value::as_u64));
                 return Ok(status);
             }
+            Ok(_) => {}
             Err(error) if error.code == "worker_unavailable" || error.code == "timeout" => {}
             Err(error) => return Err(error),
         }
@@ -232,8 +246,16 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
     let mut completed = 0_u64;
     let mut expired_or_disconnected = 0_u64;
     let mut rejected = 0_u64;
+    #[cfg(feature = "p0-managed-helper")]
+    let mut supervisor = crate::helper::Supervisor::new(&directory, database_oid)?;
 
     loop {
+        #[cfg(feature = "p0-managed-helper")]
+        supervisor.tick(active.as_ref().map(|job| job.started.elapsed()));
+        #[cfg(feature = "p0-managed-helper")]
+        let process_status = supervisor.status();
+        #[cfg(not(feature = "p0-managed-helper"))]
+        let process_status = json!({"engine_pid": worker_pid, "engine_ready": true});
         // Accept a bounded number per tick, even under connection flooding.
         for _ in 0..ipc::CONNECTION_LIMIT {
             match listener.accept() {
@@ -267,8 +289,9 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                         client.deadline =
                             Instant::now() + Duration::from_millis(request.timeout_ms);
                         if matches!(request.operation, Operation::Ping) {
-                            client.respond(Ok(json!({
+                            let mut status = json!({
                                 "worker_pid": worker_pid, "database_oid": database_oid,
+                                "process_profile": if cfg!(feature="p0-managed-helper") {"managed_helper"} else {"direct_worker"},
                                 "queue_depth": queue.len(), "queue_limit": ipc::QUEUE_LIMIT,
                                 "connection_limit": ipc::CONNECTION_LIMIT,
                                 "active": active.as_ref().map(|job| json!({
@@ -283,7 +306,16 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                                 "response_bytes_limit": ipc::RESPONSE_BYTES,
                                 "engine_concurrency": 1,
                                 "stage": "P0_feasibility"
-                            })));
+                            });
+                            status.as_object_mut().expect("status object").extend(
+                                process_status
+                                    .as_object()
+                                    .expect("process status object")
+                                    .clone(),
+                            );
+                            client.respond(Ok(status));
+                        } else if process_status["engine_ready"] != true {
+                            client.respond(Err(helper_unavailable()));
                         } else if queue.len() >= ipc::QUEUE_LIMIT {
                             rejected += 1;
                             client.respond(Err(queue_full()));
@@ -313,6 +345,8 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
         if active.as_ref().is_some_and(|job| job.handle.is_finished()) {
             let job = active.take().expect("active job exists");
             let result = job.handle.join().unwrap_or_else(|_| Err(panic_error()));
+            #[cfg(feature = "p0-managed-helper")]
+            supervisor.completed(&result);
             completed += 1;
             if let Some(client) = clients.get_mut(&job.client_id) {
                 client.respond(result);
@@ -325,11 +359,22 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                     Operation::Engine => "engine",
                     Operation::Delay { .. } => "delay",
                     Operation::Ping => "ping",
-                    #[cfg(feature = "p0-fault-injection")]
                     Operation::Panic => "panic",
-                    #[cfg(feature = "p0-fault-injection")]
                     Operation::Abort => "abort",
                 };
+                #[cfg(feature = "p0-managed-helper")]
+                let Some(connection) = supervisor.connection() else {
+                    if let Some(client) = clients.get_mut(&client_id) {
+                        client.respond(Err(helper_unavailable()));
+                    }
+                    continue;
+                };
+                #[cfg(feature = "p0-managed-helper")]
+                let handle = thread::Builder::new()
+                    .name("pg_qdrant_p0_helper_io".into())
+                    .spawn(move || crate::helper::execute(connection, operation))
+                    .map_err(ProbeError::io)?;
+                #[cfg(not(feature = "p0-managed-helper"))]
                 let handle = thread::Builder::new()
                     .name("pg_qdrant_p0_engine".into())
                     .spawn(move || execute(operation))
@@ -378,7 +423,21 @@ fn validate_request(request: Request) -> Result<Request, ProbeError> {
             return Err(ProbeError::invalid("P0 delay exceeds 120000 ms"));
         }
     }
+    #[cfg(not(feature = "p0-fault-injection"))]
+    if matches!(request.operation, Operation::Panic | Operation::Abort) {
+        return Err(ProbeError::invalid(
+            "fault operation is not compiled into this build",
+        ));
+    }
     Ok(request)
+}
+
+fn helper_unavailable() -> ProbeError {
+    ProbeError::new(
+        "worker_unavailable",
+        "P0 engine helper is not ready",
+        "Inspect p0_ping helper status and bounded restart attempts; no request was silently downgraded.",
+    )
 }
 
 fn queue_full() -> ProbeError {
@@ -398,6 +457,7 @@ fn panic_error() -> ProbeError {
 }
 
 /// No PostgreSQL calls, Datum values, SPI handles, or memory contexts here.
+#[cfg(not(feature = "p0-managed-helper"))]
 fn execute(operation: Operation) -> Result<Value, ProbeError> {
     std::panic::catch_unwind(|| match operation {
         Operation::Engine => pg_qdrant_edge_probe::run_smoke().map_err(|error| {
@@ -416,6 +476,10 @@ fn execute(operation: Operation) -> Result<Value, ProbeError> {
         Operation::Panic => panic!("intentional P0 engine-thread panic"),
         #[cfg(feature = "p0-fault-injection")]
         Operation::Abort => std::process::abort(),
+        #[cfg(not(feature = "p0-fault-injection"))]
+        Operation::Panic | Operation::Abort => {
+            Err(ProbeError::invalid("fault operation is disabled"))
+        }
     })
     .unwrap_or_else(|_| Err(panic_error()))
 }

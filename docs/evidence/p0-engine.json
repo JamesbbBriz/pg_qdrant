@@ -10,11 +10,11 @@
   "source_inputs": [
     {
       "path": "Cargo.toml",
-      "sha256": "140a29205f639aa60493be7f96b9fcac168a026b46273523454c965e7156110b"
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
     },
     {
       "path": "Cargo.lock",
-      "sha256": "4e733bca0696a21e126783f5b6c0088fee326820110524d27f18ffaf01aaee17"
+      "sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f"
     },
     {
       "path": "rust-toolchain.toml",
@@ -30,26 +30,35 @@
     },
     {
       "path": "crates/edge-probe/src/lib.rs",
-      "sha256": "cb5b2e24a3d46be56e8dd58d614948101ad7c31e9598761099c4735bb242a6df"
+      "sha256": "e4937461ec70fad33409d612deafda631df94ee974d6491b84450175cee7c53f"
     },
     {
       "path": "crates/edge-probe/src/main.rs",
-      "sha256": "e0fdb371c0dd6295e951fe2dd8702d0b12bd81be015f817e1b3283332bf91a71"
+      "sha256": "3e38afd2cb0d1f59abb2b0e5000d8b8adb5f539711cac66db37aecc8946182a9"
+    },
+    {
+      "path": "crates/edge-probe/src/fault_probes.rs",
+      "sha256": "c77153b0f2dc21dc05f646c992611bba56048922d33fb54e58bb349ac6765d7b"
     },
     {
       "path": "crates/edge-probe/tests/persistence.rs",
       "sha256": "006e71319eb123f9f35290d692b0d387d84c63e1efe069b5b3f4fa212988fc15"
+    },
+    {
+      "path": "crates/edge-probe/tests/faults.rs",
+      "sha256": "f4af2f21f07e933cc7c38534a32ebf38670d50f9b5a506f753a7a632902508b4"
     }
   ],
   "commands": [
     {
       "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
       "exit_code": 0,
-      "tests_passed": 2,
+      "tests_passed": 3,
       "tests_failed": 0,
       "tests_ignored": 0,
       "scope": [
-        "engine smoke suite",
+        "actual_edge_smoke",
+        "metadata_corruption_and_unsafe_disk_environment_are_rejected",
         "explicit_flush_survives_sigkill_without_drop"
       ]
     },
@@ -59,6 +68,13 @@
       "scope": [
         "16 synthetic engine check groups"
       ]
+    },
+    {
+      "command": "target/debug/pg-qdrant-edge-probe --corruption-probe",
+      "exit_code": 0,
+      "scope": [
+        "malformed owned metadata rejection and intact-copy recovery"
+      ]
     }
   ],
   "smoke_report": {
@@ -67,6 +83,7 @@
     "engine_version": "0.8.0",
     "kind": "synthetic_engine_smoke",
     "status": "passed",
+    "elapsed_ms": 1902,
     "fixture_points": 8,
     "search_threads": 2,
     "checks": [
@@ -110,7 +127,7 @@
         "status": "passed",
         "detail": {
           "leader": 1,
-          "score": 1,
+          "score": 1.0,
           "distance": "dot",
           "exact_domain": "authorized fixture points"
         }
@@ -181,7 +198,7 @@
         "status": "passed",
         "detail": {
           "leader": 1,
-          "score": 2,
+          "score": 2.0,
           "candidate_budget": 3,
           "global_exact_top_k": false
         }
@@ -332,5 +349,39 @@
   "quality_benchmark": false,
   "postgres_integration_verified": false,
   "p0_exit_passed": false,
-  "release_supported": false
+  "release_supported": false,
+  "supplemental_corruption_test": {
+    "schema_version": 1,
+    "engine_version": "0.8.0",
+    "kind": "edge_corruption_probe",
+    "status": "passed",
+    "sql_integration_verified": false,
+    "release_supported": false,
+    "oom_verified": false,
+    "power_loss_verified": false,
+    "cases": [
+      {
+        "target": "edge_config.json",
+        "load": "error",
+        "ready": false,
+        "error_class": "JSON deserialization failure"
+      },
+      {
+        "target": "segments/<owned-segment>/segment.json",
+        "load": "error",
+        "ready": false,
+        "error_class": "JSON deserialization failure"
+      }
+    ],
+    "recovery": {
+      "source": "separate explicitly flushed image",
+      "records": 8,
+      "all_representation_records_equal": true,
+      "phrase_and_maxsim_queries": "passed",
+      "original_unchanged": true
+    },
+    "scope": "malformed JSON metadata only; no arbitrary bit-rot detection or in-place repair claim"
+  },
+  "positive_enospc_verified": false,
+  "postgresql_diagnostic_evidence": "p0-postgresql-ci.json"
 }

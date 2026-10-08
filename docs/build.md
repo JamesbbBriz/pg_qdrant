@@ -8,7 +8,7 @@ search functions. Successful probes do not constitute a production release.
 
 | Input | Selected value | Evidence boundary |
 | --- | --- | --- |
-| Rust | 1.96.0 | Combined engine/PG17 shared-library build verified; SQL runtime tracked separately |
+| Rust | 1.96.0 | Combined engine/PG17 build and scoped SQL probes verified at the recorded CI revision |
 | Qdrant Edge | 0.8.0 | Published archive checksum matches Cargo.lock; no declared crate features |
 | pgrx / cargo-pgrx | 0.19.3 / 0.19.3 | Matching library and build tool; no substitution with a network client |
 | PostgreSQL | 17, headers/package 17.11 | Other PostgreSQL majors are outside the tested target |
@@ -90,8 +90,11 @@ docker run --rm --memory=5g --cpus=2 pg-qdrant-p0
 
 The container compiles and installs as root, then runs the isolated PostgreSQL
 tests as an ordinary user. CI uses these same commands and exports the test
-reports. The workflow's presence is not a passing CI result; record each actual
-run and code revision before advancing evidence status.
+reports. The [first recorded CI run](evidence/p0-postgresql-ci.json) passed 10
+normal-profile checks and 12 private-fault checks at its recorded source tree.
+Those results include a negative finding about direct-worker crash isolation.
+New code and additional profiles must earn their own run evidence before their
+verification status advances.
 
 For intentionally destructive *disposable-cluster* experiments only:
 
@@ -104,6 +107,57 @@ docker run --rm --memory=5g --cpus=2 pg-qdrant-p0-faults \
 Fault entry points are compiled out of a normal build. A successful fault test
 may demonstrate collateral PostgreSQL session termination; that finding is
 evidence against the tested isolation boundary, not a production pass.
+
+### Managed-helper comparison
+
+The optional helper uses the same pinned Edge library in a separately exec'ed
+process. The package installs its executable beside PostgreSQL; SQL arguments
+cannot choose the executable. The PostgreSQL supervisor retains queue admission
+and protocol handling. The direct-worker profile remains independently testable.
+
+```sh
+docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 \
+  --tag pg-qdrant-p0-helper-normal .
+docker run --rm --memory=5g --cpus=2 pg-qdrant-p0-helper-normal
+
+docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 \
+  --tag pg-qdrant-p0-helper-faults .
+docker run --rm --memory=5g --cpus=2 pg-qdrant-p0-helper-faults \
+  bash crates/pg_qdrant/tests/run-faults.sh
+```
+
+CI runs both normal and fault-enabled helper profiles, including their standalone
+pipe tests and actual SQL calls. The selected image sets
+`PG_QDRANT_MANAGED_HELPER=1`; the suite checks this against the extension build
+and helper handshake. Missing or mismatched helpers fail explicitly and do not
+silently select the direct-worker profile. See the [helper protocol tests](../crates/pg_qdrant-helper/README.md)
+and [PostgreSQL prototype](../crates/pg_qdrant/README.md) for ownership, restart,
+parent-death and cancellation boundaries. Presence of these CI steps alone does
+not claim that they passed.
+
+### Bounded disk and corruption experiments
+
+The default standalone suite corrupts only owned copies of an eight-point
+fixture and verifies that invalid metadata cannot open as healthy data. It then
+reopens an intact copy and the original, checking actual filtered retrieval.
+This is rejection and recovery-source validation, not arbitrary bit-rot repair.
+
+The disk-full test requires an explicitly provisioned, empty, isolated tmpfs:
+
+```sh
+docker run --rm --memory=5g --cpus=2 \
+  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \
+  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+  pg-qdrant-p0 python3 scripts/run_disk_probe.py
+```
+
+The probe checks the mount type, ownership, permissions, size and data-directory
+separation before writing. It requires a real `ENOSPC` response from an Edge
+configuration save, verifies failed writes leave both saved and in-memory
+configuration unchanged, frees its filler and checks retry/reopen. The wrapper
+requires JSON `status: "passed"`; an unconfigured `not_run` is not a passing
+positive experiment. WAL exhaustion, source-event ACK durability, OOM and
+power-loss behavior remain separate gates.
 
 ## Keeping evidence current
 

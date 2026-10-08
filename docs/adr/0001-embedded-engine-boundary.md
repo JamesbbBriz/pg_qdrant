@@ -1,12 +1,12 @@
 # ADR 0001: Embedded retrieval and the PostgreSQL boundary
 
-Status: **accepted product boundaries; provisional implementation topology**. The background-worker/helper decision and exact build combination require P0 evidence. This ADR does not assert that an extension is installable or that a dependency graph compiles.
+Status: **accepted product boundaries; direct-worker topology not accepted for production; managed-helper comparison in progress**. The recorded PostgreSQL CI establishes a working diagnostic installation and an inadequate direct-worker failure domain. Production topology acceptance and the overall P0 go/no-go decision remain open.
 
 ## Context and decision scope
 
 Developers already maintain source records in PostgreSQL and want text, vector, hybrid, and multistage search through SQL. The product should own indexing, change capture, plan selection, reranking, status and recovery without requiring a second application write path or an independently operated Qdrant network service.
 
-The repository's [capability contract](../capabilities.md), [upgrade policy](../dependencies.md), and [version baseline](../dependency-baseline.json) are the shared sources of truth. At this ADR's initial review, their source evidence selected candidate Edge `0.8.0`, pgrx/cargo-pgrx `0.19.3`, Linux x86_64 and PostgreSQL 17. Candidate version metadata is not a successful combined build. The exact compiler and all resolved/transitive features must follow actual P0 compilation evidence.
+The repository's [capability contract](../capabilities.md), [upgrade policy](../dependencies.md), and [version baseline](../dependency-baseline.json) are the shared sources of truth. The initial candidates were Edge `0.8.0`, pgrx/cargo-pgrx `0.19.3`, Linux x86_64 and PostgreSQL 17. Those versions now have a locked Rust 1.96.0 build and actual diagnostic PostgreSQL 17.11 execution in the [recorded CI](../evidence/p0-postgresql-ci.json). This validates the tested combination and source tree; it does not automatically validate newer helper changes, other platforms or product indexing behavior.
 
 ## Accepted boundaries
 
@@ -22,13 +22,32 @@ The repository's [capability contract](../capabilities.md), [upgrade policy](../
 
 Use Rust for both the pgrx boundary and engine integration. A separate Zig/Go layer requires demonstrated FFI/build/isolation benefit, a lifecycle design and measured maintenance costs; no such benefit is assumed.
 
-The first topology candidate is a PostgreSQL-managed owner worker per database, owning a bounded number of index generations and a bounded engine runtime. SQL backends submit owned requests over bounded IPC. Engine threads never access PostgreSQL SPI, Datum, pointers, memory contexts or thread-local backend state. PostgreSQL catalog/source work stays on the correct PostgreSQL process thread. A runtime is created in its owning child process, not inherited as active threads from postmaster initialization.
+The first implemented experiment is a PostgreSQL-managed owner worker per database with bounded IPC and a dedicated engine thread. Its measured native-failure domain is unacceptable for the production default described below. The intended index owner must still own a bounded number of generations and a bounded engine runtime. SQL backends submit owned requests over bounded IPC. Engine threads never access PostgreSQL SPI, Datum, pointers, memory contexts or thread-local backend state. PostgreSQL catalog/source work stays on the correct PostgreSQL process thread. A runtime is created in its owning child process, not inherited as active threads from postmaster initialization.
 
 The owner count, shard count, runtime thread count, request queue and per-stage budgets must be explicit. Limits include request/response bytes, candidate count, HasId count, token matrices, matrix cells, wall time, engine memory/RSS/mmap and worker concurrency. PostgreSQL `work_mem` alone does not bound the embedded engine.
 
-A PostgreSQL background worker is not an unconditional crash-isolation mechanism. P0 must measure Rust panic, native crash, SIGKILL, constrained-memory/OOM and disk-full behavior in a disposable cluster, observing other sessions and the whole instance. If its failure domain is unacceptable, the alternative is a Rust helper process installed and managed with the extension package. That helper is an implementation boundary, not a requirement that applications separately deploy a network Qdrant service.
+A PostgreSQL background worker is not an unconditional crash-isolation mechanism. The direct-worker experiments have now measured caught Rust panic, native abort and SIGKILL in a disposable cluster, including companion sessions and recovery. Constrained-memory/OOM, positive bounded disk-full and complete dirty-index recovery remain required. The next comparison is a Rust helper process installed and managed with the extension package. That helper is an implementation boundary, not a requirement that applications separately deploy a network Qdrant service.
 
 IPC must carry request IDs, generation identity, caller-authorized retrieval domain, budgets, cancellation/deadline and owned source/model metadata. It cannot carry live PostgreSQL values or arbitrary engine DAGs. A cancellation must stop queued work or signal an active bounded operation; dropping only the SQL receiver is insufficient. A dead owner cannot leave its generation marked query-ready without startup validation.
+
+## Measured process result and comparison decision
+
+The [2026-10-08 CI evidence](../evidence/p0-postgresql-ci.json) identifies head `f5bda3519421ef294bac82b17c17957f9727b648`, merge checkout `982adef4faaadd9831c2144b14bf155e89928ce0` and their identical source tree. The normal profile passed 10 diagnostic checks; the private-fault profile passed 12. A passing fault assertion means that the recorded behavior occurred, including an unacceptable failure domain.
+
+| Direct-worker experiment | Observed result | Decision consequence |
+| --- | --- | --- |
+| Rust panic caught around the diagnostic engine call | Request fails; worker survives | Retain the caught-panic boundary; do not infer recovery of arbitrary engine state |
+| Owner worker SIGKILL | Companion SQL session terminates; PostgreSQL recovers; committed marker remains and a fresh owner starts | Do not accept this native-owner topology as the production default |
+| Native abort inside the engine thread | Companion SQL session terminates with the same committed-marker recovery | A thread inside the PostgreSQL worker does not provide the required native-failure containment |
+| Caller/statement cancellation and queue pressure | Caller stops waiting; active native ownership is retained; cancelled queued work is not executed; admission is bounded | Preserve these verified semantics in the helper comparison |
+
+**Decision:** retain the direct-worker implementation as the default P0 control profile and evaluate `p0-managed-helper` before accepting a production topology. The helper ships beside the PostgreSQL executable. The PostgreSQL worker remains responsible for SQL authorization, queueing and signals; the helper owns Edge after exec, exchanges bounded owned frames, and performs no PostgreSQL calls. This remains one installed product with one application source-write path.
+
+The current helper comparison has explicit ready/build/process/request identity checks, a separate process-lifetime engine-owner lock, EOF-driven shutdown, reap-before-replacement behavior and three restart attempts after initial startup. SQL caller cancellation retains the active request until completion or process termination. A separate 125-second process-stop budget is an experimental hard limit, not native Edge cancellation or a production durability guarantee. Local compilation and standalone pipe/engine checks are reported in the [P0 checkpoint](../p0-report.md); they do not prove PostgreSQL containment.
+
+Before topology acceptance, the helper profile must reproduce the normal SQL/ACL/concurrency/queue tests and independently demonstrate that helper SIGKILL/native abort preserve the companion SQL transaction and the PostgreSQL supervisor. It also needs explicit evidence for supervisor death, exclusive replacement ownership, bounded restart exhaustion, and the operation-limit path. A PostgreSQL supervisor itself can still cause PostgreSQL collateral failure; isolating Edge does not remove that distinction. OOM victim selection, memory/storage budgets, generation readiness, dirty-data durability and recovery remain separate requirements.
+
+The workload consequence is concrete: the previously conditional helper work is now required for the architecture decision. Initial direct-worker installation and IPC tests reduce uncertainty, but their passing results do not justify deleting isolation, shutdown, packaging, recovery or upgrade work. No overall P0 go/no-go or production-topology acceptance follows from this ADR update.
 
 ## Module responsibilities
 
@@ -95,14 +114,14 @@ The first recovery contract rebuilds from consistent PostgreSQL source data, ret
 
 | Question | Current position | Evidence needed to close |
 | --- | --- | --- |
-| Direct Edge crate and Rust adapter | Accepted product direction | Exact published package/API, full locked build and callable probes |
-| Exact Edge/pgrx/tool/compiler combination | Candidate | Complete Linux/PG build and native linking; actual feature/checksum inventory |
-| Owner background worker or packaged helper | Candidate worker first | Two-session SQL/IPC/cancellation plus measured crash/OOM/disk failure domain |
+| Direct Edge crate and Rust adapter | Accepted direction; executable engine and SQL diagnostic paths | Remaining complete public-call and product adapter acceptance |
+| Exact Edge/pgrx/tool/compiler combination | Recorded Linux/PG17 diagnostic build and runtime pass | Regression for changed sources/features; complete native/CPU/license and release matrix |
+| Owner background worker or packaged helper | Direct worker fails production containment; managed-helper comparison required | Actual helper PostgreSQL/fault results, supervisor lifecycle, bounded OOM/disk behavior and topology acceptance |
 | Array/JSON SQL signatures and ticket shape | Candidate API | pgrx dimension/bound conversion, driver, transaction/savepoint and concurrency tests |
 | Engine persistence condition for ACK | Open, blocking P1 wait guarantee | Crash-before/after-flush and reopen/replay tests on selected Edge |
 | Analysis parity and richer lexical dependency | Open, blocking full FTS claims | Golden analysis/phrase/prefix/offset tests and F13–F20 quality/cost ADR |
-| Source recheck and supported authorization | Candidate strict initial policy | Multi-role/column/RLS rejection and every-path leakage tests |
+| Source recheck and supported authorization | Diagnostic ACL/runtime-superuser checks pass; product policy still proposed | Source SELECT/column/RLS and every-path leakage tests |
 | Upgrade/reopen/rollback compatibility | Unverified | Old/new generation fixtures and executed rollback procedure |
-| Package and platform support | Candidate Linux x86_64 / PG17 | Clean installation, complete declared user journey and release gates |
+| Package and platform support | Linux x86_64 / PG17 diagnostic installation measured | Helper packaging/runtime, complete declared product journey and release gates |
 
 See [stage acceptance](../acceptance.md) for P0 exit conditions and [work items](../work-items.json) for remaining scope. Progress is recorded with reproducible evidence rather than by changing a candidate into an accepted claim in this ADR alone.

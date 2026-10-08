@@ -5,6 +5,8 @@
 
 use pgrx::prelude::*;
 
+#[cfg(feature = "p0-managed-helper")]
+mod helper;
 mod ipc;
 mod worker;
 
@@ -27,11 +29,14 @@ mod qdrant {
             "pgrx_version": "0.19.3",
             "postgres_major": 17,
             "features": {"pg17": cfg!(feature="pg17"), "cshim": true,
+                "p0_managed_helper": cfg!(feature="p0-managed-helper"),
                 "p0_fault_injection": cfg!(feature="p0-fault-injection")},
             "product_indexing_api": false,
             "release_supported_capabilities": [],
             "native_engine_cancellation": false,
-            "prototype_process": "dynamic_postgresql_worker_with_engine_thread"
+            "prototype_process": if cfg!(feature="p0-managed-helper") {
+                "postgresql_supervisor_with_exec_helper"
+            } else { "dynamic_postgresql_worker_with_engine_thread" }
         }))
     }
 

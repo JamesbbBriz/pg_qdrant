@@ -1,0 +1,252 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_helper_local_evidence",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "rust": "1.96.0"
+  },
+  "source_inputs": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+    },
+    {
+      "path": "crates/edge-probe/Cargo.toml",
+      "sha256": "cf6109fc8f380c82b97f26985249d5b4430e9cd5483a7a6e426404cf95a9bbc2"
+    },
+    {
+      "path": "crates/edge-probe/src/api_inventory.rs",
+      "sha256": "4424956a0d98b7364124ac0d45136b7345aee843ae436b314e70574359e7ba8f"
+    },
+    {
+      "path": "crates/edge-probe/src/fault_probes.rs",
+      "sha256": "c77153b0f2dc21dc05f646c992611bba56048922d33fb54e58bb349ac6765d7b"
+    },
+    {
+      "path": "crates/edge-probe/src/lib.rs",
+      "sha256": "e4937461ec70fad33409d612deafda631df94ee974d6491b84450175cee7c53f"
+    },
+    {
+      "path": "crates/edge-probe/src/main.rs",
+      "sha256": "3e38afd2cb0d1f59abb2b0e5000d8b8adb5f539711cac66db37aecc8946182a9"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/Cargo.toml",
+      "sha256": "674a1166a52c7664bb4a523f4141e6381c62a2d4b8ac60ebf204bee7eb777ff9"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/src/main.rs",
+      "sha256": "f855cc1e964f161aa47881ff10dd361eabc8ed7bb4f9a383b53bed0c3546e00c"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/tests/probe.py",
+      "sha256": "51225d6cf3251f5395d6a65c9ddc7c01fcb5772666f0e2b774340cd141ba92e6"
+    },
+    {
+      "path": "crates/pg_qdrant-protocol/Cargo.toml",
+      "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
+    },
+    {
+      "path": "crates/pg_qdrant-protocol/src/lib.rs",
+      "sha256": "03736dac4f2253b2beddcc70322047ee1c95419b429b88d3f2d2c772775e1722"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+    }
+  ],
+  "commands": [
+    {
+      "command": "cargo build --locked -p pg-qdrant-helper",
+      "status": "passed",
+      "feature_profile": "normal"
+    },
+    {
+      "command": "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --out artifacts/helper-pipes.json",
+      "status": "passed",
+      "checks_passed": 7
+    },
+    {
+      "command": "cargo build --locked -p pg-qdrant-helper --features p0-fault-injection",
+      "status": "passed",
+      "feature_profile": "private_faults"
+    },
+    {
+      "command": "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --faults --out artifacts/helper-fault-pipes.json",
+      "status": "passed",
+      "checks_passed": 8
+    }
+  ],
+  "reports": {
+    "normal": {
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_operation_refused_without_private_feature",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed"
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed"
+        }
+      ]
+    },
+    "private_faults": {
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_native_panic_preserves_helper",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed"
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed"
+        },
+        {
+          "name": "private_native_abort_terminates_only_child",
+          "status": "passed"
+        }
+      ]
+    }
+  },
+  "rejected_attempts": [
+    {
+      "scenario": "normal_profile_build_identity",
+      "observed": "The normal-profile harness rejected a private-feature ready handshake in a reused local target directory.",
+      "resolution": "Helper-package build artifacts were cleaned, the normal binary was rebuilt, and all seven normal assertions passed. No feature or test contract was relaxed."
+    }
+  ],
+  "scope": [
+    "Distinct exec process with the published Edge adapter",
+    "Real 16-group Edge smoke through bounded owned pipes",
+    "Unique owner, request replay and oversized frame rejection",
+    "Caught panic/private abort behavior and build-feature validation",
+    "EOF and pure-controller SIGKILL stop outstanding native work"
+  ],
+  "unverified": [
+    "Actual PostgreSQL helper-profile runtime and collateral containment",
+    "PostgreSQL supervisor SIGKILL and instance recovery",
+    "125-second PostgreSQL supervisor hard-stop and restart-exhaustion paths",
+    "Kernel OOM, production memory governance, durable indexing and index upgrade"
+  ],
+  "postgresql_integration_verified": false,
+  "performance_benchmark": false,
+  "p0_exit_passed": false,
+  "release_supported": false,
+  "local_linked_sql_profiles": [
+    {
+      "features": [
+        "pg17"
+      ],
+      "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features \"pg17\" --cargo=--locked --out \"$PG_QDRANT_SCHEMA_OUT\"",
+      "status": "passed",
+      "generated_function_count": 6,
+      "local_generated_sql_sha256": "7aabd4c8abee717c12a4e119ab1b0191a5eba76240527a8caccd153dc89dc84e",
+      "sql_runtime_verified": false
+    },
+    {
+      "features": [
+        "pg17",
+        "p0-fault-injection"
+      ],
+      "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features \"pg17 p0-fault-injection\" --cargo=--locked --out \"$PG_QDRANT_SCHEMA_OUT\"",
+      "status": "passed",
+      "generated_function_count": 7,
+      "local_generated_sql_sha256": "7550eb6f0cd32cff0878840e85c6dbeecaa2af6c2e03fc032a9096942e9bcb2e",
+      "sql_runtime_verified": false
+    },
+    {
+      "features": [
+        "pg17",
+        "p0-managed-helper"
+      ],
+      "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features \"pg17 p0-managed-helper\" --cargo=--locked --out \"$PG_QDRANT_SCHEMA_OUT\"",
+      "status": "passed",
+      "generated_function_count": 6,
+      "local_generated_sql_sha256": "8d2281d7a6eb2eb461db1bda4d69b594828efe6e0c761e8ededfd3d6375cd248",
+      "sql_runtime_verified": false
+    },
+    {
+      "features": [
+        "pg17",
+        "p0-managed-helper",
+        "p0-fault-injection"
+      ],
+      "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features \"pg17 p0-managed-helper p0-fault-injection\" --cargo=--locked --out \"$PG_QDRANT_SCHEMA_OUT\"",
+      "status": "passed",
+      "generated_function_count": 7,
+      "local_generated_sql_sha256": "d9e9f51f2dcdb3d5cb829518d0977c50d6ff6849d834f217bbdbe7bd47f4890d",
+      "sql_runtime_verified": false
+    }
+  ],
+  "postgresql_link_source_inputs": [
+    {
+      "path": "crates/pg_qdrant/src/helper.rs",
+      "sha256": "e065ca3b637c27e4366f7d66ac62287b7b8a33face791a605396d8ed2e07fb85"
+    },
+    {
+      "path": "crates/pg_qdrant/src/ipc.rs",
+      "sha256": "ebb1491f4b1d2677d5eb1018580fd84d96cc84a8396cd985b1dca8e91c315d4e"
+    },
+    {
+      "path": "crates/pg_qdrant/src/lib.rs",
+      "sha256": "6c97aa544c0ebfc21309f54e103288b6e83bc549efee6ba01d59cdfa2f5b6f12"
+    },
+    {
+      "path": "crates/pg_qdrant/src/worker.rs",
+      "sha256": "6718b71694006d05a360937e4ff0de885858ded79bc05121b23dc569c63e09f8"
+    }
+  ]
+}

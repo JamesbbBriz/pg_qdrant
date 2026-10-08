@@ -1,6 +1,24 @@
+mod fault_probes;
+
 fn main() {
     let mut args = std::env::args_os().skip(1);
     if let Some(command) = args.next() {
+        if command == "--corruption-probe" || command == "--disk-full-probe" {
+            if args.next().is_some() {
+                eprintln!("fault probes do not accept positional arguments");
+                std::process::exit(2);
+            }
+            let (report, exit_code) = if command == "--corruption-probe" {
+                match fault_probes::corruption_probe() {
+                    Ok(report) => (report, 0),
+                    Err(error) => (fault_probes::failure("edge_corruption_probe", error), 1),
+                }
+            } else {
+                fault_probes::disk_full_probe()
+            };
+            println!("{}", serde_json::to_string_pretty(&report).unwrap());
+            std::process::exit(exit_code);
+        }
         if command == "--persistence-child" {
             let Some(path) = args.next() else {
                 eprintln!("--persistence-child requires an existing empty directory");

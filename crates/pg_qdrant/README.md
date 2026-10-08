@@ -72,8 +72,8 @@ PostgreSQL-owned directory transports versioned, owned JSON messages. An OS
 file lock selects one owner endpoint even when two SQL sessions start it at the
 same time. No engine runtime or thread is initialized in the postmaster.
 
-The owner main thread handles PostgreSQL signals, the socket, and queue
-accounting. At most one dedicated Rust thread executes the engine probe or delay
+In the default direct-worker profile, the owner main thread handles PostgreSQL
+signals, the socket, and queue accounting. At most one dedicated Rust thread executes the engine probe or delay
 operation. Engine threads receive no SPI handle, PostgreSQL pointer, `Datum`, or
 memory context. The engine probe owns its disposable shard until completion.
 
@@ -129,6 +129,62 @@ PostgreSQL background workers attach to shared memory. Their process boundary
 must not be advertised as unconditional crash isolation. If the measured worker
 failure terminates an unrelated session, the default architecture needs a
 packaged helper-process evaluation before a reliability claim or release.
+
+## Optional managed-helper comparison
+
+`p0-managed-helper` selects a separate P0 process experiment. The same PostgreSQL
+worker owns the SQL socket, queue, signals and permission boundary. It executes
+the installed `pg_qdrant_p0_helper` binary beside PostgreSQL's own executable;
+SQL cannot select an executable path. The helper has no PostgreSQL dependency
+and initializes Edge after `exec`, outside PostgreSQL shared memory.
+
+The supervisor and helper exchange bounded owned messages over stdin/stdout.
+The ready handshake verifies the process ID, protocol, package version and fault
+feature; each subsequent response must match that process and request ID. The
+helper holds an independent engine-owner file lock until process termination.
+When the supervisor's stdin writer closes, a dedicated bounded reader exits the
+entire helper, including outstanding native work. A replacement must acquire
+the same engine-owner lock.
+
+The supervisor reaps a failed helper before attempting a replacement, retains an
+outstanding native request after caller cancellation, and permits three restart
+attempts with increasing backoff. A separate 125-second operation limit can kill
+the helper; this is a P0 process-stop policy without a durable-index shutdown
+claim. `p0_ping` reports separate worker/engine PIDs, readiness, starts, last
+failure and restart exhaustion. One bounded last-exit record retains the old
+engine PID, exit code/signal and supervisor stop reason across a successful
+replacement. Requests do not fall back to the direct profile.
+
+```bash
+cargo build --locked -p pg-qdrant-helper
+install -m 755 target/debug/pg_qdrant_p0_helper \
+  "$(pg_config --bindir)/pg_qdrant_p0_helper"
+cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml \
+  --pg-config "$(command -v pg_config)" --cargo=--locked \
+  --no-default-features --features 'pg17 p0-managed-helper'
+PG_QDRANT_MANAGED_HELPER=1 PG_QDRANT_ARTIFACT_DIR=artifacts/p0-helper \
+  bash crates/pg_qdrant/tests/run-p0.sh
+```
+
+For the private fault comparison, build **both** binaries with
+`p0-fault-injection`, include `p0-managed-helper` in the extension features, and
+run `run-faults.sh` with `PG_QDRANT_MANAGED_HELPER=1`. A build mismatch fails the
+ready handshake. The shared test suite preserves the direct-worker expectation
+of collateral session termination and separately requires helper crashes to
+preserve the supervisor and companion SQL session. The helper profile also
+tests that supervisor `SIGTERM` stops an outstanding helper and allows a fresh
+owner, and that three restart attempts end in an observable unavailable state.
+A separate CI assertion freezes the active helper with `SIGSTOP`, cancels the
+SQL caller, and waits for the unchanged 125-second process-stop limit to replace
+that helper while preserving the PostgreSQL supervisor and a companion query.
+The standalone helper suite also checks pipe cleanup after killing its own pure
+controller. Forced **PostgreSQL** supervisor `SIGKILL` remains a separate gate;
+none of these test implementations count as passing until their run is recorded.
+
+Passing this comparison would establish only the measured P0 fault behavior.
+Source outbox durability, memory/disk limits, production generations, recovery,
+upgrade safety and an architecture adoption decision still have independent
+acceptance gates.
 
 ## Versioned source evidence
 

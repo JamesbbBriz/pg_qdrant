@@ -86,7 +86,7 @@
       "packaging",
       "upgrade and maintenance"
     ],
-    "reestimate_status": "partial_risk_review; final module allocation waits for PostgreSQL runtime/fault and lexical topology decisions",
+    "reestimate_status": "partial_risk_review; final module allocation waits for helper PostgreSQL/fault and lexical topology decisions",
     "evidence_adjustments": [
       {
         "finding": "The direct published engine compiles and executes initial retrieval paths.",
@@ -103,6 +103,11 @@
       {
         "finding": "Native rich lexical primitives are incomplete and analyzer defaults differ.",
         "effect": "I-07 and possible I-08 remain a separate critical path; F13-F20 estimates are not removed."
+      },
+      {
+        "finding": "Recorded direct-worker PostgreSQL CI passed its diagnostics but SIGKILL/native abort terminated companion SQL sessions.",
+        "effect": "The formerly conditional managed-helper comparison is now required before production topology acceptance. Preserve existing estimate ranges until its PostgreSQL/fault results and the lexical decision support reallocation.",
+        "source": "docs/evidence/p0-postgresql-ci.json"
       }
     ]
   },
@@ -6042,7 +6047,7 @@
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
-          "scope": "Explicit private fault-feature prototype compiles. No PostgreSQL fault experiment has run at this checkpoint.",
+          "scope": "Explicit private fault-feature prototype compiles. This compilation record alone makes no PostgreSQL fault-runtime claim; later CI evidence is recorded separately.",
           "source": "docs/dependency-baseline.json",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
@@ -6055,13 +6060,60 @@
           "level": "compile-verified",
           "kind": "postgres_build",
           "status": "passed",
-          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. Actual database load and SQL/runtime behavior are unverified.",
+          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. This linked-build record alone does not establish database execution; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false,
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_diagnostic_owner_sql_runtime",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "The recorded non-root PostgreSQL CI proves a unique diagnostic owner under concurrent startup and serialized requests from two SQL sessions. Production shard-generation ownership and source lifecycle remain required.",
+          "check_groups": [
+            "concurrent_start_unique_owner",
+            "two_sql_sessions_single_execution_owner"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-p0.sh"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_helper_initial_standalone_observation",
+          "status": "passed",
+          "scope": "Initial normal and private-fault helper builds and standalone pipe scenarios passed, including real Edge 16-group execution, owner contention, feature-specific fault behavior, EOF, replay and oversized-input refusal. Added lifecycle cases require a separate final run; this observation is not PostgreSQL containment evidence.",
+          "source": "docs/p0-report.md",
+          "source_paths": [
+            "crates/pg_qdrant-helper/src/main.rs",
+            "crates/pg_qdrant-helper/tests/probe.py",
+            "crates/pg_qdrant-protocol/src/lib.rs"
+          ],
+          "commands": [
+            "cargo build --locked -p pg-qdrant-helper",
+            "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --out artifacts/p0-helper-normal.json",
+            "cargo build --locked -p pg-qdrant-helper --features p0-fault-injection",
+            "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --faults --out artifacts/p0-helper-faults.json"
+          ],
+          "source_checkpoint": "Local helper iteration after the recorded direct-worker CI; final expanded-suite/source-hash evidence remains separate.",
+          "final_expanded_suite_evidence": "pending",
+          "postgresql_helper_runtime_verified": false,
+          "hard_stop_budget_runtime_verified": false,
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -6164,7 +6216,9 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "diagnostic_sql_runtime_verified": true,
+        "helper_initial_standalone_observation": "passed_scoped_scenarios; expanded_lifecycle_record_pending"
       }
     },
     {
@@ -6483,6 +6537,28 @@
           "source_paths": [
             "crates/edge-probe/tests/persistence.rs"
           ]
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_owned_metadata_corruption",
+          "status": "passed",
+          "scope": "Later local three-test engine suite includes two malformed copied-JSON load failures, intact-copy recovery and unchanged original records with phrase/MaxSim checks. Unsafe host/shared-disk paths are refused. No positive ENOSPC, arbitrary bit-rot repair, production generation or PostgreSQL ACK claim.",
+          "source": "docs/p0-report.md",
+          "source_paths": [
+            "crates/edge-probe/src/fault_probes.rs",
+            "crates/edge-probe/tests/faults.rs"
+          ],
+          "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
+          "test": "metadata_corruption_and_unsafe_disk_environment_are_rejected",
+          "tests_passed": 3,
+          "tests_failed": 0,
+          "tests_ignored": 0,
+          "source_checkpoint": "Later local fault-probe iteration; not part of the recorded initial PostgreSQL CI tree.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "positive_enospc_verified": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -6979,7 +7055,7 @@
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
-          "scope": "Explicit private fault-feature prototype compiles. No PostgreSQL fault experiment has run at this checkpoint.",
+          "scope": "Explicit private fault-feature prototype compiles. This compilation record alone makes no PostgreSQL fault-runtime claim; later CI evidence is recorded separately.",
           "source": "docs/dependency-baseline.json",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
@@ -6992,7 +7068,7 @@
           "level": "compile-verified",
           "kind": "postgres_build",
           "status": "passed",
-          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. Actual database load and SQL/runtime behavior are unverified.",
+          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. This linked-build record alone does not establish database execution; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
           "full_capability_acceptance": false,
@@ -7044,6 +7120,31 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_diagnostic_sql_contract_runtime",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "CREATE EXTENSION and the restricted diagnostics execute; discovery retains all 54 planned IDs, the real SQL-to-Edge call passes 16 synthetic groups, and the normal build lacks a fault entrypoint. Product search/vector-shape/driver/source contracts remain unimplemented.",
+          "check_groups": [
+            "install_and_honest_capabilities",
+            "acl_runtime_superuser_and_input_validation",
+            "real_sql_to_edge_smoke",
+            "fault_entrypoint_absent_in_normal_build"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-p0.sh",
+          "registry_capability_count": 54,
+          "engine_check_groups": 16
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7153,7 +7254,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "diagnostic_sql_runtime_verified": true
       }
     },
     {
@@ -7183,7 +7285,7 @@
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
-          "scope": "Explicit private fault-feature prototype compiles. No PostgreSQL fault experiment has run at this checkpoint.",
+          "scope": "Explicit private fault-feature prototype compiles. This compilation record alone makes no PostgreSQL fault-runtime claim; later CI evidence is recorded separately.",
           "source": "docs/dependency-baseline.json",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
@@ -7196,7 +7298,7 @@
           "level": "compile-verified",
           "kind": "postgres_build",
           "status": "passed",
-          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. Actual database load and SQL/runtime behavior are unverified.",
+          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. This linked-build record alone does not establish database execution; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
           "full_capability_acceptance": false,
@@ -7248,6 +7350,26 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_diagnostic_acl_runtime",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "Diagnostic schema ACL and runtime superuser checks reject an unprivileged role, including after an explicit function grant; input bounds are exercised. This is not indexed-source SELECT/column/RLS/tenant authorization or every-query-path leakage evidence.",
+          "check_groups": [
+            "acl_runtime_superuser_and_input_validation"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-p0.sh"
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7360,7 +7482,8 @@
         "sql_product_integration_verified": false,
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
-        "authorization_limit": "Synthetic tenant filtering and compiled superuser guards do not establish PostgreSQL indexed-source permission/RLS safety."
+        "authorization_limit": "Actual diagnostic ACL and runtime-superuser checks pass; synthetic tenant filters and restricted diagnostics do not establish indexed-source SELECT/column/RLS safety.",
+        "diagnostic_sql_runtime_verified": true
       }
     },
     {
@@ -7390,7 +7513,7 @@
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
-          "scope": "Explicit private fault-feature prototype compiles. No PostgreSQL fault experiment has run at this checkpoint.",
+          "scope": "Explicit private fault-feature prototype compiles. This compilation record alone makes no PostgreSQL fault-runtime claim; later CI evidence is recorded separately.",
           "source": "docs/dependency-baseline.json",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
@@ -7403,7 +7526,7 @@
           "level": "compile-verified",
           "kind": "postgres_build",
           "status": "passed",
-          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. Actual database load and SQL/runtime behavior are unverified.",
+          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. This linked-build record alone does not establish database execution; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
           "full_capability_acceptance": false,
@@ -7426,6 +7549,87 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_diagnostic_queue_cancel_runtime",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "Two-session serialization, caller cancellation retaining active ownership, request/statement deadlines, cancelled queued work not executing and queue admission at a limit of eight pass in actual PostgreSQL. Native in-flight cancellation and general RSS/mmap/candidate budgets remain unverified.",
+          "check_groups": [
+            "two_sql_sessions_single_execution_owner",
+            "caller_cancel_retains_active_owner",
+            "request_deadline_and_statement_timeout",
+            "cancelled_queued_request_never_executes",
+            "bounded_queue_admission"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-p0.sh",
+          "queue_limit": 8,
+          "native_in_flight_cancellation": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_direct_worker_negative_isolation",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "Fault assertions successfully reproduce the failure domain: direct owner SIGKILL and native engine-thread abort terminate the companion SQL session. The committed PostgreSQL marker survives recovery and a new owner starts. Production-default containment fails; the managed-helper comparison is required.",
+          "check_groups": [
+            "caught_engine_thread_panic",
+            "worker_sigkill_collateral_recovery",
+            "worker_abort_collateral_recovery"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-faults.sh",
+          "observation": "negative_isolation_result",
+          "production_containment": "failed",
+          "caught_panic_worker_survived": true,
+          "companion_session_terminated_on_sigkill": true,
+          "companion_session_terminated_on_native_abort": true,
+          "committed_postgresql_marker_retained": true,
+          "managed_helper_comparison": "required_before_topology_acceptance"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_helper_initial_standalone_observation",
+          "status": "passed",
+          "scope": "Initial normal and private-fault helper builds and standalone pipe scenarios passed, including real Edge 16-group execution, owner contention, feature-specific fault behavior, EOF, replay and oversized-input refusal. Added lifecycle cases require a separate final run; this observation is not PostgreSQL containment evidence.",
+          "source": "docs/p0-report.md",
+          "source_paths": [
+            "crates/pg_qdrant-helper/src/main.rs",
+            "crates/pg_qdrant-helper/tests/probe.py",
+            "crates/pg_qdrant-protocol/src/lib.rs"
+          ],
+          "commands": [
+            "cargo build --locked -p pg-qdrant-helper",
+            "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --out artifacts/p0-helper-normal.json",
+            "cargo build --locked -p pg-qdrant-helper --features p0-fault-injection",
+            "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --faults --out artifacts/p0-helper-faults.json"
+          ],
+          "source_checkpoint": "Local helper iteration after the recorded direct-worker CI; final expanded-suite/source-hash evidence remains separate.",
+          "final_expanded_suite_evidence": "pending",
+          "postgresql_helper_runtime_verified": false,
+          "hard_stop_budget_runtime_verified": false,
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7527,7 +7731,12 @@
         "sql_product_integration_verified": false,
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
-        "cancellation_limit": "Caller/queue cancellation and lifetime ownership are implemented but SQL runtime is unexecuted; public native in-flight query cancellation is absent."
+        "cancellation_limit": "Actual direct-worker SQL proves caller/queued cancellation with active ownership retained; public native in-flight cancellation is absent.",
+        "diagnostic_sql_runtime_verified": true,
+        "direct_worker_production_containment": "failed",
+        "helper_postgresql_containment": "pending",
+        "helper_comparison_required": true,
+        "helper_initial_standalone_observation": "passed_scoped_scenarios; expanded_lifecycle_record_pending"
       }
     },
     {
@@ -7557,7 +7766,7 @@
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
-          "scope": "Explicit private fault-feature prototype compiles. No PostgreSQL fault experiment has run at this checkpoint.",
+          "scope": "Explicit private fault-feature prototype compiles. This compilation record alone makes no PostgreSQL fault-runtime claim; later CI evidence is recorded separately.",
           "source": "docs/dependency-baseline.json",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
@@ -7570,7 +7779,7 @@
           "level": "compile-verified",
           "kind": "postgres_build",
           "status": "passed",
-          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. Actual database load and SQL/runtime behavior are unverified.",
+          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. This linked-build record alone does not establish database execution; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
           "full_capability_acceptance": false,
@@ -7622,6 +7831,34 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_clean_container_diagnostic_ci",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "The recorded Docker builds install and run the locked normal and private-fault PostgreSQL diagnostic profiles as UID 10001. The completed CI has 10 normal and 12 private-fault checks. This does not verify newer helper sources, a product package, old-index migration or rollback.",
+          "check_groups": [
+            "install_and_honest_capabilities",
+            "real_sql_to_edge_smoke"
+          ],
+          "commands": [
+            "docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .",
+            "bash crates/pg_qdrant/tests/run-p0.sh",
+            "docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .",
+            "bash crates/pg_qdrant/tests/run-faults.sh"
+          ],
+          "normal_checks_passed": 10,
+          "fault_checks_passed": 12
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7740,7 +7977,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "diagnostic_sql_runtime_verified": true
       }
     },
     {
@@ -7942,7 +8180,7 @@
           "level": "compile-verified",
           "kind": "postgres_build",
           "status": "passed",
-          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. Actual database load and SQL/runtime behavior are unverified.",
+          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. This linked-build record alone does not establish database execution; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
           "full_capability_acceptance": false,
@@ -7994,6 +8232,34 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_clean_container_diagnostic_ci",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "The recorded Docker builds install and run the locked normal and private-fault PostgreSQL diagnostic profiles as UID 10001. The completed CI has 10 normal and 12 private-fault checks. This does not verify newer helper sources, a product package, old-index migration or rollback.",
+          "check_groups": [
+            "install_and_honest_capabilities",
+            "real_sql_to_edge_smoke"
+          ],
+          "commands": [
+            "docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .",
+            "bash crates/pg_qdrant/tests/run-p0.sh",
+            "docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .",
+            "bash crates/pg_qdrant/tests/run-faults.sh"
+          ],
+          "normal_checks_passed": 10,
+          "fault_checks_passed": 12
         }
       ],
       "deliverable": "Real manifests and Cargo.lock, exact compiler and matched pgrx tool, selected features, container/system libraries/PG headers/CPU inputs, actual dependency and license inventories.",
@@ -8107,6 +8373,31 @@
           "source_paths": [
             "crates/edge-probe/src/api_inventory.rs"
           ]
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_diagnostic_sql_contract_runtime",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "CREATE EXTENSION and the restricted diagnostics execute; discovery retains all 54 planned IDs, the real SQL-to-Edge call passes 16 synthetic groups, and the normal build lacks a fault entrypoint. Product search/vector-shape/driver/source contracts remain unimplemented.",
+          "check_groups": [
+            "install_and_honest_capabilities",
+            "acl_runtime_superuser_and_input_validation",
+            "real_sql_to_edge_smoke",
+            "fault_entrypoint_absent_in_normal_build"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-p0.sh",
+          "registry_capability_count": 54,
+          "engine_check_groups": 16
         }
       ],
       "deliverable": "Every selected public query/match/vector/storage/payload/read/update/lifecycle variant maps to a formal ID or explicit scope exclusion; probes cover real invocations and negative unsupported types.",
@@ -8177,7 +8468,7 @@
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
-          "scope": "Explicit private fault-feature prototype compiles. No PostgreSQL fault experiment has run at this checkpoint.",
+          "scope": "Explicit private fault-feature prototype compiles. This compilation record alone makes no PostgreSQL fault-runtime claim; later CI evidence is recorded separately.",
           "source": "docs/dependency-baseline.json",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
@@ -8190,7 +8481,7 @@
           "level": "compile-verified",
           "kind": "postgres_build",
           "status": "passed",
-          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. Actual database load and SQL/runtime behavior are unverified.",
+          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. This linked-build record alone does not establish database execution; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
           "full_capability_acceptance": false,
@@ -8242,6 +8533,82 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_diagnostic_owner_sql_runtime",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "The recorded non-root PostgreSQL CI proves a unique diagnostic owner under concurrent startup and serialized requests from two SQL sessions. Production shard-generation ownership and source lifecycle remain required.",
+          "check_groups": [
+            "concurrent_start_unique_owner",
+            "two_sql_sessions_single_execution_owner"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-p0.sh"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_direct_worker_negative_isolation",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "Fault assertions successfully reproduce the failure domain: direct owner SIGKILL and native engine-thread abort terminate the companion SQL session. The committed PostgreSQL marker survives recovery and a new owner starts. Production-default containment fails; the managed-helper comparison is required.",
+          "check_groups": [
+            "caught_engine_thread_panic",
+            "worker_sigkill_collateral_recovery",
+            "worker_abort_collateral_recovery"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-faults.sh",
+          "observation": "negative_isolation_result",
+          "production_containment": "failed",
+          "caught_panic_worker_survived": true,
+          "companion_session_terminated_on_sigkill": true,
+          "companion_session_terminated_on_native_abort": true,
+          "committed_postgresql_marker_retained": true,
+          "managed_helper_comparison": "required_before_topology_acceptance"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_helper_initial_standalone_observation",
+          "status": "passed",
+          "scope": "Initial normal and private-fault helper builds and standalone pipe scenarios passed, including real Edge 16-group execution, owner contention, feature-specific fault behavior, EOF, replay and oversized-input refusal. Added lifecycle cases require a separate final run; this observation is not PostgreSQL containment evidence.",
+          "source": "docs/p0-report.md",
+          "source_paths": [
+            "crates/pg_qdrant-helper/src/main.rs",
+            "crates/pg_qdrant-helper/tests/probe.py",
+            "crates/pg_qdrant-protocol/src/lib.rs"
+          ],
+          "commands": [
+            "cargo build --locked -p pg-qdrant-helper",
+            "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --out artifacts/p0-helper-normal.json",
+            "cargo build --locked -p pg-qdrant-helper --features p0-fault-injection",
+            "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --faults --out artifacts/p0-helper-faults.json"
+          ],
+          "source_checkpoint": "Local helper iteration after the recorded direct-worker CI; final expanded-suite/source-hash evidence remains separate.",
+          "final_expanded_suite_evidence": "pending",
+          "postgresql_helper_runtime_verified": false,
+          "hard_stop_budget_runtime_verified": false,
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Minimal loaded extension, owned IPC and two sessions plus panic/native crash/SIGKILL/constrained OOM/disk-full experiments; measured background-worker versus managed-helper go/no-go.",
@@ -8280,7 +8647,19 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "diagnostic_sql_runtime_verified": true,
+        "direct_worker_production_containment": "failed",
+        "helper_comparison_required": true,
+        "helper_postgresql_containment": "pending",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "helper_initial_standalone_observation": "passed_scoped_scenarios; expanded_lifecycle_record_pending"
+      }
     },
     {
       "id": "I-04",
@@ -8357,7 +8736,28 @@
       "phase": "P2",
       "owner": "sql/security",
       "status": "pending",
-      "evidence": [],
+      "evidence": [
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_diagnostic_acl_runtime",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "Diagnostic schema ACL and runtime superuser checks reject an unprivileged role, including after an explicit function grant; input bounds are exercised. This is not indexed-source SELECT/column/RLS/tenant authorization or every-query-path leakage evidence.",
+          "check_groups": [
+            "acl_runtime_superuser_and_input_validation"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-p0.sh"
+        }
+      ],
       "deliverable": "Multi-role/column/index privilege and unsafe-RLS negative tests, trusted tenant domains if adopted, no hits/snippets/count/example/cache/explain leakage, bounded source-version refill.",
       "dependencies": [
         "W-L09",
@@ -8636,6 +9036,28 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "command": "cargo test --locked -p pg-qdrant-edge-probe"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_owned_metadata_corruption",
+          "status": "passed",
+          "scope": "Later local three-test engine suite includes two malformed copied-JSON load failures, intact-copy recovery and unchanged original records with phrase/MaxSim checks. Unsafe host/shared-disk paths are refused. No positive ENOSPC, arbitrary bit-rot repair, production generation or PostgreSQL ACK claim.",
+          "source": "docs/p0-report.md",
+          "source_paths": [
+            "crates/edge-probe/src/fault_probes.rs",
+            "crates/edge-probe/tests/faults.rs"
+          ],
+          "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
+          "test": "metadata_corruption_and_unsafe_disk_environment_are_rejected",
+          "tests_passed": 3,
+          "tests_failed": 0,
+          "tests_ignored": 0,
+          "source_checkpoint": "Later local fault-probe iteration; not part of the recorded initial PostgreSQL CI tree.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "positive_enospc_verified": false
         }
       ],
       "deliverable": "Concurrent queries pin generations while mutations/late outputs/deletes/rebuild/optimize/restarts interleave; crash, disk-full and corruption cannot create false readiness or lost durable events.",
@@ -8745,7 +9167,7 @@
           "observed_on": "2026-10-08",
           "level": "source/API-reviewed",
           "status": "passed",
-          "scope": "CI and grouped update configuration are present; contract validator passes and rejects full-build, PG feature and default-feature drift. No remote CI run, cross-version migration or rollback result.",
+          "scope": "CI and grouped update configuration are present; contract validator passes and rejects full-build, PG feature and default-feature drift. This configuration review alone does not prove CI execution or upgrade/rollback; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
@@ -8757,6 +9179,34 @@
             "scripts/check_contracts.py",
             "scripts/dependency_report.py"
           ]
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_clean_container_diagnostic_ci",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "The recorded Docker builds install and run the locked normal and private-fault PostgreSQL diagnostic profiles as UID 10001. The completed CI has 10 normal and 12 private-fault checks. This does not verify newer helper sources, a product package, old-index migration or rollback.",
+          "check_groups": [
+            "install_and_honest_capabilities",
+            "real_sql_to_edge_smoke"
+          ],
+          "commands": [
+            "docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .",
+            "bash crates/pg_qdrant/tests/run-p0.sh",
+            "docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .",
+            "bash crates/pg_qdrant/tests/run-faults.sh"
+          ],
+          "normal_checks_passed": 10,
+          "fault_checks_passed": 12
         }
       ],
       "deliverable": "Grouped update bot/CI after actual manifest; release/API/license review, lock/pin updates, full probes/SQL/quality/security/fault combinations, old-index reopen or new generation, executed rollback and release notes.",
@@ -8816,7 +9266,7 @@
           "level": "compile-verified",
           "kind": "postgres_build",
           "status": "passed",
-          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. Actual database load and SQL/runtime behavior are unverified.",
+          "scope": "Normal PG17.11 extension links as an x86-64 ELF shared library. This linked-build record alone does not establish database execution; later CI evidence is recorded separately.",
           "source": "docs/p0-report.md",
           "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
           "full_capability_acceptance": false,
@@ -8868,6 +9318,34 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_clean_container_diagnostic_ci",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "The recorded Docker builds install and run the locked normal and private-fault PostgreSQL diagnostic profiles as UID 10001. The completed CI has 10 normal and 12 private-fault checks. This does not verify newer helper sources, a product package, old-index migration or rollback.",
+          "check_groups": [
+            "install_and_honest_capabilities",
+            "real_sql_to_edge_smoke"
+          ],
+          "commands": [
+            "docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .",
+            "bash crates/pg_qdrant/tests/run-p0.sh",
+            "docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .",
+            "bash crates/pg_qdrant/tests/run-faults.sh"
+          ],
+          "normal_checks_passed": 10,
+          "fault_checks_passed": 12
         }
       ],
       "deliverable": "Supported platform artifacts with library/control/install/upgrade SQL, tested clean installation/uninstall, current README/API/examples and executable operating/recovery runbooks.",
@@ -9069,6 +9547,32 @@
           "release_supported": false,
           "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17",
           "rust": "1.96.0"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_diagnostic_queue_cancel_runtime",
+          "status": "passed",
+          "source": "docs/evidence/p0-postgresql-ci.json",
+          "code_revision": "f5bda3519421ef294bac82b17c17957f9727b648",
+          "checkout_revision": "982adef4faaadd9831c2144b14bf155e89928ce0",
+          "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+          "ci_run": 37716391262,
+          "process_profile": "direct_worker",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "scope": "Two-session serialization, caller cancellation retaining active ownership, request/statement deadlines, cancelled queued work not executing and queue admission at a limit of eight pass in actual PostgreSQL. Native in-flight cancellation and general RSS/mmap/candidate budgets remain unverified.",
+          "check_groups": [
+            "two_sql_sessions_single_execution_owner",
+            "caller_cancel_retains_active_owner",
+            "request_deadline_and_statement_timeout",
+            "cancelled_queued_request_never_executes",
+            "bounded_queue_admission"
+          ],
+          "command": "bash crates/pg_qdrant/tests/run-p0.sh",
+          "queue_limit": 8,
+          "native_in_flight_cancellation": false
         }
       ],
       "deliverable": "Enforced queues, candidate/HasId/token/matrix/response bounds, engine threads and RSS/mmap, cancellation from SQL through every stage, overload behavior and resumable maintenance.",
@@ -9271,16 +9775,30 @@
     "report": "docs/p0-report.md",
     "engine_evidence": "docs/evidence/p0-engine.json",
     "dependency_evidence": "docs/dependency-baseline.json",
-    "source_identity": "Exact engine inputs/hashes are recorded in the engine evidence; the starting revision predates the implementation.",
+    "source_identity": "The PostgreSQL CI evidence fixes the tested head/merge/tree; the engine evidence fixes its original inputs. Later local helper/corruption checks are separate and do not inherit that CI result.",
     "p0_exit_passed": false,
-    "sql_runtime_verified": false,
+    "sql_runtime_verified": true,
     "product_completed": false,
     "release_supported": false,
     "postgres_normal_cdylib_linked": true,
     "postgres_schema_generated": true,
     "postgres_local_install_verified": true,
-    "container_runtime_verified": false,
-    "postgres_fault_cdylib_and_schema_verified": true
+    "container_runtime_verified": true,
+    "postgres_fault_cdylib_and_schema_verified": true,
+    "postgresql_ci_evidence": "docs/evidence/p0-postgresql-ci.json",
+    "verified_ci_head": "f5bda3519421ef294bac82b17c17957f9727b648",
+    "verified_ci_checkout": "982adef4faaadd9831c2144b14bf155e89928ce0",
+    "verified_ci_tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+    "diagnostic_sql_runtime_verified": true,
+    "sql_runtime_scope": "Recorded direct-worker P0 diagnostics only; source-table indexing, source permissions and public search remain unimplemented.",
+    "direct_worker_production_containment": "failed",
+    "managed_helper_comparison": "required_before_topology_acceptance",
+    "helper_postgresql_runtime_verified": false,
+    "metadata_corruption_runtime_verified": true,
+    "positive_enospc_runtime_verified": false,
+    "evidence_scope": "Every verification level applies only to its named probe. All product completion and release flags remain false.",
+    "helper_initial_standalone_observation": "normal_and_private_fault_pipe_scenarios_passed; final expanded-suite record pending",
+    "helper_hard_stop_runtime_verified": false
   },
   "remaining_p0_estimate_review": {
     "observed_on": "2026-10-08",
@@ -9299,7 +9817,8 @@
           "W-L08",
           "W-L11"
         ],
-        "assumption": "Local normal linking/schema/install results reproduce with provisioned native dependencies."
+        "assumption": "Local normal linking/schema/install results reproduce with provisioned native dependencies.",
+        "checkpoint_status": "Initial direct-worker clean installation and diagnostic SQL slice passed; current-source/profile and platform/license gates remain."
       },
       {
         "owner": "engine/registry",
@@ -9321,7 +9840,8 @@
           "I-14",
           "W-L10"
         ],
-        "assumption": "Disposable process and bounded memory/storage environments are available."
+        "assumption": "Disposable process and bounded memory/storage environments are available.",
+        "checkpoint_status": "Direct-worker diagnostic checks and negative isolation observation recorded; helper and remaining fault gates are open."
       },
       {
         "owner": "lexical/quality",
@@ -9345,9 +9865,12 @@
           "W-L10"
         ],
         "conditional_on": "Measured PostgreSQL worker failure domain is unacceptable.",
-        "assumption": "One-package deployment is retained; reuse only lifecycle/protocol portions proven safe."
+        "assumption": "One-package deployment is retained; reuse only lifecycle/protocol portions proven safe.",
+        "condition_status": "triggered_by_recorded_direct_worker_collateral; helper PostgreSQL/fault acceptance remains pending"
       }
     ],
-    "rule": "These overlap shared work and must not be added to existing capability estimates without allocation. The 5-10 day investigation budget is not a completion criterion."
+    "rule": "These overlap shared work and must not be added to existing capability estimates without allocation. The 5-10 day investigation budget is not a completion criterion.",
+    "status": "historical_pre_ci_allocations_retained; no new remaining-work estimate is claimed",
+    "superseding_evidence": "docs/p0-report.md"
   }
 }

@@ -15,7 +15,9 @@ import traceback
 PSQL = os.environ["PG_QDRANT_PSQL"]
 ARTIFACTS = Path(os.environ["PG_QDRANT_ARTIFACT_DIR"])
 FAULTS = os.environ.get("PG_QDRANT_FAULT_TESTS") == "1"
-REPORT = {"schema_version": 1, "stage": "P0", "status": "running", "checks": []}
+HELPER = os.environ.get("PG_QDRANT_MANAGED_HELPER") == "1"
+REPORT = {"schema_version": 1, "stage": "P0", "status": "running", "checks": [],
+          "process_profile": "managed_helper" if HELPER else "direct_worker"}
 
 
 def command(sql):
@@ -67,7 +69,7 @@ def wait_for(predicate, seconds=8):
 def idle():
     def is_idle():
         state = ping()
-        return state if state["active"] is None and state["queue_depth"] == 0 else None
+        return state if state["active"] is None and state["queue_depth"] == 0 and state["engine_ready"] else None
     return wait_for(is_idle)
 
 
@@ -101,6 +103,7 @@ def exercise():
     assert build["native_engine_cancellation"] is False
     assert build["engine"] == {"name": "qdrant-edge", "version": "0.8.0"}
     assert build["features"]["p0_fault_injection"] is FAULTS
+    assert build["features"]["p0_managed_helper"] is HELPER
     capabilities = jsql("SELECT qdrant.capabilities()")
     expected = {f"{prefix}{i:02}" for prefix, count in [("F", 20), ("V", 8), ("Q", 14), ("L", 12)] for i in range(1, count + 1)}
     assert {row["id"] for row in capabilities["capabilities"]} == expected
@@ -114,8 +117,12 @@ def exercise():
     owners = [json.loads(finish(process)[0])["worker_pid"] for process in starts]
     assert len(set(owners)) == 1
     owner_pid = owners[0]
-    assert ping()["worker_pid"] == owner_pid
-    record("concurrent_start_unique_owner", worker_pid=owner_pid)
+    state = ping()
+    assert state["worker_pid"] == owner_pid and state["engine_ready"]
+    assert (state["engine_pid"] != owner_pid) is HELPER
+    if HELPER:
+        assert scalar(f"SELECT count(*) FROM pg_stat_activity WHERE pid={state['engine_pid']}") == "0"
+    record("concurrent_start_unique_owner", worker_pid=owner_pid, engine_pid=state["engine_pid"])
 
     run("CREATE ROLE pgq_p0_unprivileged")
     expect_error("SET ROLE pgq_p0_unprivileged; SELECT qdrant_internal.p0_ping(1000)", "42501")
@@ -214,7 +221,8 @@ def wait_recovery():
 
 
 def spectator():
-    process = spawn("SET application_name='pgq_p0_spectator'; BEGIN; SELECT pg_sleep(30); COMMIT")
+    delay = 2 if HELPER else 30
+    process = spawn(f"SET application_name='pgq_p0_spectator'; BEGIN; SELECT pg_sleep({delay}); COMMIT")
     wait_for(lambda: scalar("SELECT count(*) FROM pg_stat_activity WHERE application_name='pgq_p0_spectator' AND state='active'") == "1")
     return process
 
@@ -229,30 +237,159 @@ def exercise_faults():
     record("caught_engine_thread_panic", worker_survived=True)
 
     for kind in ["sigkill", "abort"]:
-        owner_before = idle()["worker_pid"]
+        state_before = idle()
+        owner_before = state_before["worker_pid"]
+        engine_before = state_before["engine_pid"]
         observer = spectator()
         if kind == "sigkill":
-            os.kill(owner_before, signal.SIGKILL)
+            os.kill(engine_before, signal.SIGKILL)
         else:
             outcome = run("SELECT qdrant_internal.p0_fault('abort',5000)", check=False)
             assert outcome.returncode != 0
         out, err = observer.communicate(timeout=15)
         collateral = observer.returncode != 0
-        assert collateral, "expected PG17 shared-memory worker crash to terminate the companion session"
+        if HELPER:
+            assert not collateral, ("helper death must preserve companion SQL session", out, err)
+        else:
+            assert collateral, "expected PG17 shared-memory worker crash to terminate the companion session"
         wait_recovery()
         assert scalar("SELECT value FROM p0_recovery_marker WHERE id=1") == "committed before worker failure"
         state = jsql("SELECT qdrant_internal.p0_start_worker(5000)")
-        assert state["worker_pid"] != owner_before
-        record(f"worker_{kind}_collateral_recovery", companion_session_terminated=collateral,
+        if HELPER:
+            assert state["worker_pid"] == owner_before and state["engine_pid"] != engine_before
+        else:
+            assert state["worker_pid"] != owner_before
+        record(f"{'helper' if HELPER else 'worker'}_{kind}_collateral_recovery", companion_session_terminated=collateral,
                committed_postgresql_marker_retained=True, original_worker_pid=owner_before,
-               replacement_worker_pid=state["worker_pid"])
+               replacement_worker_pid=state["worker_pid"], original_engine_pid=engine_before,
+               replacement_engine_pid=state["engine_pid"])
+
+    if HELPER:
+        exercise_helper_operation_budget()
+        exercise_helper_parent_exit()
+        exercise_helper_restart_exhaustion()
 
     REPORT["unexecuted_fault_gates"] = [
         {"name": "oom", "status": "not_run", "reason": "requires an isolated memory cgroup and recorded victim/recovery evidence"},
         {"name": "disk_full", "status": "not_run", "reason": "requires a bounded fault filesystem; never fill the host filesystem"},
         {"name": "engine_disk_corruption", "status": "not_run", "reason": "requires durable generation/replay integration beyond the disposable probe"},
     ]
-    REPORT["background_worker_failure_isolation"] = "not_sufficient_for_no_collateral_session_failure"
+    REPORT["background_worker_failure_isolation"] = (
+        "native_engine_helper_failure_preserved_companion_sessions_in_this_probe" if HELPER else
+        "not_sufficient_for_no_collateral_session_failure")
+
+
+def exercise_helper_parent_exit():
+    state = idle()
+    worker_pid, engine_pid = state["worker_pid"], state["engine_pid"]
+    active = spawn("SELECT qdrant_internal.p0_delay(10000,15000)")
+    wait_for(lambda: ping()["active"] is not None)
+    os.kill(worker_pid, signal.SIGTERM)
+    out, err = active.communicate(timeout=5)
+    assert active.returncode != 0, (out, err)
+
+    def stopped():
+        try:
+            # A zombie has no executing native work; init may reap it later.
+            stat = Path(f"/proc/{engine_pid}/stat").read_text()
+            return stat.rsplit(")", 1)[1].strip().split()[0] == "Z"
+        except FileNotFoundError:
+            return True
+
+    wait_for(stopped, seconds=5)
+    replacement = jsql("SELECT qdrant_internal.p0_start_worker(5000)")
+    assert replacement["worker_pid"] != worker_pid and replacement["engine_pid"] != engine_pid
+    assert replacement["engine_ready"]
+    assert jsql("SELECT qdrant_internal.p0_delay(1,1000)")["completed_delay_ms"] == 1
+    record("helper_supervisor_exit_closes_native_owner", old_engine_stopped=True,
+           replacement_owner_ready=True, shutdown_signal="SIGTERM")
+
+
+def exercise_helper_operation_budget():
+    state = idle()
+    supervisor_pid, engine_pid = state["worker_pid"], state["engine_pid"]
+    assert state["helper_start_attempts"] == 3
+    assert state["helper_operation_limit_ms"] == 125000
+    observer = spawn("SET application_name='pgq_p0_timer_observer'; SELECT pg_sleep(130)")
+    active = spawn("SET application_name='pgq_p0_timer_caller'; SELECT qdrant_internal.p0_delay(10000,15000)")
+    try:
+        wait_for(lambda: ping()["active"] is not None)
+        os.kill(engine_pid, signal.SIGSTOP)
+        cancel_application("pgq_p0_timer_caller")
+        finish(active, expected_error="57014")
+        held = ping()
+        assert held["engine_pid"] == engine_pid and held["active"] is not None
+        assert held["worker_pid"] == supervisor_pid
+        remaining = max(0, (125000 - held["active"]["elapsed_ms"]) / 1000)
+        begin = time.monotonic()
+
+        def replacement_ready():
+            current = ping()
+            assert current["worker_pid"] == supervisor_pid
+            if current["engine_pid"] == engine_pid:
+                assert current["active"] is not None, "cancellation released a live native owner"
+            return current if current["engine_ready"] and current["engine_pid"] != engine_pid else None
+
+        # This long assertion runs only in the disposable remote CI profile.
+        # Each SQL poll remains bounded; the actual 125s limit is not shortened.
+        deadline = time.monotonic() + 140
+        replacement = None
+        while time.monotonic() < deadline:
+            replacement = replacement_ready()
+            if replacement:
+                break
+            time.sleep(0.2)
+        assert replacement is not None, "helper process-stop budget did not replace the stopped engine"
+        elapsed = time.monotonic() - begin
+        assert elapsed >= remaining - 0.5, "helper stopped before its independent execution budget"
+        assert replacement["helper_start_attempts"] == 4
+        last_exit = replacement["helper_last_exit"]
+        assert last_exit["engine_pid"] == engine_pid and last_exit["signal"] == signal.SIGKILL
+        assert last_exit["stop_reason"] == "execution_budget"
+        finish(observer, timeout=12)
+        record("helper_operation_budget_stops_frozen_engine", fault="SIGSTOP", configured_limit_ms=125000,
+               observed_remaining_seconds=elapsed, caller_cancelled=True, native_cancellation=False,
+               supervisor_preserved=True, companion_session_completed=True,
+               stop_reason=last_exit["stop_reason"], stopped_engine_pid=engine_pid,
+               replacement_engine_pid=replacement["engine_pid"])
+    finally:
+        # A failed assertion must not leave our deliberately stopped child alive.
+        try:
+            stat = Path(f"/proc/{engine_pid}/stat").read_text()
+            if stat.rsplit(")", 1)[1].strip().split()[0] != "Z":
+                os.kill(engine_pid, signal.SIGKILL)
+        except FileNotFoundError:
+            pass
+        for process in (active, observer):
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=3)
+
+
+def exercise_helper_restart_exhaustion():
+    # The preceding supervisor-replacement check starts a fresh attempt budget.
+    state = idle()
+    assert state["helper_start_attempts"] == 1
+    supervisor_pid = state["worker_pid"]
+    for attempt in range(1, 5):
+        state = idle()
+        assert state["helper_start_attempts"] == attempt
+        os.kill(state["engine_pid"], signal.SIGKILL)
+        if attempt < 4:
+            previous_pid = state["engine_pid"]
+            wait_for(lambda: (current := ping())["engine_ready"] and current["engine_pid"] != previous_pid)
+    def exhausted_status():
+        current = ping()
+        return current if current["helper_restart_exhausted"] else None
+
+    exhausted = wait_for(exhausted_status)
+    assert exhausted["worker_pid"] == supervisor_pid and not exhausted["engine_ready"]
+    assert exhausted["engine_pid"] is None and exhausted["helper_start_attempts"] == 4
+    time.sleep(0.5)
+    assert ping()["helper_start_attempts"] == 4
+    expect_error("SELECT qdrant_internal.p0_delay(1,1000)", "55000")
+    record("helper_restart_budget_exhaustion_is_visible", start_attempts=4, automatic_restarts=3,
+           supervisor_preserved=True, unavailable_requests_refused=True)
 
 
 try:

@@ -43,15 +43,27 @@ RUN cargo fmt --all -- --check \
     && cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1 \
     && cargo run --locked -p pg-qdrant-edge-probe >/tmp/edge-probe.json
 
-# Fault injection is a separate image build and is never a release feature.
+# Fault injection and the helper comparison are explicit P0-only image choices.
 ARG P0_FAULTS=0
-RUN if [ "${P0_FAULTS}" = 1 ]; then \
-      cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml --no-default-features \
-        --features "pg17 p0-fault-injection" --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked; \
-    else \
-      cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml --no-default-features \
-        --features pg17 --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked; \
-    fi
+ARG P0_HELPER=0
+RUN pgq_features=pg17 \
+    && if [ "${P0_FAULTS}" = 1 ]; then \
+         pgq_features="${pgq_features} p0-fault-injection"; \
+       fi \
+    && if [ "${P0_HELPER}" = 1 ]; then \
+         pgq_features="${pgq_features} p0-managed-helper"; \
+         if [ "${P0_FAULTS}" = 1 ]; then \
+           cargo build --locked -p pg-qdrant-helper --features p0-fault-injection; \
+         else \
+           cargo build --locked -p pg-qdrant-helper; \
+         fi \
+         && install -m 755 target/debug/pg_qdrant_p0_helper \
+           "$("${PGRX_PG_CONFIG_PATH}" --bindir)/pg_qdrant_p0_helper"; \
+       fi \
+    && cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml \
+         --no-default-features --features "${pgq_features}" \
+         --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked
+ENV PG_QDRANT_MANAGED_HELPER=${P0_HELPER}
 RUN mkdir -p /src/artifacts \
     && dpkg-query -W -f='${binary:Package}\t${Version}\n' >/src/artifacts/native-packages.tsv \
     && useradd --create-home --uid 10001 builder \

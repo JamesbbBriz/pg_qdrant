@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "combined_build_and_install_verified_postgres_runtime_pending",
+  "status": "p0_direct_worker_sql_verified_helper_comparison_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -91,7 +91,28 @@
     "fault_injection_default": false,
     "container_base": "ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
     "native_package_lock_complete": false,
-    "container_execution_verified": false
+    "container_execution_verified": true,
+    "container_evidence": "evidence/p0-postgresql-ci.json",
+    "current_source_container_execution_verified": false,
+    "managed_helper_default": false,
+    "prototype_profiles": [
+      [
+        "pg17"
+      ],
+      [
+        "pg17",
+        "p0-fault-injection"
+      ],
+      [
+        "pg17",
+        "p0-managed-helper"
+      ],
+      [
+        "pg17",
+        "p0-managed-helper",
+        "p0-fault-injection"
+      ]
+    ]
   },
   "build_evidence": [
     {
@@ -103,25 +124,27 @@
     },
     {
       "kind": "engine_runtime",
-      "command": "cargo test --locked -p pg-qdrant-edge-probe",
+      "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
       "status": "passed",
       "rust": "1.96.0",
       "evidence": "evidence/p0-engine.json",
-      "scope": "Two tests pass: 16 synthetic engine check groups and actual queries after explicit-flush/SIGKILL reopen. No PostgreSQL or quality claim."
+      "scope": "Three tests pass: 16 synthetic engine check groups, actual queries after explicit-flush/SIGKILL reopen, and malformed owned metadata rejection with intact-copy recovery. No product PostgreSQL indexing or quality claim."
     },
     {
       "kind": "postgres_check",
       "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17",
       "status": "passed",
       "rust": "1.96.0",
-      "scope": "Combined Rust types, native PG17.11 bindings and cshim compile. Linking and installation are separate gates."
+      "scope": "Combined Rust types, native PG17.11 bindings and cshim compile. Linking and installation are separate gates.",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648"
     },
     {
       "kind": "postgres_fault_check",
       "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17,p0-fault-injection",
       "status": "passed",
       "rust": "1.96.0",
-      "scope": "Private fault feature compiles. No fault experiment outcome is implied."
+      "scope": "Private fault feature compiles. No fault experiment outcome is implied.",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648"
     },
     {
       "kind": "cargo_pgrx_version",
@@ -129,35 +152,74 @@
       "status": "passed",
       "rust": "1.96.0",
       "version": "0.19.3",
-      "scope": "Exact matching published CLI installed in locked mode and version checked."
+      "scope": "Exact matching published CLI installed in locked mode and version checked.",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648"
     },
     {
       "kind": "postgres_build",
       "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
       "status": "passed",
       "rust": "1.96.0",
-      "scope": "PostgreSQL17.11 extension cdylib linked with pgrx0.19.3 and Edge0.8.0. Installation and SQL runtime remain separate gates."
+      "scope": "PostgreSQL17.11 extension cdylib linked with pgrx0.19.3 and Edge0.8.0. Installation and SQL runtime remain separate gates.",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648"
     },
     {
       "kind": "postgres_schema",
       "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features pg17 --cargo=--locked --skip-build --out \"$PG_QDRANT_SCHEMA_OUT\"",
       "status": "passed",
       "rust": "1.96.0",
-      "scope": "Matching CLI discovers9 SQL entities: 2 schemas, 6 functions and final privilege block. Generated SQL inspected."
+      "scope": "Matching CLI discovers9 SQL entities: 2 schemas, 6 functions and final privilege block. Generated SQL inspected.",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648"
     },
     {
       "kind": "postgres_install",
       "command": "cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features pg17 --cargo=--locked",
       "status": "passed",
       "rust": "1.96.0",
-      "scope": "Shared library, control file and pg_qdrant--0.0.1.sql installed into the selected PG17.11 installation. CREATE EXTENSION and SQL runtime still require a disposable non-root cluster."
+      "scope": "Shared library, control file and SQL installed into PG17.11. CREATE EXTENSION and actual SQL are separately recorded in postgres_runtime evidence.",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648"
     },
     {
       "kind": "postgres_fault_build_schema",
       "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features \"pg17 p0-fault-injection\" --cargo=--locked --out \"$PG_QDRANT_FAULT_SCHEMA_OUT\"",
       "status": "passed",
       "rust": "1.96.0",
-      "scope": "Private-feature shared library linked and7-function SQL generated. The normal6-function installed schema excludes the fault entry point. No fault runtime outcome is implied."
+      "scope": "Private-feature shared library linked and 7-function SQL generated. The normal 6-function schema excludes the fault entry point. Runtime results are recorded separately.",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648"
+    },
+    {
+      "kind": "postgres_runtime",
+      "command": "docker run --rm --memory=5g --cpus=2 pg-qdrant-p0",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-postgresql-ci.json",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648",
+      "scope": "10 normal-profile SQL checks in non-root PostgreSQL17.11, including real 16-group Edge smoke. Private diagnostic permissions do not prove source-table or RLS authorization."
+    },
+    {
+      "kind": "postgres_fault_runtime",
+      "command": "docker run --rm --memory=5g --cpus=2 pg-qdrant-p0-faults bash crates/pg_qdrant/tests/run-faults.sh",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-postgresql-ci.json",
+      "verified_source_commit": "f5bda3519421ef294bac82b17c17957f9727b648",
+      "scope": "12 private-fault checks measured caught-panic survival and companion SQL session termination after direct-worker SIGKILL/native abort. Committed PostgreSQL marker survived. This is evidence against the direct-worker isolation boundary."
+    },
+    {
+      "kind": "postgres_helper_build_schema",
+      "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features \"pg17 p0-managed-helper\" --cargo=--locked --out \"$PG_QDRANT_SCHEMA_OUT\"",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-helper-local.json",
+      "scope": "Both helper normal and private-fault profiles linked and generated SQL (6 and 7 functions). Current direct profiles also regenerated. Actual helper PostgreSQL runtime remains pending CI."
+    },
+    {
+      "kind": "helper_runtime",
+      "command": "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --out artifacts/helper-pipes.json",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-helper-local.json",
+      "scope": "7 normal and 8 private-fault standalone pipe/process checks after matching locked builds, including actual Edge execution and pure-controller SIGKILL cleanup. Not PostgreSQL failure-containment evidence."
     }
   ]
 }

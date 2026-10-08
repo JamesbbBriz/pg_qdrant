@@ -36,8 +36,10 @@ On 2026-10-08, with Rust 1.96.0 on Linux x86_64 and the repository lockfile:
 
 | Command | Observed result |
 | --- | --- |
-| `cargo test --locked -p pg-qdrant-edge-probe` | Actual engine smoke and explicit-flush/SIGKILL integration tests passed; 2 tests, 0 failed or ignored. |
+| `cargo test --locked -p pg-qdrant-edge-probe` | Actual engine smoke, explicit-flush/SIGKILL recovery, owned metadata corruption and unsafe disk-environment refusal passed; 3 tests, 0 failed or ignored. |
 | `target/debug/pg-qdrant-edge-probe` after the locked test build | All 16 synthetic check groups passed; engine version `0.8.0`. |
+| `target/debug/pg-qdrant-edge-probe --corruption-probe` | Both malformed copied-metadata loads returned errors; intact-copy recovery, original preservation, representation equality and phrase/MaxSim queries passed. |
+| `target/debug/pg-qdrant-edge-probe --disk-full-probe` without `PG_QDRANT_ENOSPC_DIR` | `status: "not_run"`, no disk writes attempted; a dedicated tmpfs is required for positive ENOSPC evidence. |
 
 These commands compiled and linked the engine harness, including exhaustive
 surface sentinels. They do not prove that the PostgreSQL extension links,
@@ -48,6 +50,78 @@ running the commands again; this record is not a blanket compatibility claim.
 pointers and makes no PostgreSQL calls. A SQL feasibility harness may invoke
 it only in its designated engine owner. Running it in an engine thread does
 not establish crash isolation from the process owning that thread.
+
+## Standalone fault experiments
+
+These binary modes are opt-in. PostgreSQL never invokes them. The default test
+suite adds one safe test for corrupted owned copies and refusal of unsafe disk
+paths; it does not fill a filesystem. Fault reports use separate `kind` values,
+so they must not be confused with the 16-group normal smoke report.
+
+```sh
+cargo run --locked -p pg-qdrant-edge-probe -- --corruption-probe
+cargo run --locked -p pg-qdrant-edge-probe -- --disk-full-probe
+```
+
+The corruption probe builds the same eight source identities and four named
+representations with a 64 KiB test WAL segment capacity. It explicitly flushes
+and closes this owned fixture, then copies it into separate owned temporary
+directories. Copying preserves zero extents in Edge's large sparse storage
+pages. Each copy is limited to 512 MiB of logical file content scanned,
+64 MiB of content written, 512 files and 16 directory levels. It writes invalid
+JSON into `edge_config.json` in one copy and
+`segments/<owned-segment>/segment.json` in another. Each `EdgeShard::load` must
+return a real error, and each damaged copy reports `ready: false`. An intact
+recovery copy and the original must reopen with identical retrieved records and
+pass phrase/MaxSim queries. This tests these two metadata corruption cases;
+it does not demonstrate arbitrary bit-rot detection or in-place repair.
+The file names and load paths come from the fixed release's
+[shard configuration](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/config/shard.rs)
+and [segment state code](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/segment/segment_ops.rs).
+
+The disk probe requires `PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults`. Before any write,
+it checks all of these conditions:
+
+- Linux, the exact canonical path `/pgq-p0-faults`, and no symlink substitution.
+- An initially empty mount, owned by the effective UID with permissions `0700`.
+- Kernel mountinfo identifies that path as the root of a dedicated writable
+  tmpfs, with no other mount aliases for its device in the current namespace.
+- `/usr/bin/stat` confirms tmpfs and reports total capacity no greater than
+  64 MiB. Missing/unparseable filesystem information refuses the experiment.
+- No PostgreSQL data marker in the path's ancestors; any configured `PGDATA`
+  or `PG_QDRANT_PGDATA` must resolve, be disjoint, and use a different device.
+
+An ordinary temporary directory or shared `/dev/shm` never qualifies. Missing
+configuration returns JSON `status: "not_run"` and exit code 0. An explicitly
+unsafe environment returns `status: "not_run"`, `reason_code:
+"unsafe_environment"`, and exit code 2, without attempting disk writes.
+
+For a locally built `Dockerfile.p0` image, the intended isolated invocation is:
+
+```sh
+docker run --rm --user 10001:10001 --memory=5g --cpus=2 \
+  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \
+  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+  pg-qdrant-p0 /src/target/debug/pg-qdrant-edge-probe --disk-full-probe
+```
+
+After preparing and flushing the bounded fixture, the probe writes an owned
+filler until the OS returns ENOSPC (errno 28), with a hard total-byte limit no
+greater than the validated filesystem capacity and a 15-second fill limit.
+It requires the public `set_hnsw_config` persistence call to report ENOSPC and
+the persisted configuration bytes to remain unchanged. It separately records
+whether the in-memory configuration changed; disk atomicity is not assumed to
+imply an in-memory transaction. The filler is removed before retry, reopen or
+normal error unwinding. A successful retry must survive explicit flush/reopen
+and preserve all fixture records and the phrase/MaxSim results. Only the owned
+experiment directory is removed; the mount must be empty after cleanup.
+
+This is a configuration-save failure/retry experiment. WAL growth, dirty vector
+ingestion, PostgreSQL outbox ACK semantics, power-loss durability, cgroup OOM and
+whole-instance isolation remain separate gates. A 32 MiB tmpfs is a storage
+limit, not an engine RSS limit or evidence of OOM handling. The positive ENOSPC
+path requires the dedicated mount and must be recorded as unexecuted until a
+report with `status: "passed"` is captured from that environment.
 
 ## Checks and limits
 

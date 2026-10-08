@@ -2554,11 +2554,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "pg-qdrant-helper"
+version = "0.0.1"
+dependencies = [
+ "libc",
+ "pg-qdrant-edge-probe",
+ "pg-qdrant-protocol",
+ "serde_json",
+]
+
+[[package]]
+name = "pg-qdrant-protocol"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "pg_qdrant"
 version = "0.0.1"
 dependencies = [
  "libc",
  "pg-qdrant-edge-probe",
+ "pg-qdrant-protocol",
  "pgrx",
  "serde",
  "serde_json",

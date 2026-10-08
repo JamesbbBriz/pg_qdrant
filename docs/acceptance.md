@@ -1,6 +1,6 @@
 # Stage acceptance and release gates
 
-Status: required acceptance, with implementation evidence pending. Checklists define exits, not a claim that those exits have passed. The [capability contract](capabilities.md) retains every formal requirement. The [work-item inventory](work-items.json) maps all 54 capability IDs and cross-cutting integration work to owners and deliverables. [User journeys](user-journeys.md) are proposed SQL contracts until integration tests prove them executable.
+Status: required acceptance, with partial engine and PostgreSQL diagnostic evidence recorded. No complete P0 exit or release is declared. Checklists define exits, not a claim that those exits have passed. The [capability contract](capabilities.md) retains every formal requirement. The [work-item inventory](work-items.json) maps all 54 capability IDs and cross-cutting integration work to owners and deliverables. [User journeys](user-journeys.md) are proposed SQL contracts until integration tests prove them executable. The [P0 checkpoint](p0-report.md) records the measured direct-worker isolation failure and the required helper comparison.
 
 ## Evidence rules
 
@@ -32,7 +32,17 @@ P0 is a decision gate. A 5–10 engineering-day investigation budget is a stop-l
 | P0-FAULT | Disposable-cluster experiments for Rust panic, native process crash, SIGKILL, constrained-memory/OOM and disk-full/I/O failure; observe affected PostgreSQL sessions, instance restart, owner reacquisition, on-disk state and recovery |
 | P0-DECISION | Go/no-go ADR cites the preceding evidence, accepts a process topology, records unavailable capabilities and alternatives, and revises work/critical-path estimates |
 
-The process choice remains open until P0-FAULT. An engine inside a PostgreSQL background worker is not assumed to isolate a native crash from the instance. If its failure domain is unacceptable, test a helper process shipped and managed by the same installation. This preserves the one-package product experience without making an independently managed network server the default.
+The process choice remains open until the necessary P0-FAULT evidence supports it. The [recorded PostgreSQL CI](evidence/p0-postgresql-ci.json) passed 10 normal and 12 private-fault diagnostic checks at head `f5bda3519421ef294bac82b17c17957f9727b648`. Direct owner SIGKILL and native abort both terminated the companion SQL session; the committed PostgreSQL marker survived recovery. These expected fault-test assertions passed while the production containment requirement failed. The [architecture ADR](adr/0001-embedded-engine-boundary.md) therefore requires a helper process shipped and managed by the same installation to be evaluated before topology acceptance. This preserves the one-package product experience without making an independently managed network server the default.
+
+The following distinctions apply to the next P0 evidence:
+
+- The direct-worker control profile keeps its companion-session termination assertions. The helper profile must separately require companion-session and supervisor survival when the native helper fails; it cannot pass by weakening the control assertions.
+- Helper ownership, EOF/parent-death behavior, replacement ordering, restart exhaustion and its hard process-stop limit require named tests. Source implementation of a limit is not proof that its failure path works.
+- Standalone helper pipe tests do not prove PostgreSQL containment. Their source/feature identity and observed check counts are separate from the earlier PostgreSQL CI tree.
+- The later three-test engine suite adds malformed owned-metadata rejection and intact-copy recovery. It does not prove arbitrary corruption detection, source reconstruction or PostgreSQL durable ACK behavior.
+- A positive ENOSPC gate requires a dedicated bounded fault filesystem and a report with `status: "passed"`. An omitted environment returns `not_run` with exit code 0 and cannot pass that gate. Storage capacity and engine RSS/OOM are separate constraints.
+
+Actual `CREATE EXTENSION`, diagnostic owner/ACL/deadline/cancellation/backpressure behavior and real Edge calls now have direct-worker SQL evidence. Source identity/rechecks, product vector/array inputs, helper PostgreSQL containment, OOM, positive ENOSPC, dirty recovery, full analyzer quality and the overall topology decision remain open. No P0 requirement is removed by the successful diagnostic run.
 
 For full dependency-graph failures, record the exact missing package/compiler/API/native requirement and whether it is an environmental acquisition problem or a version incompatibility. Do not substitute qdrant-client, advertise an unbuilt dependency graph, or change pins without reviewing the [upgrade contract](dependencies.md).
 
@@ -121,7 +131,7 @@ Rich lexical quality needs a chosen path before the core Alpha; the full P4 acce
 
 | Release class | Minimum honest claim | Required exits |
 | --- | --- | --- |
-| Source feasibility work | Build/probe source with exact passed and blocked results | No installable-extension or production claim; P0 findings identified individually |
+| Source feasibility work | Build/probe source and specifically evidenced diagnostic installation/runtime, with exact passed and blocked results | Diagnostic evidence is named individually; no source-table indexing or production claim; all unfinished P0 requirements remain |
 | `0.0.x` preview | A working declared subset in a clean tested environment | Executable declared journey, corresponding transaction/permission/failure gates, scoped P5 packaging/docs/licenses; explicit remaining P0–P4 work |
 | `0.1` core | Reliable local text plus declared balanced/precision and operating model | All necessary P0, P1, P2 and P3 correctness/recovery/security exits; scoped P5 clean installation and upgrade; pending advanced scope retained |
 | Complete formal product | Full 54-item product coverage with explicit supported/unsupported decisions | P4 and P5, all required slices/combinations, quality and operational evidence; a justified unsupported native input is clearly distinct from implemented support |
