@@ -4,7 +4,7 @@
 
 Full-text, vector, and multi-stage hybrid search over the data you already keep in PostgreSQL.
 
-> **Status: design and feasibility stage.** This repository currently documents the intended product and proposed architecture. There is no installable extension, implemented SQL API, or published benchmark yet. Features and examples below are planned, not available functionality.
+> **Status: P0 feasibility implementation.** The repository now includes an exact-version Rust workspace, Cargo.lock, public Edge API probes, and a restricted PostgreSQL worker/IPC prototype. The source-table indexing and search product described below is not implemented or release-supported. Private feasibility probes are not a production extension or a published benchmark.
 
 ## The goal
 
@@ -61,11 +61,32 @@ Typo tolerance, synonyms, query syntax, proximity, highlighting, and autocomplet
 
 ## Dependencies and upstream upgrades
 
-The design depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. The initial exact-version candidates are Edge `0.8.0` and pgrx/cargo-pgrx `0.19.3`; the combined build has not been validated.
+The design depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. The initial exact-version candidates are Edge `0.8.0` and pgrx/cargo-pgrx `0.19.3`; validation of the combined build and PostgreSQL runtime is tracked in the version baseline.
 
 Use released public APIs through an engine adapter. Track tokenizer configuration, model contracts, SQL API versions, and on-disk generations separately from dependency versions. An upstream update must pass capability, quality, authorization, lifecycle, and migration checks before it becomes a supported release.
 
-See the [dependency and upgrade policy](docs/dependencies.md), the [version baseline](docs/dependency-baseline.json), and the [capability coverage contract](docs/capabilities.md). These describe planned dependencies and release gates; there is no compiled dependency graph, Cargo.lock, active update bot, or upgrade CI yet.
+See the [dependency and upgrade policy](docs/dependencies.md), the [version baseline](docs/dependency-baseline.json), and the [capability coverage contract](docs/capabilities.md). The repository includes a resolved Cargo.lock, a machine-readable dependency/features/license inventory, and P0 CI/update-bot configuration. Build and runtime evidence is recorded separately; configuration is not proof that CI or an update bot has run.
+
+## Feasibility development
+
+The supported product workflow remains the target described below. To run the
+standalone engine experiments with Rust 1.96.0 and a C toolchain:
+
+```sh
+cargo check --locked -p pg-qdrant-edge-probe
+cargo run --locked -p pg-qdrant-edge-probe
+cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1
+```
+
+The probe uses the published Edge crate directly. Synthetic fixtures exercise
+local BM25, dense/sparse/MaxSim, fusion, text constraints, grouping and persistence;
+they do not establish production retrieval quality. See the [probe inventory](crates/edge-probe/README.md)
+and [PostgreSQL prototype](crates/pg_qdrant/README.md) for exact scope and commands.
+
+[User journeys](docs/user-journeys.md), [phase acceptance](docs/acceptance.md),
+the [P0 evidence report](docs/p0-report.md), and the [work ledger](docs/work-items.json) retain all 54 formal capabilities and
+integration work. [Build instructions](docs/build.md) distinguish configured,
+compiled, runtime-tested, and release-supported environments.
 
 ## Search plans
 
@@ -198,7 +219,7 @@ Rebuilds are intended to construct and catch up a new generation before switchin
 
 ## Roadmap
 
-All milestones below are planned.
+P0 is in progress. P1–P5 remain pending; the work ledger records their complete scope.
 
 | Milestone | Exit condition |
 | --- | --- |
@@ -209,7 +230,7 @@ All milestones below are planned.
 | **P4: Advanced retrieval** | Visual/explore plans, feedback, MMR, formulas, facets/matrices, and instant search have tested contracts and examples |
 | **P5: Distribution** | Clean-install packages, CI, installation/upgrade documentation, compatibility matrix, licenses, and reproducible examples |
 
-The initial platform candidate is Linux x86_64 with PostgreSQL 17. The Rust, pgrx, and Edge version combination has not been validated. Other PostgreSQL majors, operating systems, and managed PostgreSQL services are not supported claims at this stage.
+The initial platform candidate is Linux x86_64 with PostgreSQL 17. The exact Rust, pgrx, and Edge combination and its current evidence are recorded in the version baseline. Other PostgreSQL majors, operating systems, and managed PostgreSQL services are not supported claims at this stage.
 
 Future benchmark reports should separate retrieval quality from engine efficiency and report model inputs, hardware, candidate budgets, latency, memory, indexing, updates, and recovery. There are no performance claims yet.
 
@@ -223,6 +244,6 @@ Use [GitHub Issues](https://github.com/JamesbbBriz/pg_qdrant/issues) to share co
 
 ## License and project identity
 
-Apache-2.0 is the proposed license for independently developed project code; the license has not been finalized or added to this repository. Do not assume upstream dependency licenses automatically license this repository. A license and required third-party notices must accompany a code release.
+Independently developed project code is licensed under [Apache-2.0](LICENSE). Dependencies retain their own licenses. [NOTICE](NOTICE) and the [resolved dependency inventory](docs/dependency-graph.json) record attribution and package-declared licensing; complete third-party distribution notices remain a release gate.
 
 pg_qdrant is an independent community project and is not an official Qdrant product.

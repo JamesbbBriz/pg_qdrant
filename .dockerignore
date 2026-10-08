@@ -1,0 +1,7 @@
+.git
+target
+artifacts
+*.log
+.DS_Store
+**/__pycache__
+*.pyc

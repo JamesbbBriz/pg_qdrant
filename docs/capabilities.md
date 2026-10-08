@@ -1,6 +1,6 @@
 # Capability coverage contract
 
-Status: planned product scope. This document maps the intended embedded retrieval surface to dependencies, extension work, and acceptance conditions. It does not claim that any SQL function or integration test exists yet.
+Status: formal product scope with P0 probes in progress. This document maps the intended embedded retrieval surface to dependencies, extension work, and acceptance conditions. The repository contains private feasibility SQL functions and tests; it does not yet provide the source-table indexing/search product or any release-supported capability.
 
 Baseline: [dependency versions and upgrade policy](dependencies.md). Public API/source inspection refers to Qdrant Edge `0.8.0`; rolling Qdrant Server documentation is supplementary, not a replacement for that version's embedded API.
 
@@ -8,13 +8,13 @@ Baseline: [dependency versions and upgrade policy](dependencies.md). Public API/
 
 Each capability ID must acquire: input/configuration contract, dependency/API mapping, owner, SQL exposure or managed internal use, budgets, authorization semantics, compile probe, runtime acceptance test, example, and upgrade/rebuild classification.
 
-Evidence progresses through source/API-reviewed, compile-verified, engine-runtime-verified, SQL-integration-verified, and release-supported. All extension implementation is currently planned. Source review is not implementation evidence.
+Evidence progresses through source/API-reviewed, compile-verified, engine-runtime-verified, SQL-integration-verified, and release-supported. Product implementation remains pending. Public API compile sentinels and synthetic runtime probes are recorded in the [P0 inventory](../crates/edge-probe/README.md); their scope is narrower than full product acceptance. Source review is not implementation evidence. Every ID has a detailed owner, contract and acceptance entry in the [work ledger](work-items.json).
 
 Every public Edge query/match variant, vector/storage kind, payload-index schema, and read/update/lifecycle operation must be mapped to an ID, used internally, or explicitly marked outside the product scope. Newly introduced upstream variants require a mapping decision before an upgraded release. A complete coverage inventory does not mean all capabilities are implemented or that every combination is valid.
 
 ## Proposed capability discovery
 
-Add a versioned `qdrant.capabilities(index_name text DEFAULT NULL) -> jsonb` interface during implementation. This is an API proposal, not a callable function today.
+Add a versioned `qdrant.capabilities(index_name text DEFAULT NULL) -> jsonb` interface during implementation. The current P0 function reports the 54 planned IDs and rejects index-specific requests because the index catalog does not exist yet. Full index-aware discovery remains a product requirement.
 
 Without an index it should report extension/engine versions, build features, API support and capability status. With an index it should also report effective lexical backend, generation, configured representations, and readiness or rejection reasons. Keep these distinctions explicit: upstream primitive exists, adapter supports it, feature is release-tested, and this index has the necessary data.
 

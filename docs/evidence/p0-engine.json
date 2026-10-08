@@ -1,0 +1,336 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_engine_evidence",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "rust": "1.96.0"
+  },
+  "source_inputs": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "140a29205f639aa60493be7f96b9fcac168a026b46273523454c965e7156110b"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "4e733bca0696a21e126783f5b6c0088fee326820110524d27f18ffaf01aaee17"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+    },
+    {
+      "path": "crates/edge-probe/Cargo.toml",
+      "sha256": "cf6109fc8f380c82b97f26985249d5b4430e9cd5483a7a6e426404cf95a9bbc2"
+    },
+    {
+      "path": "crates/edge-probe/src/api_inventory.rs",
+      "sha256": "4424956a0d98b7364124ac0d45136b7345aee843ae436b314e70574359e7ba8f"
+    },
+    {
+      "path": "crates/edge-probe/src/lib.rs",
+      "sha256": "cb5b2e24a3d46be56e8dd58d614948101ad7c31e9598761099c4735bb242a6df"
+    },
+    {
+      "path": "crates/edge-probe/src/main.rs",
+      "sha256": "e0fdb371c0dd6295e951fe2dd8702d0b12bd81be015f817e1b3283332bf91a71"
+    },
+    {
+      "path": "crates/edge-probe/tests/persistence.rs",
+      "sha256": "006e71319eb123f9f35290d692b0d387d84c63e1efe069b5b3f4fa212988fc15"
+    }
+  ],
+  "commands": [
+    {
+      "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
+      "exit_code": 0,
+      "tests_passed": 2,
+      "tests_failed": 0,
+      "tests_ignored": 0,
+      "scope": [
+        "engine smoke suite",
+        "explicit_flush_survives_sigkill_without_drop"
+      ]
+    },
+    {
+      "command": "target/debug/pg-qdrant-edge-probe",
+      "exit_code": 0,
+      "scope": [
+        "16 synthetic engine check groups"
+      ]
+    }
+  ],
+  "smoke_report": {
+    "schema_version": 1,
+    "engine": "qdrant-edge",
+    "engine_version": "0.8.0",
+    "kind": "synthetic_engine_smoke",
+    "status": "passed",
+    "fixture_points": 8,
+    "search_threads": 2,
+    "checks": [
+      {
+        "name": "payload_index_and_scoped_count",
+        "capabilities": [
+          "Q11",
+          "Q12",
+          "L01",
+          "L02"
+        ],
+        "status": "passed",
+        "detail": {
+          "points": 7,
+          "global_document_total": null
+        }
+      },
+      {
+        "name": "offline_bm25",
+        "capabilities": [
+          "F01",
+          "V02",
+          "Q14"
+        ],
+        "status": "passed",
+        "detail": {
+          "hits": 3,
+          "idf_corpus": "tenant a",
+          "encoder": "EdgeBm25",
+          "tokenizer": "multilingual",
+          "stemming": "disabled",
+          "stopwords": "empty"
+        }
+      },
+      {
+        "name": "named_dense_exact",
+        "capabilities": [
+          "V01",
+          "Q01"
+        ],
+        "status": "passed",
+        "detail": {
+          "leader": 1,
+          "score": 1,
+          "distance": "dot",
+          "exact_domain": "authorized fixture points"
+        }
+      },
+      {
+        "name": "supplied_sparse",
+        "capabilities": [
+          "F02",
+          "V02"
+        ],
+        "status": "passed",
+        "detail": {
+          "hits": 2,
+          "model": "synthetic test values",
+          "inference": false,
+          "idf": "disabled"
+        }
+      },
+      {
+        "name": "weighted_rrf",
+        "capabilities": [
+          "Q02",
+          "Q03"
+        ],
+        "status": "passed",
+        "detail": {
+          "leader": 1,
+          "score": 1.1666667461395264,
+          "formula": "sum(1 / ((zero_based_position + 1) / weight + k - 1))",
+          "k": 2
+        }
+      },
+      {
+        "name": "dbsf",
+        "capabilities": [
+          "Q03"
+        ],
+        "status": "passed",
+        "detail": {
+          "leader": 1,
+          "score": 1.3295536041259766,
+          "scope": "prefetch distributions",
+          "golden_scores_checked": 7,
+          "variance": "sample (n-1)"
+        }
+      },
+      {
+        "name": "dbsf_degenerate_distributions",
+        "capabilities": [
+          "Q03"
+        ],
+        "status": "passed",
+        "detail": {
+          "singleton_score": 0.5,
+          "constant_score": 0.5,
+          "empty_branch": "no contribution",
+          "all_empty": "no hits",
+          "tie_order_asserted": false
+        }
+      },
+      {
+        "name": "maxsim_nested_prefetch",
+        "capabilities": [
+          "V03",
+          "Q01",
+          "Q02"
+        ],
+        "status": "passed",
+        "detail": {
+          "leader": 1,
+          "score": 2,
+          "candidate_budget": 3,
+          "global_exact_top_k": false
+        }
+      },
+      {
+        "name": "text_and_or",
+        "capabilities": [
+          "F06"
+        ],
+        "status": "passed",
+        "detail": {
+          "and": [
+            1,
+            2
+          ],
+          "or": [
+            1,
+            2,
+            5
+          ]
+        }
+      },
+      {
+        "name": "boolean_exclusion",
+        "capabilities": [
+          "F07",
+          "Q12"
+        ],
+        "status": "passed",
+        "detail": {
+          "matches": [
+            1
+          ],
+          "policy": "tenant AND terms AND NOT excluded SKU"
+        }
+      },
+      {
+        "name": "phrase_in_all_retrieval_branches",
+        "capabilities": [
+          "F08",
+          "Q02",
+          "Q03",
+          "Q12"
+        ],
+        "status": "passed",
+        "detail": {
+          "matches": [
+            1
+          ],
+          "phrase_matching": true
+        }
+      },
+      {
+        "name": "distinct_token_and_keyword_prefix",
+        "capabilities": [
+          "F09",
+          "F10",
+          "F11"
+        ],
+        "status": "passed",
+        "detail": {
+          "token_prefix": "tran",
+          "keyword_prefix": "PG-",
+          "keyword_case_sensitive": true
+        }
+      },
+      {
+        "name": "chinese_offline_smoke",
+        "capabilities": [
+          "F01",
+          "F04",
+          "F05"
+        ],
+        "status": "passed",
+        "detail": {
+          "required_match": 6,
+          "quality_benchmark": false
+        }
+      },
+      {
+        "name": "authorized_document_groups",
+        "capabilities": [
+          "Q09"
+        ],
+        "status": "passed",
+        "detail": {
+          "documents": 3,
+          "first_document_chunks": 2,
+          "source_hydration": "authorized HasId query"
+        }
+      },
+      {
+        "name": "explicit_analyzer_defaults",
+        "capabilities": [
+          "F04"
+        ],
+        "status": "passed",
+        "detail": {
+          "bm25_default_stems": true,
+          "neutral_policy_stems": false,
+          "full_offset_parity_verified": false
+        }
+      },
+      {
+        "name": "flush_close_reopen",
+        "capabilities": [
+          "L01",
+          "L04"
+        ],
+        "status": "passed",
+        "detail": {
+          "explicit_flush": true,
+          "abrupt_crash_test": false,
+          "wal_replay_claim": false
+        }
+      }
+    ],
+    "sql_integration_verified": false,
+    "release_supported": false,
+    "unverified": [
+      "P0 crash/kill/OOM/disk-full isolation",
+      "complete analyzer/offset parity",
+      "real multilingual relevance evaluation",
+      "F13-F20 product experience",
+      "quantization/MRL/visual/explore",
+      "PostgreSQL transactions and permissions",
+      "old-version migrations and rollback",
+      "hard in-flight cancellation"
+    ]
+  },
+  "supplemental_persistence_test": {
+    "explicit_flush": true,
+    "child_termination": "SIGKILL",
+    "clean_drop_before_termination": false,
+    "reopened_checks": [
+      "point count",
+      "payload revision",
+      "four named representations",
+      "authorized contiguous phrase",
+      "learned sparse scores",
+      "MaxSim scores",
+      "offline BM25"
+    ],
+    "unflushed_wal_replay_verified": false,
+    "power_loss_verified": false,
+    "postgres_atomicity_verified": false
+  },
+  "quality_benchmark": false,
+  "postgres_integration_verified": false,
+  "p0_exit_passed": false,
+  "release_supported": false
+}

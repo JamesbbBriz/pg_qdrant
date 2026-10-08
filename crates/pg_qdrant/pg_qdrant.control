@@ -1,0 +1,6 @@
+comment = 'Embedded Qdrant feasibility diagnostics; no production search API'
+default_version = '@CARGO_VERSION@'
+module_pathname = 'pg_qdrant'
+relocatable = false
+superuser = true
+trusted = false

@@ -1,0 +1,14 @@
+[package]
+name = "pg-qdrant-edge-probe"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Reproducible public-API feasibility probes for pg_qdrant"
+
+[dependencies]
+qdrant-edge = "=0.8.0"
+serde_json = "=1.0.151"
+tempfile = "=3.27.0"

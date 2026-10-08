@@ -1,6 +1,6 @@
 # Dependencies and upstream upgrade policy
 
-Status: design contract. The [machine-readable baseline](dependency-baseline.json) records candidate versions, not a validated build. The repository does not yet contain implementation code, a resolved Cargo.lock, or active dependency-update CI.
+Status: active dependency and upgrade contract. The [machine-readable baseline](dependency-baseline.json) records exact build inputs and the validation reached by each component. The repository now includes P0 source, Cargo.lock, a [resolved dependency inventory](dependency-graph.json), and CI/update-bot configuration. A successful engine probe is not a successful PostgreSQL integration or release gate; see [build evidence](build.md).
 
 ## Dependency ownership
 
@@ -30,7 +30,7 @@ If highlighting or a future Tantivy adapter needs a direct analyzer dependency, 
 
 ## P0 dependency deliverables
 
-The first executable milestone must add and validate:
+P0 must complete and validate the following. The manifest, lockfile and probes now exist; presence alone does not complete the gate:
 
 - A real Cargo workspace with exact engine and PostgreSQL integration requirements.
 - The matching cargo-pgrx tool, exact Rust toolchain, explicit PG major feature, and package feature list.
@@ -39,12 +39,12 @@ The first executable milestone must add and validate:
 - A dependency graph and license inventory from the actual build, including native components and model licenses when applicable.
 - Compiled API probes for every upstream capability in the [coverage contract](capabilities.md).
 
-Illustrative manifest fragment for that milestone, not a manifest currently installed in this repository:
+The actual manifests use these exact dependency requirements, with the `cshim` feature explicitly selected for PostgreSQL integration:
 
 ```toml
 [dependencies]
 qdrant-edge = "=0.8.0"
-pgrx = { version = "=0.19.3", default-features = false }
+pgrx = { version = "=0.19.3", default-features = false, features = ["cshim"] }
 
 [features]
 default = ["pg17"]
@@ -80,7 +80,7 @@ Changing a model or analyzer is not just changing a crate version. Classify each
 7. Validate rollback against the actual index format. If a binary downgrade cannot reopen a newer index, preserve a compatible generation or document rebuilding from retained source data and vectors.
 8. Update baseline, capability evidence, compatibility matrix, migration instructions, and release notes before shipping.
 
-Add an update bot when a real Cargo manifest exists; prefer reviewable grouped engine and pgrx/tool updates. Automatic version detection does not mean automatic release or safe index-file upgrade. An update must not silently remove features, change defaults, or enable external inference.
+An update-bot configuration now accompanies the real manifest; prefer reviewable grouped engine and pgrx/tool updates. Automatic version detection does not mean automatic release or safe index-file upgrade. An update must not silently remove features, change defaults, or enable external inference.
 
 ## Lexical gap decision
 

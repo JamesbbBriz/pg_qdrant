@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "candidate_not_build_verified",
+  "status": "combined_build_and_install_verified_postgres_runtime_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -15,7 +15,9 @@
       "source": "crates.io",
       "package_sha256": "0b8072302c87506a34bffec9bc16dbdcd36df8ab1321406b6e141530348c7e54",
       "public_api": "https://docs.rs/qdrant-edge/0.8.0/qdrant_edge/",
-      "registry_record": "https://crates.io/api/v1/crates/qdrant-edge/0.8.0"
+      "registry_record": "https://crates.io/api/v1/crates/qdrant-edge/0.8.0",
+      "default_features": true,
+      "features": []
     },
     {
       "name": "pgrx",
@@ -24,7 +26,13 @@
       "source": "crates.io",
       "postgres_feature_candidate": "pg17",
       "declared_rust_minimum": "1.96",
-      "registry_record": "https://crates.io/api/v1/crates/pgrx/0.19.3"
+      "registry_record": "https://crates.io/api/v1/crates/pgrx/0.19.3",
+      "package_sha256": "fa01ba6f6cb025576dc2bd70efae13c002d3b9cce5848b647e3158f33dbf32bb",
+      "default_features": false,
+      "features": [
+        "pg17",
+        "cshim"
+      ]
     }
   ],
   "build_tool_candidates": [
@@ -32,18 +40,21 @@
       "name": "cargo-pgrx",
       "version": "0.19.3",
       "must_match": "pgrx",
-      "registry_record": "https://crates.io/api/v1/crates/cargo-pgrx/0.19.3"
+      "registry_record": "https://crates.io/api/v1/crates/cargo-pgrx/0.19.3",
+      "package_sha256": "63418c536503020a9e79c20fd8a33c1b84814fbcb262f684d1b11b9adc7e628a",
+      "verification_status": "installed_and_version_verified"
     }
   ],
   "rust_toolchain": {
-    "exact_version": null,
+    "exact_version": "1.96.0",
     "minimum_from_pgrx": "1.96",
-    "freeze_gate": "P0 Linux build and full dependency resolution"
+    "freeze_gate": "P0 Linux build and full dependency resolution",
+    "verification_status": "combined_linux_pg17_build_verified"
   },
   "observed_upstream_dependency": {
     "name": "charabia",
     "requirement_in_edge_0_8_0": "0.9.9",
-    "resolved_version": null,
+    "resolved_version": "0.9.9",
     "default_features": false,
     "features": [
       "greek",
@@ -63,7 +74,90 @@
   },
   "mandatory_inference_dependencies": [],
   "mandatory_network_qdrant_client_dependencies": [],
-  "cargo_lock_present": false,
-  "compiled_dependency_graph_verified": false,
-  "automatic_dependency_updates_active": false
+  "cargo_lock_present": true,
+  "compiled_dependency_graph_verified": true,
+  "automatic_dependency_updates_active": false,
+  "dependency_update_configuration_present": true,
+  "build_configuration": {
+    "rust_host": "x86_64-unknown-linux-gnu",
+    "postgres_header_version": "17.11",
+    "postgres_package_version": "17.11-1.pgdg24.04+2",
+    "rust_target_cpu_flag": null,
+    "edge_features_declared": [],
+    "postgres_features": [
+      "pg17",
+      "cshim"
+    ],
+    "fault_injection_default": false,
+    "container_base": "ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
+    "native_package_lock_complete": false,
+    "container_execution_verified": false
+  },
+  "build_evidence": [
+    {
+      "kind": "engine_compile",
+      "command": "cargo check --locked -p pg-qdrant-edge-probe",
+      "status": "passed",
+      "rust": "1.96.0",
+      "scope": "Public API compile sentinels; no PostgreSQL runtime or release claim."
+    },
+    {
+      "kind": "engine_runtime",
+      "command": "cargo test --locked -p pg-qdrant-edge-probe",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-engine.json",
+      "scope": "Two tests pass: 16 synthetic engine check groups and actual queries after explicit-flush/SIGKILL reopen. No PostgreSQL or quality claim."
+    },
+    {
+      "kind": "postgres_check",
+      "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17",
+      "status": "passed",
+      "rust": "1.96.0",
+      "scope": "Combined Rust types, native PG17.11 bindings and cshim compile. Linking and installation are separate gates."
+    },
+    {
+      "kind": "postgres_fault_check",
+      "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17,p0-fault-injection",
+      "status": "passed",
+      "rust": "1.96.0",
+      "scope": "Private fault feature compiles. No fault experiment outcome is implied."
+    },
+    {
+      "kind": "cargo_pgrx_version",
+      "command": "cargo pgrx --version",
+      "status": "passed",
+      "rust": "1.96.0",
+      "version": "0.19.3",
+      "scope": "Exact matching published CLI installed in locked mode and version checked."
+    },
+    {
+      "kind": "postgres_build",
+      "command": "cargo build --locked -p pg_qdrant --no-default-features --features pg17",
+      "status": "passed",
+      "rust": "1.96.0",
+      "scope": "PostgreSQL17.11 extension cdylib linked with pgrx0.19.3 and Edge0.8.0. Installation and SQL runtime remain separate gates."
+    },
+    {
+      "kind": "postgres_schema",
+      "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features pg17 --cargo=--locked --skip-build --out \"$PG_QDRANT_SCHEMA_OUT\"",
+      "status": "passed",
+      "rust": "1.96.0",
+      "scope": "Matching CLI discovers9 SQL entities: 2 schemas, 6 functions and final privilege block. Generated SQL inspected."
+    },
+    {
+      "kind": "postgres_install",
+      "command": "cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features pg17 --cargo=--locked",
+      "status": "passed",
+      "rust": "1.96.0",
+      "scope": "Shared library, control file and pg_qdrant--0.0.1.sql installed into the selected PG17.11 installation. CREATE EXTENSION and SQL runtime still require a disposable non-root cluster."
+    },
+    {
+      "kind": "postgres_fault_build_schema",
+      "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features \"pg17 p0-fault-injection\" --cargo=--locked --out \"$PG_QDRANT_FAULT_SCHEMA_OUT\"",
+      "status": "passed",
+      "rust": "1.96.0",
+      "scope": "Private-feature shared library linked and7-function SQL generated. The normal6-function installed schema excludes the fault entry point. No fault runtime outcome is implied."
+    }
+  ]
 }

@@ -1,0 +1,58 @@
+name: P0 embedded-engine feasibility
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p0:
+    # Feature branches run once through their PR; main also verifies direct pushes.
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Validate locked product contracts
+        run: python3 scripts/check_contracts.py
+      - name: Build exact Rust, Edge, pgrx and PostgreSQL prototype
+        run: docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .
+      - name: Run PostgreSQL integration probes as a non-root user
+        run: |
+          docker create --name pg-qdrant-p0-run --memory=5g --cpus=2 pg-qdrant-p0
+          docker start --attach pg-qdrant-p0-run
+      - name: Collect integration evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/normal
+          if docker inspect pg-qdrant-p0-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-run:/src/artifacts/. artifacts/normal/
+          fi
+      - name: Build explicitly enabled disposable fault-test image
+        run: docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .
+      - name: Measure worker crash and PostgreSQL collateral recovery
+        run: |
+          docker create --name pg-qdrant-p0-fault-run --memory=5g --cpus=2 pg-qdrant-p0-faults bash crates/pg_qdrant/tests/run-faults.sh
+          docker start --attach pg-qdrant-p0-fault-run
+      - name: Collect fault-test evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/faults
+          if docker inspect pg-qdrant-p0-fault-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-fault-run:/src/artifacts/. artifacts/faults/
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p0-evidence-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: warn

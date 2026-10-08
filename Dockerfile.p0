@@ -1,0 +1,61 @@
+# P0 build/test environment. This is not a production database image.
+FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG PG_PACKAGE_VERSION=17.11-1.pgdg24.04+2
+ARG RUSTUP_SHA256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl gnupg build-essential pkg-config cmake python3 \
+    libssl-dev libreadline-dev zlib1g-dev libxml2-dev libxslt1-dev libicu-dev \
+    flex bison locales util-linux \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl --fail --silent --show-error \
+    https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    -o /usr/share/keyrings/postgresql.asc \
+    && echo 'deb [signed-by=/usr/share/keyrings/postgresql.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' \
+       > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+       postgresql-17=${PG_PACKAGE_VERSION} postgresql-client-17=${PG_PACKAGE_VERSION} \
+       postgresql-server-dev-17=${PG_PACKAGE_VERSION} \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CARGO_HOME=/opt/cargo RUSTUP_HOME=/opt/rustup
+ENV PATH=/opt/cargo/bin:/usr/lib/postgresql/17/bin:${PATH}
+ENV PGRX_PG_CONFIG_PATH=/usr/lib/postgresql/17/bin/pg_config
+ENV CARGO_BUILD_JOBS=2 CARGO_HTTP_MULTIPLEXING=false
+
+RUN curl --fail --silent --show-error \
+    https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init \
+    -o /tmp/rustup-init \
+    && echo "${RUSTUP_SHA256}  /tmp/rustup-init" | sha256sum --check \
+    && chmod 755 /tmp/rustup-init \
+    && /tmp/rustup-init -y --profile minimal --default-toolchain 1.96.0 --no-modify-path \
+    && rustup component add rustfmt clippy \
+    && rm /tmp/rustup-init
+RUN cargo install cargo-pgrx --version 0.19.3 --locked
+
+WORKDIR /src
+COPY . .
+RUN cargo fmt --all -- --check \
+    && python3 scripts/dependency_report.py --check \
+    && cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1 \
+    && cargo run --locked -p pg-qdrant-edge-probe >/tmp/edge-probe.json
+
+# Fault injection is a separate image build and is never a release feature.
+ARG P0_FAULTS=0
+RUN if [ "${P0_FAULTS}" = 1 ]; then \
+      cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml --no-default-features \
+        --features "pg17 p0-fault-injection" --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked; \
+    else \
+      cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml --no-default-features \
+        --features pg17 --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked; \
+    fi
+RUN mkdir -p /src/artifacts \
+    && dpkg-query -W -f='${binary:Package}\t${Version}\n' >/src/artifacts/native-packages.tsv \
+    && useradd --create-home --uid 10001 builder \
+    && chown builder:builder /src/artifacts
+USER builder
+ENV PG_QDRANT_ARTIFACT_DIR=/src/artifacts
+CMD ["bash", "crates/pg_qdrant/tests/run-p0.sh"]
