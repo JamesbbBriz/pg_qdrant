@@ -7318,6 +7318,16 @@
       "status": "pending",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_committed_native_retirement",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_retirements.py",
+          "scope": "Transactional logical drop followed by exact native epoch flush/close/cleanup receipts; rollback, same-name new identity, owner-protected historical tasks, 40 lifecycle cycles and actual helper SIGKILL fail-closed storage preservation. Unknown old-owner epochs are retained; pending shadow cleanup while an index exists, general resource governance and full lifecycle acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "engine-runtime-verified",
           "kind": "p0_ci7_disk_capacity",

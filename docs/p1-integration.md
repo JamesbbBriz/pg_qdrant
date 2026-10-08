@@ -119,3 +119,8 @@ Same-contract asynchronous rebuild tasks now construct, catch up and switch a
 separate native generation; see [generation lifecycle](p3-resource-generation.md)
 for precise receipts, long-transaction fencing, cleanup and remaining limits.
 This does not repair invalidated source capture or migrate model/analyzer contracts.
+
+Index removal returns a committed cleanup task rather than equating catalog
+deletion with native storage deletion. Rollback performs no native retirement;
+owner changes preserve uncertain epochs and report failure. Await the returned
+task before uninstalling. See the generation lifecycle for the full boundary.
