@@ -49,6 +49,40 @@ mod qdrant {
         }))
     }
 
+    /// Validate an advanced request's bounded shape, not its permission or execution.
+    #[pg_extern(immutable, parallel_safe)]
+    fn validate_advanced_request(request: JsonB) -> JsonB {
+        // Reject oversized structures before recursive semantic validation.
+        // The JsonB input itself has already crossed PostgreSQL's datum bound.
+        let encoded = serde_json::to_vec(&request.0).unwrap_or_else(|_| {
+            pgrx::ereport!(
+                ERROR, pgrx::PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
+                "advanced request cannot be serialized"
+            )
+        });
+        if encoded.len() > 16 * 1024 {
+            pgrx::ereport!(
+                ERROR, pgrx::PgSqlErrorCode::ERRCODE_PROGRAM_LIMIT_EXCEEDED,
+                "advanced request exceeds 16 KiB admission limit"
+            );
+        }
+        let admission = pg_qdrant_protocol::advanced::validate(request.0)
+            .unwrap_or_else(|reason| {
+                pgrx::ereport!(
+                    ERROR, pgrx::PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
+                    reason, "Validation does not authorize or execute native Edge work."
+                )
+            });
+        JsonB(json!({
+            "family": admission.family,
+            "candidate_limit": admission.candidate_limit,
+            "needs_source_authorization": admission.needs_source_authorization,
+            "source_authorization_checked": false,
+            "native_implementation_available": false,
+            "search_executable": false
+        }))
+    }
+
     /// Preserve all 54 product requirements without promoting a probe to support.
     #[pg_extern(volatile, parallel_unsafe)]
     fn capabilities(index_name: default!(Option<&str>, "NULL")) -> JsonB {

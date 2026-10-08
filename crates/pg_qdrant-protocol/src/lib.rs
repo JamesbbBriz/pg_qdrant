@@ -6,6 +6,7 @@ use serde_json::{Value, json};
 use std::io;
 
 pub mod budgets;
+pub mod advanced;
 
 pub const VERSION: u32 = 1;
 pub const REQUEST_BYTES: usize = 16 * 1024;
