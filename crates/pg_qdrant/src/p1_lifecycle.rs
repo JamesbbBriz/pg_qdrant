@@ -39,3 +39,8 @@ pgrx::extension_sql_file!(
     name = "p1_source_ddl",
     requires = ["p1_transaction_capture"]
 );
+pgrx::extension_sql_file!(
+    "../sql/paging.sql",
+    name = "p2_search_pages",
+    requires = ["p2_query_admission"]
+);

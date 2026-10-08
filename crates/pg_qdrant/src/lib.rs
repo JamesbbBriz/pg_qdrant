@@ -126,7 +126,8 @@ mod qdrant {
         }
         JsonB(json!({"registry_schema_version": 1,
             "stage": if cfg!(feature="p0-managed-helper") {"development_source_indexing"} else {"P0_feasibility"},
-            "index_catalog_available": cfg!(feature="p0-managed-helper"), "capabilities": ids}))
+            "index_catalog_available": cfg!(feature="p0-managed-helper"),
+            "bounded_search_page_available": cfg!(feature="p0-managed-helper"), "capabilities": ids}))
     }
 }
 
