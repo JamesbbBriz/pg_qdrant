@@ -15,7 +15,7 @@ docker run --rm --memory=5g --cpus=2 --network=none \
 - Transactional PostgreSQL catalog, source-key projection and event outbox,
   installed by an explicit SQL experiment against the P0 extension's private
   schema. This is not a released install/upgrade script.
-- One ordinary persistent heap source per index with a default single-column
+- One ordinary persistent built-in heap source per index with a default single-column
   bigint/uuid/text btree primary key, non-null text field, and no RLS,
   inheritance or partitioning; registration fails otherwise.
 - One-transaction, source-table ACCESS EXCLUSIVE capture installation and
@@ -24,6 +24,12 @@ docker run --rm --memory=5g --cpus=2 --network=none \
 - Statement-level TRUNCATE tombstones, row-level INSERT/UPDATE/DELETE,
   persistent point identity and revision, new UUID incarnation and new point
   allocation on delete/reinsert, SHA-256 of the selected body field.
+- Trigger capture extracts only the configured key/text fields through quoted
+  identifiers, rather than converting an arbitrarily wide source row to JSON.
+- Source-state diagnostics degrade if a source disappears, changes name,
+  enables RLS, or disables/replaces its expected capture triggers. An event
+  verdict function marks out-of-date key/revision/incarnation as stale, but
+  is advisory rather than an atomic native apply fence.
 - Source and outbox writes share one PG transaction. Rollback and savepoint
   rollback remove both. Tests cover DML by a non-superuser whose source rights
   do not grant access to internal ledgers.
@@ -31,7 +37,8 @@ docker run --rm --memory=5g --cpus=2 --network=none \
   the current top-level transaction*, not event-ID max/watermarks. Tickets
   created after further writes are distinct. Tickets cannot be polled from the
   writing transaction. An uncommitted/aborted ticket does not become visible.
-- Two-session tests exercise cross-key commit inversion and serialized
+- UUID/text key, bounded backfill refusal and disabled-trigger assertions are
+  covered by the SQL harness. Two-session tests exercise cross-key commit inversion and serialized
   same-key updates.
 
 ## Not implemented / correctness boundary

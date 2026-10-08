@@ -67,7 +67,7 @@ CREATE INDEX p1_outbox_by_ticket
 -- Record a row mutation in the same PostgreSQL transaction as the source write.
 -- An immutable event is never marked durable in this slice: no Edge flush exists.
 CREATE FUNCTION qdrant_internal.p1_record(
-    p_name text, p_operation text, p_row jsonb, p_origin text
+    p_name text, p_operation text, p_key text, p_body text, p_origin text
 ) RETURNS bigint
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path = pg_catalog, qdrant_internal, pg_temp
@@ -89,7 +89,7 @@ BEGIN
     SELECT * INTO STRICT v_idx FROM qdrant_internal.p1_indexes WHERE index_name = p_name;
     IF p_operation NOT IN ('upsert','delete')
        OR p_origin NOT IN ('backfill','source_write','truncate')
-       OR p_row IS NULL OR jsonb_typeof(p_row) <> 'object' THEN
+       OR p_key IS NULL THEN
         RAISE EXCEPTION 'invalid P1 source operation' USING ERRCODE = '22023';
     END IF;
     v_kind := CASE v_idx.key_type
@@ -100,7 +100,7 @@ BEGIN
     IF v_kind IS NULL THEN
         RAISE EXCEPTION 'unsupported P1 source key type' USING ERRCODE = '0A000';
     END IF;
-    v_key := p_row ->> v_idx.key_field;
+    v_key := p_key;
     IF v_key IS NULL OR octet_length(v_key) > 1024 THEN
         RAISE EXCEPTION 'source key is NULL or exceeds 1024 UTF-8 bytes'
             USING ERRCODE = '22023';
@@ -112,7 +112,7 @@ BEGIN
     END IF;
     v_tagged := jsonb_build_object('type', v_kind, 'value', v_key);
     IF p_operation = 'upsert' THEN
-        v_body := p_row ->> v_idx.text_field;
+        v_body := p_body;
         IF v_body IS NULL OR octet_length(v_body) > 65536 THEN
             RAISE EXCEPTION 'P1 indexed text must be non-null and at most 65536 bytes'
                 USING ERRCODE = '22023';
@@ -175,6 +175,9 @@ SET search_path = pg_catalog, qdrant_internal, pg_temp
 AS $p1$
 DECLARE
     v_idx qdrant_internal.p1_indexes%ROWTYPE;
+    v_old_key text;
+    v_new_key text;
+    v_new_body text;
 BEGIN
     IF TG_WHEN <> 'AFTER' OR TG_LEVEL <> 'ROW' OR TG_NARGS <> 1
         OR TG_NAME <> 'qdrant_p1_rows' THEN
@@ -185,17 +188,24 @@ BEGIN
       WHERE index_name = TG_ARGV[0] AND source_oid = TG_RELID
         AND capture_state = 'capturing';
     IF TG_OP = 'DELETE' THEN
-        PERFORM qdrant_internal.p1_record(v_idx.index_name,'delete',to_jsonb(OLD),'source_write');
+        EXECUTE format('SELECT ($1).%I::text', v_idx.key_field)
+          INTO v_old_key USING OLD;
+        PERFORM qdrant_internal.p1_record(v_idx.index_name,'delete',v_old_key,NULL,'source_write');
         RETURN OLD;
     ELSIF TG_OP = 'INSERT' THEN
-        PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',to_jsonb(NEW),'source_write');
+        EXECUTE format('SELECT ($1).%I::text, ($1).%I',v_idx.key_field,v_idx.text_field)
+          INTO v_new_key,v_new_body USING NEW;
+        PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',v_new_key,v_new_body,'source_write');
         RETURN NEW;
     ELSIF TG_OP = 'UPDATE' THEN
-        IF to_jsonb(OLD)->>v_idx.key_field IS DISTINCT FROM
-           to_jsonb(NEW)->>v_idx.key_field THEN
-            PERFORM qdrant_internal.p1_record(v_idx.index_name,'delete',to_jsonb(OLD),'source_write');
+        EXECUTE format('SELECT ($1).%I::text',v_idx.key_field)
+          INTO v_old_key USING OLD;
+        EXECUTE format('SELECT ($1).%I::text, ($1).%I',v_idx.key_field,v_idx.text_field)
+          INTO v_new_key,v_new_body USING NEW;
+        IF v_old_key IS DISTINCT FROM v_new_key THEN
+            PERFORM qdrant_internal.p1_record(v_idx.index_name,'delete',v_old_key,NULL,'source_write');
         END IF;
-        PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',to_jsonb(NEW),'source_write');
+        PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',v_new_key,v_new_body,'source_write');
         RETURN NEW;
     END IF;
     RAISE EXCEPTION 'unsupported P1 trigger event' USING ERRCODE = '0A000';
@@ -220,7 +230,7 @@ BEGIN
                  WHERE index_name = v_idx.index_name AND NOT tombstone
                  ORDER BY point_id LOOP
         PERFORM qdrant_internal.p1_record(v_idx.index_name,'delete',
-            jsonb_build_object(v_idx.key_field, v_row.tagged_key->>'value'),'truncate');
+            v_row.tagged_key->>'value',NULL,'truncate');
     END LOOP;
     RETURN NULL;
 END
@@ -257,6 +267,7 @@ BEGIN
       AND ta.attnotnull AND ta.attnum > 0 AND NOT ta.attisdropped
       AND ta.atttypid = 'pg_catalog.text'::regtype::oid AND ta.attgenerated = ''
     WHERE c.oid=p_source::oid AND c.relkind='r' AND c.relpersistence='p'
+      AND c.relam=(SELECT am.oid FROM pg_am am WHERE am.amname='heap')
       AND NOT c.relispartition AND NOT c.relhassubclass
       AND NOT c.relrowsecurity AND NOT c.relforcerowsecurity
       AND left(n.nspname,3) <> 'pg_'
@@ -301,8 +312,10 @@ BEGIN
       'CREATE TRIGGER qdrant_p1_truncate AFTER TRUNCATE ON %s
        FOR EACH STATEMENT EXECUTE FUNCTION qdrant_internal.p1_capture_truncate(%L)',
       p_source,p_name);
-    FOR v_row IN EXECUTE format('SELECT to_jsonb(s) AS data FROM ONLY %s s',p_source) LOOP
-        PERFORM qdrant_internal.p1_record(p_name,'upsert',v_row.data,'backfill');
+    FOR v_row IN EXECUTE format(
+       'SELECT %I::text AS key, %I AS body FROM ONLY %s',
+       p_key_field,p_text_field,p_source) LOOP
+        PERFORM qdrant_internal.p1_record(p_name,'upsert',v_row.key,v_row.body,'backfill');
         v_inserted := v_inserted+1;
     END LOOP;
     RETURN jsonb_build_object('index_name',p_name,'capture_state','capturing',
@@ -368,7 +381,19 @@ SET search_path = pg_catalog, qdrant_internal, pg_temp
 AS $p1$
   SELECT jsonb_build_object(
     'index_name',i.index_name,'source_oid',i.source_oid,
-    'capture_state',CASE WHEN c.oid IS NULL THEN 'degraded' ELSE i.capture_state END,
+    'capture_state',CASE
+       WHEN c.oid IS NULL OR c.relname<>i.source_table
+         OR c.relnamespace<>(SELECT n.oid FROM pg_namespace n WHERE n.nspname=i.source_schema)
+         OR c.relrowsecurity OR c.relforcerowsecurity
+         OR c.relam<>(SELECT am.oid FROM pg_am am WHERE am.amname='heap')
+         OR (SELECT count(*) FROM pg_trigger t
+              WHERE t.tgrelid=c.oid AND NOT t.tgisinternal
+                AND t.tgenabled IN ('O','A')
+                AND ((t.tgname='qdrant_p1_rows'
+                    AND t.tgfoid='qdrant_internal.p1_capture_row()'::regprocedure)
+                  OR (t.tgname='qdrant_p1_truncate'
+                    AND t.tgfoid='qdrant_internal.p1_capture_truncate()'::regprocedure)))<>2
+       THEN 'degraded' ELSE i.capture_state END,
     'source_exists',c.oid IS NOT NULL,'generation',i.generation,
     'captured_events',(SELECT count(*) FROM qdrant_internal.p1_outbox e
                        WHERE e.index_name=i.index_name),
@@ -377,6 +402,26 @@ AS $p1$
     'engine_index_ready',false,'release_supported',false)
   FROM qdrant_internal.p1_indexes i LEFT JOIN pg_class c ON c.oid=i.source_oid
   WHERE i.index_name=p_name
+$p1$;
+
+
+-- Advisory eligibility only. A pre-write check is not atomic with an Edge
+-- operation; the production consumer must fence and recheck around flush/ACK.
+CREATE FUNCTION qdrant_internal.p1_event_verdict(p_event_id bigint) RETURNS jsonb
+LANGUAGE sql STABLE
+SET search_path = pg_catalog, qdrant_internal, pg_temp
+AS $p1$
+ SELECT jsonb_build_object(
+   'event_id',e.event_id,
+   'current', s.point_id=e.point_id AND s.incarnation=e.incarnation
+     AND s.revision=e.revision AND s.fingerprint IS NOT DISTINCT FROM e.fingerprint
+     AND s.tombstone=(e.operation='delete'),
+   'point_id',e.point_id,'incarnation',e.incarnation,'revision',e.revision,
+   'operation',e.operation,'engine_applied',false,'durable_ack',false)
+ FROM qdrant_internal.p1_outbox e
+ JOIN qdrant_internal.p1_source_state s
+   ON s.index_name=e.index_name AND s.tagged_key=e.tagged_key
+ WHERE e.event_id=p_event_id
 $p1$;
 
 -- REVOKE does not revoke execution by installed triggers: privileges on the

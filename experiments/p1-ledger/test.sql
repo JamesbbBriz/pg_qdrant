@@ -22,6 +22,26 @@ BEGIN
     WHERE tagged_key='{"type":"bigint","value":"2"}'::jsonb)
  THEN RAISE EXCEPTION 'delete tombstone missing'; END IF;
 END $test$;
+
+-- Earlier events are stale after a newer revision; latest event is eligible.
+DO $test$
+DECLARE old_state jsonb; new_state jsonb;
+BEGIN
+ SELECT qdrant_internal.p1_event_verdict(min(event_id))
+ INTO old_state FROM qdrant_internal.p1_outbox
+ WHERE tagged_key='{"type":"bigint","value":"1"}'::jsonb;
+ SELECT qdrant_internal.p1_event_verdict(max(event_id))
+ INTO new_state FROM qdrant_internal.p1_outbox
+ WHERE tagged_key='{"type":"bigint","value":"1"}'::jsonb;
+ IF old_state->>'current'<>'false' OR new_state->>'current'<>'true'
+    OR new_state->>'durable_ack'<>'false'
+ THEN RAISE EXCEPTION 'event-version fencing verdict incorrect'; END IF;
+ IF (SELECT fingerprint FROM qdrant_internal.p1_source_state
+      WHERE tagged_key='{"type":"bigint","value":"1"}'::jsonb)
+    <> encode(sha256(convert_to('after','UTF8')),'hex')
+ THEN RAISE EXCEPTION 'UTF8 fingerprint mismatch'; END IF;
+END $test$;
+
 BEGIN;
  INSERT INTO public.p1_chunks VALUES (4,'will rollback');
 ROLLBACK;
@@ -120,6 +140,48 @@ BEGIN
  IF EXISTS(SELECT 1 FROM qdrant_internal.p1_indexes WHERE index_name='no_rls')
  THEN RAISE EXCEPTION 'rejected registration leaked'; END IF;
 END $test$;
+
+-- Both other initially supported source PK types register and capture.
+CREATE TABLE public.p1_uuid (id uuid PRIMARY KEY, body text NOT NULL);
+SELECT qdrant_internal.p1_register('uuid_idx','public.p1_uuid'::regclass,'id','body');
+INSERT INTO public.p1_uuid VALUES ('11111111-2222-4333-8444-555555555555','uuid indexed text');
+CREATE TABLE public.p1_text (id text COLLATE "C" PRIMARY KEY, body text NOT NULL);
+SELECT qdrant_internal.p1_register('text_idx','public.p1_text'::regclass,'id','body');
+INSERT INTO public.p1_text VALUES ('你好-key','chinese and ascii');
+DO $test$
+BEGIN
+ IF (SELECT count(*) FROM qdrant_internal.p1_outbox
+     WHERE index_name='uuid_idx' AND tagged_key->>'type'='uuid')<>1
+    OR (SELECT count(*) FROM qdrant_internal.p1_outbox
+     WHERE index_name='text_idx' AND tagged_key->>'value'='你好-key')<>1
+ THEN RAISE EXCEPTION 'uuid or text key capture unsupported'; END IF;
+END $test$;
+
+-- Capture-integrity status fails closed if a registered trigger is disabled.
+ALTER TABLE public.p1_text DISABLE TRIGGER qdrant_p1_rows;
+DO $test$
+DECLARE result jsonb;
+BEGIN
+ result:=qdrant_internal.p1_index_status('text_idx');
+ IF result->>'capture_state'<>'degraded'
+ THEN RAISE EXCEPTION 'disabled trigger silently marked ready'; END IF;
+END $test$;
+
+-- An intentionally small, locked backfill budget refuses oversized sources.
+CREATE TABLE public.p1_large (id bigint PRIMARY KEY, body text NOT NULL);
+INSERT INTO public.p1_large
+ SELECT x,'fixture' FROM generate_series(1,1001) AS x;
+DO $test$
+BEGIN
+ BEGIN
+  PERFORM qdrant_internal.p1_register('too_many','public.p1_large'::regclass,'id','body');
+  RAISE EXCEPTION 'oversized locked backfill incorrectly allowed';
+ EXCEPTION WHEN SQLSTATE '54000' THEN NULL;
+ END;
+ IF EXISTS(SELECT 1 FROM qdrant_internal.p1_indexes WHERE index_name='too_many')
+ THEN RAISE EXCEPTION 'failed backfill left registration metadata'; END IF;
+END $test$;
+
 DROP TABLE public.p1_chunks;
 DO $test$
 DECLARE j jsonb;

@@ -8,6 +8,14 @@ cluster="$(mktemp -d /tmp/pgq-p1-ledger.XXXXXXXX)"
 mkdir "$cluster/socket"
 cleanup() {
   code=$?
+  if [[ "$code" != 0 ]]; then
+    for report in "$artifacts/p1-install.log" "$artifacts/p1-assertions.log" "$artifacts/p1-parallel.log" "$artifacts/p1-postgresql.log"; do
+      if [[ -f "$report" ]]; then
+        echo "P1 failure detail: $report" >&2
+        tail -n 80 "$report" >&2
+      fi
+    done
+  fi
   "$pgq_bin/pg_ctl" -D "$cluster/data" -m immediate -w stop >/dev/null 2>&1 || true
   rm -rf -- "$cluster"
   exit "$code"
