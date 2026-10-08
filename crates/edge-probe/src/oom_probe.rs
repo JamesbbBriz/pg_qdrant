@@ -95,6 +95,52 @@ fn events() -> Checked<BTreeMap<String, u64>> {
     Ok(events)
 }
 
+fn validate_allocation_headroom(profile: &str, soft: u64, virtual_bytes: u64) -> Checked<()> {
+    if soft == libc::RLIM_INFINITY {
+        return Ok(());
+    }
+    // A finite helper cap is compatible only if the current mappings leave
+    // twice the complete bounded allocation available. This does not turn an
+    // allocator refusal into evidence of a kernel OOM.
+    require(
+        profile == "managed_helper"
+            && virtual_bytes
+                .checked_add(2 * MEMORY_BYTES)
+                .is_some_and(|end| end <= soft),
+        "insufficient verified virtual allocation headroom",
+    )
+}
+
+fn allocation_limits(profile: &str, page_size: usize) -> Checked<Value> {
+    let mut address = libc::rlimit {
+        rlim_cur: 0,
+        rlim_max: 0,
+    };
+    let mut data = libc::rlimit {
+        rlim_cur: 0,
+        rlim_max: 0,
+    };
+    require(
+        unsafe { libc::getrlimit(libc::RLIMIT_AS, &mut address) } == 0
+            && unsafe { libc::getrlimit(libc::RLIMIT_DATA, &mut data) } == 0
+            && data.rlim_cur == libc::RLIM_INFINITY,
+        "restrictive data limit or unreadable process allocation limit",
+    )?;
+    let pages = bounded_read(Path::new("/proc/self/statm"))?
+        .split_whitespace()
+        .next()
+        .ok_or("missing virtual mapping size")?
+        .parse::<u64>()
+        .map_err(|_| "invalid virtual mapping size")?;
+    let virtual_bytes = pages
+        .checked_mul(page_size as u64)
+        .ok_or("virtual mapping size overflow")?;
+    validate_allocation_headroom(profile, address.rlim_cur, virtual_bytes)?;
+    Ok(json!({"address_space_soft_bytes": address.rlim_cur,
+        "address_space_hard_bytes": address.rlim_max, "virtual_bytes": virtual_bytes,
+        "required_finite_headroom_bytes": 2 * MEMORY_BYTES, "data_soft_unlimited": true}))
+}
+
 fn process(pid: u32) -> Checked<Value> {
     let root = PathBuf::from(format!("/proc/{pid}"));
     let metadata = fs::metadata(&root).map_err(|e| e.to_string())?;
@@ -274,6 +320,7 @@ struct Guard {
     page_size: usize,
     log: File,
     allocation_started: bool,
+    allocation_limits: Value,
 }
 
 impl Guard {
@@ -374,17 +421,6 @@ impl Guard {
                     .as_deref(),
             "postmaster identity mismatch",
         )?;
-        for resource in [libc::RLIMIT_AS, libc::RLIMIT_DATA] {
-            let mut limit = libc::rlimit {
-                rlim_cur: 0,
-                rlim_max: 0,
-            };
-            require(
-                unsafe { libc::getrlimit(resource, &mut limit) } == 0
-                    && limit.rlim_cur == libc::RLIM_INFINITY,
-                "restrictive or unreadable process allocation limit",
-            )?;
-        }
         let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
         require(
             (4096..=65536).contains(&page_size)
@@ -392,6 +428,7 @@ impl Guard {
                 && CHUNK_BYTES % page_size as usize == 0,
             "unsupported native page size",
         )?;
+        let allocation_limits = allocation_limits(profile, page_size as usize)?;
         consume_marker(&directory)?;
         require(
             owned_json(&directory.join("consumed.json"), uid)? == marker,
@@ -414,6 +451,7 @@ impl Guard {
             page_size: page_size as usize,
             log,
             allocation_started: false,
+            allocation_limits,
         })
     }
 
@@ -421,7 +459,8 @@ impl Guard {
         let armed = json!({"event": "armed", "nonce": self.nonce, "profile": self.profile,
             "target": self.marker["target"], "cgroup": self.cgroup, "page_size": self.page_size,
             "oom_score_adj_before": previous_score, "oom_score_adj_during": 1000,
-            "allocation_started": false, "requested_bytes_cap": MEMORY_BYTES, "loop_deadline_ms": 10000});
+            "allocation_started": false, "requested_bytes_cap": MEMORY_BYTES, "loop_deadline_ms": 10000,
+            "allocation_limits": self.allocation_limits});
         writeln!(self.log, "{armed}").map_err(|e| e.to_string())?;
         self.log.sync_data().map_err(|e| e.to_string())?;
         let deadline = Instant::now() + Duration::from_secs(10);
@@ -458,6 +497,7 @@ impl Guard {
                 ] {
                     same_identity(&self.marker[role], self.uid, &self.marker["namespaces"])?;
                 }
+                self.allocation_limits = allocation_limits(&self.profile, self.page_size)?;
                 return Ok(());
             }
             std::thread::sleep(Duration::from_millis(20));
@@ -527,7 +567,7 @@ fn allocate(guard: &mut Guard) -> Checked<&'static str> {
         .map_err(|_| "cannot reserve bounded buffer list")?;
     let boundary = json!({"event": "allocation_started", "touched_bytes": 0,
         "companion_identity_verified": guard.marker["companion"],
-        "participants_verified_at_barrier": true});
+        "participants_verified_at_barrier": true, "allocation_limits": guard.allocation_limits});
     writeln!(guard.log, "{boundary}").map_err(|e| e.to_string())?;
     guard.log.sync_data().map_err(|e| e.to_string())?;
     guard.allocation_started = true;
@@ -641,6 +681,23 @@ mod tests {
         assert_eq!(values["max"], 7);
         for bad in ["max 1\nmax 2", "oom -1", "oom 1 extra", "oom"] {
             assert!(keyed_numbers(bad).is_err());
+        }
+    }
+
+    #[test]
+    fn finite_helper_budget_requires_complete_allocation_headroom() {
+        let baseline = 512 * 1024 * 1024;
+        let required = baseline + 2 * MEMORY_BYTES;
+        assert!(validate_allocation_headroom("managed_helper", required, baseline).is_ok());
+        for cap in [0, baseline, required - 1] {
+            assert!(validate_allocation_headroom("managed_helper", cap, baseline).is_err());
+        }
+        assert!(validate_allocation_headroom("direct_worker", required, baseline).is_err());
+        assert!(
+            validate_allocation_headroom("managed_helper", u64::MAX - 1, u64::MAX - 1).is_err()
+        );
+        for profile in ["direct_worker", "managed_helper"] {
+            assert!(validate_allocation_headroom(profile, libc::RLIM_INFINITY, baseline).is_ok());
         }
     }
 }
