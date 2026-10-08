@@ -86,7 +86,11 @@ fn validate_formula(node: &Formula, depth: usize, total: &mut usize) -> Result<(
     match node {
         Formula::Constant { value } if value.is_finite() && value.abs() <= 1_000_000.0 => Ok(()),
         Formula::Constant { .. } => Err("nonfinite or out-of-range constant".into()),
-        Formula::Field { name } if ["popularity", "freshness", "distance"].contains(&name.as_str()) => Ok(()),
+        Formula::Field { name }
+            if ["popularity", "freshness", "distance"].contains(&name.as_str()) =>
+        {
+            Ok(())
+        }
         Formula::Field { .. } => Err("unknown or unauthorized formula field".into()),
         Formula::Add { args } | Formula::Multiply { args } => {
             if !(2..=8).contains(&args.len()) {
@@ -102,10 +106,14 @@ fn validate_formula(node: &Formula, depth: usize, total: &mut usize) -> Result<(
 
 pub fn validate(raw: Value) -> Result<Admission, String> {
     // serde rejects fields not named in the tagged request or typed formula.
-    let request: AdvancedRequest = serde_json::from_value(raw)
-        .map_err(|e| format!("Invalid advanced request: {e}"))?;
+    let request: AdvancedRequest =
+        serde_json::from_value(raw).map_err(|e| format!("Invalid advanced request: {e}"))?;
     match request {
-        AdvancedRequest::Recommend { positive, negative, limit } => {
+        AdvancedRequest::Recommend {
+            positive,
+            negative,
+            limit,
+        } => {
             valid_limit(limit)?;
             if positive.is_empty() {
                 return Err("recommendation needs positive examples".into());
@@ -116,61 +124,103 @@ pub fn validate(raw: Value) -> Result<Admission, String> {
             if negative.iter().any(|id| positives.contains(id)) {
                 return Err("positive/negative example overlap".into());
             }
-            Ok(Admission { family: "recommend", candidate_limit: limit,
-                needs_source_authorization: true })
+            Ok(Admission {
+                family: "recommend",
+                candidate_limit: limit,
+                needs_source_authorization: true,
+            })
         }
-        AdvancedRequest::Mmr { candidates, lambda, limit } => {
+        AdvancedRequest::Mmr {
+            candidates,
+            lambda,
+            limit,
+        } => {
             valid_limit(limit)?;
             unique_ids(&candidates, MAX_CANDIDATES)?;
             if candidates.len() < limit || !lambda.is_finite() || !(0.0..=1.0).contains(&lambda) {
                 return Err("MMR candidate domain/lambda invalid".into());
             }
-            Ok(Admission { family: "mmr", candidate_limit: candidates.len(),
-                needs_source_authorization: true })
+            Ok(Admission {
+                family: "mmr",
+                candidate_limit: candidates.len(),
+                needs_source_authorization: true,
+            })
         }
         AdvancedRequest::Formula { expression, limit } => {
             valid_limit(limit)?;
             let mut visited_nodes = 0;
             validate_formula(&expression, 0, &mut visited_nodes)?;
-            Ok(Admission { family: "formula", candidate_limit: limit,
-                needs_source_authorization: true })
+            Ok(Admission {
+                family: "formula",
+                candidate_limit: limit,
+                needs_source_authorization: true,
+            })
         }
         AdvancedRequest::Facet { field, limit } => {
             valid_limit(limit)?;
-            if field.len() > 63 || field.is_empty()
-                || !field.as_bytes().iter().all(|b| b.is_ascii_alphanumeric() || *b == b'_') {
+            if field.len() > 63
+                || field.is_empty()
+                || !field
+                    .as_bytes()
+                    .iter()
+                    .all(|b| b.is_ascii_alphanumeric() || *b == b'_')
+            {
                 return Err("facet field must be simple ASCII identifier".into());
             }
-            Ok(Admission { family: "facet", candidate_limit: limit,
-                needs_source_authorization: true })
+            Ok(Admission {
+                family: "facet",
+                candidate_limit: limit,
+                needs_source_authorization: true,
+            })
         }
-        AdvancedRequest::Matrix { source_ids, target_ids } => {
+        AdvancedRequest::Matrix {
+            source_ids,
+            target_ids,
+        } => {
             unique_ids(&source_ids, MAX_CANDIDATES)?;
             unique_ids(&target_ids, MAX_CANDIDATES)?;
-            let cells = source_ids.len().checked_mul(target_ids.len())
+            let cells = source_ids
+                .len()
+                .checked_mul(target_ids.len())
                 .ok_or("matrix cell count overflow")?;
             if source_ids.is_empty() || target_ids.is_empty() || cells > MAX_MATRIX_CELLS {
                 return Err("matrix cell budget exceeded".into());
             }
-            Ok(Admission { family: "matrix", candidate_limit: cells,
-                needs_source_authorization: true })
+            Ok(Admission {
+                family: "matrix",
+                candidate_limit: cells,
+                needs_source_authorization: true,
+            })
         }
         AdvancedRequest::Visual {
-            model_name, vector_dimensions, patch_count, limit,
+            model_name,
+            vector_dimensions,
+            patch_count,
+            limit,
         } => {
             valid_limit(limit)?;
-            if model_name.is_empty() || model_name.len() > 64 ||
-                !model_name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
+            if model_name.is_empty()
+                || model_name.len() > 64
+                || !model_name
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+            {
                 return Err("visual model identifier is invalid".into());
             }
-            let cells = vector_dimensions.checked_mul(patch_count)
+            let cells = vector_dimensions
+                .checked_mul(patch_count)
                 .ok_or("visual token matrix overflow")?;
-            if !(1..=4096).contains(&vector_dimensions) ||
-               !(1..=256).contains(&patch_count) || cells > 1_000_000 {
+            if !(1..=4096).contains(&vector_dimensions)
+                || !(1..=256).contains(&patch_count)
+                || cells > 1_000_000
+            {
                 return Err("visual token matrix budget exceeded".into());
             }
-            Ok(Admission { family: "visual", candidate_limit: limit,
-                needs_source_authorization: true })
+            Ok(Admission {
+                family: "visual",
+                candidate_limit: limit,
+                needs_source_authorization: true,
+            })
         }
     }
 }
@@ -182,32 +232,61 @@ mod tests {
 
     #[test]
     fn recommendation_requires_distinct_authorized_ids() {
-        assert!(validate(json!({"kind":"recommend","positive":[1],"negative":[1],
-            "limit":10})).is_err());
-        assert_eq!(validate(json!({"kind":"recommend","positive":[1],"negative":[2],
-            "limit":10})).unwrap().family,"recommend");
+        assert!(
+            validate(json!({"kind":"recommend","positive":[1],"negative":[1],
+            "limit":10}))
+            .is_err()
+        );
+        assert_eq!(
+            validate(json!({"kind":"recommend","positive":[1],"negative":[2],
+            "limit":10}))
+            .unwrap()
+            .family,
+            "recommend"
+        );
     }
     #[test]
     fn unknown_fields_and_unimplemented_stages_are_refused() {
-        assert!(validate(json!({"kind":"recommend","positive":[1],"negative":[],
-            "limit":5,"silent_override":true})).is_err());
+        assert!(
+            validate(json!({"kind":"recommend","positive":[1],"negative":[],
+            "limit":5,"silent_override":true}))
+            .is_err()
+        );
         assert!(validate(json!({"kind":"native_formula","limit":10})).is_err());
     }
     #[test]
     fn formula_is_typed_and_depth_bounded() {
-        assert_eq!(validate(json!({"kind":"formula","expression":
+        assert_eq!(
+            validate(json!({"kind":"formula","expression":
            {"op":"add","args":[{"op":"field","name":"popularity"},
-           {"op":"constant","value":2.0}]},"limit":10})).unwrap().family,"formula");
-        assert!(validate(json!({"kind":"formula","expression":
-           {"op":"field","name":"arbitrary_sql"},"limit":10})).is_err());
+           {"op":"constant","value":2.0}]},"limit":10}))
+            .unwrap()
+            .family,
+            "formula"
+        );
+        assert!(
+            validate(json!({"kind":"formula","expression":
+           {"op":"field","name":"arbitrary_sql"},"limit":10}))
+            .is_err()
+        );
     }
     #[test]
     fn bounded_facet_matrix_and_visual() {
         assert!(validate(json!({"kind":"facet","field":"unsafe.sql","limit":3})).is_err());
         assert!(validate(json!({"kind":"matrix","source_ids":[],"target_ids":[1]})).is_err());
-        assert!(validate(json!({"kind":"visual","model_name":"v","vector_dimensions":4096,
-            "patch_count":257,"limit":10})).is_err());
-        assert_eq!(validate(json!({"kind":"visual","model_name":"v",
-            "vector_dimensions":768,"patch_count":64,"limit":10})).unwrap().family,"visual");
+        assert!(
+            validate(
+                json!({"kind":"visual","model_name":"v","vector_dimensions":4096,
+            "patch_count":257,"limit":10})
+            )
+            .is_err()
+        );
+        assert_eq!(
+            validate(json!({"kind":"visual","model_name":"v",
+            "vector_dimensions":768,"patch_count":64,"limit":10}))
+            .unwrap()
+            .family,
+            "visual"
+        );
     }
 }

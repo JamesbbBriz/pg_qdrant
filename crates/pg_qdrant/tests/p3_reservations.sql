@@ -15,6 +15,11 @@ DECLARE
 BEGIN
  r1 := qdrant.rebuild_index('p3_fixture');
  r2 := qdrant.rebuild_index('p3_fixture');
+ IF r1->>'state'<>'reserved_unbuilt' OR r2->>'state'<>'reserved_unbuilt'
+    OR (r1->>'engine_build_started')::boolean OR (r2->>'engine_build_started')::boolean
+    OR (r1->>'search_ready')::boolean OR (r2->>'search_ready')::boolean THEN
+   RAISE EXCEPTION 'unbuilt reservation claimed execution or readiness';
+ END IF;
  IF (r1->>'reserved_generation')::bigint <> 2 OR
     (r2->>'reserved_generation')::bigint <> 3 THEN
    RAISE EXCEPTION 'generation reservation sequence invalid';
@@ -25,9 +30,8 @@ BEGIN
  END IF;
  state := qdrant.rebuild_status('p3_fixture');
  IF (state->>'active_generation')::bigint <> 1 OR
-    (state->>'active_generation_search_ready')::boolean OR
     (state->>'switch_available')::boolean THEN
-   RAISE EXCEPTION 'unbuilt generation switched or reported ready';
+   RAISE EXCEPTION 'unbuilt reservation switched the working generation';
  END IF;
  IF (qdrant.operation_limits()->>'native_rss_limit_enforced')::boolean THEN
    RAISE EXCEPTION 'preflight claimed to control engine RSS';

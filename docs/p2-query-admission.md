@@ -1,5 +1,9 @@
 # P2 query admission and fail-closed result contract — incomplete phase
 
+Historical admission-only record. The integration branch connects a restricted
+owner-domain BM25 execution path with source rechecks; see
+[P1 integration](p1-integration.md). Full P2 acceptance remains open.
+
 The P2 draft adds a typed search-result shape and PostgreSQL permission/query
 validation. It does not execute Edge retrieval and cannot satisfy a core Alpha.
 

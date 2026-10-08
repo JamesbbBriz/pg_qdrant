@@ -1,4 +1,8 @@
-# Temporary CI hold — unfinished draft branches only
+# Historical CI hold — unfinished draft branches
+
+The integration branch restores automatic P0 push and pull-request triggers.
+Installed source-to-Edge tests run in the managed-helper fault build. The
+entries below record the earlier hold, rather than the current CI policy.
 
 As requested on 2026-10-08, the P0 GitHub Actions workflow retains all its
 jobs and test scripts. Its automatic push/pull_request events are temporarily

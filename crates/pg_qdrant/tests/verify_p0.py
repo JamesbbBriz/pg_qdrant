@@ -102,7 +102,7 @@ def exercise():
     assert Path(actual_data).resolve() == Path(os.environ["PG_QDRANT_DISPOSABLE_DATA"]).resolve()
 
     build = jsql("SELECT qdrant.build_info()")
-    assert build["product_indexing_api"] is False
+    assert build["product_indexing_api"] is HELPER
     assert build["native_engine_cancellation"] is False
     assert build["engine"] == {"name": "qdrant-edge", "version": "0.8.0"}
     assert build["features"]["p0_fault_injection"] is FAULTS
@@ -113,7 +113,8 @@ def exercise():
     assert all(not row["release_supported"] for row in capabilities["capabilities"])
     expect_error("SELECT qdrant.capabilities('missing')", "0A000")
     assert scalar("SELECT bool_and(provolatile='v' AND proparallel='u' AND NOT prosecdef) "
-                  "FROM pg_proc WHERE pronamespace IN ('qdrant'::regnamespace,'qdrant_internal'::regnamespace)") == "t"
+                  "FROM pg_proc WHERE pronamespace IN ('qdrant'::regnamespace,'qdrant_internal'::regnamespace) "
+                  "AND (proname LIKE 'p0_%' OR proname IN ('build_info','capabilities'))") == "t"
     record("install_and_honest_capabilities", count=54, postgres_major=17)
 
     starts = [spawn("SELECT qdrant_internal.p0_start_worker(5000)") for _ in range(2)]

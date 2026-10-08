@@ -1,5 +1,10 @@
 # P1: transaction capture patch — incomplete phase
 
+Historical draft record. The integration branch replaces this capture storage
+with the tested typed ledger and adds real Edge consumption. See the current
+[integration status](p1-integration.md); the limitations below describe the
+earlier branch and do not establish current acceptance.
+
 This draft installs an actual PostgreSQL-owned transactional capture foundation.
 It is not a complete P1, not a complete ingestion pipeline and not a queryable
 Qdrant index.

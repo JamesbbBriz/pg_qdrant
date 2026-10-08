@@ -1,5 +1,4 @@
-//! Experimental P2 search-admission boundary, NOT a search implementation.
-//! The exposed query shape refuses all native work until durable P1 is ready.
+//! Bounded owner-domain text search; other P2 plans remain unimplemented.
 
 pgrx::extension_sql!(
     r###"
@@ -27,7 +26,7 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
 AS $pgq$
 DECLARE
-    selected qdrant._index_catalog%ROWTYPE;
+    selected qdrant_internal.index_catalog%ROWTYPE;
     actor_oid oid;
     relation_info record;
     text_field text;
@@ -91,12 +90,16 @@ BEGIN
           USING ERRCODE = '22023';
     END IF;
 
-    SELECT * INTO STRICT selected FROM qdrant._index_catalog
-    WHERE qdrant._index_catalog.index_name = explain_search.index_name;
-    SELECT oid INTO actor_oid FROM pg_roles WHERE rolname=session_user;
+    SELECT * INTO STRICT selected FROM qdrant_internal.index_catalog
+    WHERE qdrant_internal.index_catalog.index_name = explain_search.index_name;
+    PERFORM qdrant_internal.require_index(index_name);
+    IF qdrant_internal.p1_index_status(index_name)->>'capture_state'<>'capturing' THEN
+        RAISE EXCEPTION 'Source binding changed; rebuild required' USING ERRCODE='55000';
+    END IF;
+    actor_oid:=qdrant_internal.actor_oid();
     IF actor_oid IS NULL OR
-       NOT has_table_privilege(actor_oid,selected.source_table,'SELECT') OR
-       NOT has_column_privilege(actor_oid,selected.source_table,
+       NOT has_table_privilege(actor_oid,selected.source_oid,'SELECT') OR
+       NOT has_column_privilege(actor_oid,selected.source_oid,
                                selected.key_field::text,'SELECT') THEN
         RAISE EXCEPTION 'Source SELECT and key-column SELECT required'
           USING ERRCODE = '42501';
@@ -107,7 +110,7 @@ BEGIN
     INTO relation_info FROM pg_class c
     JOIN pg_attribute a ON a.attrelid=c.oid
       AND a.attname=selected.key_field AND NOT a.attisdropped
-    WHERE c.oid=selected.source_table;
+    WHERE c.oid=selected.source_oid;
     IF NOT FOUND OR relation_info.relkind <> 'r'
        OR relation_info.relrowsecurity OR relation_info.relforcerowsecurity
        OR relation_info.relispartition OR relation_info.relhassubclass
@@ -120,9 +123,9 @@ BEGIN
     FOR text_field IN
       SELECT jsonb_array_elements_text(selected.settings #> '{text,fields}')
     LOOP
-      IF NOT has_column_privilege(actor_oid,selected.source_table,text_field,'SELECT')
+      IF NOT has_column_privilege(actor_oid,selected.source_oid,text_field,'SELECT')
          OR NOT EXISTS (
-           SELECT 1 FROM pg_attribute a WHERE a.attrelid=selected.source_table
+           SELECT 1 FROM pg_attribute a WHERE a.attrelid=selected.source_oid
             AND a.attname=text_field AND a.atttypid='text'::regtype::oid
             AND NOT a.attisdropped
          ) THEN
@@ -131,16 +134,15 @@ BEGIN
       END IF;
     END LOOP;
     SELECT count(*) INTO matched_triggers FROM pg_trigger
-    WHERE tgrelid=selected.source_table AND tgenabled='O'
+    WHERE tgrelid=selected.source_oid AND tgenabled IN ('O','A')
       AND NOT tgisinternal AND tgname IN (
-       'pgq_capture_'||selected.index_id,
-       'pgq_truncate_'||selected.index_id);
-    IF matched_triggers <> 2 OR selected.lifecycle <> 'capture_only' THEN
+       'qdrant_p1_rows', 'qdrant_p1_truncate');
+    IF matched_triggers <> 2 OR selected.capture_state <> 'capturing' THEN
         RAISE EXCEPTION 'Capture triggers or lifecycle are not safe'
           USING ERRCODE = '55000';
     END IF;
     RETURN jsonb_build_object(
-       'index_name',index_name,'source_oid',selected.source_table,
+       'index_name',index_name,'source_oid',selected.source_oid,
        'source_key_type',selected.key_type,
        'requested_mode',mode,'effective_plan','text',
        'text_fields',selected.settings #> '{text,fields}',
@@ -148,9 +150,11 @@ BEGIN
        'timeout_ms',timeout_ms,
        'permission_preflight','passed_for_registered_source',
        'native_predicates_compiled',false,
-       'source_recheck_available',false,
-       'edge_generation_ready',false,'search_executable',false,
-       'blocked_by','P1 native apply and authorization filter compiler');
+       'source_recheck_available',true,
+       'edge_generation_ready',(SELECT state='ready' AND qdrant_internal.p1_service_ready() FROM qdrant_internal.consumer_state c WHERE c.index_name=selected.index_name),
+       'search_executable',(SELECT state='ready' AND qdrant_internal.p1_service_ready() FROM qdrant_internal.consumer_state c WHERE c.index_name=selected.index_name),
+       'permission_domain','registered owner with complete source SELECT',
+       'release_supported',false);
 END;
 $pgq$;
 
@@ -165,10 +169,35 @@ RETURNS SETOF qdrant.search_hit
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
 AS $pgq$
+DECLARE plan jsonb; i qdrant_internal.index_catalog%ROWTYPE;
+        c qdrant_internal.consumer_state%ROWTYPE; hits jsonb;
 BEGIN
-    PERFORM qdrant.explain_search(index_name,q,mode,top_k,query_vectors,options);
-    RAISE EXCEPTION 'Native search is not implemented on the P2 draft'
-      USING ERRCODE = '0A000', DETAIL = 'No fake hits or fallback to PostgreSQL FTS.';
+    plan:=qdrant.explain_search(index_name,q,mode,top_k,query_vectors,options);
+    IF NOT coalesce((plan->>'search_executable')::boolean,false) THEN
+      RAISE EXCEPTION 'Index is not ready' USING ERRCODE='55000';
+    END IF;
+    SELECT * INTO STRICT i FROM qdrant_internal.index_catalog idx WHERE idx.index_name=search.index_name;
+    SELECT * INTO STRICT c FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name;
+    hits:=qdrant_internal.p1_search(jsonb_build_object('operation','source_search','index_id',i.index_id,
+      'generation',i.generation,'storage_epoch',c.storage_epoch,'q',q,
+      'top_k',(plan->>'candidate_limit')::integer),(plan->>'timeout_ms')::integer);
+    IF NOT EXISTS(SELECT 1 FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name
+        AND cs.storage_epoch=c.storage_epoch AND cs.consumer_id=c.consumer_id AND cs.state='ready') THEN
+      RAISE EXCEPTION 'Generation changed during search' USING ERRCODE='55000';
+    END IF;
+    RETURN QUERY EXECUTE format(
+      'SELECT t.%I::text,row_number() OVER(ORDER BY v.ordinality)::integer,(v.hit->>''score'')::double precision,
+       t.%I::text,left(t.%I,240),jsonb_build_object(''generation'',$2,''storage_epoch'',$3,''plan'',''text'',
+       ''statistics_scope'',''bounded_candidates'',''release_supported'',false)
+       FROM jsonb_array_elements($1) WITH ORDINALITY v(hit,ordinality)
+       JOIN ONLY %s t ON t.%I=(v.hit #>> ''{payload,source_key,value}'')::%s
+       JOIN qdrant_internal.source_state s ON s.index_name=$4 AND s.point_id=(v.hit->>''id'')::bigint
+       WHERE NOT s.tombstone AND s.incarnation::text=v.hit #>> ''{payload,incarnation}''
+         AND s.revision=(v.hit #>> ''{payload,revision}'')::bigint
+         AND encode(sha256(convert_to(t.%I,''UTF8'')),''hex'')=v.hit #>> ''{payload,fingerprint}''
+       ORDER BY v.ordinality LIMIT $5',
+       i.key_field,i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.text_field)
+       USING hits,i.generation,c.storage_epoch,i.index_name,top_k;
 END;
 $pgq$;
 
@@ -178,5 +207,5 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
     qdrant.search(text,text,text,integer,jsonb,jsonb) TO PUBLIC;
 "###,
     name = "p2_query_admission",
-    finalize
+    requires = ["p1_management"]
 );

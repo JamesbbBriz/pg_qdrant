@@ -6,7 +6,7 @@
     "pg_qdrant/pg17",
     "pgrx/cshim"
   ],
-  "cargo_lock_sha256": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d",
+  "cargo_lock_sha256": "e7dfa1f4defe286d5a491c1c0479baea0901febbb0e1cb13181cdfd36695beb8",
   "manifest_inputs": [
     {
       "path": "Cargo.toml",
@@ -22,7 +22,7 @@
     },
     {
       "path": "crates/pg_qdrant-helper/Cargo.toml",
-      "sha256": "08fced4f33410d377152dffe1632f851923d5405bd708f964e3c39babf36fd58"
+      "sha256": "8682740658861f124e15aafa9e55cae98edff8560d3c6a83c84b668f32dd9f6e"
     },
     {
       "path": "crates/pg_qdrant-protocol/Cargo.toml",
@@ -3559,6 +3559,7 @@
         "libc@0.2.189",
         "pg-qdrant-edge-probe@0.0.1",
         "pg-qdrant-protocol@0.0.1",
+        "qdrant-edge@0.8.0",
         "serde_json@1.0.151"
       ]
     },

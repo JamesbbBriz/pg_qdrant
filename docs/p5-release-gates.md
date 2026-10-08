@@ -25,6 +25,9 @@ release binary or upgrade script has been built by this draft.
 
 ## Reversible CI hold
 
+The integration branch restores automatic triggers and adds installed P1
+durability/replay tests. The following paragraph records the historical hold.
+
 See [temporary CI hold](ci-temporary-hold.md). The P0 workflow is stored
 in the repo, with its test steps intact, and is manually dispatchable.
 Restore automatic `push` and `pull_request` triggers and add phase

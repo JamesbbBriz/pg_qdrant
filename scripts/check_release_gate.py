@@ -14,18 +14,17 @@ import re
 import subprocess
 import sys
 
-PHASES = {
-    "P0": "BUILD API ENGINE LEXICAL PG FAULT DECISION",
-    "P1": "CATALOG BACKFILL TRANSACTION ORDER IDENTITY MODEL DURABILITY WAIT DDL",
-    "P2": "TEXT HYBRID PERMISSION RESULT STATS DISCOVERY EXAMPLE QUALITY",
-    "P3": "FAST FILTER RESOURCE MAINTENANCE GENERATION RECOVERY UPGRADE PLATFORM",
-    "P4": "VISUAL EXPLORE SCORING READ LEXICAL DUAL COVERAGE",
-    "P5": "PACKAGE DOCS LICENSE CI JOURNEY",
-}
-REQUIRED_GATES = tuple(
-    f"{phase}-{name}" for phase, names in PHASES.items()
-    for name in names.split()
-)
+def acceptance_gates(path: pathlib.Path) -> tuple[str, ...]:
+    """The acceptance table is the authority, including future added gates."""
+    gates = tuple(re.findall(r"(?m)^\| (P[0-5]-[A-Z]+) \|", path.read_text(encoding="utf-8")))
+    if not gates or len(set(gates)) != len(gates) or set(
+            name.split("-")[0] for name in gates) != {f"P{i}" for i in range(6)}:
+        raise ValueError("missing phases or duplicate acceptance gates")
+    return gates
+
+
+REQUIRED_GATES = acceptance_gates(
+    pathlib.Path(__file__).resolve().parents[1] / "docs/acceptance.md")
 REQUIRED_ARTIFACTS = (
     "pg_qdrant.so", "pg_qdrant.control", "pg_qdrant--0.0.1.sql", "pg_qdrant_p0_helper"
 )
@@ -67,6 +66,13 @@ def assess(root: pathlib.Path, attestation: pathlib.Path,
            artifact_root: pathlib.Path, git_sha: str | None = None) -> dict:
     root = root.resolve()
     errors: list[str] = []
+    try:
+        required_gates = acceptance_gates(root / "docs/acceptance.md")
+        if required_gates != REQUIRED_GATES:
+            errors.append("acceptance authority differs from the checked gate implementation")
+    except (OSError, ValueError):
+        errors.append("authoritative acceptance table unavailable or invalid")
+        required_gates = REQUIRED_GATES
     if git_sha is None:
         process = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
                                  text=True, capture_output=True, check=False)
@@ -119,7 +125,7 @@ def assess(root: pathlib.Path, attestation: pathlib.Path,
     gates = att.get("gates", {})
     if not isinstance(gates, dict):
         gates = {}
-    for name in REQUIRED_GATES:
+    for name in required_gates:
         value = gates.get(name)
         if not isinstance(value, dict) or value.get("status") != "passed" or \
                 value.get("checkout_sha") != git_sha or not isinstance(
@@ -146,7 +152,7 @@ def assess(root: pathlib.Path, attestation: pathlib.Path,
             errors.append(f"artifact {name}: missing or invalid checksum")
 
     return {"ready": not errors, "checkout_sha": git_sha,
-            "required_gates": len(REQUIRED_GATES), "blockers": errors}
+            "required_gates": len(required_gates), "blockers": errors}
 
 
 def main() -> int:

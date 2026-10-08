@@ -191,6 +191,12 @@ impl Supervisor {
             self.stop("transport_failure");
         }
     }
+
+    pub fn source_progress(&mut self) {
+        // Successful durable ingestion establishes progress between bounded
+        // recovery attempts. Repeated failures without progress still exhaust.
+        self.attempts = 1;
+    }
 }
 
 fn set_nonblocking(output: &ChildStdout, enabled: bool) -> Result<(), ProbeError> {
@@ -226,7 +232,12 @@ pub fn execute(connection: Connection, operation: Operation) -> Result<Value, Pr
     };
     let mut bytes = serde_json::to_vec(&request).expect("owned protocol serializes");
     bytes.push(b'\n');
-    if bytes.len() > ipc::REQUEST_BYTES {
+    let byte_limit = if matches!(request.operation, Operation::SourceApply { .. }) {
+        pg_qdrant_protocol::CONSUMER_REQUEST_BYTES
+    } else {
+        ipc::REQUEST_BYTES
+    };
+    if bytes.len() > byte_limit {
         return Err(ProbeError::invalid("helper request exceeds byte budget"));
     }
     io.input.write_all(&bytes).map_err(ProbeError::io)?;

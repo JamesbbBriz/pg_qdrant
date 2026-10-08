@@ -1,7 +1,8 @@
 name: P0 embedded-engine feasibility
 
-## TEMPORARY HOLD on unfinished phase PRs; see docs/ci-temporary-hold.md.
 on:
+  push:
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -28,7 +29,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Build exact Rust, Edge, pgrx and PostgreSQL prototype
         id: base_image
-        run: docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .
+        run: docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --tag pg-qdrant-p0 .
       # Each experiment depends on its image, not unrelated earlier experiments.
       # A failed experiment still fails the job; no continue-on-error is used.
       - name: Build the independent lexical candidate experiment
@@ -121,7 +122,7 @@ jobs:
       - name: Build explicitly enabled disposable fault-test image
         id: fault_image
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
-        run: docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .
+        run: docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .
       - name: Measure worker crash and PostgreSQL collateral recovery
         if: ${{ !cancelled() && steps.fault_image.outcome == 'success' }}
         run: |
@@ -137,7 +138,7 @@ jobs:
       - name: Build the managed-helper comparison without fault injection
         id: helper_normal_image
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
-        run: docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal .
+        run: docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal .
       - name: Test the normal helper protocol
         if: ${{ !cancelled() && steps.helper_normal_image.outcome == 'success' }}
         run: |
@@ -164,7 +165,7 @@ jobs:
       - name: Build the explicit managed-helper fault comparison
         id: helper_fault_image
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
-        run: docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper .
+        run: docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper .
       - name: Test private helper protocol and process isolation
         if: ${{ !cancelled() && steps.helper_fault_image.outcome == 'success' }}
         run: |
@@ -187,6 +188,19 @@ jobs:
           fi
           if docker inspect pg-qdrant-p0-helper-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-helper-run:/src/artifacts/. artifacts/helper/
+          fi
+      - name: Test installed source-to-Edge flush and exact ACK
+        if: ${{ !cancelled() && steps.helper_fault_image.outcome == 'success' }}
+        run: |
+          docker create --name pg-qdrant-p1-product --memory=5g --cpus=2 --network=none \
+            pg-qdrant-p0-helper bash crates/pg_qdrant/tests/run-p1.sh
+          docker start --attach pg-qdrant-p1-product
+      - name: Collect installed P1 and crash-replay evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/p1-product
+          if docker inspect pg-qdrant-p1-product >/dev/null 2>&1; then
+            docker cp pg-qdrant-p1-product:/src/artifacts/. artifacts/p1-product/
           fi
       - name: Observe kernel OOM and direct-worker PostgreSQL recovery
         if: ${{ !cancelled() && steps.fault_image.outcome == 'success' && steps.helper_fault_image.outcome == 'success' }}

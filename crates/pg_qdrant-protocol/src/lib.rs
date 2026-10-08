@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::io;
 
-pub mod budgets;
 pub mod advanced;
+pub mod budgets;
 
 pub const VERSION: u32 = 1;
 pub const REQUEST_BYTES: usize = 16 * 1024;
@@ -14,16 +14,51 @@ pub const RESPONSE_BYTES: usize = 1024 * 1024;
 pub const QUEUE_LIMIT: usize = 8;
 pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
+pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceEvent {
+    pub event_id: u64,
+    pub point_id: u64,
+    pub revision: u64,
+    pub incarnation: String,
+    pub fingerprint: Option<String>,
+    pub key: Value,
+    pub body: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceBatch {
+    pub index_id: u64,
+    pub generation: String,
+    pub storage_epoch: String,
+    pub consumer_id: String,
+    pub events: Vec<SourceEvent>,
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Operation {
     Ping,
     Engine,
-    Delay { delay_ms: u64 },
+    Delay {
+        delay_ms: u64,
+    },
     Panic,
     Abort,
     Oom,
+    SourceApply {
+        batch: SourceBatch,
+    },
+    SourceSearch {
+        index_id: u64,
+        generation: String,
+        storage_epoch: String,
+        q: String,
+        top_k: usize,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]

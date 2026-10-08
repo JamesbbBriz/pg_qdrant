@@ -1,0 +1,45 @@
+name: P1 transactional source-ledger experiment
+on:
+  pull_request:
+    paths:
+      - "experiments/p1-ledger/**"
+      - ".github/workflows/p1-ledger.yml"
+      - "Dockerfile.p0"
+      - "crates/**"
+      - "Cargo.lock"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p1-ledger-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  postgres-ledger:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify tracked dependency and product contracts
+        run: python3 scripts/check_contracts.py
+      - name: Build exact P0 PostgreSQL 17 and embedded Edge dependencies
+        run: docker build -f Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} -t pg-qdrant-p1-base .
+      - name: Run transactional capture, rollback and two-session tests
+        run: |
+          docker create --name pg-qdrant-p1-run --memory=5g --cpus=2 --network=none \
+            pg-qdrant-p1-base bash experiments/p1-ledger/run.sh
+          docker start --attach pg-qdrant-p1-run
+      - name: Collect SQL and concurrency evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/p1
+          if docker inspect pg-qdrant-p1-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p1-run:/src/artifacts/. artifacts/p1/
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: p1-ledger-evidence
+          path: artifacts/
+          if-no-files-found: warn

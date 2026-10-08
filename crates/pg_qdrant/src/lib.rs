@@ -1,10 +1,12 @@
-//! P0 only: an actual PostgreSQL-to-Edge experiment, not the indexing product.
+//! Development source indexing and retained P0 PostgreSQL-to-Edge diagnostics.
 //!
 //! The dynamic PostgreSQL worker owns a bounded request queue. It sends owned
 //! Rust data to at most one engine thread. Engine threads never call PostgreSQL.
 
 use pgrx::prelude::*;
 
+#[cfg(feature = "p0-managed-helper")]
+mod consumer;
 mod formats;
 #[cfg(feature = "p0-managed-helper")]
 mod helper;
@@ -12,11 +14,11 @@ mod helper;
 mod helper_child;
 mod identity;
 mod ipc;
-mod recheck;
-mod worker;
 mod p1_lifecycle;
 mod p2_query;
 mod p3_operations;
+mod recheck;
+mod worker;
 
 ::pgrx::pg_module_magic!();
 
@@ -40,7 +42,8 @@ mod qdrant {
             "features": {"pg17": cfg!(feature="pg17"), "cshim": true,
                 "p0_managed_helper": cfg!(feature="p0-managed-helper"),
                 "p0_fault_injection": cfg!(feature="p0-fault-injection")},
-            "product_indexing_api": false,
+            "product_indexing_api": cfg!(feature="p0-managed-helper"),
+            "indexing_scope": "development: one text field, owner domain, retained-event recovery",
             "release_supported_capabilities": [],
             "native_engine_cancellation": false,
             "prototype_process": if cfg!(feature="p0-managed-helper") {
@@ -56,22 +59,26 @@ mod qdrant {
         // The JsonB input itself has already crossed PostgreSQL's datum bound.
         let encoded = serde_json::to_vec(&request.0).unwrap_or_else(|_| {
             pgrx::ereport!(
-                ERROR, pgrx::PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
+                ERROR,
+                pgrx::PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
                 "advanced request cannot be serialized"
-            )
+            );
         });
         if encoded.len() > 16 * 1024 {
             pgrx::ereport!(
-                ERROR, pgrx::PgSqlErrorCode::ERRCODE_PROGRAM_LIMIT_EXCEEDED,
+                ERROR,
+                pgrx::PgSqlErrorCode::ERRCODE_PROGRAM_LIMIT_EXCEEDED,
                 "advanced request exceeds 16 KiB admission limit"
             );
         }
-        let admission = pg_qdrant_protocol::advanced::validate(request.0)
-            .unwrap_or_else(|reason| {
+        let admission =
+            pg_qdrant_protocol::advanced::validate(request.0).unwrap_or_else(|reason| {
                 pgrx::ereport!(
-                    ERROR, pgrx::PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
-                    reason, "Validation does not authorize or execute native Edge work."
-                )
+                    ERROR,
+                    pgrx::PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
+                    reason,
+                    "Validation does not authorize or execute native Edge work."
+                );
             });
         JsonB(json!({
             "family": admission.family,
@@ -117,6 +124,38 @@ mod qdrant_internal {
     use super::{formats, identity, ipc, recheck, worker};
     use pgrx::JsonB;
     use pgrx::prelude::*;
+
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p1_start_consumer() -> JsonB {
+        require_superuser();
+        if !cfg!(feature = "p0-managed-helper") {
+            ipc::raise(ipc::ProbeError::invalid(
+                "source indexing requires managed helper installation",
+            ));
+        }
+        JsonB(worker::ensure_owner(5000).unwrap_or_else(|e| ipc::raise(e)))
+    }
+
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p1_service_ready() -> bool {
+        require_superuser();
+        cfg!(feature = "p0-managed-helper")
+            && ipc::call(ipc::Operation::Ping, 250)
+                .is_ok_and(|status| status["engine_ready"] == true)
+    }
+
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p1_search(request: JsonB, timeout_ms: i32) -> JsonB {
+        require_superuser();
+        worker::start(5000).unwrap_or_else(|e| ipc::raise(e));
+        let operation: ipc::Operation = serde_json::from_value(request.0).unwrap_or_else(|_| {
+            ipc::raise(ipc::ProbeError::invalid("invalid owned search request"))
+        });
+        if !matches!(operation, ipc::Operation::SourceSearch { .. }) {
+            ipc::raise(ipc::ProbeError::invalid("search operation required"));
+        }
+        JsonB(ipc::call(operation, timeout_ms).unwrap_or_else(|e| ipc::raise(e)))
+    }
 
     /// Fixture-only source recheck; no production authorization or capture.
     #[pg_extern(volatile, parallel_unsafe)]

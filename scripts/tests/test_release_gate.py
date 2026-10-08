@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 from scripts.check_release_gate import (
-    REQUIRED_GATES, REQUIRED_FEATURES, assess, verified_file,
+    REQUIRED_GATES, REQUIRED_FEATURES, acceptance_gates, assess, verified_file,
 )
 
 
@@ -46,9 +46,20 @@ class GateTest(unittest.TestCase):
 
     def test_contract_counts_are_stable(self):
         self.assertEqual(len(REQUIRED_FEATURES), 54)
-        self.assertEqual(len(REQUIRED_GATES), 44)
+        self.assertEqual(len(REQUIRED_GATES), 45)
+        self.assertIn("P5-RELEASE", REQUIRED_GATES)
         self.assertEqual(len(set(REQUIRED_FEATURES)), 54)
-        self.assertEqual(len(set(REQUIRED_GATES)), 44)
+        self.assertEqual(len(set(REQUIRED_GATES)), 45)
+
+    def test_acceptance_authority_discovers_added_gate_and_rejects_duplicates(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "acceptance.md"
+            text = "\n".join(f"| P{i}-TEST | requirement |" for i in range(6))
+            path.write_text(text + "\n| P5-RELEASE | publication |\n")
+            self.assertIn("P5-RELEASE", acceptance_gates(path))
+            path.write_text(text + "\n| P5-TEST | duplicate |\n")
+            with self.assertRaises(ValueError):
+                acceptance_gates(path)
 
 
 if __name__ == "__main__":

@@ -50,7 +50,8 @@ impl RequestBudget {
         if self.vector_dimensions > DIMENSIONS_MAX {
             return Err(BudgetError::Dimensions);
         }
-        let total = self.rerank_rows
+        let total = self
+            .rerank_rows
             .checked_mul(self.rerank_tokens_per_row)
             .and_then(|cells| cells.checked_mul(self.vector_dimensions))
             .ok_or(BudgetError::RerankCells)?;
@@ -72,9 +73,13 @@ mod tests {
     use super::*;
     fn valid() -> RequestBudget {
         RequestBudget {
-            top_k: 10, candidates: 50, query_tokens: 32,
-            vector_dimensions: 256, rerank_rows: 50,
-            rerank_tokens_per_row: 4, requested_response_bytes: 8192,
+            top_k: 10,
+            candidates: 50,
+            query_tokens: 32,
+            vector_dimensions: 256,
+            rerank_rows: 50,
+            rerank_tokens_per_row: 4,
+            requested_response_bytes: 8192,
             timeout_ms: 5000,
         }
     }

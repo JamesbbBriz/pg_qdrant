@@ -61,7 +61,9 @@ ORDER BY h.rank;
 
 Hybrid queries, native JSON requests, and optional model ranking use the same index and PostgreSQL permissions. See [the proposed API and architecture](docs/design.md#proposed-sql-experience).
 
-See the draft-only [P1 capture status](docs/p1-capture.md) and [temporary CI hold](docs/ci-temporary-hold.md). Opening a PR does not establish a tested installation.
+See the [P1 integration status](docs/p1-integration.md) and historical
+[CI hold](docs/ci-temporary-hold.md). The integration branch restores automatic
+CI; opening a PR alone does not establish a tested installation.
 
 ## Development
 

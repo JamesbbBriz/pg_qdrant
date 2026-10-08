@@ -1,4 +1,9 @@
 .git
+.planning
+.local-notes
+task_plan.md
+findings.md
+progress.md
 target
 **/target
 artifacts

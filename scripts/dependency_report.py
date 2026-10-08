@@ -26,7 +26,7 @@ PROFILES = {
 def manifest_inputs() -> list[dict[str, str]]:
     paths = [ROOT / "Cargo.toml", ROOT / "rust-toolchain.toml",
              *sorted((ROOT / "crates").glob("*/Cargo.toml"))]
-    return [{"path": str(path.relative_to(ROOT)),
+    return [{"path": path.relative_to(ROOT).as_posix(),
              "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
             for path in sorted(paths)]
 
@@ -147,7 +147,7 @@ def write_or_check(path: pathlib.Path, report: dict, check: bool) -> None:
             raise SystemExit(f"Dependency inventory differs from the locked graph: {path.name}; regenerate and review it.")
     else:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(serialize(report))
+        path.write_text(serialize(report), encoding="utf-8", newline="\n")
 
 
 def main() -> None:
