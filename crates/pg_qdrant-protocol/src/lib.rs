@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::io;
 
+pub mod budgets;
+
 pub const VERSION: u32 = 1;
 pub const REQUEST_BYTES: usize = 16 * 1024;
 pub const RESPONSE_BYTES: usize = 1024 * 1024;
