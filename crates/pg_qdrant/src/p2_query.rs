@@ -1,4 +1,4 @@
-//! Bounded owner-domain text, declared dense and native hybrid search.
+//! Bounded owner-domain text, declared model and native hybrid search.
 
 pgrx::extension_sql!(
     r###"
@@ -36,7 +36,8 @@ DECLARE
     candidate_limit integer;
     timeout_ms integer;
     matched_triggers integer;
-    dense_query jsonb;
+    representation_query jsonb;
+    representation_kind text;
     fusion text;
     effective_plan text;
 BEGIN
@@ -49,7 +50,7 @@ BEGIN
         RAISE EXCEPTION 'top_k outside permitted 1..100 range'
           USING ERRCODE = '22023';
     END IF;
-    IF mode IS NULL OR mode NOT IN ('text','semantic','hybrid') THEN
+    IF mode IS NULL OR mode NOT IN ('text','semantic','sparse','hybrid') THEN
         RAISE EXCEPTION 'Unknown search mode'
           USING ERRCODE = '22023';
     END IF;
@@ -152,15 +153,23 @@ BEGIN
         RAISE EXCEPTION 'Capture triggers or lifecycle are not safe'
           USING ERRCODE = '55000';
     END IF;
-    IF mode IN ('semantic','hybrid') THEN dense_query:=qdrant_internal.admit_dense(index_name,query_vectors); END IF;
+    IF mode IN ('semantic','sparse','hybrid') THEN
+        representation_query:=qdrant_internal.admit_representation(index_name,query_vectors);
+        SELECT contract->>'kind' INTO representation_kind FROM qdrant_internal.representation_catalog
+          WHERE representation_catalog.index_name=explain_search.index_name AND name=representation_query->>'representation';
+        IF (mode='semantic' AND representation_kind<>'dense') OR (mode='sparse' AND representation_kind<>'learned_sparse') THEN
+            RAISE EXCEPTION 'Search mode does not match representation kind' USING ERRCODE='22023';
+        END IF;
+        IF mode='hybrid' THEN effective_plan:='hybrid_bm25_'||representation_kind||'_'||fusion; END IF;
+    END IF;
     RETURN jsonb_build_object(
        'index_name',index_name,'source_oid',selected.source_oid,
        'source_key_type',selected.key_type,
-       'requested_mode',mode,'effective_plan',effective_plan,'dense_query',dense_query,'fusion',fusion,
+       'requested_mode',mode,'effective_plan',effective_plan,'representation_query',representation_query,'representation_kind',representation_kind,'fusion',fusion,
        'fusion_contract',CASE WHEN mode='hybrid' THEN jsonb_build_object('engine','qdrant-edge 0.8.0',
-         'branches',jsonb_build_array('bm25',dense_query->>'representation'),'candidate_limit_per_branch',candidate_limit,
+         'branches',jsonb_build_array('bm25',representation_query->>'representation'),'candidate_limit_per_branch',candidate_limit,
          'rrf_k',CASE WHEN fusion='rrf' THEN 2 END,'rrf_weights','equal',
-         'idf_scope','owned index generation','normalization_scope','bounded prefetch distributions') END,
+         'idf_scope','live vectors in owned generation','normalization_scope','bounded prefetch distributions') END,
        'text_fields',selected.settings #> '{text,fields}',
        'top_k',top_k,'candidate_limit',candidate_limit,
        'timeout_ms',timeout_ms,
@@ -204,7 +213,7 @@ BEGIN
     SELECT * INTO STRICT c FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name;
     hits:=qdrant_internal.p1_search(jsonb_build_object('operation','source_search','index_id',i.index_id,
       'generation',i.generation,'storage_epoch',c.storage_epoch,'q',q,
-      'dense_query',plan->'dense_query',
+      'representation_query',plan->'representation_query',
       'fusion',plan->'fusion',
       'top_k',(plan->>'candidate_limit')::integer),(plan->>'timeout_ms')::integer);
     IF NOT EXISTS(SELECT 1 FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name

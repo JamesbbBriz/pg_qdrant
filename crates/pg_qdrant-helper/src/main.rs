@@ -117,7 +117,7 @@ fn run() -> Result<(), ProbeError> {
                 storage_epoch,
                 q,
                 top_k,
-                dense_query,
+                representation_query,
                 fusion,
             } => source_owner.search(
                 index_id,
@@ -125,7 +125,7 @@ fn run() -> Result<(), ProbeError> {
                 &storage_epoch,
                 &q,
                 top_k,
-                dense_query,
+                representation_query,
                 fusion,
             ),
             op => execute(op),

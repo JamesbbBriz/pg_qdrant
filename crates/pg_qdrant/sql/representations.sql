@@ -52,11 +52,54 @@ BEGIN
  RETURN to_jsonb(values_real);
 END $$;
 
+CREATE FUNCTION qdrant_internal.validate_sparse(p_vector jsonb,p_contract jsonb) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,pg_temp AS $$
+DECLARE n integer; k integer; entry jsonb; token bigint; previous bigint:=-1;
+        weight real; indices bigint[]:='{}'; weights real[]:='{}';
+BEGIN
+ IF p_vector IS NULL OR jsonb_typeof(p_vector)<>'object'
+    OR NOT p_vector ?& ARRAY['indices','values'] OR (SELECT count(*) FROM jsonb_object_keys(p_vector))<>2
+    OR jsonb_typeof(p_vector->'indices')<>'array' OR jsonb_typeof(p_vector->'values')<>'array' THEN
+   RAISE EXCEPTION 'Sparse indices and values arrays required' USING ERRCODE='22023';
+ END IF;
+ n:=jsonb_array_length(p_vector->'indices');
+ IF n>2048 OR n<>jsonb_array_length(p_vector->'values') THEN
+   RAISE EXCEPTION 'Sparse length mismatch or more than 2048 nonzero entries' USING ERRCODE='22023';
+ END IF;
+ FOR k IN 0..n-1 LOOP
+   entry:=p_vector->'indices'->k;
+   IF jsonb_typeof(entry)<>'number' OR entry::text !~ '^[0-9]+$' THEN
+     RAISE EXCEPTION 'Sparse token IDs must be integers' USING ERRCODE='22023';
+   END IF;
+   BEGIN token:=(entry::text)::bigint;
+   EXCEPTION WHEN numeric_value_out_of_range THEN RAISE EXCEPTION 'Sparse token ID overflow' USING ERRCODE='22023'; END;
+   IF token<=previous OR token>4294967295 OR token>=(p_contract->>'dimensions')::bigint THEN
+     RAISE EXCEPTION 'Sparse IDs must be ordered, unique and within vocabulary' USING ERRCODE='22023';
+   END IF;
+   entry:=p_vector->'values'->k;
+   IF jsonb_typeof(entry)<>'number' THEN RAISE EXCEPTION 'Finite sparse numeric weights required' USING ERRCODE='22023'; END IF;
+   BEGIN weight:=(entry::text)::real;
+   EXCEPTION WHEN numeric_value_out_of_range THEN RAISE EXCEPTION 'Sparse weight overflow' USING ERRCODE='22023'; END;
+   IF weight::text IN ('NaN','Infinity','-Infinity') OR weight=0 THEN
+     RAISE EXCEPTION 'Finite nonzero sparse float32 weights required' USING ERRCODE='22023';
+   END IF;
+   indices:=array_append(indices,token); weights:=array_append(weights,weight); previous:=token;
+ END LOOP;
+ RETURN jsonb_build_object('indices',indices,'values',weights);
+END $$;
+
+CREATE FUNCTION qdrant_internal.validate_representation(p_vector jsonb,p_contract jsonb) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,pg_temp AS $$
+BEGIN
+ IF p_contract->>'kind'='learned_sparse' THEN RETURN qdrant_internal.validate_sparse(p_vector,p_contract); END IF;
+ RETURN qdrant_internal.validate_dense(p_vector,p_contract);
+END $$;
+
 CREATE FUNCTION qdrant_internal.register_representations(p_name text,p_slots jsonb) RETURNS void
 LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; slot record; c jsonb; k text; field text;
-        field_type oid; fields text[]:='{}'; dimensions integer;
-        allowed text[]:=ARRAY['kind','model_id','model_version','tokenizer','dimensions','distance',
+        field_type oid; fields text[]:='{}'; dimensions bigint; allowed text[];
+        common_fields text[]:=ARRAY['kind','model_id','model_version','tokenizer','dimensions','distance',
           'normalization','storage_precision','vector_field','fingerprint_field','incarnation_field',
           'model_id_field','model_version_field'];
 BEGIN
@@ -64,11 +107,13 @@ BEGIN
    RAISE EXCEPTION 'representations must be an object' USING ERRCODE='22023';
  END IF;
  IF (SELECT count(*) FROM jsonb_object_keys(p_slots))>4 THEN
-   RAISE EXCEPTION 'At most four dense slots per generation' USING ERRCODE='54000';
+   RAISE EXCEPTION 'At most four model slots per generation' USING ERRCODE='54000';
  END IF;
  SELECT * INTO STRICT i FROM qdrant_internal.index_catalog WHERE index_name=p_name;
  FOR slot IN SELECT * FROM jsonb_each(p_slots) LOOP
    c:=slot.value;
+   allowed:=common_fields;
+   IF c->>'kind'='learned_sparse' THEN allowed:=allowed||ARRAY['vocabulary','idf_policy','idf_revision']; END IF;
    IF slot.key !~ '^[a-z][a-z0-9_]{0,31}$' OR slot.key='bm25'
       OR jsonb_typeof(c)<>'object' THEN
      RAISE EXCEPTION 'Invalid representation name or contract' USING ERRCODE='22023';
@@ -85,11 +130,17 @@ BEGIN
    IF jsonb_typeof(c->'dimensions')<>'number' OR c->>'dimensions' !~ '^[0-9]+$' THEN
      RAISE EXCEPTION 'Integer dimensions required' USING ERRCODE='22023';
    END IF;
-   BEGIN dimensions:=(c->>'dimensions')::integer;
+   BEGIN dimensions:=(c->>'dimensions')::bigint;
    EXCEPTION WHEN numeric_value_out_of_range THEN
-     RAISE EXCEPTION 'Dense dimensions exceed bounds' USING ERRCODE='22023';
+     RAISE EXCEPTION 'Representation dimensions exceed bounds' USING ERRCODE='22023';
    END;
-   IF dimensions NOT BETWEEN 1 AND 4096 OR c->>'kind'<>'dense'
+   IF c->>'kind'='learned_sparse' THEN
+     IF dimensions NOT BETWEEN 1 AND 4294967296 OR c->>'distance'<>'dot' OR c->>'normalization'<>'none'
+        OR c->>'storage_precision'<>'float32' OR c->>'idf_policy' NOT IN ('none','external','engine')
+        OR (c->>'idf_policy'='engine' AND c->>'idf_revision'<>'qdrant-edge:0.8.0') THEN
+       RAISE EXCEPTION 'Unsupported sparse vocabulary or IDF contract' USING ERRCODE='0A000';
+     END IF;
+   ELSIF dimensions NOT BETWEEN 1 AND 4096 OR c->>'kind'<>'dense'
       OR c->>'distance' NOT IN ('dot','cosine','euclid','manhattan')
       OR c->>'normalization' NOT IN ('none','unit') OR c->>'storage_precision'<>'float32' THEN
      RAISE EXCEPTION 'Unsupported dense model contract' USING ERRCODE='0A000';
@@ -151,7 +202,7 @@ BEGIN
         OR output->>'model_version' IS DISTINCT FROM slot.contract->>'model_version' THEN
        RAISE EXCEPTION 'Stale or incompatible model output: %',slot.name USING ERRCODE='55000';
      END IF;
-     PERFORM qdrant_internal.validate_dense(output->'vector',slot.contract);
+     PERFORM qdrant_internal.validate_representation(output->'vector',slot.contract);
    END IF;
  END LOOP;
  RETURN NEW;
@@ -169,7 +220,7 @@ BEGIN
        OR output->>'model_id' IS DISTINCT FROM slot.contract->>'model_id'
        OR output->>'model_version' IS DISTINCT FROM slot.contract->>'model_version' THEN 'stale' ELSE 'ready' END;
    IF status='ready' THEN
-     vector:=qdrant_internal.validate_dense(output->'vector',slot.contract);
+     vector:=qdrant_internal.validate_representation(output->'vector',slot.contract);
      fingerprint:=encode(sha256(convert_to(jsonb_build_object('model',slot.contract,'source',p_fingerprint,
                   'incarnation',p_inc,'vector',vector)::text,'UTF8')),'hex');
      vectors:=vectors||jsonb_build_object(slot.name,vector);
@@ -227,23 +278,32 @@ BEGIN
  RETURN result;
 END $$;
 
-CREATE FUNCTION qdrant_internal.admit_dense(p_name text,p_queries jsonb) RETURNS jsonb
+CREATE FUNCTION qdrant_internal.admit_representation(p_name text,p_queries jsonb) RETURNS jsonb
 LANGUAGE plpgsql STABLE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE rep text; input jsonb; c jsonb; normalized jsonb; field text; source_id oid;
 BEGIN
  IF (SELECT count(*) FROM jsonb_object_keys(p_queries))<>1 THEN
-   RAISE EXCEPTION 'Semantic search requires one named query vector' USING ERRCODE='22023';
+   RAISE EXCEPTION 'One named representation query required' USING ERRCODE='22023';
  END IF;
  SELECT key,value INTO rep,input FROM jsonb_each(p_queries);
  IF jsonb_typeof(input)<>'object' OR NOT input ?& ARRAY['model_id','model_version','vector']
-    OR (SELECT count(*) FROM jsonb_object_keys(input))<>3
+    OR (SELECT count(*) FROM jsonb_object_keys(input)) NOT IN (3,5)
     OR jsonb_typeof(input->'model_id')<>'string' OR jsonb_typeof(input->'model_version')<>'string' THEN
    RAISE EXCEPTION 'Query vector, model_id and model_version required' USING ERRCODE='22023';
  END IF;
  SELECT contract INTO c FROM qdrant_internal.representation_catalog WHERE index_name=p_name AND name=rep;
- IF NOT FOUND THEN RAISE EXCEPTION 'Unknown named dense representation' USING ERRCODE='22023'; END IF;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Unknown named representation' USING ERRCODE='22023'; END IF;
  IF input->>'model_id' IS DISTINCT FROM c->>'model_id' OR input->>'model_version' IS DISTINCT FROM c->>'model_version' THEN
    RAISE EXCEPTION 'Query model differs from index model contract' USING ERRCODE='22023';
+ END IF;
+ IF c->>'kind'='learned_sparse' THEN
+   IF (SELECT count(*) FROM jsonb_object_keys(input))<>5 OR NOT input ?& ARRAY['vocabulary','idf_revision']
+      OR jsonb_typeof(input->'vocabulary')<>'string' OR jsonb_typeof(input->'idf_revision')<>'string'
+      OR input->>'vocabulary' IS DISTINCT FROM c->>'vocabulary' OR input->>'idf_revision' IS DISTINCT FROM c->>'idf_revision' THEN
+     RAISE EXCEPTION 'Query vocabulary and IDF revision must match the model contract' USING ERRCODE='22023';
+   END IF;
+ ELSIF (SELECT count(*) FROM jsonb_object_keys(input))<>3 THEN
+   RAISE EXCEPTION 'Dense query contains unsupported fields' USING ERRCODE='22023';
  END IF;
  SELECT source_oid INTO STRICT source_id FROM qdrant_internal.index_catalog WHERE index_name=p_name;
  FOREACH field IN ARRAY ARRAY[c->>'vector_field',c->>'fingerprint_field',c->>'incarnation_field',c->>'model_id_field',c->>'model_version_field'] LOOP
@@ -251,12 +311,12 @@ BEGIN
      RAISE EXCEPTION 'Representation source column SELECT required' USING ERRCODE='42501';
    END IF;
  END LOOP;
- normalized:=qdrant_internal.validate_dense(input->'vector',c);
+ normalized:=qdrant_internal.validate_representation(input->'vector',c);
  IF EXISTS(SELECT 1 FROM qdrant_internal.source_state s
    LEFT JOIN qdrant_internal.representation_state r ON r.index_name=s.index_name AND r.tagged_key=s.tagged_key AND r.name=rep
    WHERE s.index_name=p_name AND NOT s.tombstone AND (r.state IS DISTINCT FROM 'ready'
      OR r.incarnation IS DISTINCT FROM s.incarnation OR r.source_fingerprint IS DISTINCT FROM s.fingerprint)) THEN
-   RAISE EXCEPTION 'Required dense representation is missing, stale or failed' USING ERRCODE='55000';
+   RAISE EXCEPTION 'Required representation is missing, stale or failed' USING ERRCODE='55000';
  END IF;
  RETURN jsonb_build_object('representation',rep,'model_id',c->>'model_id','model_version',c->>'model_version','vector',normalized);
 END $$;

@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 4;
+pub const SOURCE_CONTRACT_VERSION: u32 = 5;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -28,7 +28,7 @@ pub enum SourceFusion {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct DenseContract {
+pub struct RepresentationContract {
     pub kind: String,
     pub model_id: String,
     pub model_version: String,
@@ -42,15 +42,35 @@ pub struct DenseContract {
     pub incarnation_field: String,
     pub model_id_field: String,
     pub model_version_field: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vocabulary: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub idf_policy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub idf_revision: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct DenseQuery {
+pub struct SparseValues {
+    pub indices: Vec<u32>,
+    pub values: Vec<f32>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum RepresentationVector {
+    Dense(Vec<f32>),
+    Sparse(SparseValues),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RepresentationQuery {
     pub representation: String,
     pub model_id: String,
     pub model_version: String,
-    pub vector: Vec<f32>,
+    pub vector: RepresentationVector,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -63,7 +83,7 @@ pub struct SourceEvent {
     pub fingerprint: Option<String>,
     pub key: Value,
     pub body: Option<String>,
-    pub vectors: BTreeMap<String, Vec<f32>>,
+    pub vectors: BTreeMap<String, RepresentationVector>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -79,7 +99,7 @@ pub struct SourceBatch {
     #[serde(default)]
     pub retire: bool,
     pub events: Vec<SourceEvent>,
-    pub representations: BTreeMap<String, DenseContract>,
+    pub representations: BTreeMap<String, RepresentationContract>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -103,7 +123,7 @@ pub enum Operation {
         q: String,
         top_k: usize,
         #[serde(default)]
-        dense_query: Option<DenseQuery>,
+        representation_query: Option<RepresentationQuery>,
         #[serde(default)]
         fusion: Option<SourceFusion>,
     },
@@ -225,7 +245,7 @@ mod search_contract_tests {
         assert!(matches!(
             operation,
             Operation::SourceSearch {
-                dense_query: None,
+                representation_query: None,
                 fusion: None,
                 ..
             }
@@ -254,5 +274,24 @@ mod search_contract_tests {
         let value = json!({"operation":"source_search","index_id":1,
             "generation":"g","storage_epoch":"e","q":"word","top_k":10,"fusion":"sum"});
         assert!(serde_json::from_value::<Operation>(value).is_err());
+    }
+
+    #[test]
+    fn sparse_shape_preserves_numeric_ids_and_rejects_unknown_or_missing_fields() {
+        let value = json!({"indices":[0,4294967295u32],"values":[1.0,-2.0]});
+        let RepresentationVector::Sparse(parsed) =
+            serde_json::from_value::<RepresentationVector>(value.clone()).unwrap()
+        else {
+            panic!("sparse became dense")
+        };
+        assert_eq!(parsed.indices, vec![0, u32::MAX]);
+        for wrong in [
+            json!({"indices":[0],"values":[1],"unknown":true}),
+            json!({"values":[1]}),
+            json!({"indices":[-1],"values":[1]}),
+            json!({"indices":[4294967296u64],"values":[1]}),
+        ] {
+            assert!(serde_json::from_value::<RepresentationVector>(wrong).is_err());
+        }
     }
 }

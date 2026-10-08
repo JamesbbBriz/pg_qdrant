@@ -1,13 +1,14 @@
 //! Embedded Edge mutation owner. No SQL values select a filesystem path.
 use pg_qdrant_protocol::{
-    DenseContract, DenseQuery, ProbeError, SOURCE_CONTRACT_VERSION, SourceBatch, SourceFusion,
+    ProbeError, RepresentationContract, RepresentationQuery, RepresentationVector,
+    SOURCE_CONTRACT_VERSION, SourceBatch, SourceFusion,
 };
 use qdrant_edge::bm25_embed::{EdgeBm25, EdgeBm25Config};
 use qdrant_edge::{
-    Distance, EdgeConfig, EdgeShard, EdgeSparseVectorParams, EdgeVectorParams, Fusion, Modifier,
-    NamedQuery, PointId, PointInsertOperations, PointOperations, PointStruct, Prefetch, QueryEnum,
-    QueryRequest, ScoringQuery, SearchParams, UpdateOperation, Vector, VectorInternal, Vectors,
-    WithPayloadInterface,
+    Distance, EdgeConfig, EdgeShard, EdgeSparseVectorParams, EdgeVectorParams, Filter, Fusion,
+    IdfCorpusParams, IdfParams, Modifier, NamedQuery, PointId, PointInsertOperations,
+    PointOperations, PointStruct, Prefetch, QueryEnum, QueryRequest, ScoringQuery, SearchParams,
+    UpdateOperation, Vector, VectorInternal, Vectors, WithPayloadInterface,
 };
 use serde_json::{Value, json};
 use std::{
@@ -17,7 +18,7 @@ use std::{
 
 struct SourceShard {
     shard: EdgeShard,
-    representations: BTreeMap<String, DenseContract>,
+    representations: BTreeMap<String, RepresentationContract>,
 }
 
 pub struct SourceOwner {
@@ -125,6 +126,13 @@ impl SourceOwner {
             return Err(error("retired storage epoch cannot receive mutations"));
         }
         let mut dense_config = HashMap::new();
+        let mut sparse_config = HashMap::from([(
+            "bm25".to_owned(),
+            EdgeSparseVectorParams {
+                modifier: Some(Modifier::Idf),
+                ..Default::default()
+            },
+        )]);
         for (name, contract) in &batch.representations {
             if name == "bm25"
                 || name.is_empty()
@@ -132,12 +140,52 @@ impl SourceOwner {
                 || !name
                     .bytes()
                     .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
-                || contract.kind != "dense"
-                || !(1..=4096).contains(&contract.dimensions)
                 || contract.storage_precision != "float32"
                 || !["none", "unit"].contains(&contract.normalization.as_str())
             {
-                return Err(ProbeError::invalid("unsupported owned dense contract"));
+                return Err(ProbeError::invalid(
+                    "unsupported owned representation contract",
+                ));
+            }
+            if contract.kind == "learned_sparse" {
+                if contract.dimensions == 0
+                    || contract.dimensions > u32::MAX as usize + 1
+                    || contract.distance != "dot"
+                    || contract.normalization != "none"
+                    || contract
+                        .vocabulary
+                        .as_ref()
+                        .is_none_or(|v| v.is_empty() || v.len() > 256)
+                    || contract
+                        .idf_revision
+                        .as_ref()
+                        .is_none_or(|v| v.is_empty() || v.len() > 256)
+                    || !matches!(
+                        contract.idf_policy.as_deref(),
+                        Some("none" | "external" | "engine")
+                    )
+                    || (contract.idf_policy.as_deref() == Some("engine")
+                        && contract.idf_revision.as_deref() != Some("qdrant-edge:0.8.0"))
+                {
+                    return Err(ProbeError::invalid("unsupported learned sparse contract"));
+                }
+                sparse_config.insert(
+                    name.clone(),
+                    EdgeSparseVectorParams {
+                        modifier: (contract.idf_policy.as_deref() == Some("engine"))
+                            .then_some(Modifier::Idf),
+                        ..Default::default()
+                    },
+                );
+                continue;
+            }
+            if contract.kind != "dense"
+                || !(1..=4096).contains(&contract.dimensions)
+                || contract.vocabulary.is_some()
+                || contract.idf_policy.is_some()
+                || contract.idf_revision.is_some()
+            {
+                return Err(ProbeError::invalid("unsupported dense contract"));
             }
             let distance = match contract.distance.as_str() {
                 "dot" => Distance::Dot,
@@ -157,7 +205,7 @@ impl SourceOwner {
                     .representations
                     .get(name)
                     .ok_or_else(|| ProbeError::invalid("undeclared named vector"))?;
-                validate_dense(vector, contract)?;
+                validate_representation(vector, contract)?;
             }
             if event.body.is_none() && !event.vectors.is_empty() {
                 return Err(ProbeError::invalid("tombstone contains vectors"));
@@ -182,13 +230,7 @@ impl SourceOwner {
             std::fs::create_dir_all(&path).map_err(error)?;
             let config = EdgeConfig {
                 vectors: dense_config,
-                sparse_vectors: HashMap::from([(
-                    "bm25".into(),
-                    EdgeSparseVectorParams {
-                        modifier: Some(Modifier::Idf),
-                        ..Default::default()
-                    },
-                )]),
+                sparse_vectors: sparse_config,
                 max_search_threads: Some(2),
                 ..Default::default()
             };
@@ -230,12 +272,9 @@ impl SourceOwner {
                     "bm25".to_owned(),
                     Vector::from(self.encoder.embed_document(body)),
                 )];
-                vectors.extend(
-                    event
-                        .vectors
-                        .iter()
-                        .map(|(name, vector)| (name.clone(), Vector::new_dense(vector.clone()))),
-                );
+                for (name, vector) in &event.vectors {
+                    vectors.push((name.clone(), native_vector(vector)?));
+                }
                 let point = PointStruct::new(
                     event.point_id,
                     Vectors::new_named(vectors),
@@ -281,7 +320,7 @@ impl SourceOwner {
         epoch: &str,
         q: &str,
         top_k: usize,
-        dense_query: Option<DenseQuery>,
+        representation_query: Option<RepresentationQuery>,
         fusion: Option<SourceFusion>,
     ) -> Result<Value, ProbeError> {
         if q.is_empty() || q.len() > 8192 || !(1..=1000).contains(&top_k) {
@@ -293,31 +332,37 @@ impl SourceOwner {
             .get(&key)
             .ok_or_else(|| error("generation not owned by this helper"))?;
         let shard = &owned.shard;
-        if fusion.is_some() && dense_query.is_none() {
+        if fusion.is_some() && representation_query.is_none() {
             return Err(ProbeError::invalid(
-                "hybrid fusion requires a named dense query",
+                "hybrid fusion requires a named representation query",
             ));
         }
         let mut request = QueryRequest::new(top_k);
-        let (using, query) = if let Some(dense) = dense_query {
+        let (using, query) = if let Some(dense) = representation_query {
             let contract = owned
                 .representations
                 .get(&dense.representation)
-                .ok_or_else(|| ProbeError::invalid("dense slot is not owned by this generation"))?;
+                .ok_or_else(|| {
+                    ProbeError::invalid("representation slot is not owned by this generation")
+                })?;
             if dense.model_id != contract.model_id || dense.model_version != contract.model_version
             {
                 return Err(ProbeError::invalid(
                     "query model does not match the generation",
                 ));
             }
-            validate_dense(&dense.vector, contract)?;
-            (dense.representation, VectorInternal::Dense(dense.vector))
+            validate_representation(&dense.vector, contract)?;
+            (dense.representation, native_vector(&dense.vector)?.into())
         } else {
             (
                 "bm25".to_owned(),
                 VectorInternal::Sparse(self.encoder.embed_query(q)),
             )
         };
+        let uses_idf = using == "bm25"
+            || owned.representations.get(&using).is_some_and(|c| {
+                c.kind == "learned_sparse" && c.idf_policy.as_deref() == Some("engine")
+            });
         let scoring = ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
             using: Some(using),
             query,
@@ -329,12 +374,18 @@ impl SourceOwner {
             }));
             request.prefetches = [bm25, scoring]
                 .into_iter()
-                .map(|query| {
+                .enumerate()
+                .map(|(branch, query)| {
                     let mut stage = Prefetch::new(top_k);
                     stage.query = Some(query);
                     stage.params = Some(SearchParams {
                         exact: true,
                         indexed_only: false,
+                        idf: (branch == 0 || uses_idf).then(|| {
+                            IdfParams::Corpus(IdfCorpusParams {
+                                corpus: Filter::default(),
+                            })
+                        }),
                         ..Default::default()
                     });
                     stage
@@ -353,6 +404,14 @@ impl SourceOwner {
         request.params = Some(SearchParams {
             exact: true,
             indexed_only: false,
+            // Global posting counts include deleted offsets until optimize.
+            // Corpus statistics resolve live points, so source replacement,
+            // replay and rebuild do not change IDF through tombstone history.
+            idf: (fusion.is_none() && uses_idf).then(|| {
+                IdfParams::Corpus(IdfCorpusParams {
+                    corpus: Filter::default(),
+                })
+            }),
             ..Default::default()
         });
         // Source text is returned only through the authorized PostgreSQL JOIN.
@@ -375,7 +434,44 @@ impl SourceOwner {
     }
 }
 
-fn validate_dense(vector: &[f32], contract: &DenseContract) -> Result<(), ProbeError> {
+fn native_vector(vector: &RepresentationVector) -> Result<Vector, ProbeError> {
+    match vector {
+        RepresentationVector::Dense(values) => Ok(Vector::new_dense(values.clone())),
+        RepresentationVector::Sparse(values) => {
+            Vector::new_sparse(values.indices.clone(), values.values.clone()).map_err(error)
+        }
+    }
+}
+
+fn validate_representation(
+    vector: &RepresentationVector,
+    contract: &RepresentationContract,
+) -> Result<(), ProbeError> {
+    let RepresentationVector::Dense(vector) = vector else {
+        let RepresentationVector::Sparse(sparse) = vector else {
+            unreachable!()
+        };
+        if contract.kind != "learned_sparse"
+            || sparse.indices.len() > 2048
+            || sparse.indices.len() != sparse.values.len()
+            || sparse.indices.windows(2).any(|w| w[0] >= w[1])
+            || sparse
+                .indices
+                .iter()
+                .any(|i| *i as usize >= contract.dimensions)
+            || sparse.values.iter().any(|v| !v.is_finite() || *v == 0.0)
+        {
+            return Err(ProbeError::invalid(
+                "sparse vocabulary, ordering, finite nonzero weights or nonzero count invalid",
+            ));
+        }
+        return Ok(());
+    };
+    if contract.kind != "dense" {
+        return Err(ProbeError::invalid(
+            "vector kind differs from model contract",
+        ));
+    }
     if vector.len() != contract.dimensions || vector.iter().any(|value| !value.is_finite()) {
         return Err(ProbeError::invalid(
             "dense vector violates dimensions or finite-value contract",

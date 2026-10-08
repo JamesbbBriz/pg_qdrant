@@ -1,12 +1,13 @@
-# Bounded native BM25 and dense fusion
+# Bounded native BM25 and model fusion
 
 The managed-helper development build executes `mode => 'hybrid'` using two
 native Edge prefetch branches: the registered text field's offline BM25 and one
-declared dense BYOV representation. It requires the same current model contract
+declared dense or [learned sparse BYOV](sparse-representations.md) representation.
+It requires the same current model contract
 and whole-source representation readiness as [semantic search](dense-representations.md).
 Missing, stale or incompatible vectors cause an error. No implicit fallback is
-performed. This is partial Q02/Q03 integration; the balanced preset, learned
-sparse branch and general multi-stage planner remain pending.
+performed. This is partial Q02/Q03 integration; the balanced preset and general
+multi-stage planner remain pending.
 
 For an index configured with the `dense` representation in the dense example:
 
@@ -31,9 +32,10 @@ is `qdrant-edge =0.8.0`. Both branches execute exact nearest queries with a
 candidate limit between `top_k` and 1000. The outer fused candidate list has the
 same limit; the source JOIN can return fewer than `top_k` if concurrent source
 changes invalidate candidates. There is no unbounded refill or exact whole-corpus
-hybrid ranking claim. BM25 IDF uses the owned generation, with its current live
-native points. Tenant-filtered IDF and separate learned-sparse IDF are not supplied
-by this owner-domain implementation.
+hybrid ranking claim. The adapter explicitly selects native live-corpus IDF for
+BM25 and engine-IDF learned sparse, excluding deleted posting history. Learned
+sparse has separate none/external/engine IDF contracts. Tenant-filtered IDF and
+user-selected corpus filters remain unimplemented.
 
 RRF uses equal weights and `k=2`. A point at zero-based branch position `r`
 contributes `1/(r+2)`; contributions from participating branches are added.
@@ -46,7 +48,8 @@ SQL key-order guarantee.
 
 `explain_search` exposes branch names, budgets, pinned fusion contract and the
 effective plan. Result provenance identifies `hybrid_bm25_dense_rrf` or
-`hybrid_bm25_dense_dbsf` and the bounded-candidate statistics scope.
+`hybrid_bm25_dense_dbsf`, or the corresponding `learned_sparse` plan, and the
+bounded-candidate statistics scope.
 The registered owner domain is shared by both branches because each owned index
 contains only that registered source. Index/source/model-column authorization and
 RLS rejection occur before native admission. Catalog/source locks and post-query

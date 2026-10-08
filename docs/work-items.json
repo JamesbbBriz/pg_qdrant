@@ -353,6 +353,14 @@
       "capability_ids": [
         "F02"
       ],
+      "installed_implementation": {
+        "status": "partially_verified",
+        "scope": "Declared learned sparse source output, vocabulary/model/IDF fences, native sparse and BM25/sparse RRF/DBSF, live-corpus IDF, freshness/key reuse and same-contract generation replay; full capability acceptance remains open.",
+        "documentation": "docs/sparse-representations.md",
+        "test": "crates/pg_qdrant/tests/verify_sparse.py",
+        "full_capability_acceptance": false,
+        "release_supported": false
+      },
       "title": "Learned lexical ranking",
       "phase": "P2",
       "owner": "planner/models",
