@@ -3,6 +3,7 @@ import json
 import hashlib
 import os
 import pathlib
+import signal
 import subprocess
 import time
 
@@ -32,7 +33,9 @@ def wait_session(name, event):
 def sql(query, ok=True):
     p = subprocess.run(PSQL+['-c',query],text=True,capture_output=True,timeout=130)
     if ok and p.returncode:
-        raise AssertionError(query + '\n' + p.stderr)
+        diagnostic=subprocess.run(PSQL+['-c',"SELECT jsonb_agg(jsonb_build_object('pid',pid,'backend_type',backend_type,'state',state,'wait_type',wait_event_type,'wait',wait_event,'query',left(query,300),'blocked_by',pg_blocking_pids(pid))) FROM pg_stat_activity"],text=True,capture_output=True,timeout=5)
+        processes=subprocess.run(['ps','-eLo','pid,tid,ppid,stat,wchan:24,comm'],text=True,capture_output=True,timeout=5)
+        raise AssertionError(query + '\n' + p.stderr+'\n'+diagnostic.stdout+'\n'+processes.stdout)
     if not ok:
         assert p.returncode, 'expected SQL error: ' + query
         return p.stderr
@@ -50,7 +53,19 @@ def ready(index='docs', timeout=60):
 def hits(q, index='docs'):
     return sql("SELECT coalesce(jsonb_agg(source_key ORDER BY rank),'[]') FROM qdrant.search('"+index+"','"+q+"')")
 
+def native_hits(q, index='docs'):
+    # Inspect native candidates before SQL source rechecking can hide an old ID.
+    request="(SELECT jsonb_build_object('operation','source_search','index_id',i.index_id,'generation',i.generation,'storage_epoch',c.storage_epoch,'q','"+q+"','top_k',1000) FROM qdrant_internal.index_catalog i JOIN qdrant_internal.consumer_state c USING(index_name) WHERE i.index_name='"+index+"')"
+    return json.loads(sql('SELECT qdrant_internal.p1_search('+request+',30000)'))
+
+disposable=pathlib.Path(os.environ['PG_QDRANT_DISPOSABLE_DATA']).resolve()
+assert disposable.parent.parent==pathlib.Path('/tmp') and disposable.parent.name.startswith('pgq-p1-product.')
+assert pathlib.Path(sql('SHOW data_directory')).resolve()==disposable
 sql('CREATE EXTENSION pg_qdrant')
+capabilities=json.loads(sql('SELECT qdrant.capabilities()'))
+assert capabilities['index_catalog_available']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01']
+assert not any(item['release_supported'] for item in capabilities['capabilities'])
 sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)')
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
 sql("SELECT qdrant.create_index('docs','docs','id','{\"text\":{\"fields\":[\"body\"]}}')")
@@ -100,10 +115,12 @@ assert len(json.loads(hits('copybatch')))==5
 checks += ['64 KiB escaped-text consumer frame','COPY and multi-row UPDATE reach Edge']
 
 old=sql("SELECT point_id FROM qdrant_internal.source_state WHERE index_name='docs' AND tagged_key->>'value'='1'")
+assert old in [str(hit['id']) for hit in native_hits('changed')]
 sql("DELETE FROM docs WHERE id=1; INSERT INTO docs VALUES(1,'reused incarnation',NULL)")
 ready()
 new=sql("SELECT point_id FROM qdrant_internal.source_state WHERE index_name='docs' AND tagged_key->>'value'='1'")
 assert old!=new
+assert native_hits('changed')==[], 'obsolete native point cannot be hidden by the source JOIN'
 assert hits('changed')=='[]'
 assert hits('reused')=='["1"]'
 sql('UPDATE docs SET id=5002 WHERE id=1')
@@ -152,11 +169,14 @@ checks += ['durable DDL invalidation and explicit reconstruction','source DROP a
 sql('TRUNCATE docs')
 ready()
 assert hits('recovery')=='[]'
+assert native_hits('recovery')==[], 'TRUNCATE must delete native points, not just hide missing source rows'
 sql("INSERT INTO docs VALUES(1,'final recovery',NULL)")
 ready()
 checks += ['TRUNCATE tombstones']
 
 status=ready()
+assert len(status['engine_instance'])==32
+assert sql("SELECT qdrant_internal.p1_service_ready(repeat('0',32))")=='f'
 # Kill actual managed helper and verify complete authoritative reconstruction.
 pid=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
 os.kill(pid,9)
@@ -167,8 +187,60 @@ while time.monotonic()<end:
         break
     time.sleep(.05)
 assert status2['storage_epoch']!=status['storage_epoch']
+assert status2['engine_instance']!=status['engine_instance']
+assert sql("SELECT qdrant_internal.p1_service_ready('"+status['engine_instance']+"')")=='f'
 assert hits('final')=='["1"]'
 checks += ['helper SIGKILL new storage epoch reconstruction']
+
+# A caller cancelling its wait does not relinquish a native write's owner.
+pid=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
+os.kill(pid,signal.SIGSTOP)
+try:
+    ticket=ticket_from(sql("BEGIN; UPDATE docs SET body='cancelledwait recovery' WHERE id=1; SELECT qdrant.track_changes('docs'); COMMIT"))
+    timed=json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',100)"))
+    assert timed['timed_out'] and not timed['durable'] and timed['pending_events']>0,timed
+    waiting=spawn("SELECT qdrant.await_changes('"+ticket+"',60000)",'pgq_cancelled_wait')
+    wait_session('pgq_cancelled_wait',"wait_event='PgSleep'")
+    assert sql("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE application_name='pgq_cancelled_wait'")=='t'
+    out,err=waiting.communicate(timeout=10)
+    assert waiting.returncode!=0 and '57014' in err,(out,err)
+    owner=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+    assert owner['engine_pid']==pid and owner['active']['operation']=='source_apply',owner
+finally:
+    os.kill(pid,signal.SIGCONT)
+assert json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))['durable']
+assert hits('cancelledwait')=='["1"]'
+checks += ['timeout and cancelled wait retain the in-flight native write owner']
+
+# A management rollback cannot strand an in-flight flush receipt or its ticket.
+pid=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
+os.kill(pid,signal.SIGSTOP)
+try:
+    ticket=ticket_from(sql("BEGIN; UPDATE docs SET body='managementrollback recovery' WHERE id=1; SELECT qdrant.track_changes('docs'); COMMIT"))
+    assert not json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',100)"))['durable']
+    management=spawn("BEGIN; SELECT qdrant.drop_index('docs'); SELECT pg_sleep(2); ROLLBACK",'pgq_management_rollback')
+    wait_session('pgq_management_rollback',"wait_event='PgSleep'")
+finally:
+    os.kill(pid,signal.SIGCONT)
+finish(management)
+assert json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))['durable']
+assert hits('managementrollback')=='["1"]'
+assert json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']==pid
+checks += ['management rollback replays unacknowledged in-flight receipts']
+
+# Replacement may initially skip a management-locked catalog row. It must
+# rotate that row's owner fence once the lock is released, before serving it.
+before=ready()
+locked=spawn("BEGIN; SELECT index_name FROM qdrant_internal.index_catalog WHERE index_name='docs' FOR UPDATE; SELECT pg_sleep(2); ROLLBACK",'pgq_owner_rotation_lock')
+wait_session('pgq_owner_rotation_lock',"wait_event='PgSleep'")
+os.kill(json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid'],signal.SIGKILL)
+finish(locked)
+after=ready()
+assert after['engine_instance']!=before['engine_instance'] and after['storage_epoch']!=before['storage_epoch']
+assert hits('managementrollback')=='["1"]'
+crash_matrix.append({'cut':'owner_replacement_with_locked_catalog','before':before,
+    'after':after,'final_source_keys':json.loads(hits('managementrollback'))})
+checks += ['replacement owner rotates catalog rows skipped during management']
 
 faults=sql('SELECT (qdrant.build_info()->\'features\'->>\'p0_fault_injection\')::boolean')=='t'
 if faults:
@@ -200,8 +272,44 @@ for fixture in ['p3_reservations.sql','p4_advanced.sql']:
     assert fixture_result.returncode==0,(fixture,fixture_result.stderr)
 checks += ['retained P3 reservations and P4 shape validators (no native execution claim)']
 
+# Restart the actual fsync-enabled PostgreSQL cluster with committed ACKs and
+# a committed pending event. Historical ACKs cannot authorize a new helper.
+before=ready()
+ticket=ticket_from(sql("BEGIN; UPDATE docs SET body='postgresrestart durable recovery' WHERE id=1; SELECT qdrant.track_changes('docs'); COMMIT"))
+data=pathlib.Path(os.environ['PG_QDRANT_DISPOSABLE_DATA'])
+bindir=subprocess.check_output(['pg_config','--bindir'],text=True).strip()
+subprocess.run([bindir+'/pg_ctl','-D',str(data),'-m','immediate','-w','stop'],check=True,capture_output=True,text=True)
+restart_log=pathlib.Path(os.environ.get('PG_QDRANT_ARTIFACT_DIR','/src/artifacts'))/'p1-product-restart.log'
+start=subprocess.run([bindir+'/pg_ctl','-D',str(data),'-l',str(restart_log),'-o',
+    "-c listen_addresses='' -c unix_socket_directories='"+os.environ['PGHOST']+"' -c port="+os.environ['PGPORT']+" -c fsync=on -c synchronous_commit=on",'-w','start'],capture_output=True,text=True)
+assert start.returncode==0,(start.stdout,start.stderr,restart_log.read_text())
+result=json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))
+after=ready()
+assert result['durable'] and after['storage_epoch']!=before['storage_epoch'],(result,after)
+assert hits('postgresrestart')=='["1"]'
+crash_matrix.append({'cut':'postgres_immediate_stop','before':before,'after':after,
+    'ticket_durable':result,'final_source_keys':json.loads(hits('postgresrestart'))})
+checks += ['PostgreSQL immediate-stop WAL recovery and new-owner exact replay']
+
+# Uninstall while the supervisor is alive. It must avoid calling removed SQL
+# functions; installation rollback and reinstallation preserve source facts.
+build_info=json.loads(sql('SELECT qdrant.build_info()'))
+worker=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['worker_pid']
+observer=spawn('SELECT pg_sleep(2)','pgq_extension_drop_observer')
+sql("SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
+finish(observer)
+assert sql('SELECT count(*) FROM docs')=='1'
+assert sql("SELECT count(*) FROM pg_stat_activity WHERE pid="+str(worker))=='1','consumer must stay alive without its extension catalog'
+sql('BEGIN; CREATE EXTENSION pg_qdrant; ROLLBACK')
+assert sql("SELECT count(*) FROM pg_extension WHERE extname='pg_qdrant'")=='0'
+sql('CREATE EXTENSION pg_qdrant')
+sql("SELECT qdrant.create_index('docs','docs','id','{\"text\":{\"fields\":[\"body\"]}}')")
+ready()
+assert hits('postgresrestart')=='["1"]'
+checks += ['live-consumer DROP, installation rollback and reinstallation']
+
 print(json.dumps({'status':'passed','checks':checks,'fault_build':faults,
     'source_revision':os.environ.get('PG_QDRANT_SOURCE_SHA','unrecorded'),
     'cargo_lock_sha256':hashlib.sha256(pathlib.Path('/src/Cargo.lock').read_bytes()).hexdigest(),
-    'build_info':json.loads(sql('SELECT qdrant.build_info()')), 'crash_matrix':crash_matrix,
+    'build_info':build_info, 'crash_matrix':crash_matrix,
     'postgres_version':sql('SHOW server_version'), 'release_supported':False},indent=2))

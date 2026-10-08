@@ -68,6 +68,7 @@ CREATE TABLE qdrant_internal.consumer_state (
     generation uuid NOT NULL,
     storage_epoch uuid NOT NULL DEFAULT gen_random_uuid(),
     consumer_id uuid NOT NULL DEFAULT gen_random_uuid(),
+    engine_instance text NOT NULL CHECK (engine_instance ~ '^[0-9a-f]{32}$'),
     state text NOT NULL DEFAULT 'building' CHECK (state IN ('building','ready','dirty','failed')),
     last_error text,
     updated_at timestamptz NOT NULL DEFAULT clock_timestamp()

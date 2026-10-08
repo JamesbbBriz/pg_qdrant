@@ -151,8 +151,8 @@ BEGIN
        'permission_preflight','passed_for_registered_source',
        'native_predicates_compiled',false,
        'source_recheck_available',true,
-       'edge_generation_ready',(SELECT state='ready' AND qdrant_internal.p1_service_ready() FROM qdrant_internal.consumer_state c WHERE c.index_name=selected.index_name),
-       'search_executable',(SELECT state='ready' AND qdrant_internal.p1_service_ready() FROM qdrant_internal.consumer_state c WHERE c.index_name=selected.index_name),
+       'edge_generation_ready',(SELECT state='ready' AND qdrant_internal.p1_service_ready(c.engine_instance) FROM qdrant_internal.consumer_state c WHERE c.index_name=selected.index_name),
+       'search_executable',(SELECT state='ready' AND qdrant_internal.p1_service_ready(c.engine_instance) FROM qdrant_internal.consumer_state c WHERE c.index_name=selected.index_name),
        'permission_domain','registered owner with complete source SELECT',
        'release_supported',false);
 END;

@@ -1,6 +1,6 @@
 # Capability coverage contract
 
-Status: formal product scope with the selected P0 feasibility baseline verified. The [P0 decision](evidence/p0-feasibility.json) accepts an implementation route; it does not complete these capability contracts. This document maps the intended embedded retrieval surface to dependencies, extension work, and acceptance conditions. The repository contains private feasibility SQL functions and tests; it does not yet provide the source-table indexing/search product or any release-supported capability.
+Status: formal product scope with the selected P0 feasibility baseline verified. The [P0 decision](evidence/p0-feasibility.json) accepts an implementation route; it does not complete these capability contracts. This document maps the intended embedded retrieval surface to dependencies, extension work, and acceptance conditions. The managed-helper development build now provides a restricted installed source-table capture, durable consumer and single-field BM25 SQL path, described in [the integration status](p1-integration.md). No capability is release-supported; the complete contracts below remain open.
 
 Baseline: [dependency versions and upgrade policy](dependencies.md). Public API/source inspection refers to Qdrant Edge `0.8.0`; rolling Qdrant Server documentation is supplementary, not a replacement for that version's embedded API.
 
@@ -22,7 +22,7 @@ Every public Edge query/match variant, vector/storage kind, payload-index schema
 
 ## Proposed capability discovery
 
-Add a versioned `qdrant.capabilities(index_name text DEFAULT NULL) -> jsonb` interface during implementation. The current P0 function reports the 54 planned IDs and rejects index-specific requests because the index catalog does not exist yet. Full index-aware discovery remains a product requirement.
+The versioned `qdrant.capabilities(index_name text DEFAULT NULL) -> jsonb` interface retains all 54 IDs. The managed-helper build reports its installed catalog and partial single-field F01 SQL integration, separately from release support. Index-specific requests still fail because full index-aware discovery remains unimplemented. Direct-worker feasibility builds do not enable product indexing.
 
 Without an index it should report extension/engine versions, build features, API support and capability status. With an index it should also report effective lexical backend, generation, configured representations, and readiness or rejection reasons. Keep these distinctions explicit: upstream primitive exists, adapter supports it, feature is release-tested, and this index has the necessary data.
 

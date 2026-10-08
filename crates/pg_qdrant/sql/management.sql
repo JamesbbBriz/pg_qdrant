@@ -91,7 +91,7 @@ BEGIN
  INTO total,pending FROM qdrant_internal.outbox e LEFT JOIN qdrant_internal.event_ack a USING(event_id)
  WHERE e.ticket_id=p_ticket;
  IF total<>t.sealed_events THEN RAISE EXCEPTION 'Ticket membership mismatch' USING ERRCODE='XX001'; END IF;
- ready:=c.state='ready' AND c.generation=t.generation AND qdrant_internal.p1_service_ready()
+ ready:=c.state='ready' AND c.generation=t.generation AND qdrant_internal.p1_service_ready(c.engine_instance)
         AND qdrant_internal.p1_index_status(t.index_name)->>'capture_state'='capturing';
  reason:=CASE WHEN c.generation<>t.generation THEN 'generation_invalidated'
               WHEN NOT coalesce(ready,false) THEN coalesce(c.last_error,'index_not_ready') END;
@@ -109,13 +109,13 @@ BEGIN
  SELECT * INTO c FROM qdrant_internal.consumer_state WHERE index_name=p_index_name;
  result:=qdrant_internal.p1_index_status(p_index_name);
  RETURN result || jsonb_build_object('state',CASE WHEN result->>'capture_state'<>'capturing'
-   OR NOT (owner_status->>'engine_ready')::boolean
+   OR NOT (owner_status->>'engine_ready')::boolean OR c.engine_instance IS DISTINCT FROM owner_status->>'engine_instance'
    THEN 'degraded' ELSE coalesce(c.state,'registered') END,
    'backfill_done',(SELECT backfill_done FROM qdrant_internal.index_catalog WHERE index_name=p_index_name),
-   'storage_epoch',c.storage_epoch,'consumer_id',c.consumer_id,'last_error',c.last_error,
+   'storage_epoch',c.storage_epoch,'consumer_id',c.consumer_id,'engine_instance',c.engine_instance,'last_error',c.last_error,
    'owner_status',owner_status,
    'engine_index_ready',c.state='ready' AND result->>'capture_state'='capturing'
-      AND (owner_status->>'engine_ready')::boolean,
+      AND (owner_status->>'engine_ready')::boolean AND c.engine_instance=owner_status->>'engine_instance',
    'pending_events',(SELECT count(*) FROM qdrant_internal.outbox e
       LEFT JOIN qdrant_internal.event_ack a USING(event_id) WHERE e.index_name=p_index_name
       AND (a.event_id IS NULL OR a.storage_epoch IS DISTINCT FROM c.storage_epoch)));

@@ -27,6 +27,7 @@ pub struct Supervisor {
     owner_path: PathBuf,
     child: Option<ManagedChild>,
     connection: Option<Connection>,
+    owner_instance: Option<String>,
     attempts: u32,
     next_attempt: Instant,
     last_error: Option<String>,
@@ -48,6 +49,7 @@ impl Supervisor {
             owner_path: directory.join(format!("db-{database_oid}.engine-owner")),
             child: None,
             connection: None,
+            owner_instance: None,
             attempts: 0,
             next_attempt: Instant::now(),
             last_error: None,
@@ -57,6 +59,7 @@ impl Supervisor {
 
     pub fn status(&self) -> Value {
         json!({"engine_pid": self.child.as_ref().map(ManagedChild::id),
+            "engine_instance": self.owner_instance,
             "engine_ready": self.connection.is_some(),
             "helper_start_attempts": self.attempts,
             "helper_restart_limit": 3,
@@ -108,6 +111,7 @@ impl Supervisor {
         self.last_exit = Some(exit.details);
         self.child = None;
         self.connection = None;
+        self.owner_instance = None;
         self.last_error = Some(format!("helper exited: {}", exit.status));
         self.backoff();
     }
@@ -160,6 +164,9 @@ impl Supervisor {
         match ready {
             Ok(value)
                 if value["ready"] == true
+                    && value["owner_instance"].as_str().is_some_and(|nonce| {
+                        nonce.len() == 32 && nonce.bytes().all(|b| b.is_ascii_hexdigit())
+                    })
                     && value["helper_version"] == env!("CARGO_PKG_VERSION")
                     && value["fault_injection"] == cfg!(feature = "p0-fault-injection") =>
             {
@@ -171,6 +178,7 @@ impl Supervisor {
                     sequence: 0,
                 })));
                 self.last_error = None;
+                self.owner_instance = value["owner_instance"].as_str().map(str::to_owned);
                 Ok(())
             }
             result => {

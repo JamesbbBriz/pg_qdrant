@@ -34,7 +34,7 @@ mod qdrant {
         JsonB(json!({
             "schema_version": 1,
             "extension_version": env!("CARGO_PKG_VERSION"),
-            "stage": "P0_feasibility",
+            "stage": if cfg!(feature="p0-managed-helper") {"development_source_indexing"} else {"P0_feasibility"},
             "engine": {"name": "qdrant-edge", "version": "0.8.0"},
             "pgrx_version": "0.19.3",
             "cpu_admission": pg_qdrant_edge_probe::cpu_report(),
@@ -97,25 +97,26 @@ mod qdrant {
             pgrx::ereport!(
                 ERROR,
                 pgrx::PgSqlErrorCode::ERRCODE_FEATURE_NOT_SUPPORTED,
-                "index-specific capability discovery is not available in the P0 prototype",
+                "index-specific capability discovery remains unimplemented",
                 "Call qdrant.capabilities() to inspect the retained product requirements."
             );
         }
         let mut ids = Vec::new();
         for (prefix, count) in [("F", 20), ("V", 8), ("Q", 14), ("L", 12)] {
             for number in 1..=count {
+                let bm25_sql = cfg!(feature = "p0-managed-helper") && prefix == "F" && number == 1;
                 ids.push(json!({
                     "id": format!("{prefix}{number:02}"),
-                    "product_status": "planned",
+                    "product_status": if bm25_sql {"partial_sql_integration"} else {"planned"},
                     "release_supported": false,
-                    "sql_product_interface": false
+                    "sql_product_interface": bm25_sql,
+                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else {None}
                 }));
             }
         }
-        JsonB(
-            json!({"registry_schema_version": 1, "stage": "P0_feasibility",
-            "index_catalog_available": false, "capabilities": ids}),
-        )
+        JsonB(json!({"registry_schema_version": 1,
+            "stage": if cfg!(feature="p0-managed-helper") {"development_source_indexing"} else {"P0_feasibility"},
+            "index_catalog_available": cfg!(feature="p0-managed-helper"), "capabilities": ids}))
     }
 }
 
@@ -137,11 +138,12 @@ mod qdrant_internal {
     }
 
     #[pg_extern(volatile, parallel_unsafe)]
-    fn p1_service_ready() -> bool {
+    fn p1_service_ready(instance: &str) -> bool {
         require_superuser();
         cfg!(feature = "p0-managed-helper")
-            && ipc::call(ipc::Operation::Ping, 250)
-                .is_ok_and(|status| status["engine_ready"] == true)
+            && ipc::call(ipc::Operation::Ping, 250).is_ok_and(|status| {
+                status["engine_ready"] == true && status["engine_instance"] == instance
+            })
     }
 
     #[pg_extern(volatile, parallel_unsafe)]

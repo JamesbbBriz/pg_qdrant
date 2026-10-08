@@ -61,6 +61,21 @@ class GateTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 acceptance_gates(path)
 
+    def test_gate_spacing_and_numbered_suffix_are_not_silently_lost(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "acceptance.md"
+            text = "\n".join(f"|P{i}-TEST|requirement|" for i in range(6))
+            path.write_text(text + "\n  | `P5-RELEASE2` | publication |\n")
+            self.assertIn("P5-RELEASE2", acceptance_gates(path))
+
+    def test_unknown_phase_fails_closed_instead_of_omitting_a_gate(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = pathlib.Path(d) / "acceptance.md"
+            text = "\n".join(f"| P{i}-TEST | requirement |" for i in range(7))
+            path.write_text(text)
+            with self.assertRaises(ValueError):
+                acceptance_gates(path)
+
 
 if __name__ == "__main__":
     unittest.main()

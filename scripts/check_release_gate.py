@@ -16,7 +16,18 @@ import sys
 
 def acceptance_gates(path: pathlib.Path) -> tuple[str, ...]:
     """The acceptance table is the authority, including future added gates."""
-    gates = tuple(re.findall(r"(?m)^\| (P[0-5]-[A-Z]+) \|", path.read_text(encoding="utf-8")))
+    found: list[str] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        cells = line.strip().split("|")
+        if len(cells) < 3 or cells[0]:
+            continue
+        name = cells[1].strip().strip("`")
+        if not re.match(r"P\d+-", name):
+            continue
+        if re.fullmatch(r"P[0-5]-[A-Z][A-Z0-9_-]*", name) is None:
+            raise ValueError(f"invalid acceptance gate: {name}")
+        found.append(name)
+    gates = tuple(found)
     if not gates or len(set(gates)) != len(gates) or set(
             name.split("-")[0] for name in gates) != {f"P{i}" for i in range(6)}:
         raise ValueError("missing phases or duplicate acceptance gates")

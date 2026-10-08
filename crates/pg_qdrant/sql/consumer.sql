@@ -1,17 +1,21 @@
-CREATE FUNCTION qdrant_internal.consumer_reset() RETURNS void
+CREATE FUNCTION qdrant_internal.consumer_reset(p_instance text) RETURNS void
 LANGUAGE sql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
- INSERT INTO qdrant_internal.consumer_state(index_name,generation)
- SELECT index_name,generation FROM qdrant_internal.index_catalog
+ INSERT INTO qdrant_internal.consumer_state(index_name,generation,engine_instance)
+ SELECT index_name,generation,p_instance FROM qdrant_internal.index_catalog FOR KEY SHARE SKIP LOCKED
  ON CONFLICT(index_name) DO UPDATE SET generation=excluded.generation,
-   storage_epoch=gen_random_uuid(),consumer_id=gen_random_uuid(),state='building',last_error=NULL
+   storage_epoch=gen_random_uuid(),consumer_id=gen_random_uuid(),engine_instance=excluded.engine_instance,state='building',last_error=NULL
 $$;
 
-CREATE FUNCTION qdrant_internal.next_batch() RETURNS jsonb
+CREATE FUNCTION qdrant_internal.next_batch(p_instance text) RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; c qdrant_internal.consumer_state%ROWTYPE; events jsonb;
 BEGIN
- INSERT INTO qdrant_internal.consumer_state(index_name,generation)
- SELECT index_name,generation FROM qdrant_internal.index_catalog ON CONFLICT DO NOTHING;
+ -- A row skipped during owner replacement must rotate after management unlocks.
+ INSERT INTO qdrant_internal.consumer_state AS old(index_name,generation,engine_instance)
+ SELECT index_name,generation,p_instance FROM qdrant_internal.index_catalog FOR KEY SHARE SKIP LOCKED
+ ON CONFLICT(index_name) DO UPDATE SET generation=excluded.generation,
+   storage_epoch=gen_random_uuid(),consumer_id=gen_random_uuid(),engine_instance=excluded.engine_instance,
+   state='building',last_error=NULL WHERE old.engine_instance<>excluded.engine_instance;
  SELECT idx.* INTO i FROM qdrant_internal.index_catalog idx
  JOIN qdrant_internal.consumer_state cs USING(index_name)
  WHERE cs.state<>'failed'
@@ -19,7 +23,7 @@ BEGIN
    AND (cs.state<>'ready' OR NOT idx.backfill_done OR EXISTS (
      SELECT 1 FROM qdrant_internal.outbox e LEFT JOIN qdrant_internal.event_ack a USING(event_id)
      WHERE e.index_name=idx.index_name AND (a.event_id IS NULL OR a.storage_epoch<>cs.storage_epoch)))
- ORDER BY cs.updated_at,idx.index_id LIMIT 1 FOR NO KEY UPDATE OF idx;
+ ORDER BY cs.updated_at,idx.index_id LIMIT 1 FOR NO KEY UPDATE OF idx SKIP LOCKED;
  IF NOT FOUND THEN RETURN NULL; END IF;
  PERFORM qdrant_internal.backfill_step(i.index_name);
  SELECT * INTO STRICT c FROM qdrant_internal.consumer_state WHERE index_name=i.index_name;
@@ -46,7 +50,7 @@ CREATE FUNCTION qdrant_internal.ack_batch(p_batch jsonb) RETURNS void
 LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; c qdrant_internal.consumer_state%ROWTYPE;
 BEGIN
- SELECT * INTO i FROM qdrant_internal.index_catalog WHERE index_id=(p_batch->>'index_id')::bigint FOR NO KEY UPDATE;
+ SELECT * INTO i FROM qdrant_internal.index_catalog WHERE index_id=(p_batch->>'index_id')::bigint FOR NO KEY UPDATE SKIP LOCKED;
  IF NOT FOUND THEN RETURN; END IF;
  SELECT * INTO STRICT c FROM qdrant_internal.consumer_state WHERE index_name=i.index_name FOR UPDATE;
  IF i.generation::text<>p_batch->>'generation' OR c.storage_epoch::text<>p_batch->>'storage_epoch'

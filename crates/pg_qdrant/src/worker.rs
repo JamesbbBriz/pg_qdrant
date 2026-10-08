@@ -66,7 +66,11 @@ fn start_owner(timeout_ms: i32, require_engine: bool) -> Result<Value, ProbeErro
             .saturating_duration_since(Instant::now())
             .as_millis()
             .max(1) as i32;
-        match ipc::call(Operation::Ping, remaining.min(100)) {
+        // One reply may follow the worker's bounded SPI batch. Repeated tiny
+        // deadlines can expire every accepted socket while making a live owner
+        // appear unavailable. Use the existing overall startup budget; IPC
+        // remains nonblocking and checks PostgreSQL cancellation throughout.
+        match ipc::call(Operation::Ping, remaining) {
             Ok(mut status) if !require_engine || status["engine_ready"] == true => {
                 let registered_pid = handle
                     .as_ref()
@@ -259,7 +263,7 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
     #[cfg(feature = "p0-managed-helper")]
     let mut supervisor = crate::helper::Supervisor::new(&directory, database_oid)?;
     #[cfg(feature = "p0-managed-helper")]
-    let mut consumer_pid = None;
+    let mut consumer_instance: Option<String> = None;
 
     loop {
         #[cfg(feature = "p0-managed-helper")]
@@ -268,10 +272,13 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
         let process_status = supervisor.status();
         #[cfg(feature = "p0-managed-helper")]
         if process_status["engine_ready"] == true
-            && consumer_pid != process_status["engine_pid"].as_u64()
+            && consumer_instance.as_deref() != process_status["engine_instance"].as_str()
         {
-            crate::consumer::reset();
-            consumer_pid = process_status["engine_pid"].as_u64();
+            let instance = process_status["engine_instance"]
+                .as_str()
+                .expect("ready owner identity");
+            crate::consumer::reset(instance);
+            consumer_instance = Some(instance.to_owned());
         }
         #[cfg(not(feature = "p0-managed-helper"))]
         let process_status = json!({"engine_pid": worker_pid, "engine_ready": true});
@@ -420,7 +427,11 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
 
         #[cfg(feature = "p0-managed-helper")]
         if active.is_none() && process_status["engine_ready"] == true {
-            if let Some(batch) = crate::consumer::next() {
+            if let Some(batch) = crate::consumer::next(
+                process_status["engine_instance"]
+                    .as_str()
+                    .expect("ready owner identity"),
+            ) {
                 let connection = supervisor.connection().expect("ready helper");
                 let operation = crate::consumer::operation(batch.clone());
                 let handle = thread::Builder::new()

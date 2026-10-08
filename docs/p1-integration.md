@@ -6,7 +6,8 @@ release acceptance remain open. Hosted exact-revision CI is still required.
 of the two earlier capture branches.
 
 The managed-helper build installs the canonical ledger via `CREATE EXTENSION`.
-It currently admits one non-null text column and a bigint, UUID or text primary
+It currently admits one non-null text column (at most 65,536 UTF-8 bytes per row)
+and a bigint, UUID or text primary
 key on an ordinary permanent heap table. Multiple text fields, BYOV, RLS,
 partitions and alternative table access methods remain unimplemented. These
 requirements remain in the formal acceptance contract.
@@ -44,12 +45,22 @@ bound to generation, storage epoch, consumer and exact event membership. Only
 a matching receipt permits PostgreSQL ACK. Caller deadlines do not release a
 running native operation's owner.
 
-Helper replacement rotates storage epoch, preserves dirty directories and
-replays retained PostgreSQL events into a fresh shard. Every retained event is
-reconciled with the current identity. Old deletes cannot remove a new point;
+Helper replacement rotates storage epoch, preserves dirty directories, and
+replays retained PostgreSQL events into a fresh shard. It uses a fresh random
+execution identity rather than PID equality as its fence.
+Readiness checks compare this identity with the live supervisor, including
+catalog rows temporarily skipped during management.
+Every retained event is reconciled with the current identity. Old deletes cannot remove a new point;
 old upserts cannot resurrect old incarnations. Readiness stays false until
 backfill and reconciliation complete. Event retention, storage bounds and
 garbage collection are open operating gates.
+
+Consumer transactions hold the extension object lock while using installed
+functions. Catalog key-share locks protect consumer-state insertion against
+concurrent index deletion without blocking unrelated non-key source updates.
+Rows locked for management are skipped and retried; an in-flight receipt for
+such a row is left unacknowledged and may be replayed after rollback.
+Uninstalled consumers remain dormant; reinstalling creates new generations.
 
 Tickets seal previously unsealed events in the current transaction. Later
 writes require another ticket. Own uncommitted waits fail. Timeout returns

@@ -87,12 +87,18 @@ fn run() -> Result<(), ProbeError> {
         .map_err(ProbeError::io)?;
 
     let pid = std::process::id();
+    // A PID can be reused. Each execution receives a fresh owner identity.
+    let mut nonce = [0_u8; 16];
+    std::fs::File::open("/dev/urandom")
+        .and_then(|mut random| random.read_exact(&mut nonce))
+        .map_err(ProbeError::io)?;
+    let owner_instance: String = nonce.iter().map(|byte| format!("{byte:02x}")).collect();
     respond(
         0,
         pid,
         Ok(json!({"ready": true, "protocol_version": VERSION,
         "helper_version": env!("CARGO_PKG_VERSION"),
-        "fault_injection": cfg!(feature="p0-fault-injection")})),
+        "fault_injection": cfg!(feature="p0-fault-injection"), "owner_instance": owner_instance})),
     )?;
     let mut previous_id = 0;
     let mut source_owner =

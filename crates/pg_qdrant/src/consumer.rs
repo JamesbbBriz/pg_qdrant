@@ -3,15 +3,43 @@ use crate::ipc::{Operation, ProbeError, SourceBatch};
 use pgrx::{JsonB, Spi, bgworkers::BackgroundWorker};
 use serde_json::{Value, json};
 
-pub fn reset() {
+/// Hold the extension's shared object lock for this PostgreSQL transaction.
+/// DROP cannot remove a function or ledger relation under an admitted SPI call.
+fn installed() -> bool {
+    unsafe {
+        let oid = pgrx::pg_sys::get_extension_oid(c"pg_qdrant".as_ptr(), true);
+        if oid == pgrx::pg_sys::InvalidOid {
+            return false;
+        }
+        pgrx::pg_sys::LockDatabaseObject(
+            pgrx::pg_sys::ExtensionRelationId,
+            oid,
+            0,
+            pgrx::pg_sys::AccessShareLock as i32,
+        );
+        // DROP might have completed between lookup and lock acquisition.
+        pgrx::pg_sys::get_extension_oid(c"pg_qdrant".as_ptr(), true) == oid
+    }
+}
+
+pub fn reset(instance: &str) {
     BackgroundWorker::transaction(|| {
-        Spi::run("SELECT qdrant_internal.consumer_reset()").expect("consumer reset")
+        if installed() {
+            Spi::run_with_args(
+                "SELECT qdrant_internal.consumer_reset($1)",
+                &[instance.into()],
+            )
+            .expect("consumer reset")
+        }
     });
 }
 
-pub fn next() -> Option<SourceBatch> {
+pub fn next(instance: &str) -> Option<SourceBatch> {
     BackgroundWorker::transaction(|| {
-        Spi::get_one::<JsonB>("SELECT qdrant_internal.next_batch()")
+        if !installed() {
+            return None;
+        }
+        Spi::get_one_with_args::<JsonB>("SELECT qdrant_internal.next_batch($1)", &[instance.into()])
             .expect("select committed source batch")
             .map(|v| {
                 let mut batch: SourceBatch =
@@ -36,6 +64,9 @@ pub fn complete(batch: SourceBatch, result: &Result<Value, ProbeError>) {
             && r["event_ids"] == json!(ids)
     });
     BackgroundWorker::transaction(|| {
+        if !installed() {
+            return;
+        }
         let argument = JsonB(serde_json::to_value(&batch).expect("batch JSON"));
         if receipt.is_some() {
             Spi::run_with_args("SELECT qdrant_internal.ack_batch($1)", &[argument.into()])
@@ -46,8 +77,9 @@ pub fn complete(batch: SourceBatch, result: &Result<Value, ProbeError>) {
                 "error":result.as_ref().err().map(|e|e.message.as_str()).unwrap_or("invalid flush receipt")}),
             );
             Spi::run_with_args("UPDATE qdrant_internal.consumer_state c SET state='failed',last_error=$1->>'error' \
-              FROM qdrant_internal.index_catalog i WHERE i.index_name=c.index_name \
-              AND i.index_id=($1->>'index_id')::bigint AND c.storage_epoch::text=$1->>'epoch'",&[message.into()])
+              FROM (SELECT index_name FROM qdrant_internal.index_catalog \
+                WHERE index_id=($1->>'index_id')::bigint FOR KEY SHARE SKIP LOCKED) i \
+              WHERE i.index_name=c.index_name AND c.storage_epoch::text=$1->>'epoch'",&[message.into()])
               .expect("persist consumer failure");
         }
     });
