@@ -143,7 +143,14 @@ impl SourceOwner {
             indexed_only: false,
             ..Default::default()
         });
-        request.with_payload = WithPayloadInterface::Bool(true);
+        // Source text is returned only through the authorized PostgreSQL JOIN.
+        // Fetch identity/version metadata without copying every candidate body
+        // into the bounded IPC response (one source row can contain 64 KiB).
+        request.with_payload = WithPayloadInterface::Fields(
+            ["source_key", "revision", "incarnation", "fingerprint"]
+                .map(|field| field.parse().expect("constant payload selector"))
+                .to_vec(),
+        );
         let hits = shard.query(request).map_err(error)?;
         let mut result = Vec::with_capacity(hits.len());
         for hit in hits {

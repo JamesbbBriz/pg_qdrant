@@ -176,7 +176,15 @@ BEGIN
     IF NOT coalesce((plan->>'search_executable')::boolean,false) THEN
       RAISE EXCEPTION 'Index is not ready' USING ERRCODE='55000';
     END IF;
-    SELECT * INTO STRICT i FROM qdrant_internal.index_catalog idx WHERE idx.index_name=search.index_name;
+    SELECT * INTO STRICT i FROM qdrant_internal.index_catalog idx WHERE idx.index_name=search.index_name
+      FOR KEY SHARE NOWAIT;
+    -- Hold the source binding through native admission and source recheck.
+    -- NOWAIT avoids management/source lock-order cycles and unbounded DDL waits.
+    EXECUTE format('LOCK TABLE ONLY %s IN ACCESS SHARE MODE NOWAIT',i.source_oid::regclass);
+    plan:=qdrant.explain_search(index_name,q,mode,top_k,query_vectors,options);
+    IF NOT coalesce((plan->>'search_executable')::boolean,false) THEN
+      RAISE EXCEPTION 'Index changed during search admission' USING ERRCODE='55000';
+    END IF;
     SELECT * INTO STRICT c FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name;
     hits:=qdrant_internal.p1_search(jsonb_build_object('operation','source_search','index_id',i.index_id,
       'generation',i.generation,'storage_epoch',c.storage_epoch,'q',q,
@@ -185,6 +193,9 @@ BEGIN
         AND cs.storage_epoch=c.storage_epoch AND cs.consumer_id=c.consumer_id AND cs.state='ready') THEN
       RAISE EXCEPTION 'Generation changed during search' USING ERRCODE='55000';
     END IF;
+    -- Permissions and conservative DDL invalidation are checked again before
+    -- any native payload can become a caller-visible source result.
+    PERFORM qdrant.explain_search(index_name,q,mode,top_k,query_vectors,options);
     RETURN QUERY EXECUTE format(
       'SELECT t.%I::text,row_number() OVER(ORDER BY v.ordinality)::integer,(v.hit->>''score'')::double precision,
        t.%I::text,left(t.%I,240),jsonb_build_object(''generation'',$2,''storage_epoch'',$3,''plan'',''text'',

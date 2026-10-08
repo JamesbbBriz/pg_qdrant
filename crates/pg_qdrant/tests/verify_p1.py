@@ -70,9 +70,12 @@ sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)'
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
 sql("SELECT qdrant.create_index('docs','docs','id','{\"text\":{\"fields\":[\"body\"]}}')")
 ready()
+idle_version=sql("SELECT xmax::text FROM qdrant_internal.consumer_state WHERE index_name='docs'")
+time.sleep(.2)
+assert sql("SELECT xmax::text FROM qdrant_internal.consumer_state WHERE index_name='docs'")==idle_version,'idle polling must not repeatedly lock the consumer tuple'
 assert sql("SELECT count(*) FROM qdrant_internal.source_state WHERE index_name='docs'")=='1100'
 assert hits('recovery')!='[]'
-checks += ['CREATE EXTENSION install','online backfill beyond 1000','real offline Edge BM25','narrow field capture']
+checks += ['CREATE EXTENSION install','online backfill beyond 1000','real offline Edge BM25','narrow field capture','idle consumer does not rewrite tuple locks']
 
 sql("BEGIN; INSERT INTO docs VALUES(5000,'rollback ghost',NULL); SAVEPOINT s; UPDATE docs SET body='ghost' WHERE id=1; ROLLBACK TO s; ROLLBACK")
 assert sql("SELECT count(*) FROM qdrant_internal.outbox WHERE projection->>'body' LIKE '%ghost%'")=='0'
@@ -82,6 +85,21 @@ result=json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))
 assert result['durable'] and result['pending_events']==0, result
 sql("BEGIN; INSERT INTO docs VALUES(5001,'uncommitted',NULL); SELECT qdrant.await_changes(qdrant.track_changes('docs'),100); COMMIT",ok=False)
 checks += ['rollback/savepoint','committed fixed ticket durable','own uncommitted wait rejection']
+
+# Later writes in the same transaction belong to a different sealed ticket.
+sealed=sql("BEGIN; INSERT INTO docs VALUES(8100,'sealedfirst',NULL); SELECT qdrant.track_changes('docs'); UPDATE docs SET body='sealedsecond' WHERE id=8100; SELECT qdrant.track_changes('docs'); COMMIT")
+tickets=[line for line in sealed.splitlines() if len(line)==36 and line.count('-')==4]
+assert len(tickets)==2 and tickets[0]!=tickets[1]
+for sealed_ticket in tickets:
+    assert sql("SELECT sealed_events FROM qdrant_internal.change_tickets WHERE ticket_id='"+sealed_ticket+"'")=='1'
+    assert sql("SELECT count(*) FROM qdrant_internal.outbox WHERE ticket_id='"+sealed_ticket+"'")=='1'
+    assert json.loads(sql("SELECT qdrant.await_changes('"+sealed_ticket+"',60000)"))['durable']
+assert hits('sealedfirst')=='[]' and hits('sealedsecond')=='["8100"]'
+empty_ticket=sql("SELECT qdrant.track_changes('docs')")
+empty=json.loads(sql("SELECT qdrant.await_changes('"+empty_ticket+"',5000)"))
+assert empty['durable'] and empty['pending_events']==0,empty
+assert '25001' in sql("BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT qdrant.await_changes('"+empty_ticket+"',10)",ok=False)
+checks += ['fixed membership across later writes, empty ticket and snapshot rejection']
 
 # An earlier allocated event commits later than an already durable higher ID.
 slow=spawn("BEGIN; INSERT INTO docs VALUES(7001,'slowcommit order',NULL); SELECT qdrant.track_changes('docs'); SELECT pg_sleep(5); COMMIT",'pgq_commit_inversion')
@@ -133,6 +151,13 @@ ready()
 assert len(json.loads(hits('copybatch')))==5
 checks += ['64 KiB escaped-text consumer frame','COPY and multi-row UPDATE reach Edge']
 
+sql("INSERT INTO docs SELECT n,repeat('budgetedlongbody ',3800),NULL FROM generate_series(7300,7319)n")
+ready()
+native=native_hits('budgetedlongbody')
+assert len(native)==20 and all('body' not in hit['payload'] for hit in native)
+assert sql("SELECT count(*) FROM qdrant.search('docs','budgetedlongbody','text',20,'{}','{\"candidate_limit\":20}')")=='20'
+checks += ['long-body candidates use metadata-only IPC and authorized source excerpts']
+
 old=sql("SELECT point_id FROM qdrant_internal.source_state WHERE index_name='docs' AND tagged_key->>'value'='1'")
 assert old in [str(hit['id']) for hit in native_hits('changed')]
 sql("DELETE FROM docs WHERE id=1; INSERT INTO docs VALUES(1,'reused incarnation',NULL)")
@@ -156,6 +181,34 @@ for query in ["qdrant.rebuild_index('docs')","qdrant.rebuild_status('docs')","qd
     assert '42501' in sql('SET ROLE pgq_writer; SELECT '+query,ok=False)
 ready()
 checks += ['ordinary writer needs no ledger privileges','effective role access rejection']
+
+# A source DDL change cannot cross the native-query permission boundary.
+sql('CREATE TABLE query_binding(id bigint PRIMARY KEY,body text NOT NULL)')
+sql("INSERT INTO query_binding VALUES(1,'querybinding token')")
+sql("SELECT qdrant.create_index('query_binding','query_binding','id','{\"text\":{\"fields\":[\"body\"]}}')")
+ready('query_binding')
+pid=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
+os.kill(pid,signal.SIGSTOP)
+try:
+    query=spawn("SELECT source_key FROM qdrant.search('query_binding','querybinding')",'pgq_search_binding')
+    end=time.monotonic()+10
+    while time.monotonic()<end:
+        if (json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active') or {}).get('operation')=='source_search':
+            break
+        time.sleep(.01)
+    else:
+        raise AssertionError('native source search was not admitted')
+    assert sql("SELECT count(*) FROM pg_locks l JOIN pg_stat_activity a USING(pid) WHERE a.application_name='pgq_search_binding' AND l.relation='query_binding'::regclass AND l.mode='AccessShareLock' AND l.granted")=='1'
+    ddl=spawn('ALTER TABLE query_binding ENABLE ROW LEVEL SECURITY','pgq_source_rls_change')
+    wait_session('pgq_source_rls_change',"wait_event_type='Lock'")
+    assert query.poll() is None and ddl.poll() is None
+finally:
+    os.kill(pid,signal.SIGCONT)
+assert finish(query)=='1'
+finish(ddl)
+assert '55000' in sql("SELECT * FROM qdrant.search('query_binding','querybinding')",ok=False)
+sql("SELECT qdrant.drop_index('query_binding')")
+checks += ['source binding lock spans native search and concurrent RLS change']
 
 for keytype,key in [('uuid',"'12345678-1234-1234-1234-123456789abc'"),('text',"'你好 key'")]:
     name='keys_'+keytype

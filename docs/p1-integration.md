@@ -81,6 +81,12 @@ roles inheriting that owner, with complete table and indexed-column SELECT.
 Ordinary writers need no ledger access. Search rejects RLS and joins hits to
 real source rows, checking incarnation, revision and source SHA-256. Candidate
 underfill remains possible; candidate counts are not exact match counts.
+Search pins the catalog binding and source relation across native execution,
+uses NOWAIT for conflicting management locks, and repeats permission and DDL
+checks before exposing source rows. A concurrent RLS change waits for the
+in-flight search and makes subsequent searches fail closed.
+Native candidate responses fetch only identity/version fields, keeping long
+source bodies out of IPC; excerpts are read from the authorized source JOIN.
 
 BM25 uses the pinned multilingual tokenizer, no stemming or stopwords,
 lowercase, no ASCII folding and average length 16. This fixed configuration is

@@ -11,8 +11,13 @@ LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; c qdrant_internal.consumer_state%ROWTYPE; events jsonb;
 BEGIN
  -- A row skipped during owner replacement must rotate after management unlocks.
+ -- Do not lock an unchanged consumer on every idle poll: even a rejected
+ -- ON CONFLICT UPDATE can write a tuple lock and require a WAL commit.
  INSERT INTO qdrant_internal.consumer_state AS old(index_name,generation,engine_instance)
- SELECT index_name,generation,p_instance FROM qdrant_internal.index_catalog FOR KEY SHARE SKIP LOCKED
+ SELECT idx.index_name,idx.generation,p_instance FROM qdrant_internal.index_catalog idx
+ LEFT JOIN qdrant_internal.consumer_state previous USING(index_name)
+ WHERE previous.index_name IS NULL OR previous.engine_instance<>p_instance
+ FOR KEY SHARE OF idx SKIP LOCKED
  ON CONFLICT(index_name) DO UPDATE SET generation=excluded.generation,
    storage_epoch=gen_random_uuid(),consumer_id=gen_random_uuid(),engine_instance=excluded.engine_instance,
    state='building',last_error=NULL WHERE old.engine_instance<>excluded.engine_instance;
