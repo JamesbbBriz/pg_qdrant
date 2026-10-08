@@ -153,11 +153,30 @@ docker run --rm --memory=5g --cpus=2 \
 
 The probe checks the mount type, ownership, permissions, size and data-directory
 separation before writing. It requires a real `ENOSPC` response from an Edge
-configuration save, verifies failed writes leave both saved and in-memory
-configuration unchanged, frees its filler and checks retry/reopen. The wrapper
-requires JSON `status: "passed"`; an unconfigured `not_run` is not a passing
-positive experiment. WAL exhaustion, source-event ACK durability, OOM and
-power-loss behavior remain separate gates.
+configuration save, verifies that persisted configuration is unchanged and
+separately records whether in-memory settings changed, frees its filler and
+checks retry/reopen. The wrapper requires a successful native exit and an ENOSPC
+report with `status: "passed"`; an unconfigured `not_run` is not a passing
+positive experiment. Its artifact includes the child return code or signal,
+timeout state, bounded output and last recorded execution phase, including when
+native code cannot return JSON. The wrapper's own real-child regression tests
+run before the container build:
+
+```sh
+python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+```
+
+The [first provisioned attempt](evidence/p0-helper-ci.json) failed without a JSON
+report; that older wrapper did not preserve its exit code, so the cause remains
+unknown. New storage-placement settings and diagnostics require a new provisioned
+run. The revised fixture retains eight records, four named vectors and keyword
+indexes, while explicitly excluding the two mutable text indexes whose writable
+loader eagerly populates backing pages. Its independent clean-reopen test passes;
+it does not establish ENOSPC or full-text recovery. The full phrase/ENOSPC/reopen
+combination remains open, and the separate corruption and flushed-SIGKILL tests
+keep their phrase assertions. See the [fixture and source details](../crates/edge-probe/README.md#why-the-small-disk-fixture-excludes-mutable-text-indexes).
+WAL exhaustion, source-event ACK durability, OOM and power-loss behavior remain
+separate gates.
 
 ## Keeping evidence current
 

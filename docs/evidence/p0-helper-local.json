@@ -248,5 +248,7 @@
       "path": "crates/pg_qdrant/src/worker.rs",
       "sha256": "6718b71694006d05a360937e4ff0de885858ded79bc05121b23dc569c63e09f8"
     }
-  ]
+  ],
+  "recorded_source_commit": "a22d3c73ad838ff606a080345b65d634f5144c39",
+  "source_scope": "Historical local results for the listed hashes; later engine fixture changes require separate regression evidence."
 }

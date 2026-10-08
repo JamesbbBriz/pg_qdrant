@@ -84,14 +84,27 @@ they do not establish production retrieval quality. See the [probe inventory](cr
 and [PostgreSQL prototype](crates/pg_qdrant/README.md) for exact scope and commands.
 
 The [first PostgreSQL CI result](docs/evidence/p0-postgresql-ci.json) records
-successful installation, real SQL-to-Edge calls, two-session ownership,
-permissions on private diagnostics, cancellation, deadlines and queue bounds.
-It also records a negative architecture result: killing or aborting the direct
-engine background worker terminated an unrelated SQL session. Committed
-PostgreSQL data survived recovery, but the worker was not a sufficient native
-failure boundary. An optional, packaged helper comparison now tests engine
-execution in an exec'ed process supervised by PostgreSQL. Its current evidence
-and remaining gates are recorded in the P0 report.
+successful installation and SQL/IPC diagnostics, plus a negative architecture
+result: killing or aborting the direct engine background worker terminated an
+unrelated SQL session. Committed PostgreSQL data survived recovery.
+
+The [helper comparison CI](docs/evidence/p0-helper-ci.json) passed all four
+PostgreSQL profiles at its recorded source tree: 10/12 direct-worker checks and
+10/15 managed-helper checks, plus 7/8 standalone helper pipe checks. Helper
+SIGKILL/native abort preserved the companion SQL session and PostgreSQL
+supervisor. Its actual 125-second process-stop budget, supervisor SIGTERM/EOF
+cleanup and bounded restart exhaustion also passed. These results make the
+same-package helper the preferred topology candidate. Process termination is
+distinct from native query cancellation or durable index recovery.
+
+The overall helper comparison workflow **failed** at a provisioned 32 MiB tmpfs
+experiment: the child returned no JSON, and its exit cause was not captured.
+The corrected small disk fixture explicitly tests vectors, keyword filtering and
+configuration persistence; full mutable-text ENOSPC recovery remains an open
+combination. Its independent clean-reopen test passes, while the positive disk
+experiment still needs a successful rerun. Forced
+PostgreSQL-supervisor SIGKILL, actual OOM and the remaining product/release gates
+are still open; the P0 report preserves the successful slices and the failure.
 
 [User journeys](docs/user-journeys.md), [phase acceptance](docs/acceptance.md),
 the [P0 evidence report](docs/p0-report.md), and the [work ledger](docs/work-items.json) retain all 54 formal capabilities and
@@ -200,8 +213,9 @@ flowchart TD
     E --> J
 ```
 
-The current process-layout proposal gives each database a PostgreSQL supervisor
-and a managed engine helper in the same installation. The direct-worker
+The preferred process-layout candidate gives each database a PostgreSQL supervisor
+and a managed engine helper in the same installation, supported by the scoped
+native-failure experiments above. The direct-worker
 experiment remains available for comparison. Each index generation must have
 one shard owner; SQL sessions do not independently open the same shard directory.
 The complete source-table architecture shown above is still a product design,
@@ -212,12 +226,13 @@ Engine threads receive owned data and must not use PostgreSQL pointers, memory c
 Queues, candidate counts, token matrices, response sizes, engine threads, memory, and execution time need explicit limits. An engine runtime, if required, must be initialized in its owning child process rather than inherited from postmaster initialization.
 
 Worker crash behavior and threaded-engine integration are feasibility gates.
-The direct-worker experiment demonstrated collateral session termination, so
-topology acceptance now requires the managed-helper comparison. The helper
-loads the Edge library directly and exposes no Qdrant network-service API;
-the intended installation experience remains one managed package. A successful
-helper crash experiment still does not establish OOM, durable indexing, or
-backup/recovery support.
+The direct-worker experiment demonstrated collateral session termination;
+the helper contained the tested native failures and passed its bounded stop and
+restart paths. The helper loads the Edge library directly and exposes no Qdrant
+network-service API; the intended installation experience remains one managed
+package. Production topology acceptance still requires the remaining fault,
+resource and persistence evidence. The measured helper results do not establish
+OOM, durable indexing, or backup/recovery support.
 
 Applications are intended to keep using standard PostgreSQL drivers from Rust, Go, Python, JavaScript, or other languages. No language-specific Qdrant client is required for the SQL interface. A pgvector type adapter may be added later; pgvector is not a required engine dependency in the proposed design.
 

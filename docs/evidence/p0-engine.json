@@ -30,15 +30,15 @@
     },
     {
       "path": "crates/edge-probe/src/lib.rs",
-      "sha256": "e4937461ec70fad33409d612deafda631df94ee974d6491b84450175cee7c53f"
+      "sha256": "7d67856d3c1bfd88ed031f0eea86cef6e6042197d13efcd9da9a21c7afd70d35"
     },
     {
       "path": "crates/edge-probe/src/main.rs",
-      "sha256": "3e38afd2cb0d1f59abb2b0e5000d8b8adb5f539711cac66db37aecc8946182a9"
+      "sha256": "e7bde2b6e019d22655faaf3ce70e09540e4307ef82a9381429f22cbf9fec756f"
     },
     {
       "path": "crates/edge-probe/src/fault_probes.rs",
-      "sha256": "c77153b0f2dc21dc05f646c992611bba56048922d33fb54e58bb349ac6765d7b"
+      "sha256": "6d0d081bf130c2ce02870026bcf9a154540a1835c0f6bda99cb147e3b4108f04"
     },
     {
       "path": "crates/edge-probe/tests/persistence.rs",
@@ -46,20 +46,21 @@
     },
     {
       "path": "crates/edge-probe/tests/faults.rs",
-      "sha256": "f4af2f21f07e933cc7c38534a32ebf38670d50f9b5a506f753a7a632902508b4"
+      "sha256": "7c4e67c10097b38da1b482a1ddd8f944e4157829e8f74905396a83a45b1be2de"
     }
   ],
   "commands": [
     {
       "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
       "exit_code": 0,
-      "tests_passed": 3,
+      "tests_passed": 4,
       "tests_failed": 0,
       "tests_ignored": 0,
       "scope": [
         "actual_edge_smoke",
         "metadata_corruption_and_unsafe_disk_environment_are_rejected",
-        "explicit_flush_survives_sigkill_without_drop"
+        "explicit_flush_survives_sigkill_without_drop",
+        "disk_fixture_clean_reopen_without_filling"
       ]
     },
     {
@@ -75,6 +76,13 @@
       "scope": [
         "malformed owned metadata rejection and intact-copy recovery"
       ]
+    },
+    {
+      "command": "target/debug/pg-qdrant-edge-probe --disk-fixture-probe",
+      "exit_code": 0,
+      "scope": [
+        "safe clean reopen of the disk-specific vector/keyword fixture; no disk filling"
+      ]
     }
   ],
   "smoke_report": {
@@ -83,7 +91,7 @@
     "engine_version": "0.8.0",
     "kind": "synthetic_engine_smoke",
     "status": "passed",
-    "elapsed_ms": 1902,
+    "elapsed_ms": 2187,
     "fixture_points": 8,
     "search_threads": 2,
     "checks": [
@@ -383,5 +391,64 @@
     "scope": "malformed JSON metadata only; no arbitrary bit-rot detection or in-place repair claim"
   },
   "positive_enospc_verified": false,
-  "postgresql_diagnostic_evidence": "p0-postgresql-ci.json"
+  "postgresql_diagnostic_evidence": "p0-helper-ci.json",
+  "supplemental_disk_fixture_test": {
+    "schema_version": 1,
+    "engine_version": "0.8.0",
+    "kind": "edge_disk_fixture_probe",
+    "status": "passed",
+    "sql_integration_verified": false,
+    "release_supported": false,
+    "oom_verified": false,
+    "power_loss_verified": false,
+    "fixture": {
+      "points": 8,
+      "named_representations": [
+        "dense",
+        "bm25",
+        "learned",
+        "tokens"
+      ],
+      "wal_segment_capacity_bytes": 65536,
+      "payload_on_disk": true,
+      "dense_and_token_on_disk": true,
+      "keyword_indexes": [
+        "tenant",
+        "document",
+        "sku"
+      ],
+      "text_indexes": [],
+      "storage_scope": "cold payload/vectors and mutable keyword indexes; no text indexes",
+      "excluded_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes"
+    },
+    "recovery": {
+      "explicit_flush": "passed",
+      "reopen": "passed",
+      "records": 8,
+      "all_representation_records_equal": true,
+      "keyword_tenant_and_maxsim_queries": "passed",
+      "phrase_query": "not_tested"
+    },
+    "storage_observations": {
+      "created_and_flushed": {
+        "files": 67,
+        "logical_bytes": 220534047,
+        "allocated_bytes": 258048,
+        "mapping_rss_kib": 204,
+        "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+      },
+      "reopened": {
+        "files": 67,
+        "logical_bytes": 220534047,
+        "allocated_bytes": 258048,
+        "mapping_rss_kib": 16024,
+        "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+      }
+    },
+    "enospc_verified": false,
+    "filler_created": false,
+    "scope": "clean disk-specific fixture reopen only; full mutable text indexes are excluded"
+  },
+  "enospc_with_mutable_text_indexes_verified": false,
+  "historical_enospc_failure_evidence": "p0-helper-ci.json"
 }

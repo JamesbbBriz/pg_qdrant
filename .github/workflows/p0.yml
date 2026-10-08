@@ -23,9 +23,25 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate locked product contracts
-        run: python3 scripts/check_contracts.py
+        run: |
+          python3 scripts/check_contracts.py
+          python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Build exact Rust, Edge, pgrx and PostgreSQL prototype
         run: docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .
+      - name: Test Edge ENOSPC on a dedicated 32 MiB tmpfs
+        run: |
+          docker create --name pg-qdrant-p0-disk-run --memory=5g --cpus=2 --network=none \
+            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \
+            --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+            pg-qdrant-p0 python3 scripts/run_disk_probe.py
+          docker start --attach pg-qdrant-p0-disk-run
+      - name: Collect bounded disk-failure evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/enospc
+          if docker inspect pg-qdrant-p0-disk-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-disk-run:/src/artifacts/. artifacts/enospc/
+          fi
       - name: Run PostgreSQL integration probes as a non-root user
         run: |
           docker create --name pg-qdrant-p0-run --memory=5g --cpus=2 --network=none pg-qdrant-p0
@@ -79,20 +95,6 @@ jobs:
           mkdir -p artifacts/helper
           if docker inspect pg-qdrant-p0-helper-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-helper-run:/src/artifacts/. artifacts/helper/
-          fi
-      - name: Test Edge ENOSPC on a dedicated 32 MiB tmpfs
-        run: |
-          docker create --name pg-qdrant-p0-disk-run --memory=5g --cpus=2 --network=none \
-            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \
-            --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
-            pg-qdrant-p0 python3 scripts/run_disk_probe.py
-          docker start --attach pg-qdrant-p0-disk-run
-      - name: Collect bounded disk-failure evidence
-        if: always()
-        run: |
-          mkdir -p artifacts/enospc
-          if docker inspect pg-qdrant-p0-disk-run >/dev/null 2>&1; then
-            docker cp pg-qdrant-p0-disk-run:/src/artifacts/. artifacts/enospc/
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()

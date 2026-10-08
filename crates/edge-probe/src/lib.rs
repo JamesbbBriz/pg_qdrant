@@ -206,7 +206,7 @@ fn create_payload_index(
     )
 }
 
-fn prepare_payload_indexes(shard: &EdgeShard) -> ProbeResult<()> {
+fn prepare_keyword_indexes(shard: &EdgeShard) -> ProbeResult<()> {
     // Authorization and matching structures precede insertion/optimization.
     create_payload_index(
         shard,
@@ -228,7 +228,11 @@ fn prepare_payload_indexes(shard: &EdgeShard) -> ProbeResult<()> {
             prefix: Some(true),
             ..Default::default()
         }),
-    )?;
+    )
+}
+
+fn prepare_payload_indexes(shard: &EdgeShard) -> ProbeResult<()> {
+    prepare_keyword_indexes(shard)?;
     create_payload_index(
         shard,
         "body",
@@ -293,37 +297,75 @@ fn upsert_fixtures(shard: &EdgeShard, bm25: &EdgeBm25) -> ProbeResult<()> {
 /// Keeping the returned shard alive prevents a graceful Drop from substituting
 /// for the explicit persistence boundary being tested.
 pub fn persistence_fixture(path: &std::path::Path, flush: bool) -> ProbeResult<EdgeShard> {
-    persistence_fixture_config(path, flush, shard_config())
+    persistence_fixture_config(path, flush, shard_config(), PersistenceProfile::Full)
 }
 
-/// The same eight source identities and representations with a small WAL for
-/// disposable fault experiments. This does not change the normal smoke fixture.
-pub fn bounded_persistence_fixture(path: &std::path::Path) -> ProbeResult<EdgeShard> {
+fn small_wal_config() -> EdgeConfig {
     let mut config = shard_config();
-    // WalOptions is exposed as a field type but not a nameable public export.
-    // Keep the exact-version serde constant confined to this private harness.
-    config.wal_options = Some(context(
-        serde_json::from_value(json!({
-            "segment_capacity": 65_536,
-            "segment_queue_len": 0,
-            "retain_closed": 1
-        })),
-        "bounded fixture WAL options",
-    )?);
-    persistence_fixture_config(path, true, config)
+    config.wal_options = Some(qdrant_edge::WalOptions {
+        segment_capacity: 65_536,
+        segment_queue_len: 0,
+        retain_closed: std::num::NonZeroUsize::MIN,
+    });
+    config
+}
+
+/// The complete eight-row fixture with a small WAL for owned corruption tests.
+/// Payload/text placement and the normal smoke fixture remain unchanged.
+pub fn bounded_persistence_fixture(path: &std::path::Path) -> ProbeResult<EdgeShard> {
+    persistence_fixture_config(path, true, small_wal_config(), PersistenceProfile::Full)
+}
+
+/// Eight source identities and all four representations for configuration-save
+/// ENOSPC only. Cold payload/vector storage avoids eager backing-page population.
+/// The two mutable text indexes are deliberately absent: their Edge 0.8 writable
+/// loader populates at least 64 MiB regardless of on_disk/memory settings.
+pub fn disk_persistence_fixture(path: &std::path::Path) -> ProbeResult<EdgeShard> {
+    let mut config = small_wal_config();
+    config.on_disk_payload = Some(true);
+    for vector in config.vectors.values_mut() {
+        vector.on_disk = Some(true);
+    }
+    persistence_fixture_config(path, true, config, PersistenceProfile::DiskConfig)
+}
+
+#[derive(PartialEq)]
+enum PersistenceProfile {
+    Full,
+    DiskConfig,
 }
 
 fn persistence_fixture_config(
     path: &std::path::Path,
     flush: bool,
     config: EdgeConfig,
+    profile: PersistenceProfile,
 ) -> ProbeResult<EdgeShard> {
+    let report_progress = profile == PersistenceProfile::DiskConfig;
     let bm25 = neutral_bm25()?;
+    if report_progress {
+        eprintln!("pg_qdrant_p0_stage=fixture_create");
+    }
     let shard = context(EdgeShard::new(path, config), "create persistence fixture")?;
-    prepare_payload_indexes(&shard)?;
+    if report_progress {
+        eprintln!("pg_qdrant_p0_stage=fixture_indexes");
+    }
+    match profile {
+        PersistenceProfile::Full => prepare_payload_indexes(&shard)?,
+        PersistenceProfile::DiskConfig => prepare_keyword_indexes(&shard)?,
+    }
+    if report_progress {
+        eprintln!("pg_qdrant_p0_stage=fixture_upsert");
+    }
     upsert_fixtures(&shard, &bm25)?;
     if flush {
+        if report_progress {
+            eprintln!("pg_qdrant_p0_stage=fixture_flush");
+        }
         context(shard.flush(), "persistence fixture explicit flush")?;
+    }
+    if report_progress {
+        eprintln!("pg_qdrant_p0_stage=fixture_ready");
     }
     Ok(shard)
 }

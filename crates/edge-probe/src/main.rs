@@ -3,7 +3,10 @@ mod fault_probes;
 fn main() {
     let mut args = std::env::args_os().skip(1);
     if let Some(command) = args.next() {
-        if command == "--corruption-probe" || command == "--disk-full-probe" {
+        if command == "--corruption-probe"
+            || command == "--disk-full-probe"
+            || command == "--disk-fixture-probe"
+        {
             if args.next().is_some() {
                 eprintln!("fault probes do not accept positional arguments");
                 std::process::exit(2);
@@ -12,6 +15,11 @@ fn main() {
                 match fault_probes::corruption_probe() {
                     Ok(report) => (report, 0),
                     Err(error) => (fault_probes::failure("edge_corruption_probe", error), 1),
+                }
+            } else if command == "--disk-fixture-probe" {
+                match fault_probes::disk_fixture_probe() {
+                    Ok(report) => (report, 0),
+                    Err(error) => (fault_probes::failure("edge_disk_fixture_probe", error), 1),
                 }
             } else {
                 fault_probes::disk_full_probe()

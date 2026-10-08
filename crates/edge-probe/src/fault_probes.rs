@@ -43,8 +43,12 @@ fn scrub(message: String, root: &Path) -> String {
     message.replace(&root.to_string_lossy().to_string(), "<owned-probe>")
 }
 
-/// Check actual data and searchable indexes, not just whether load returned Ok.
-fn fixture_observation(shard: &EdgeShard) -> Result<Vec<qdrant_edge::Record>, String> {
+fn progress(stage: &str) {
+    eprintln!("pg_qdrant_p0_stage={stage}");
+}
+
+/// Common disk-fixture assertions do not claim that a text index exists.
+fn records_and_vector_observation(shard: &EdgeShard) -> Result<Vec<qdrant_edge::Record>, String> {
     require(
         context(shard.count(CountRequest::new()), "count")? == 8,
         "fixture count changed",
@@ -60,7 +64,16 @@ fn fixture_observation(shard: &EdgeShard) -> Result<Vec<qdrant_edge::Record>, St
             record.id == PointId::NumId(id),
             "fixture source identity changed",
         )?;
-        require(record.vector.is_some(), "fixture vectors missing")?;
+        let Some(qdrant_edge::VectorStructInternal::Named(vectors)) = &record.vector else {
+            return Err("fixture named representations missing".into());
+        };
+        require(
+            vectors.len() == 4
+                && ["dense", "bm25", "learned", "tokens"]
+                    .iter()
+                    .all(|name| vectors.contains_key(*name)),
+            "fixture must contain all four named representations",
+        )?;
         let payload = record.payload.as_ref().ok_or("fixture payload missing")?;
         require(payload.0["revision"] == 1, "fixture revision changed")?;
     }
@@ -69,19 +82,18 @@ fn fixture_observation(shard: &EdgeShard) -> Result<Vec<qdrant_edge::Record>, St
         "tenant".parse().map_err(|()| "fixture tenant path")?,
         Match::new_value(ValueVariants::String("a".into())),
     )));
-    let mut phrase = QueryRequest::new(16);
-    phrase.filter = Some(tenant.merge(&Filter::new_must(Condition::Field(
+    let mut keyword = QueryRequest::new(16);
+    keyword.filter = Some(tenant.merge(&Filter::new_must(Condition::Field(
         FieldCondition::new_match(
-            "body".parse().map_err(|()| "fixture body path")?,
-            Match::Phrase(MatchPhrase {
-                phrase: "transaction recovery".into(),
-            }),
+            "sku".parse().map_err(|()| "fixture SKU path")?,
+            Match::new_prefix("PG-"),
         ),
     ))));
-    let phrase = context(shard.query(phrase), "reopened phrase query")?;
+    let keyword = context(shard.query(keyword), "keyword prefix and tenant filter")?;
+    let actual_ids: std::collections::BTreeSet<_> = keyword.iter().map(|point| point.id).collect();
     require(
-        phrase.len() == 1 && phrase[0].id == PointId::NumId(1),
-        "phrase/source filter changed",
+        actual_ids == [PointId::NumId(1), PointId::NumId(2)].into_iter().collect(),
+        "keyword prefix or tenant filter changed",
     )?;
 
     let mut maxsim = QueryRequest::new(3);
@@ -108,6 +120,151 @@ fn fixture_observation(shard: &EdgeShard) -> Result<Vec<qdrant_edge::Record>, St
         )?;
     }
     Ok(records)
+}
+
+/// The complete corruption fixture also requires a real phrase index.
+fn fixture_observation(shard: &EdgeShard) -> Result<Vec<qdrant_edge::Record>, String> {
+    let records = records_and_vector_observation(shard)?;
+    let tenant = Filter::new_must(Condition::Field(FieldCondition::new_match(
+        "tenant".parse().map_err(|()| "fixture tenant path")?,
+        Match::new_value(ValueVariants::String("a".into())),
+    )));
+    let mut phrase = QueryRequest::new(16);
+    phrase.filter = Some(tenant.merge(&Filter::new_must(Condition::Field(
+        FieldCondition::new_match(
+            "body".parse().map_err(|()| "fixture body path")?,
+            Match::Phrase(MatchPhrase {
+                phrase: "transaction recovery".into(),
+            }),
+        ),
+    ))));
+    let phrase = context(shard.query(phrase), "reopened phrase query")?;
+    require(
+        phrase.len() == 1 && phrase[0].id == PointId::NumId(1),
+        "phrase/source filter changed",
+    )?;
+    Ok(records)
+}
+
+/// Safe preflight of the disk-specific fixture on an ordinary owned directory.
+/// This does not fill a filesystem or provide positive ENOSPC evidence.
+pub fn disk_fixture_probe() -> Result<Value, String> {
+    let root = context(
+        tempfile::Builder::new()
+            .prefix("pgq-disk-fixture-")
+            .tempdir(),
+        "owned disk-fixture directory",
+    )?;
+    let outcome = (|| {
+        let shard = pg_qdrant_edge_probe::disk_persistence_fixture(root.path())?;
+        let expected = records_and_vector_observation(&shard)?;
+        context(shard.flush(), "disk-fixture explicit flush")?;
+        let created_footprint = storage_footprint(root.path())?;
+        drop(shard);
+        progress("recovery_reopen");
+        let reopened = context(EdgeShard::load(root.path(), None), "clean disk-fixture reopen")?;
+        require(
+            records_and_vector_observation(&reopened)? == expected,
+            "clean disk-fixture reopen changed source representations",
+        )?;
+        let reopened_footprint = storage_footprint(root.path())?;
+        drop(reopened);
+        let mut result = report("edge_disk_fixture_probe", "passed");
+        result["fixture"] = disk_fixture_description();
+        result["recovery"] = json!({"explicit_flush":"passed","reopen":"passed","records":8,"all_representation_records_equal":true,"keyword_tenant_and_maxsim_queries":"passed","phrase_query":"not_tested"});
+        result["storage_observations"] = json!({"created_and_flushed":created_footprint,"reopened":reopened_footprint});
+        result["enospc_verified"] = false.into();
+        result["filler_created"] = false.into();
+        result["scope"] = "clean disk-specific fixture reopen only; full mutable text indexes are excluded".into();
+        Ok(result)
+    })().map_err(|error| scrub(error, root.path()));
+    context(root.close(), "clean up owned disk fixture")?;
+    outcome
+}
+
+fn disk_fixture_description() -> Value {
+    json!({
+        "points":8,"named_representations":["dense","bm25","learned","tokens"],
+        "wal_segment_capacity_bytes":65_536,"payload_on_disk":true,"dense_and_token_on_disk":true,
+        "keyword_indexes":["tenant","document","sku"],"text_indexes":[],
+        "storage_scope":"cold payload/vectors and mutable keyword indexes; no text indexes",
+        "excluded_combination":"ENOSPC with writable reopen of full mutable phrase/token-prefix indexes"
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn storage_footprint(root: &Path) -> Result<Value, String> {
+    use std::os::unix::fs::MetadataExt;
+
+    fn walk(path: &Path, depth: u8, totals: &mut [u64; 3]) -> Result<(), String> {
+        require(depth <= 16, "footprint directory depth exceeded")?;
+        for entry in context(fs::read_dir(path), "inspect owned footprint directory")? {
+            let entry = context(entry, "inspect owned footprint entry")?;
+            let metadata = context(
+                fs::symlink_metadata(entry.path()),
+                "inspect footprint metadata",
+            )?;
+            if metadata.is_dir() {
+                walk(&entry.path(), depth + 1, totals)?;
+            } else {
+                require(metadata.is_file(), "footprint rejects nonregular files")?;
+                totals[0] += 1;
+                totals[1] = totals[1]
+                    .checked_add(metadata.len())
+                    .ok_or("footprint size overflow")?;
+                totals[2] = totals[2]
+                    .checked_add(
+                        metadata
+                            .blocks()
+                            .checked_mul(512)
+                            .ok_or("footprint allocation overflow")?,
+                    )
+                    .ok_or("footprint allocation overflow")?;
+                require(
+                    totals[0] <= 512 && totals[1] <= MAX_COPY_LOGICAL_BYTES,
+                    "footprint scan budget exceeded",
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    let root = context(fs::canonicalize(root), "canonicalize owned footprint path")?;
+    let mut totals = [0_u64; 3];
+    walk(&root, 0, &mut totals)?;
+    let maps = context(
+        fs::read_to_string("/proc/self/smaps"),
+        "read fixture mapping footprint",
+    )?;
+    let owned_prefix = format!("{}/", root.display());
+    let mut owned = false;
+    let mut rss_kib = 0_u64;
+    for line in maps.lines() {
+        let first = line.split_whitespace().next().unwrap_or("");
+        if first.split_once('-').is_some_and(|(start, end)| {
+            u64::from_str_radix(start, 16).is_ok() && u64::from_str_radix(end, 16).is_ok()
+        }) {
+            owned = line.contains(&owned_prefix);
+        } else if owned && let Some(value) = line.strip_prefix("Rss:") {
+            let value = value
+                .split_whitespace()
+                .next()
+                .ok_or("missing mapping RSS")?;
+            rss_kib = rss_kib
+                .checked_add(context(value.parse::<u64>(), "parse mapping RSS")?)
+                .ok_or("mapping RSS overflow")?;
+        }
+    }
+    Ok(json!({
+        "files":totals[0],"logical_bytes":totals[1],"allocated_bytes":totals[2],
+        "mapping_rss_kib":rss_kib,
+        "scope":"owned shard mappings only; not process RSS or a tmpfs capacity proof"
+    }))
+}
+
+#[cfg(not(target_os = "linux"))]
+fn storage_footprint(_root: &Path) -> Result<Value, String> {
+    Ok(json!({"status":"not_available","reason":"Linux /proc mapping observation only"}))
 }
 
 fn copy_owned_tree(source: &Path, destination: &Path) -> Result<(), String> {
@@ -455,8 +612,9 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
     let outcome = (|| {
         let shard_path = root.path().join("baseline");
         context(fs::create_dir(&shard_path), "create owned tmpfs shard directory")?;
-        let shard = pg_qdrant_edge_probe::bounded_persistence_fixture(&shard_path)?;
-        let expected = fixture_observation(&shard)?;
+        let shard = pg_qdrant_edge_probe::disk_persistence_fixture(&shard_path)?;
+        progress("fixture_query");
+        let expected = records_and_vector_observation(&shard)?;
         let config_path = shard_path.join("edge_config.json");
         let before_bytes = context(fs::read(&config_path), "read persisted baseline config")?;
         let before_memory = shard.config().clone();
@@ -465,7 +623,12 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
 
         // The filler is declared after the shard, so error unwinding frees it
         // before the shard's Drop can attempt its final flush.
+        progress("fill");
         let mut filler = context(tempfile::NamedTempFile::new_in(root.path()), "owned tmpfs filler")?;
+        require(
+            context(filler.as_file().metadata(), "inspect owned filler filesystem")?.dev() == guard.device,
+            "filler is not on the validated tmpfs device",
+        )?;
         let chunk = [0x5a_u8; 65_536];
         let mut bytes_written = 0_u64;
         let started = std::time::Instant::now();
@@ -483,11 +646,14 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
             }
         }
 
+        progress("config_save");
         let edge_result = shard.set_hnsw_config(target_config);
+        progress("config_result");
         let after_failure_memory = shard.config().clone();
         let after_failure_bytes = context(fs::read(&config_path), "read config after failed write")?;
         // Free only our own filler before retrying, reopening, or returning any
         // failed assertion. No mount or foreign file is removed.
+        progress("filler_release");
         context(filler.close(), "release owned tmpfs filler")?;
         let edge_error = match edge_result {
             Err(error) => error,
@@ -498,21 +664,24 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
         require(after_failure_bytes == before_bytes, "failed atomic config save changed persisted bytes")?;
         let memory_changed = after_failure_memory != before_memory;
 
+        progress("recovery");
         context(shard.set_hnsw_config(target_config), "retry Edge config after releasing space")?;
         context(shard.flush(), "successful explicit flush after retry")?;
         drop(shard);
+        progress("recovery_reopen");
         let reopened = context(EdgeShard::load(&shard_path, None), "reopen after ENOSPC recovery")?;
         require(reopened.config().hnsw_config == Some(target_config), "retried config not persisted")?;
-        require(fixture_observation(&reopened)? == expected, "ENOSPC recovery changed flushed source representations")?;
+        require(records_and_vector_observation(&reopened)? == expected, "ENOSPC recovery changed flushed source representations")?;
         context(reopened.flush(), "final recovered flush")?;
         drop(reopened);
 
         let mut result = report("edge_enospc_probe", "passed");
         result["environment"] = json!({"filesystem":"tmpfs","capacity_bytes":guard.capacity_bytes,"no_mount_aliases_in_current_namespace":true,"mode":"0700","pgdata_disjoint":true});
+        result["fixture"] = disk_fixture_description();
         result["fill"] = json!({"bytes_written":bytes_written,"errno":28,"filler_removed":true});
         result["engine_failure"] = json!({"operation":"set_hnsw_config","error":scrub(message, root.path()),"persisted_config_unchanged":true,"in_memory_config_changed":memory_changed});
-        result["recovery"] = json!({"config_retry":"passed","explicit_flush":"passed","reopen":"passed","records":8,"all_representation_records_equal":true,"phrase_and_maxsim_queries":"passed"});
-        result["scope"] = "configuration atomic save only; WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified".into();
+        result["recovery"] = json!({"config_retry":"passed","explicit_flush":"passed","reopen":"passed","records":8,"all_representation_records_equal":true,"keyword_tenant_and_maxsim_queries":"passed","phrase_query":"not_tested"});
+        result["scope"] = "configuration atomic save with vector/keyword fixture only; mutable text-index recovery, WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified".into();
         Ok(result)
     })().map_err(|error| scrub(error, root.path()));
     context(root.close(), "clean up owned tmpfs experiment")?;
@@ -522,10 +691,14 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
             .is_none(),
         "dedicated tmpfs is not empty after cleanup",
     )?;
+    if outcome.is_ok() {
+        progress("completed");
+    }
     outcome
 }
 
 pub fn disk_full_probe() -> (Value, i32) {
+    progress("guard");
     let mut skipped = report("edge_enospc_probe", "not_run");
     skipped["disk_writes_attempted"] = false.into();
     let Some(path) = std::env::var_os(TMPFS_ENV) else {

@@ -74,7 +74,7 @@
     ],
     "not_a_calendar_commitment": true,
     "aggregation": "Do not sum capability and integration ranges without allocating shared work and resolving conditional lexical/process choices.",
-    "reestimate_gate": "After P0, record module × stage × capability deliverable allocation, dependencies, assumptions, estimate range, actual evidence and revised critical path.",
+    "reestimate_gate": "After P0, record module \u00d7 stage \u00d7 capability deliverable allocation, dependencies, assumptions, estimate range, actual evidence and revised critical path.",
     "included_work": [
       "design",
       "implementation",
@@ -86,7 +86,7 @@
       "packaging",
       "upgrade and maintenance"
     ],
-    "reestimate_status": "partial_risk_review; final module allocation waits for helper PostgreSQL/fault and lexical topology decisions",
+    "reestimate_status": "partial_risk_review_after_scoped_helper_sql_fault_passes; final allocation waits for remaining memory/storage/persistence and lexical decisions",
     "evidence_adjustments": [
       {
         "finding": "The direct published engine compiles and executes initial retrieval paths.",
@@ -94,7 +94,7 @@
       },
       {
         "finding": "Public query/optimize paths expose no caller cancellation token.",
-        "effect": "Process isolation, stuck-work handling and owner lifetime remain critical; managed-helper evaluation is conditional work."
+        "effect": "Managed-helper SQL tests verify a bounded process-stop path while preserving active ownership after caller cancellation; native cancellation and production durable shutdown remain unavailable or unverified."
       },
       {
         "finding": "Grouping projects limited payloads and needs explicit bounded authorized hydration.",
@@ -106,8 +106,15 @@
       },
       {
         "finding": "Recorded direct-worker PostgreSQL CI passed its diagnostics but SIGKILL/native abort terminated companion SQL sessions.",
-        "effect": "The formerly conditional managed-helper comparison is now required before production topology acceptance. Preserve existing estimate ranges until its PostgreSQL/fault results and the lexical decision support reallocation.",
+        "effect": "The formerly conditional managed-helper comparison became required; subsequent scoped comparison evidence is recorded separately. Preserve workload ranges until remaining fault, persistence and lexical gates support allocation.",
         "source": "docs/evidence/p0-postgresql-ci.json"
+      },
+      {
+        "finding": "The second CI passes all four SQL profiles and the helper native-failure, 125-second stop, SIGTERM/EOF and restart-exhaustion scenarios, but the provisioned disk experiment fails without a child exit diagnostic.",
+        "effect": "Managed helper is the preferred candidate. The disk failure requires diagnosis and a new run; real OOM, forced PG-supervisor SIGKILL and production persistence remain work. Existing ranges are retained planning assumptions, not a new remaining-work estimate.",
+        "source": "docs/evidence/p0-helper-ci.json",
+        "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab"
       }
     ]
   },
@@ -6114,6 +6121,88 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_helper_native_failure_containment",
+          "status": "passed",
+          "scope": "Actual PostgreSQL helper SIGKILL and native abort preserve the companion SQL session, the same supervisor and the committed PostgreSQL marker before a distinct helper becomes ready. Direct-worker control profiles reproduce companion-session termination. This verifies only the named native-owner failures; forced PostgreSQL-supervisor SIGKILL, actual OOM and product generation recovery remain untested.",
+          "process_profile": "managed_helper",
+          "check_groups": [
+            "helper_sigkill_collateral_recovery",
+            "helper_abort_collateral_recovery"
+          ],
+          "companion_session_terminated": false,
+          "same_postgresql_supervisor_preserved": true,
+          "committed_postgresql_marker_retained": true
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_helper_bounded_process_lifecycle",
+          "status": "passed",
+          "scope": "A SIGSTOP-frozen active helper retains ownership after caller cancellation until the configured 125000 ms process budget causes SIGKILL and replacement, with execution_budget recorded for that exact child; the same supervisor and a 130-second companion SQL query survive. PostgreSQL-supervisor SIGTERM/EOF cleanup and four total starts / three automatic restarts also pass, with visible exhaustion and unavailable-request refusal. This is process termination, not native Edge cancellation or a durable-index shutdown guarantee.",
+          "process_profile": "managed_helper",
+          "check_groups": [
+            "helper_operation_budget_stops_frozen_engine",
+            "helper_supervisor_exit_closes_native_owner",
+            "helper_restart_budget_exhaustion_is_visible"
+          ],
+          "hard_stop_limit_ms": 125000,
+          "native_cancellation": false,
+          "stop_reason": "execution_budget",
+          "supervisor_shutdown_signal": "SIGTERM",
+          "forced_postgresql_supervisor_sigkill_verified": false,
+          "total_start_attempts": 4,
+          "automatic_restarts": 3
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -6218,7 +6307,23 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "diagnostic_sql_runtime_verified": true,
-        "helper_initial_standalone_observation": "passed_scoped_scenarios; expanded_lifecycle_record_pending"
+        "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed",
+        "direct_worker_production_containment": "failed",
+        "helper_postgresql_containment": "passed_named_native_failures",
+        "helper_comparison_required": true,
+        "helper_comparison_scoped_result": "passed",
+        "preferred_topology_candidate": "managed_helper",
+        "forced_postgresql_supervisor_sigkill_verified": false,
+        "kernel_oom_runtime_verified": false,
+        "helper_hard_stop_runtime_verified": true,
+        "helper_supervisor_sigterm_runtime_verified": true,
+        "helper_restart_exhaustion_runtime_verified": true,
+        "native_query_cancellation": false
       }
     },
     {
@@ -6559,6 +6664,35 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "positive_enospc_verified": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "kind": "p0_provisioned_disk_experiment",
+          "status": "failed",
+          "target_evidence_level": "engine-runtime-verified",
+          "engine_behavior_verified": false,
+          "scope": "The provisioned dedicated 32 MiB tmpfs experiment was attempted and failed: the wrapper received no JSON report and stderr was empty. It exited 1, making the overall workflow fail after all four PostgreSQL profiles passed. The original wrapper did not retain the child return code or signal, so the cause is unknown. No ENOSPC, SIGBUS or OOM cause is established. Corrected diagnostics and a successful positive run are still required; this historical failure is not not_run and must remain visible.",
+          "command": "python3 scripts/run_disk_probe.py",
+          "dedicated_tmpfs_bytes": 33554432,
+          "wrapper_exit_code": 1,
+          "child_exit_code": null,
+          "child_signal": null,
+          "stderr_empty": true,
+          "json_report_received": false,
+          "cause": "unknown",
+          "positive_enospc_verified": false,
+          "kernel_oom_verified": false,
+          "retry_required": true
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -6665,7 +6799,11 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "positive_enospc_experiment_status": "failed",
+        "positive_enospc_runtime_verified": false,
+        "positive_enospc_child_exit_cause": "unknown",
+        "positive_enospc_retry_required": true
       }
     },
     {
@@ -7145,6 +7283,33 @@
           "command": "bash crates/pg_qdrant/tests/run-p0.sh",
           "registry_capability_count": 54,
           "engine_check_groups": 16
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7255,7 +7420,12 @@
         "sql_product_integration_verified": false,
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
-        "diagnostic_sql_runtime_verified": true
+        "diagnostic_sql_runtime_verified": true,
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed"
       }
     },
     {
@@ -7370,6 +7540,33 @@
             "acl_runtime_superuser_and_input_validation"
           ],
           "command": "bash crates/pg_qdrant/tests/run-p0.sh"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7483,7 +7680,12 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "authorization_limit": "Actual diagnostic ACL and runtime-superuser checks pass; synthetic tenant filters and restricted diagnostics do not establish indexed-source SELECT/column/RLS safety.",
-        "diagnostic_sql_runtime_verified": true
+        "diagnostic_sql_runtime_verified": true,
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed"
       }
     },
     {
@@ -7630,6 +7832,117 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_helper_native_failure_containment",
+          "status": "passed",
+          "scope": "Actual PostgreSQL helper SIGKILL and native abort preserve the companion SQL session, the same supervisor and the committed PostgreSQL marker before a distinct helper becomes ready. Direct-worker control profiles reproduce companion-session termination. This verifies only the named native-owner failures; forced PostgreSQL-supervisor SIGKILL, actual OOM and product generation recovery remain untested.",
+          "process_profile": "managed_helper",
+          "check_groups": [
+            "helper_sigkill_collateral_recovery",
+            "helper_abort_collateral_recovery"
+          ],
+          "companion_session_terminated": false,
+          "same_postgresql_supervisor_preserved": true,
+          "committed_postgresql_marker_retained": true
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_helper_bounded_process_lifecycle",
+          "status": "passed",
+          "scope": "A SIGSTOP-frozen active helper retains ownership after caller cancellation until the configured 125000 ms process budget causes SIGKILL and replacement, with execution_budget recorded for that exact child; the same supervisor and a 130-second companion SQL query survive. PostgreSQL-supervisor SIGTERM/EOF cleanup and four total starts / three automatic restarts also pass, with visible exhaustion and unavailable-request refusal. This is process termination, not native Edge cancellation or a durable-index shutdown guarantee.",
+          "process_profile": "managed_helper",
+          "check_groups": [
+            "helper_operation_budget_stops_frozen_engine",
+            "helper_supervisor_exit_closes_native_owner",
+            "helper_restart_budget_exhaustion_is_visible"
+          ],
+          "hard_stop_limit_ms": 125000,
+          "native_cancellation": false,
+          "stop_reason": "execution_budget",
+          "supervisor_shutdown_signal": "SIGTERM",
+          "forced_postgresql_supervisor_sigkill_verified": false,
+          "total_start_attempts": 4,
+          "automatic_restarts": 3
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "kind": "p0_provisioned_disk_experiment",
+          "status": "failed",
+          "target_evidence_level": "engine-runtime-verified",
+          "engine_behavior_verified": false,
+          "scope": "The provisioned dedicated 32 MiB tmpfs experiment was attempted and failed: the wrapper received no JSON report and stderr was empty. It exited 1, making the overall workflow fail after all four PostgreSQL profiles passed. The original wrapper did not retain the child return code or signal, so the cause is unknown. No ENOSPC, SIGBUS or OOM cause is established. Corrected diagnostics and a successful positive run are still required; this historical failure is not not_run and must remain visible.",
+          "command": "python3 scripts/run_disk_probe.py",
+          "dedicated_tmpfs_bytes": 33554432,
+          "wrapper_exit_code": 1,
+          "child_exit_code": null,
+          "child_signal": null,
+          "stderr_empty": true,
+          "json_report_received": false,
+          "cause": "unknown",
+          "positive_enospc_verified": false,
+          "kernel_oom_verified": false,
+          "retry_required": true
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7731,12 +8044,29 @@
         "sql_product_integration_verified": false,
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
-        "cancellation_limit": "Actual direct-worker SQL proves caller/queued cancellation with active ownership retained; public native in-flight cancellation is absent.",
+        "cancellation_limit": "Both process profiles prove caller/queued cancellation with active ownership retained. The helper independently enforces an exercised 125-second process-stop budget; public native in-flight cancellation is absent.",
         "diagnostic_sql_runtime_verified": true,
         "direct_worker_production_containment": "failed",
-        "helper_postgresql_containment": "pending",
+        "helper_postgresql_containment": "passed_named_native_failures",
         "helper_comparison_required": true,
-        "helper_initial_standalone_observation": "passed_scoped_scenarios; expanded_lifecycle_record_pending"
+        "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed",
+        "helper_comparison_scoped_result": "passed",
+        "preferred_topology_candidate": "managed_helper",
+        "forced_postgresql_supervisor_sigkill_verified": false,
+        "kernel_oom_runtime_verified": false,
+        "helper_hard_stop_runtime_verified": true,
+        "helper_supervisor_sigterm_runtime_verified": true,
+        "helper_restart_exhaustion_runtime_verified": true,
+        "native_query_cancellation": false,
+        "positive_enospc_experiment_status": "failed",
+        "positive_enospc_runtime_verified": false,
+        "positive_enospc_child_exit_cause": "unknown",
+        "positive_enospc_retry_required": true
       }
     },
     {
@@ -7859,6 +8189,33 @@
           ],
           "normal_checks_passed": 10,
           "fault_checks_passed": 12
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7978,7 +8335,12 @@
         "sql_product_integration_verified": false,
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
-        "diagnostic_sql_runtime_verified": true
+        "diagnostic_sql_runtime_verified": true,
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed"
       }
     },
     {
@@ -8260,6 +8622,33 @@
           ],
           "normal_checks_passed": 10,
           "fault_checks_passed": 12
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
         }
       ],
       "deliverable": "Real manifests and Cargo.lock, exact compiler and matched pgrx tool, selected features, container/system libraries/PG headers/CPU inputs, actual dependency and license inventories.",
@@ -8294,7 +8683,20 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "diagnostic_sql_runtime_verified": true,
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed"
+      }
     },
     {
       "id": "I-02",
@@ -8398,6 +8800,33 @@
           "command": "bash crates/pg_qdrant/tests/run-p0.sh",
           "registry_capability_count": 54,
           "engine_check_groups": 16
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
         }
       ],
       "deliverable": "Every selected public query/match/vector/storage/payload/read/update/lifecycle variant maps to a formal ID or explicit scope exclusion; probes cover real invocations and negative unsupported types.",
@@ -8435,7 +8864,20 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "diagnostic_sql_runtime_verified": true,
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed"
+      }
     },
     {
       "id": "I-03",
@@ -8609,6 +9051,117 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_helper_native_failure_containment",
+          "status": "passed",
+          "scope": "Actual PostgreSQL helper SIGKILL and native abort preserve the companion SQL session, the same supervisor and the committed PostgreSQL marker before a distinct helper becomes ready. Direct-worker control profiles reproduce companion-session termination. This verifies only the named native-owner failures; forced PostgreSQL-supervisor SIGKILL, actual OOM and product generation recovery remain untested.",
+          "process_profile": "managed_helper",
+          "check_groups": [
+            "helper_sigkill_collateral_recovery",
+            "helper_abort_collateral_recovery"
+          ],
+          "companion_session_terminated": false,
+          "same_postgresql_supervisor_preserved": true,
+          "committed_postgresql_marker_retained": true
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_helper_bounded_process_lifecycle",
+          "status": "passed",
+          "scope": "A SIGSTOP-frozen active helper retains ownership after caller cancellation until the configured 125000 ms process budget causes SIGKILL and replacement, with execution_budget recorded for that exact child; the same supervisor and a 130-second companion SQL query survive. PostgreSQL-supervisor SIGTERM/EOF cleanup and four total starts / three automatic restarts also pass, with visible exhaustion and unavailable-request refusal. This is process termination, not native Edge cancellation or a durable-index shutdown guarantee.",
+          "process_profile": "managed_helper",
+          "check_groups": [
+            "helper_operation_budget_stops_frozen_engine",
+            "helper_supervisor_exit_closes_native_owner",
+            "helper_restart_budget_exhaustion_is_visible"
+          ],
+          "hard_stop_limit_ms": 125000,
+          "native_cancellation": false,
+          "stop_reason": "execution_budget",
+          "supervisor_shutdown_signal": "SIGTERM",
+          "forced_postgresql_supervisor_sigkill_verified": false,
+          "total_start_attempts": 4,
+          "automatic_restarts": 3
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "kind": "p0_provisioned_disk_experiment",
+          "status": "failed",
+          "target_evidence_level": "engine-runtime-verified",
+          "engine_behavior_verified": false,
+          "scope": "The provisioned dedicated 32 MiB tmpfs experiment was attempted and failed: the wrapper received no JSON report and stderr was empty. It exited 1, making the overall workflow fail after all four PostgreSQL profiles passed. The original wrapper did not retain the child return code or signal, so the cause is unknown. No ENOSPC, SIGBUS or OOM cause is established. Corrected diagnostics and a successful positive run are still required; this historical failure is not not_run and must remain visible.",
+          "command": "python3 scripts/run_disk_probe.py",
+          "dedicated_tmpfs_bytes": 33554432,
+          "wrapper_exit_code": 1,
+          "child_exit_code": null,
+          "child_signal": null,
+          "stderr_empty": true,
+          "json_report_received": false,
+          "cause": "unknown",
+          "positive_enospc_verified": false,
+          "kernel_oom_verified": false,
+          "retry_required": true
         }
       ],
       "deliverable": "Minimal loaded extension, owned IPC and two sessions plus panic/native crash/SIGKILL/constrained OOM/disk-full experiments; measured background-worker versus managed-helper go/no-go.",
@@ -8654,11 +9207,28 @@
         "diagnostic_sql_runtime_verified": true,
         "direct_worker_production_containment": "failed",
         "helper_comparison_required": true,
-        "helper_postgresql_containment": "pending",
+        "helper_postgresql_containment": "passed_named_native_failures",
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "helper_initial_standalone_observation": "passed_scoped_scenarios; expanded_lifecycle_record_pending"
+        "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed",
+        "helper_comparison_scoped_result": "passed",
+        "preferred_topology_candidate": "managed_helper",
+        "forced_postgresql_supervisor_sigkill_verified": false,
+        "kernel_oom_runtime_verified": false,
+        "helper_hard_stop_runtime_verified": true,
+        "helper_supervisor_sigterm_runtime_verified": true,
+        "helper_restart_exhaustion_runtime_verified": true,
+        "native_query_cancellation": false,
+        "positive_enospc_experiment_status": "failed",
+        "positive_enospc_runtime_verified": false,
+        "positive_enospc_child_exit_cause": "unknown",
+        "positive_enospc_retry_required": true
       }
     },
     {
@@ -9058,6 +9628,35 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "positive_enospc_verified": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "kind": "p0_provisioned_disk_experiment",
+          "status": "failed",
+          "target_evidence_level": "engine-runtime-verified",
+          "engine_behavior_verified": false,
+          "scope": "The provisioned dedicated 32 MiB tmpfs experiment was attempted and failed: the wrapper received no JSON report and stderr was empty. It exited 1, making the overall workflow fail after all four PostgreSQL profiles passed. The original wrapper did not retain the child return code or signal, so the cause is unknown. No ENOSPC, SIGBUS or OOM cause is established. Corrected diagnostics and a successful positive run are still required; this historical failure is not not_run and must remain visible.",
+          "command": "python3 scripts/run_disk_probe.py",
+          "dedicated_tmpfs_bytes": 33554432,
+          "wrapper_exit_code": 1,
+          "child_exit_code": null,
+          "child_signal": null,
+          "stderr_empty": true,
+          "json_report_received": false,
+          "cause": "unknown",
+          "positive_enospc_verified": false,
+          "kernel_oom_verified": false,
+          "retry_required": true
         }
       ],
       "deliverable": "Concurrent queries pin generations while mutations/late outputs/deletes/rebuild/optimize/restarts interleave; crash, disk-full and corruption cannot create false readiness or lost durable events.",
@@ -9097,7 +9696,18 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "positive_enospc_experiment_status": "failed",
+        "positive_enospc_runtime_verified": false,
+        "positive_enospc_child_exit_cause": "unknown",
+        "positive_enospc_retry_required": true
+      }
     },
     {
       "id": "I-10",
@@ -9207,6 +9817,33 @@
           ],
           "normal_checks_passed": 10,
           "fault_checks_passed": 12
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
         }
       ],
       "deliverable": "Grouped update bot/CI after actual manifest; release/API/license review, lock/pin updates, full probes/SQL/quality/security/fault combinations, old-index reopen or new generation, executed rollback and release notes.",
@@ -9246,7 +9883,20 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "diagnostic_sql_runtime_verified": true,
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed"
+      }
     },
     {
       "id": "I-11",
@@ -9346,6 +9996,33 @@
           ],
           "normal_checks_passed": 10,
           "fault_checks_passed": 12
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
         }
       ],
       "deliverable": "Supported platform artifacts with library/control/install/upgrade SQL, tested clean installation/uninstall, current README/API/examples and executable operating/recovery runbooks.",
@@ -9385,7 +10062,20 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "diagnostic_sql_runtime_verified": true,
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed"
+      }
     },
     {
       "id": "I-12",
@@ -9573,6 +10263,92 @@
           "command": "bash crates/pg_qdrant/tests/run-p0.sh",
           "queue_limit": 8,
           "native_in_flight_cancellation": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_four_profile_diagnostic_ci",
+          "status": "passed",
+          "scope": "At the exact recorded tree, all four locked container builds install and execute the PostgreSQL diagnostic contract: direct normal/private 10/12 and helper normal/private 10/15 checks. The helper standalone suites pass 7/8 checks. The overall workflow failed later at the provisioned disk experiment. These scoped SQL passes do not establish source-table search, source authorization, a production package or upgrade/rollback support.",
+          "profile_checks_passed": {
+            "direct_normal": 10,
+            "direct_private_fault": 12,
+            "helper_normal": 10,
+            "helper_private_fault": 15
+          },
+          "helper_pipe_checks_passed": {
+            "normal": 7,
+            "private_fault": 8
+          }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "level": "SQL-integration-verified",
+          "kind": "p0_helper_bounded_process_lifecycle",
+          "status": "passed",
+          "scope": "A SIGSTOP-frozen active helper retains ownership after caller cancellation until the configured 125000 ms process budget causes SIGKILL and replacement, with execution_budget recorded for that exact child; the same supervisor and a 130-second companion SQL query survive. PostgreSQL-supervisor SIGTERM/EOF cleanup and four total starts / three automatic restarts also pass, with visible exhaustion and unavailable-request refusal. This is process termination, not native Edge cancellation or a durable-index shutdown guarantee.",
+          "process_profile": "managed_helper",
+          "check_groups": [
+            "helper_operation_budget_stops_frozen_engine",
+            "helper_supervisor_exit_closes_native_owner",
+            "helper_restart_budget_exhaustion_is_visible"
+          ],
+          "hard_stop_limit_ms": 125000,
+          "native_cancellation": false,
+          "stop_reason": "execution_budget",
+          "supervisor_shutdown_signal": "SIGTERM",
+          "forced_postgresql_supervisor_sigkill_verified": false,
+          "total_start_attempts": 4,
+          "automatic_restarts": 3
+        },
+        {
+          "observed_on": "2026-10-08",
+          "source": "docs/evidence/p0-helper-ci.json",
+          "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
+          "checkout_revision": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+          "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+          "ci_run": 37720263848,
+          "ci_job": 113126054532,
+          "workflow_conclusion": "failed",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "kind": "p0_provisioned_disk_experiment",
+          "status": "failed",
+          "target_evidence_level": "engine-runtime-verified",
+          "engine_behavior_verified": false,
+          "scope": "The provisioned dedicated 32 MiB tmpfs experiment was attempted and failed: the wrapper received no JSON report and stderr was empty. It exited 1, making the overall workflow fail after all four PostgreSQL profiles passed. The original wrapper did not retain the child return code or signal, so the cause is unknown. No ENOSPC, SIGBUS or OOM cause is established. Corrected diagnostics and a successful positive run are still required; this historical failure is not not_run and must remain visible.",
+          "command": "python3 scripts/run_disk_probe.py",
+          "dedicated_tmpfs_bytes": 33554432,
+          "wrapper_exit_code": 1,
+          "child_exit_code": null,
+          "child_signal": null,
+          "stderr_empty": true,
+          "json_report_received": false,
+          "cause": "unknown",
+          "positive_enospc_verified": false,
+          "kernel_oom_verified": false,
+          "retry_required": true
         }
       ],
       "deliverable": "Enforced queues, candidate/HasId/token/matrix/response bounds, engine threads and RSS/mmap, cancellation from SQL through every stage, overload behavior and resumable maintenance.",
@@ -9611,7 +10387,28 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "diagnostic_sql_runtime_verified": true,
+        "helper_postgresql_runtime_verified": true,
+        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "latest_ci_workflow_conclusion": "failed",
+        "helper_hard_stop_runtime_verified": true,
+        "helper_supervisor_sigterm_runtime_verified": true,
+        "helper_restart_exhaustion_runtime_verified": true,
+        "native_query_cancellation": false,
+        "positive_enospc_experiment_status": "failed",
+        "positive_enospc_runtime_verified": false,
+        "positive_enospc_child_exit_cause": "unknown",
+        "positive_enospc_retry_required": true
+      }
     },
     {
       "id": "I-15",
@@ -9775,7 +10572,7 @@
     "report": "docs/p0-report.md",
     "engine_evidence": "docs/evidence/p0-engine.json",
     "dependency_evidence": "docs/dependency-baseline.json",
-    "source_identity": "The PostgreSQL CI evidence fixes the tested head/merge/tree; the engine evidence fixes its original inputs. Later local helper/corruption checks are separate and do not inherit that CI result.",
+    "source_identity": "Both PostgreSQL CI records fix head/merge/tree identities. The latest four-profile SQL passes and failed disk experiment apply only to a22d3c7 and its recorded tree; later fixes require a new run.",
     "p0_exit_passed": false,
     "sql_runtime_verified": true,
     "product_completed": false,
@@ -9786,23 +10583,56 @@
     "container_runtime_verified": true,
     "postgres_fault_cdylib_and_schema_verified": true,
     "postgresql_ci_evidence": "docs/evidence/p0-postgresql-ci.json",
-    "verified_ci_head": "f5bda3519421ef294bac82b17c17957f9727b648",
-    "verified_ci_checkout": "982adef4faaadd9831c2144b14bf155e89928ce0",
-    "verified_ci_tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+    "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+    "verified_ci_checkout": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+    "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
     "diagnostic_sql_runtime_verified": true,
-    "sql_runtime_scope": "Recorded direct-worker P0 diagnostics only; source-table indexing, source permissions and public search remain unimplemented.",
+    "sql_runtime_scope": "Recorded direct-worker and managed-helper P0 diagnostics only; source-table indexing, source permissions and public search remain unimplemented.",
     "direct_worker_production_containment": "failed",
-    "managed_helper_comparison": "required_before_topology_acceptance",
-    "helper_postgresql_runtime_verified": false,
+    "managed_helper_comparison": "scoped_sql_and_native_faults_passed; preferred_candidate; production_topology_pending",
+    "helper_postgresql_runtime_verified": true,
     "metadata_corruption_runtime_verified": true,
     "positive_enospc_runtime_verified": false,
     "evidence_scope": "Every verification level applies only to its named probe. All product completion and release flags remain false.",
-    "helper_initial_standalone_observation": "normal_and_private_fault_pipe_scenarios_passed; final expanded-suite record pending",
-    "helper_hard_stop_runtime_verified": false
+    "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
+    "helper_hard_stop_runtime_verified": true,
+    "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
+    "verified_ci_scope": "All four PostgreSQL diagnostic profiles and standalone helper pipe suites; the overall workflow failed at the provisioned disk experiment.",
+    "latest_ci_run": 37720263848,
+    "latest_ci_job": 113126054532,
+    "latest_ci_workflow_conclusion": "failed",
+    "helper_postgresql_containment": "passed_named_native_failures",
+    "helper_hard_stop_limit_ms": 125000,
+    "helper_native_query_cancellation": false,
+    "helper_supervisor_sigterm_runtime_verified": true,
+    "helper_restart_exhaustion_runtime_verified": true,
+    "forced_postgresql_supervisor_sigkill_verified": false,
+    "kernel_oom_runtime_verified": false,
+    "positive_enospc_experiment_status": "failed",
+    "positive_enospc_child_exit_cause": "unknown",
+    "preferred_topology_candidate": "managed_helper",
+    "ci_history": [
+      {
+        "run": 37716391262,
+        "source": "docs/evidence/p0-postgresql-ci.json",
+        "head": "f5bda3519421ef294bac82b17c17957f9727b648",
+        "tree": "b296fccec91f2485b17d8c843fff90e30189622f",
+        "workflow_conclusion": "passed",
+        "scope": "Initial direct-worker normal/private 10/12 diagnostics; production containment failed."
+      },
+      {
+        "run": 37720263848,
+        "source": "docs/evidence/p0-helper-ci.json",
+        "head": "a22d3c73ad838ff606a080345b65d634f5144c39",
+        "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+        "workflow_conclusion": "failed",
+        "scope": "Four SQL profiles and both helper pipe suites passed; the provisioned disk experiment failed with unknown child exit cause."
+      }
+    ]
   },
   "remaining_p0_estimate_review": {
     "observed_on": "2026-10-08",
-    "confidence": "provisional_before_pg_runtime_and_topology_decision",
+    "confidence": "provisional_after_scoped_helper_sql_runtime; remaining_fault_persistence_and_lexical_gates_open",
     "unit": "engineering_days",
     "not_additive": true,
     "streams": [
@@ -9818,7 +10648,7 @@
           "W-L11"
         ],
         "assumption": "Local normal linking/schema/install results reproduce with provisioned native dependencies.",
-        "checkpoint_status": "Initial direct-worker clean installation and diagnostic SQL slice passed; current-source/profile and platform/license gates remain."
+        "checkpoint_status": "All four profiles build, install and execute diagnostics at the second recorded tree; later-source regression and native-package/CPU/license gates remain."
       },
       {
         "owner": "engine/registry",
@@ -9841,7 +10671,7 @@
           "W-L10"
         ],
         "assumption": "Disposable process and bounded memory/storage environments are available.",
-        "checkpoint_status": "Direct-worker diagnostic checks and negative isolation observation recorded; helper and remaining fault gates are open."
+        "checkpoint_status": "Direct-worker collateral is reproduced; helper native-failure containment, the 125-second stop, SIGTERM/EOF and restart exhaustion pass. Forced PG-supervisor SIGKILL, actual OOM and the failed disk experiment remain open."
       },
       {
         "owner": "lexical/quality",
@@ -9866,11 +10696,37 @@
         ],
         "conditional_on": "Measured PostgreSQL worker failure domain is unacceptable.",
         "assumption": "One-package deployment is retained; reuse only lifecycle/protocol portions proven safe.",
-        "condition_status": "triggered_by_recorded_direct_worker_collateral; helper PostgreSQL/fault acceptance remains pending"
+        "condition_status": "triggered_by_direct_worker_collateral; required_scoped_helper_comparison_passed; preferred_candidate_with_production_acceptance_open",
+        "checkpoint_status": "Normal/private helper packaging, 7/8 pipe checks and 10/15 SQL checks pass at the recorded tree. Resource isolation, production generations, durability and release packaging remain."
       }
     ],
     "rule": "These overlap shared work and must not be added to existing capability estimates without allocation. The 5-10 day investigation budget is not a completion criterion.",
     "status": "historical_pre_ci_allocations_retained; no new remaining-work estimate is claimed",
     "superseding_evidence": "docs/p0-report.md"
+  },
+  "disk_fixture_correction": {
+    "evidence": "docs/evidence/p0-engine.json",
+    "engine_tests_passed": 4,
+    "engine_tests_failed": 0,
+    "engine_tests_ignored": 0,
+    "preserved_full_phrase_tests": [
+      "metadata_corruption_and_unsafe_disk_environment_are_rejected",
+      "explicit_flush_survives_sigkill_without_drop"
+    ],
+    "disk_fixture": {
+      "source_rows": 8,
+      "named_representations": 4,
+      "keyword_indexes": [
+        "tenant",
+        "document",
+        "sku"
+      ],
+      "text_indexes": [],
+      "clean_reopen": "passed",
+      "positive_enospc": "pending_new_ci"
+    },
+    "retained_open_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes",
+    "historical_failed_attempt": "docs/evidence/p0-helper-ci.json",
+    "product_scope_completed": false
   }
 }

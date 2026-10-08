@@ -36,9 +36,10 @@ On 2026-10-08, with Rust 1.96.0 on Linux x86_64 and the repository lockfile:
 
 | Command | Observed result |
 | --- | --- |
-| `cargo test --locked -p pg-qdrant-edge-probe` | Actual engine smoke, explicit-flush/SIGKILL recovery, owned metadata corruption and unsafe disk-environment refusal passed; 3 tests, 0 failed or ignored. |
+| `cargo test --locked -p pg-qdrant-edge-probe` | Actual engine smoke, explicit-flush/SIGKILL recovery, owned metadata corruption, unsafe disk-environment refusal and a clean disk-fixture reopen passed; 4 tests, 0 failed or ignored. |
 | `target/debug/pg-qdrant-edge-probe` after the locked test build | All 16 synthetic check groups passed; engine version `0.8.0`. |
 | `target/debug/pg-qdrant-edge-probe --corruption-probe` | Both malformed copied-metadata loads returned errors; intact-copy recovery, original preservation, representation equality and phrase/MaxSim queries passed. |
+| `target/debug/pg-qdrant-edge-probe --disk-fixture-probe` | Clean reopen of the disk-specific eight-row/four-representation fixture passed, including keyword/tenant filtering and exact MaxSim; no filler or ENOSPC injection. |
 | `target/debug/pg-qdrant-edge-probe --disk-full-probe` without `PG_QDRANT_ENOSPC_DIR` | `status: "not_run"`, no disk writes attempted; a dedicated tmpfs is required for positive ENOSPC evidence. |
 
 These commands compiled and linked the engine harness, including exhaustive
@@ -54,12 +55,14 @@ not establish crash isolation from the process owning that thread.
 ## Standalone fault experiments
 
 These binary modes are opt-in. PostgreSQL never invokes them. The default test
-suite adds one safe test for corrupted owned copies and refusal of unsafe disk
-paths; it does not fill a filesystem. Fault reports use separate `kind` values,
-so they must not be confused with the 16-group normal smoke report.
+suite includes safe tests for corrupted owned copies, refusal of unsafe disk
+paths, and a clean reopen of the disk-specific fixture. It does not fill a
+filesystem. Reports use separate `kind` values, so they must not be confused
+with the 16-group normal smoke report.
 
 ```sh
 cargo run --locked -p pg-qdrant-edge-probe -- --corruption-probe
+cargo run --locked -p pg-qdrant-edge-probe -- --disk-fixture-probe
 cargo run --locked -p pg-qdrant-edge-probe -- --disk-full-probe
 ```
 
@@ -96,6 +99,28 @@ configuration returns JSON `status: "not_run"` and exit code 0. An explicitly
 unsafe environment returns `status: "not_run"`, `reason_code:
 "unsafe_environment"`, and exit code 2, without attempting disk writes.
 
+The disk-specific fixture retains all eight source identities, all four named
+representations, and the `tenant`, `document` and `sku` keyword indexes. It uses
+the public `on_disk_payload: true` and per-vector `on_disk: true` settings plus
+the 64 KiB WAL configuration. Its two mutable text indexes are explicitly
+excluded. A passing disk report therefore verifies keyword/tenant filtering
+and exact MaxSim recovery, and reports `phrase_query: "not_tested"`. The full
+phrase/ENOSPC/reopen combination remains an open gate; the separate corruption
+and explicit-flush/SIGKILL tests retain their complete phrase assertions.
+
+`--disk-fixture-probe` creates this fixture in an ordinary owned temporary
+directory, flushes it, reopens it, and compares every retrieved source record
+and representation. It runs the keyword/tenant and exact MaxSim assertions
+before and after reopening. It never creates a filler. On Linux it also reports
+logical file size, allocated file bytes and the summed resident pages of the
+owned shard's mappings from `/proc/self/smaps`. Those measurements are neither
+total process RSS nor positive evidence of operation on a bounded tmpfs.
+The recorded ordinary-filesystem run observed 67 files, 220,534,047 logical
+bytes and 258,048 allocated bytes. After the actual fixture queries, summed
+mapping RSS was 204 KiB before close and 16,024 KiB after reopen. Rerunning
+this mode reproduces the measurement procedure; resident pages can vary by
+kernel and access history, so these values are observations, not test goldens.
+
 For a locally built `Dockerfile.p0` image, the intended isolated invocation is:
 
 ```sh
@@ -113,15 +138,48 @@ the persisted configuration bytes to remain unchanged. It separately records
 whether the in-memory configuration changed; disk atomicity is not assumed to
 imply an in-memory transaction. The filler is removed before retry, reopen or
 normal error unwinding. A successful retry must survive explicit flush/reopen
-and preserve all fixture records and the phrase/MaxSim results. Only the owned
-experiment directory is removed; the mount must be empty after cleanup.
+and preserve all fixture records and the keyword/tenant/MaxSim results. Only
+the owned experiment directory is removed; the mount must be empty after
+cleanup. Stages are emitted on stderr as `pg_qdrant_p0_stage=<name>` before
+native fixture creation, index creation, insertion, flush, filling, config
+save and recovery. The external supervisor must retain the child exit code
+and signal information when a native termination prevents JSON output.
+
+#### Why the small disk fixture excludes mutable text indexes
+
+The fixed release's [payload storage constructor](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/payload_storage/payload_storage_impl.rs)
+populates its backing pages for RAM placement. The
+[mutable full-text loader](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/index/field_index/full_text_index/mutable_text_index/lifecycle.rs)
+uses `Populate::Blocking` regardless of text-index `memory`/`on_disk` settings.
+Each [default blobstore page](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/blobstore/config.rs)
+is 32 MiB. Two text indexes plus their metadata therefore prevent treating
+this full fixture as a bounded 32 MiB writable-reopen test.
+
+An ordinary-filesystem measurement of the original full fixture observed
+34,072 KiB of mapped fixture RSS after creation. Cold payload/vector settings
+reduced that to 260 KiB, but reopening still observed 83,468 KiB because the
+mutable text and keyword indexes populated their backing pages. Public
+`optimize` returned false for the original eight rows at the smallest nonzero
+indexing threshold. A separate bounded experiment crossed that threshold with
+one temporary sparse point, optimized successfully, then deleted that point,
+restoring the count to eight. Writable reopen still observed
+83,364 KiB. The [load path](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/mod.rs)
+ensures an appendable segment, and its [segment constructor](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/shard/segment_holder/mod.rs)
+copies the payload-index schema into that segment. Optimization therefore did
+not remove the eager mutable-text reopen requirement. No private initializer,
+patched dependency, or larger fault mount is used to evade it.
+
+The first CI attempt with the full fixture on a 32 MiB tmpfs failed before
+usable child diagnostics were captured; its terminating signal is unknown.
+The measurements identify a concrete fixture-sizing problem, but do not prove
+the exact cause of that historical process termination.
 
 This is a configuration-save failure/retry experiment. WAL growth, dirty vector
 ingestion, PostgreSQL outbox ACK semantics, power-loss durability, cgroup OOM and
 whole-instance isolation remain separate gates. A 32 MiB tmpfs is a storage
 limit, not an engine RSS limit or evidence of OOM handling. The positive ENOSPC
-path requires the dedicated mount and must be recorded as unexecuted until a
-report with `status: "passed"` is captured from that environment.
+path of the revised, narrower fixture still requires the dedicated mount and
+remains unverified until a report with `status: "passed"` is captured there.
 
 ## Checks and limits
 
@@ -213,9 +271,14 @@ outer fusion. None of F13–F20 is marked complete by this crate.
 
 ## Open P0 gates
 
-Whole-instance effects of abrupt termination, native crash, OOM, full disk,
-index corruption, concurrent SQL, cancellation, transaction rollback, authority
-mapping, generations and cross-version migration still need reproducible tests.
+The [recorded direct-worker PostgreSQL CI](../../docs/evidence/p0-postgresql-ci.json)
+verified diagnostic concurrency, cancellation and bounded queues. Its native
+abort and SIGKILL experiments terminated companion SQL sessions; this is a
+negative isolation result. Current-source and managed-helper PostgreSQL results
+need separate evidence. OOM, positive bounded ENOSPC, dirty-index/source
+recovery, transaction rollback, authority mapping, generations and cross-version
+migration remain open. The owned metadata-corruption test covers only the
+malformed copied JSON files and intact recovery source described above.
 The explicit-flush/SIGKILL test establishes only the stated process-reopen
 boundary; it does not establish unflushed WAL recovery or machine power-loss
 durability. Internal cancellation flags are not application-controllable through

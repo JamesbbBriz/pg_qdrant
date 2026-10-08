@@ -25,6 +25,39 @@ fn bounded_output(mut command: Command) -> Output {
 }
 
 #[test]
+fn disk_fixture_clean_reopen_without_filling() {
+    let mut probe = Command::new(env!("CARGO_BIN_EXE_pg-qdrant-edge-probe"));
+    probe.arg("--disk-fixture-probe");
+    let output = bounded_output(probe);
+    assert!(
+        output.status.success(),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["status"], "passed");
+    assert_eq!(report["kind"], "edge_disk_fixture_probe");
+    assert_eq!(report["fixture"]["points"], 8);
+    assert_eq!(
+        report["fixture"]["named_representations"]
+            .as_array()
+            .unwrap()
+            .len(),
+        4
+    );
+    assert_eq!(report["fixture"]["text_indexes"], serde_json::json!([]));
+    assert_eq!(report["recovery"]["all_representation_records_equal"], true);
+    assert_eq!(
+        report["recovery"]["keyword_tenant_and_maxsim_queries"],
+        "passed"
+    );
+    assert_eq!(report["recovery"]["phrase_query"], "not_tested");
+    assert_eq!(report["enospc_verified"], false);
+    assert_eq!(report["filler_created"], false);
+}
+
+#[test]
 fn metadata_corruption_and_unsafe_disk_environment_are_rejected() {
     let executable = env!("CARGO_BIN_EXE_pg-qdrant-edge-probe");
     let mut corruption = Command::new(executable);

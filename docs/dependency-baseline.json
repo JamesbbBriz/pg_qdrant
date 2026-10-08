@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "p0_direct_worker_sql_verified_helper_comparison_pending",
+  "status": "p0_managed_helper_sql_verified_enospc_retry_required",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -92,7 +92,7 @@
     "container_base": "ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
     "native_package_lock_complete": false,
     "container_execution_verified": true,
-    "container_evidence": "evidence/p0-postgresql-ci.json",
+    "container_evidence": "evidence/p0-helper-ci.json",
     "current_source_container_execution_verified": false,
     "managed_helper_default": false,
     "prototype_profiles": [
@@ -128,7 +128,7 @@
       "status": "passed",
       "rust": "1.96.0",
       "evidence": "evidence/p0-engine.json",
-      "scope": "Three tests pass: 16 synthetic engine check groups, actual queries after explicit-flush/SIGKILL reopen, and malformed owned metadata rejection with intact-copy recovery. No product PostgreSQL indexing or quality claim."
+      "scope": "Four tests pass: 16 synthetic engine groups, actual phrase/vector queries after explicit-flush/SIGKILL, full-fixture copied-metadata rejection/recovery, and clean reopen of a separate disk-specific vector/keyword fixture. Positive ENOSPC and its full mutable-text combination remain unverified."
     },
     {
       "kind": "postgres_check",
@@ -211,7 +211,7 @@
       "status": "passed",
       "rust": "1.96.0",
       "evidence": "evidence/p0-helper-local.json",
-      "scope": "Both helper normal and private-fault profiles linked and generated SQL (6 and 7 functions). Current direct profiles also regenerated. Actual helper PostgreSQL runtime remains pending CI."
+      "scope": "Both helper normal and private-fault profiles linked and generated SQL (6 and 7 functions). Direct profiles also regenerated. This local evidence is separate from the subsequent recorded helper PostgreSQL runtime."
     },
     {
       "kind": "helper_runtime",
@@ -220,6 +220,33 @@
       "rust": "1.96.0",
       "evidence": "evidence/p0-helper-local.json",
       "scope": "7 normal and 8 private-fault standalone pipe/process checks after matching locked builds, including actual Edge execution and pure-controller SIGKILL cleanup. Not PostgreSQL failure-containment evidence."
+    },
+    {
+      "kind": "postgres_helper_runtime",
+      "command": "docker run --rm --memory=5g --cpus=2 --network=none pg-qdrant-p0-helper-normal bash crates/pg_qdrant/tests/run-p0.sh",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-helper-ci.json",
+      "verified_source_commit": "a22d3c73ad838ff606a080345b65d634f5144c39",
+      "scope": "10 normal helper PostgreSQL checks and 7 standalone protocol checks passed. Overall workflow failed separately at the positive ENOSPC experiment."
+    },
+    {
+      "kind": "postgres_helper_fault_runtime",
+      "command": "docker run --rm --memory=5g --cpus=2 --network=none pg-qdrant-p0-helper bash crates/pg_qdrant/tests/run-faults.sh",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-helper-ci.json",
+      "verified_source_commit": "a22d3c73ad838ff606a080345b65d634f5144c39",
+      "scope": "15 private helper PostgreSQL checks and 8 standalone protocol checks passed. Helper SIGKILL/abort preserved companion SQL; the actual 125-second operation limit, supervisor SIGTERM cleanup and four-start/three-restart exhaustion were observed. No native cancellation, actual OOM or complete product claim."
+    },
+    {
+      "kind": "edge_enospc_runtime",
+      "command": "python3 scripts/run_disk_probe.py",
+      "status": "failed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-helper-ci.json",
+      "verified_source_commit": "a22d3c73ad838ff606a080345b65d634f5144c39",
+      "scope": "Attempted only in the dedicated 32 MiB tmpfs container. No JSON report returned; original wrapper did not preserve the exit code or signal, so exact cause and recovery remain unverified. A corrected probe must repeat this test."
     }
   ]
 }
