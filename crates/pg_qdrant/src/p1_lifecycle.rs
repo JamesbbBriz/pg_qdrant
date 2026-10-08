@@ -15,6 +15,11 @@ pgrx::extension_sql_file!(
     requires = ["p1_representations"]
 );
 pgrx::extension_sql_file!(
+    "../sql/generations.sql",
+    name = "p1_native_generations",
+    requires = ["p1_consumer_contract", "p3_generation_reservations"]
+);
+pgrx::extension_sql_file!(
     "../sql/management.sql",
     name = "p1_management",
     requires = ["p1_transaction_capture"]

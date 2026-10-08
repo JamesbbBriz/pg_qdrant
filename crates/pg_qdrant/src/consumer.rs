@@ -58,10 +58,12 @@ pub fn complete(batch: SourceBatch, result: &Result<Value, ProbeError>) {
     let ids: Vec<u64> = batch.events.iter().map(|e| e.event_id).collect();
     let receipt = result.as_ref().ok().filter(|r| {
         r["flushed"] == true
+            && r["retired"] == json!(batch.retire)
             && r["source_contract_version"] == pg_qdrant_protocol::SOURCE_CONTRACT_VERSION
             && r["generation"] == batch.generation
             && r["storage_epoch"] == batch.storage_epoch
             && r["consumer_id"] == batch.consumer_id
+            && r["task_id"] == json!(batch.task_id)
             && r["event_ids"] == json!(ids)
     });
     BackgroundWorker::transaction(|| {
@@ -74,14 +76,11 @@ pub fn complete(batch: SourceBatch, result: &Result<Value, ProbeError>) {
                 .expect("exact event ACK");
         } else {
             let message = JsonB(
-                json!({"index_id":batch.index_id,"epoch":batch.storage_epoch,
+                json!({"index_id":batch.index_id,"epoch":batch.storage_epoch,"task_id":batch.task_id,"retire":batch.retire,
                 "error":result.as_ref().err().map(|e|e.message.as_str()).unwrap_or("invalid flush receipt")}),
             );
-            Spi::run_with_args("UPDATE qdrant_internal.consumer_state c SET state='failed',last_error=$1->>'error' \
-              FROM (SELECT index_name FROM qdrant_internal.index_catalog \
-                WHERE index_id=($1->>'index_id')::bigint FOR KEY SHARE SKIP LOCKED) i \
-              WHERE i.index_name=c.index_name AND c.storage_epoch::text=$1->>'epoch'",&[message.into()])
-              .expect("persist consumer failure");
+            Spi::run_with_args("SELECT qdrant_internal.fail_batch($1)", &[message.into()])
+                .expect("persist consumer failure");
         }
     });
 }

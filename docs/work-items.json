@@ -7418,6 +7418,14 @@
           "status": "pending"
         }
       ],
+      "installed_implementation": {
+        "status": "partially_verified",
+        "scope": "Same-contract shadow builds with separate flush receipts, long-transaction/search fencing, atomic switch, exact retirement cleanup, real task waits and cancellation; full lifecycle acceptance remains open.",
+        "documentation": "docs/p3-resource-generation.md",
+        "runtime_test": "crates/pg_qdrant/tests/verify_generations.py",
+        "full_acceptance_complete": false,
+        "release_supported": false
+      },
       "product_status": "planned",
       "full_acceptance_complete": false,
       "release_supported": false,

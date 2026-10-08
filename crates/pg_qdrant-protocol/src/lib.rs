@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 3;
+pub const SOURCE_CONTRACT_VERSION: u32 = 4;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -74,6 +74,10 @@ pub struct SourceBatch {
     pub generation: String,
     pub storage_epoch: String,
     pub consumer_id: String,
+    #[serde(default)]
+    pub task_id: Option<String>,
+    #[serde(default)]
+    pub retire: bool,
     pub events: Vec<SourceEvent>,
     pub representations: BTreeMap<String, DenseContract>,
 }
