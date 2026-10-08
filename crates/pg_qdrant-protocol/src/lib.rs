@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 use std::io;
 
 pub mod advanced;
@@ -15,6 +16,35 @@ pub const QUEUE_LIMIT: usize = 8;
 pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
+pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
+pub const SOURCE_CONTRACT_VERSION: u32 = 2;
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct DenseContract {
+    pub kind: String,
+    pub model_id: String,
+    pub model_version: String,
+    pub tokenizer: String,
+    pub dimensions: usize,
+    pub distance: String,
+    pub normalization: String,
+    pub storage_precision: String,
+    pub vector_field: String,
+    pub fingerprint_field: String,
+    pub incarnation_field: String,
+    pub model_id_field: String,
+    pub model_version_field: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DenseQuery {
+    pub representation: String,
+    pub model_id: String,
+    pub model_version: String,
+    pub vector: Vec<f32>,
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -26,16 +56,19 @@ pub struct SourceEvent {
     pub fingerprint: Option<String>,
     pub key: Value,
     pub body: Option<String>,
+    pub vectors: BTreeMap<String, Vec<f32>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct SourceBatch {
+    pub source_contract_version: u32,
     pub index_id: u64,
     pub generation: String,
     pub storage_epoch: String,
     pub consumer_id: String,
     pub events: Vec<SourceEvent>,
+    pub representations: BTreeMap<String, DenseContract>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -58,7 +91,19 @@ pub enum Operation {
         storage_epoch: String,
         q: String,
         top_k: usize,
+        #[serde(default)]
+        dense_query: Option<DenseQuery>,
     },
+}
+
+impl Operation {
+    pub fn request_byte_limit(&self) -> usize {
+        match self {
+            Self::SourceApply { .. } => CONSUMER_REQUEST_BYTES,
+            Self::SourceSearch { .. } => SEARCH_REQUEST_BYTES,
+            _ => REQUEST_BYTES,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

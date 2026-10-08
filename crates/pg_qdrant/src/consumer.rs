@@ -58,6 +58,7 @@ pub fn complete(batch: SourceBatch, result: &Result<Value, ProbeError>) {
     let ids: Vec<u64> = batch.events.iter().map(|e| e.event_id).collect();
     let receipt = result.as_ref().ok().filter(|r| {
         r["flushed"] == true
+            && r["source_contract_version"] == pg_qdrant_protocol::SOURCE_CONTRACT_VERSION
             && r["generation"] == batch.generation
             && r["storage_epoch"] == batch.storage_epoch
             && r["consumer_id"] == batch.consumer_id

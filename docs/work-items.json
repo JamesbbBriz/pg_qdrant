@@ -3122,7 +3122,7 @@
         "mapping": "Edge vector schema",
         "support_status": "public primitive candidate; fixed-release call and runtime evidence required"
       },
-      "input_config": "real[] plus immutable model revision, dimensions, normalization, distance and source fingerprint.",
+      "input_config": "Declared dense JSONB source columns plus immutable model revision/tokenizer, dimensions, normalization, distance, float32 precision, source fingerprint and incarnation; other representations and migration retain their separate gates.",
       "sql_exposure": "representation settings and query_vectors",
       "execution": [
         "Validate supported input/configuration, caller permissions, required slots and generation.",
@@ -3164,9 +3164,14 @@
           ]
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-V01",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "evidence": "docs/dense-representations.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_models.py",
+          "artifact": "p1-product/p1-product-results.json",
+          "verified_scope": "Local installed PG17/Edge tests: fixed-generation dense capture, encoding inputs, source/incarnation freshness, native stale-slot removal, named slot independence, model validation, permissions, rollback and process-crash replay. Hosted exact-revision validation remains required; schema migration and full capability acceptance remain open.",
+          "release_supported": false
         },
         "release": {
           "status": "pending",

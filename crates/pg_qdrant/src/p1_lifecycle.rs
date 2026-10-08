@@ -5,9 +5,14 @@ pgrx::extension_sql_file!(
     requires = [qdrant, qdrant_internal]
 );
 pgrx::extension_sql_file!(
+    "../sql/representations.sql",
+    name = "p1_representations",
+    requires = ["p1_management"]
+);
+pgrx::extension_sql_file!(
     "../sql/consumer.sql",
     name = "p1_consumer_contract",
-    requires = ["p1_management"]
+    requires = ["p1_representations"]
 );
 pgrx::extension_sql_file!(
     "../sql/management.sql",

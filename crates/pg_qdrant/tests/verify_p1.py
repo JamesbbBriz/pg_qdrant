@@ -64,7 +64,7 @@ assert pathlib.Path(sql('SHOW data_directory')).resolve()==disposable
 sql('CREATE EXTENSION pg_qdrant')
 capabilities=json.loads(sql('SELECT qdrant.capabilities()'))
 assert capabilities['index_catalog_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','V01']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)')
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
@@ -314,6 +314,8 @@ crash_matrix.append({'cut':'owner_replacement_with_locked_catalog','before':befo
     'after':after,'final_source_keys':json.loads(hits('managementrollback'))})
 checks += ['replacement owner rotates catalog rows skipped during management']
 
+import verify_models
+verify_model_replay=verify_models.run(sql,ready,ticket_from,checks)
 faults=sql('SELECT (qdrant.build_info()->\'features\'->>\'p0_fault_injection\')::boolean')=='t'
 if faults:
     data=pathlib.Path(os.environ['PG_QDRANT_DISPOSABLE_DATA'])
@@ -322,7 +324,7 @@ if faults:
     if owner is None:
         owner=next(data.rglob('db-*.engine-owner'))
     marker=owner.with_suffix('.fault')
-    for cut in ['before_apply','before_flush','after_flush']:
+    for cut in ['before_apply','after_point_delete','before_flush','after_flush']:
         before=ready()
         marker.write_text(cut)
         ticket_output=sql("BEGIN; UPDATE docs SET body='"+cut+" durable recovery' WHERE id=1; SELECT qdrant.track_changes('docs'); COMMIT")
@@ -335,6 +337,7 @@ if faults:
         assert not marker.exists(),'native crash marker was not consumed'
         assert before['storage_epoch']!=after['storage_epoch'],'native fault did not replace the owner'
         assert hits(cut)=='["1"]'
+        verify_model_replay()
         crash_matrix.append({'cut':cut,'before':before,'ticket_pending':pending,
             'after':after,'ticket_durable':result,'final_source_keys':json.loads(hits(cut))})
         checks.append('native crash '+cut+' / exact-set replay')
@@ -359,6 +362,7 @@ result=json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))
 after=ready()
 assert result['durable'] and after['storage_epoch']!=before['storage_epoch'],(result,after)
 assert hits('postgresrestart')=='["1"]'
+verify_model_replay()
 crash_matrix.append({'cut':'postgres_immediate_stop','before':before,'after':after,
     'ticket_durable':result,'final_source_keys':json.loads(hits('postgresrestart'))})
 checks += ['PostgreSQL immediate-stop WAL recovery and new-owner exact replay']
@@ -368,7 +372,8 @@ checks += ['PostgreSQL immediate-stop WAL recovery and new-owner exact replay']
 build_info=json.loads(sql('SELECT qdrant.build_info()'))
 worker=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['worker_pid']
 observer=spawn('SELECT pg_sleep(2)','pgq_extension_drop_observer')
-sql("SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
+sql("SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
+assert sql("SELECT count(*) FROM pg_trigger WHERE tgrelid='model_docs'::regclass AND NOT tgisinternal")=='0'
 finish(observer)
 assert sql('SELECT count(*) FROM docs')=='1'
 assert sql("SELECT count(*) FROM pg_stat_activity WHERE pid="+str(worker))=='1','consumer must stay alive without its extension catalog'

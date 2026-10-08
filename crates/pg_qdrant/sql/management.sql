@@ -30,8 +30,8 @@ BEGIN
  END IF;
  IF jsonb_array_length(settings #> '{text,fields}')<>1
     OR jsonb_typeof(settings #> '{text,fields,0}')<>'string'
-    OR settings<>jsonb_build_object('text',jsonb_build_object('fields',settings #> '{text,fields}')) THEN
-   RAISE EXCEPTION 'This implementation admits one text field; other representations remain unimplemented'
+    OR settings-'representations'<>jsonb_build_object('text',jsonb_build_object('fields',settings #> '{text,fields}')) THEN
+   RAISE EXCEPTION 'This implementation admits one text field and declared dense representations'
      USING ERRCODE='0A000';
  END IF;
  SELECT relowner INTO owner_id FROM pg_class WHERE oid=source;
@@ -39,6 +39,8 @@ BEGIN
    RAISE EXCEPTION 'Source owner access required' USING ERRCODE='42501';
  END IF;
  result:=qdrant_internal.p1_register(index_name,source,key_field::text,settings #>> '{text,fields,0}');
+ PERFORM qdrant_internal.register_representations(index_name,coalesce(settings->'representations','{}'));
+ UPDATE qdrant_internal.index_catalog i SET settings=create_index.settings WHERE i.index_name=create_index.index_name;
  PERFORM qdrant_internal.p1_start_consumer();
  RETURN result;
 END $$;
@@ -59,12 +61,12 @@ BEGIN
  BEGIN
  EXECUTE format('LOCK TABLE ONLY %s IN ROW SHARE MODE NOWAIT',i.source_oid::regclass);
  FOR row_data IN EXECUTE format(
-   'SELECT %I::text AS key,%I AS body FROM ONLY %s WHERE ($1 IS NULL OR %I > $1::%s) ORDER BY %I LIMIT 32 FOR UPDATE NOWAIT',
+   'SELECT t.%I::text AS key,t.%I AS body,qdrant_internal.model_projection($2,t) AS models FROM ONLY %s t WHERE ($1 IS NULL OR %I > $1::%s) ORDER BY %I LIMIT 32 FOR UPDATE NOWAIT',
    i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.key_field)
-   USING i.backfill_cursor LOOP
+   USING i.backfill_cursor,i.index_name LOOP
    IF NOT EXISTS (SELECT 1 FROM qdrant_internal.source_state WHERE index_name=p_name
                   AND tagged_key->>'value'=row_data.key) THEN
-     PERFORM qdrant_internal.p1_record(p_name,'upsert',row_data.key,row_data.body,'backfill');
+     PERFORM qdrant_internal.p1_record(p_name,'upsert',row_data.key,row_data.body,'backfill',row_data.models);
    END IF;
    UPDATE qdrant_internal.index_catalog SET backfill_cursor=row_data.key WHERE index_name=p_name;
    n:=n+1;
@@ -121,7 +123,7 @@ BEGIN
    THEN 'degraded' ELSE coalesce(c.state,'registered') END,
    'backfill_done',(SELECT backfill_done FROM qdrant_internal.index_catalog WHERE index_name=p_index_name),
    'storage_epoch',c.storage_epoch,'consumer_id',c.consumer_id,'engine_instance',c.engine_instance,'last_error',c.last_error,
-   'owner_status',owner_status,
+   'owner_status',owner_status,'representations',qdrant_internal.representation_summary(p_index_name),
    'engine_index_ready',c.state='ready' AND result->>'capture_state'='capturing'
       AND (owner_status->>'engine_ready')::boolean AND c.engine_instance=owner_status->>'engine_instance',
    'pending_events',(SELECT count(*) FROM qdrant_internal.outbox e
@@ -152,13 +154,16 @@ END $$;
 
 CREATE FUNCTION qdrant.drop_index(p_index_name text) RETURNS void
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE i qdrant_internal.index_catalog%ROWTYPE;
+DECLARE i qdrant_internal.index_catalog%ROWTYPE; slot record;
 BEGIN
  PERFORM qdrant_internal.require_index(p_index_name,true);
  SELECT * INTO STRICT i FROM qdrant_internal.index_catalog WHERE index_name=p_index_name FOR UPDATE;
  IF EXISTS(SELECT 1 FROM pg_class WHERE oid=i.source_oid) THEN
    EXECUTE format('DROP TRIGGER IF EXISTS qdrant_p1_rows ON %s',i.source_oid::regclass);
    EXECUTE format('DROP TRIGGER IF EXISTS qdrant_p1_truncate ON %s',i.source_oid::regclass);
+   FOR slot IN SELECT name FROM qdrant_internal.representation_catalog WHERE index_name=p_index_name LOOP
+     EXECUTE format('DROP TRIGGER IF EXISTS %I ON %s','qdrant_model_'||slot.name,i.source_oid::regclass);
+   END LOOP;
  END IF;
  DELETE FROM qdrant_internal.index_catalog WHERE index_name=p_index_name;
 END $$;

@@ -1,4 +1,4 @@
-//! Bounded owner-domain text search; other P2 plans remain unimplemented.
+//! Bounded owner-domain text and declared dense search.
 
 pgrx::extension_sql!(
     r###"
@@ -36,6 +36,7 @@ DECLARE
     candidate_limit integer;
     timeout_ms integer;
     matched_triggers integer;
+    dense_query jsonb;
 BEGIN
     IF index_name IS NULL OR q IS NULL
        OR octet_length(q) NOT BETWEEN 1 AND 8192 OR btrim(q) = '' THEN
@@ -61,14 +62,14 @@ BEGIN
               USING ERRCODE = '22023';
         END IF;
     END LOOP;
-    IF mode <> 'text' OR query_vectors <> '{}'::jsonb THEN
-        RAISE EXCEPTION 'Semantic/hybrid representation adapter not yet implemented'
+    IF mode = 'hybrid' OR (mode='text' AND query_vectors <> '{}'::jsonb) THEN
+        RAISE EXCEPTION 'Hybrid fusion is not yet implemented; text takes no model vector'
           USING ERRCODE = '0A000';
     END IF;
-    request_plan := coalesce(options ->> 'plan','text');
-    IF request_plan <> 'text' OR
+    request_plan := coalesce(options ->> 'plan',mode);
+    IF request_plan <> mode OR
        coalesce(options ->> 'fallback','error') <> 'error' THEN
-        RAISE EXCEPTION 'Only an explicit text/error preflight is admitted'
+        RAISE EXCEPTION 'Requested mode and plan must match; fallback requires a ready implementation'
           USING ERRCODE = '0A000';
     END IF;
     IF options ? 'candidate_limit' AND jsonb_typeof(options -> 'candidate_limit') <> 'number'
@@ -141,10 +142,11 @@ BEGIN
         RAISE EXCEPTION 'Capture triggers or lifecycle are not safe'
           USING ERRCODE = '55000';
     END IF;
+    IF mode='semantic' THEN dense_query:=qdrant_internal.admit_dense(index_name,query_vectors); END IF;
     RETURN jsonb_build_object(
        'index_name',index_name,'source_oid',selected.source_oid,
        'source_key_type',selected.key_type,
-       'requested_mode',mode,'effective_plan','text',
+       'requested_mode',mode,'effective_plan',mode,'dense_query',dense_query,
        'text_fields',selected.settings #> '{text,fields}',
        'top_k',top_k,'candidate_limit',candidate_limit,
        'timeout_ms',timeout_ms,
@@ -188,6 +190,7 @@ BEGIN
     SELECT * INTO STRICT c FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name;
     hits:=qdrant_internal.p1_search(jsonb_build_object('operation','source_search','index_id',i.index_id,
       'generation',i.generation,'storage_epoch',c.storage_epoch,'q',q,
+      'dense_query',plan->'dense_query',
       'top_k',(plan->>'candidate_limit')::integer),(plan->>'timeout_ms')::integer);
     IF NOT EXISTS(SELECT 1 FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name
         AND cs.storage_epoch=c.storage_epoch AND cs.consumer_id=c.consumer_id AND cs.state='ready') THEN
@@ -198,7 +201,7 @@ BEGIN
     PERFORM qdrant.explain_search(index_name,q,mode,top_k,query_vectors,options);
     RETURN QUERY EXECUTE format(
       'SELECT t.%I::text,row_number() OVER(ORDER BY v.ordinality)::integer,(v.hit->>''score'')::double precision,
-       t.%I::text,left(t.%I,240),jsonb_build_object(''generation'',$2,''storage_epoch'',$3,''plan'',''text'',
+       t.%I::text,left(t.%I,240),jsonb_build_object(''generation'',$2,''storage_epoch'',$3,''plan'',$6,
        ''statistics_scope'',''bounded_candidates'',''release_supported'',false)
        FROM jsonb_array_elements($1) WITH ORDINALITY v(hit,ordinality)
        JOIN ONLY %s t ON t.%I=(v.hit #>> ''{payload,source_key,value}'')::%s
@@ -208,7 +211,7 @@ BEGIN
          AND encode(sha256(convert_to(t.%I,''UTF8'')),''hex'')=v.hit #>> ''{payload,fingerprint}''
        ORDER BY v.ordinality LIMIT $5',
        i.key_field,i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.text_field)
-       USING hits,i.generation,c.storage_epoch,i.index_name,top_k;
+       USING hits,i.generation,c.storage_epoch,i.index_name,top_k,plan->>'effective_plan';
 END;
 $pgq$;
 
@@ -218,5 +221,5 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
     qdrant.search(text,text,text,integer,jsonb,jsonb) TO PUBLIC;
 "###,
     name = "p2_query_admission",
-    requires = ["p1_management"]
+    requires = ["p1_representations"]
 );

@@ -22,7 +22,7 @@ Every public Edge query/match variant, vector/storage kind, payload-index schema
 
 ## Proposed capability discovery
 
-The versioned `qdrant.capabilities(index_name text DEFAULT NULL) -> jsonb` interface retains all 54 IDs. The managed-helper build reports its installed catalog and partial single-field F01 SQL integration, separately from release support. Index-specific requests still fail because full index-aware discovery remains unimplemented. Direct-worker feasibility builds do not enable product indexing.
+The versioned `qdrant.capabilities(index_name text DEFAULT NULL) -> jsonb` interface retains all 54 IDs. The managed-helper build reports its installed catalog, partial single-field F01 SQL integration and fixed-generation dense BYOV V01 integration, separately from release support. [Dense representation contracts](dense-representations.md) define freshness, source-column permissions and the current whole-source readiness requirement. Index-specific requests still fail because full index-aware discovery remains unimplemented. Direct-worker feasibility builds do not enable product indexing.
 
 Without an index it should report extension/engine versions, build features, API support and capability status. With an index it should also report effective lexical backend, generation, configured representations, and readiness or rejection reasons. Keep these distinctions explicit: upstream primitive exists, adapter supports it, feature is release-tested, and this index has the necessary data.
 
