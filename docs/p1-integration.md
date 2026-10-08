@@ -95,9 +95,12 @@ Native candidate responses fetch only identity/version fields, keeping long
 source bodies out of IPC; excerpts are read from the authorized source JOIN.
 
 BM25 uses the pinned multilingual tokenizer, no stemming or stopwords,
-lowercase, no ASCII folding and average length 16. This fixed configuration is
-not a validated language quality policy. Full lexical predicates, hybrid
-representations and advanced APIs remain separate implementation gates.
+lowercase, disabled extra ASCII folding and average length 16. The tokenizer
+still performs its own lossy multilingual normalization. This fixed configuration is
+not a validated language quality policy. [Native candidate matching](lexical-matching.md)
+adds bounded term/phrase and distinct token/whole-key prefixes across recall
+and reranking branches. Full lexical quality, configurable analyzers and
+advanced APIs remain separate implementation gates.
 
 Run `crates/pg_qdrant/tests/run-p1.sh` against the installed helper build.
 `experiments/p1-ledger/run.sh` preserves the original independent transaction

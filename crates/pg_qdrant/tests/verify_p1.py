@@ -63,9 +63,10 @@ disposable=pathlib.Path(os.environ['PG_QDRANT_DISPOSABLE_DATA']).resolve()
 assert disposable.parent.parent==pathlib.Path('/tmp') and disposable.parent.name.startswith('pgq-p1-product.')
 assert pathlib.Path(sql('SHOW data_directory')).resolve()==disposable
 sql('CREATE EXTENSION pg_qdrant')
+faults=sql('SELECT (qdrant.build_info()->\'features\'->>\'p0_fault_injection\')::boolean')=='t'
 capabilities=json.loads(sql('SELECT qdrant.capabilities()'))
 assert capabilities['index_catalog_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','V01','V02','V03','Q02','Q03']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','V01','V02','V03','Q02','Q03','Q12']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)')
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
@@ -340,10 +341,13 @@ import verify_sparse
 verify_sparse_replay=verify_sparse.run(sql,ready,ticket_from,checks)
 import verify_tokens
 verify_tokens_replay=verify_tokens.run(sql,ready,ticket_from,checks)
+import verify_lexical
+verify_lexical_replay=verify_lexical.run(sql,ready,ticket_from,checks,faults,crash_matrix)
 def verify_model_replay():
     verify_dense_replay()
     verify_sparse_replay()
     verify_tokens_replay()
+    verify_lexical_replay()
 # PostgreSQL cancellation must not release an executing fused native query's owner.
 ready('model_docs')
 hybrid_vector=json.dumps({'dense':{'model_id':'fixture-model','model_version':'r1','vector':[1,0]}})
@@ -367,7 +371,6 @@ finally:
 verify_model_replay()
 assert json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']==pid
 checks += ['cancelled native hybrid query retains sole owner until actual completion']
-faults=sql('SELECT (qdrant.build_info()->\'features\'->>\'p0_fault_injection\')::boolean')=='t'
 if faults:
     data=pathlib.Path(os.environ['PG_QDRANT_DISPOSABLE_DATA'])
     # SourceOwner fault marker is sibling of its database-scoped storage root.
@@ -432,7 +435,7 @@ verify_retirements.run(sql,ready,checks,faults,crash_matrix)
 build_info=json.loads(sql('SELECT qdrant.build_info()'))
 worker=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['worker_pid']
 observer=spawn('SELECT pg_sleep(2)','pgq_extension_drop_observer')
-sql("SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
+sql("SELECT qdrant.drop_index('lexical_docs'); SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
 assert sql("SELECT count(*) FROM pg_trigger WHERE tgrelid='model_docs'::regclass AND NOT tgisinternal")=='0'
 finish(observer)
 assert sql('SELECT count(*) FROM docs')=='1'

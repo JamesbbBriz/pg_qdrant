@@ -75,7 +75,7 @@ epoch. Source text and vectors together have a 448 KiB serialized projection
 budget; over-budget mutations fail with 54000 before committing a partial event.
 Native search frames have a separate 128 KiB bound, supporting 4096 float32
 dimensions without changing the 16 KiB diagnostic-probe budget. Helper startup
-and flush receipts both check source contract version 5; mismatched builds fail
+and flush receipts both check source contract version 7; mismatched builds fail
 closed. This development SQL requires a fresh installation; no upgrade script
 from earlier 0.0.1 development catalogs is claimed.
 

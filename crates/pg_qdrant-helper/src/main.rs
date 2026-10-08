@@ -8,6 +8,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+mod lexical;
 mod resources;
 mod source;
 
@@ -123,6 +124,7 @@ fn run() -> Result<(), ProbeError> {
                 representation_query,
                 rerank_query,
                 fusion,
+                predicates,
             } => source_owner.search(
                 index_id,
                 &generation,
@@ -132,6 +134,7 @@ fn run() -> Result<(), ProbeError> {
                 representation_query,
                 rerank_query,
                 fusion,
+                predicates,
             ),
             op => execute(op),
         };

@@ -611,6 +611,16 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
@@ -762,6 +772,16 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
@@ -910,6 +930,16 @@
       "owner": "planner/filters",
       "status": "partially_verified",
       "evidence": [
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
         {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
@@ -1061,6 +1091,16 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
@@ -1209,6 +1249,16 @@
       "owner": "engine/lexical",
       "status": "partially_verified",
       "evidence": [
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
         {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
@@ -1386,6 +1436,16 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
@@ -1537,6 +1597,16 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
@@ -1685,6 +1755,16 @@
       "owner": "engine/lexical",
       "status": "partially_verified",
       "evidence": [
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
         {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
@@ -5752,6 +5832,16 @@
       "owner": "engine/filters",
       "status": "partially_verified",
       "evidence": [
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_native_candidate_matching",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_lexical.py",
+          "scope": "One fixed native multilingual BM25/body policy with tested lossy accent normalization, separate bounded token-prefix and case-sensitive whole-key keyword indexes. Bounded all/any/exclude/contiguous-phrase/key clauses precede truncation in text/dense/sparse/RRF/DBSF/nested MaxSim; cap-one outsider fixtures inspect native identities before the authorized source JOIN. Source DML/key reuse, actual generation switching and native/PostgreSQL crash replay are tested. IDF remains whole-live-generation. Configurable analyzers, full language quality, arbitrary Boolean/filter kinds, source-offset highlighting and complete acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
         {
           "observed_on": "2026-10-08",
           "level": "compile-verified",

@@ -1,9 +1,9 @@
 //! Embedded Edge mutation owner. No SQL values select a filesystem path.
 use pg_qdrant_protocol::{
     ProbeError, RepresentationContract, RepresentationQuery, RepresentationVector,
-    SOURCE_CONTRACT_VERSION, SourceBatch, SourceFusion,
+    SOURCE_CONTRACT_VERSION, SourceBatch, SourceFusion, SourcePredicates,
 };
-use qdrant_edge::bm25_embed::{EdgeBm25, EdgeBm25Config};
+use qdrant_edge::bm25_embed::EdgeBm25;
 use qdrant_edge::{
     Distance, EdgeConfig, EdgeShard, EdgeSparseVectorParams, EdgeVectorParams, Filter, Fusion,
     IdfCorpusParams, IdfParams, Modifier, MultiVectorComparator, MultiVectorConfig, NamedQuery,
@@ -20,6 +20,7 @@ use std::{
 struct SourceShard {
     shard: EdgeShard,
     representations: BTreeMap<String, RepresentationContract>,
+    lexical_ready: bool,
 }
 
 pub struct SourceOwner {
@@ -50,15 +51,10 @@ fn identity(index: u64, generation: &str, epoch: &str) -> Result<String, ProbeEr
 
 impl SourceOwner {
     pub fn new(root: PathBuf) -> Result<Self, ProbeError> {
-        let config: EdgeBm25Config = serde_json::from_value(json!({
-            "tokenizer":"multilingual","stemmer":{"type":"none"},"stopwords":{},
-            "lowercase":true,"ascii_folding":false,"avg_len":16.0
-        }))
-        .map_err(error)?;
         Ok(Self {
             root,
             shards: HashMap::new(),
-            encoder: EdgeBm25::new(config).map_err(error)?,
+            encoder: crate::lexical::encoder()?,
             retired: HashMap::new(),
         })
     }
@@ -255,8 +251,23 @@ impl SourceOwner {
                 SourceShard {
                     shard: EdgeShard::new(&path, config).map_err(error)?,
                     representations: batch.representations.clone(),
+                    lexical_ready: false,
                 },
             );
+            // Register native ownership before fallible schema creation so a
+            // failed build remains eligible for exact same-owner retirement.
+        }
+        if !self.shards[&key].lexical_ready {
+            #[cfg(not(feature = "p0-fault-injection"))]
+            let fail_schema = false;
+            #[cfg(feature = "p0-fault-injection")]
+            let fail_schema = batch.task_id.is_some()
+                && take_fault_marker(&self.root, "lexical_schema_error", batch.index_id, true);
+            crate::lexical::install(&self.shards[&key].shard, fail_schema)?;
+            self.shards
+                .get_mut(&key)
+                .expect("owned shard")
+                .lexical_ready = true;
         }
         let shard = &self.shards[&key].shard;
         #[cfg(feature = "p0-fault-injection")]
@@ -295,7 +306,7 @@ impl SourceOwner {
                     event.point_id,
                     Vectors::new_named(vectors),
                     json!({"source_key":event.key,"revision":event.revision,
-                        "incarnation":event.incarnation,"fingerprint":event.fingerprint,"body":body}),
+                        "incarnation":event.incarnation,"fingerprint":event.fingerprint,"body":body,"body_prefix":body}),
                 );
                 PointOperations::UpsertPoints(PointInsertOperations::PointsList(vec![point.into()]))
             } else {
@@ -347,6 +358,7 @@ impl SourceOwner {
         representation_query: Option<RepresentationQuery>,
         rerank_query: Option<RepresentationQuery>,
         fusion: Option<SourceFusion>,
+        predicates: SourcePredicates,
     ) -> Result<Value, ProbeError> {
         if q.is_empty() || q.len() > 8192 || !(1..=1000).contains(&top_k) {
             return Err(ProbeError::invalid("search outside bounds"));
@@ -357,12 +369,17 @@ impl SourceOwner {
             .get(&key)
             .ok_or_else(|| error("generation not owned by this helper"))?;
         let shard = &owned.shard;
+        if !owned.lexical_ready {
+            return Err(error("owned lexical indexes are not ready"));
+        }
         if fusion.is_some() && representation_query.is_none() {
             return Err(ProbeError::invalid(
                 "hybrid fusion requires a named representation query",
             ));
         }
         let mut request = QueryRequest::new(top_k);
+        let filter = crate::lexical::compile(&predicates, &self.encoder)?;
+        request.filter = filter.clone();
         let (using, query) = if let Some(dense) = representation_query {
             let contract = owned
                 .representations
@@ -415,6 +432,7 @@ impl SourceOwner {
                 .map(|(branch, query)| {
                     let mut stage = Prefetch::new(top_k);
                     stage.query = Some(query);
+                    stage.filter = filter.clone();
                     stage.params = Some(SearchParams {
                         exact: true,
                         indexed_only: false,
@@ -475,6 +493,7 @@ impl SourceOwner {
             candidates.query = request.query.take();
             candidates.prefetches = std::mem::take(&mut request.prefetches);
             candidates.params = request.params.take();
+            candidates.filter = filter;
             request.prefetches = vec![candidates];
             request.query = Some(ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
                 using: Some(rerank.representation),
@@ -662,6 +681,44 @@ mod tests {
                 vectors: BTreeMap::new(),
             }],
         };
+        #[cfg(feature = "p0-fault-injection")]
+        {
+            let failed = SourceBatch {
+                storage_epoch: "00000000-0000-0000-0000-000000000003".into(),
+                task_id: Some(generation.clone()),
+                ..batch.clone()
+            };
+            std::fs::write(
+                root.with_extension("fault"),
+                "shadow:1:lexical_schema_error",
+            )
+            .unwrap();
+            assert!(owner.apply(failed.clone()).is_err());
+            let key = identity(1, &generation, &failed.storage_epoch).unwrap();
+            assert!(!owner.shards[&key].lexical_ready);
+            assert!(
+                owner
+                    .search(
+                        1,
+                        &generation,
+                        &failed.storage_epoch,
+                        "retired",
+                        10,
+                        None,
+                        None,
+                        None,
+                        SourcePredicates::default()
+                    )
+                    .is_err()
+            );
+            let retirement = SourceBatch {
+                retire: true,
+                events: vec![],
+                ..failed
+            };
+            assert_eq!(owner.apply(retirement).unwrap()["retired"], true);
+            assert!(!root.join(key).exists());
+        }
         owner.apply(batch.clone()).unwrap();
         let path = root.join(identity(1, &generation, &epoch).unwrap());
         assert!(path.is_dir());
@@ -691,7 +748,17 @@ mod tests {
         assert!(owner.apply(batch).is_err());
         assert!(
             owner
-                .search(1, &generation, &epoch, "retired", 10, None, None, None)
+                .search(
+                    1,
+                    &generation,
+                    &epoch,
+                    "retired",
+                    10,
+                    None,
+                    None,
+                    None,
+                    SourcePredicates::default()
+                )
                 .is_err()
         );
         drop(owner);
