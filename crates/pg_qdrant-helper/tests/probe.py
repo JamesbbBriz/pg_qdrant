@@ -106,10 +106,12 @@ try:
         else:
             send(process, 3, "abort")
             assert frame(process)["error"]["code"] == "invalid_parameter"
+            send(process, 4, "oom")
+            assert frame(process)["error"]["code"] == "invalid_parameter"
             assert process.poll() is None
             record("fault_operation_refused_without_private_feature")
 
-        send(process, 4, "delay", delay_ms=10000)
+        send(process, 5, "delay", delay_ms=10000)
         time.sleep(0.1)
         begin = time.monotonic()
         process.stdin.close()

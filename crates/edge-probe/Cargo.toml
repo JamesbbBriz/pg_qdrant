@@ -8,7 +8,12 @@ repository.workspace = true
 publish = false
 description = "Reproducible public-API feasibility probes for pg_qdrant"
 
+[features]
+default = []
+p0-fault-injection = ["dep:libc"]
+
 [dependencies]
 qdrant-edge = "=0.8.0"
 serde_json = "=1.0.151"
 tempfile = "=3.27.0"
+libc = { version = "=0.2.189", optional = true }

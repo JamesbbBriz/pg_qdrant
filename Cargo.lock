@@ -2548,6 +2548,7 @@ dependencies = [
 name = "pg-qdrant-edge-probe"
 version = "0.0.1"
 dependencies = [
+ "libc",
  "qdrant-edge",
  "serde_json",
  "tempfile",

@@ -10,7 +10,9 @@ mod formats;
 mod helper;
 #[cfg(feature = "p0-managed-helper")]
 mod helper_child;
+mod identity;
 mod ipc;
+mod recheck;
 mod worker;
 
 ::pgrx::pg_module_magic!();
@@ -74,9 +76,31 @@ mod qdrant {
 
 #[pg_schema]
 mod qdrant_internal {
-    use super::{formats, ipc, worker};
+    use super::{formats, identity, ipc, recheck, worker};
     use pgrx::JsonB;
     use pgrx::prelude::*;
+
+    /// Fixture-only source recheck; no production authorization or capture.
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p0_recheck_candidates(
+        source: Option<pgrx::PgRelation>,
+        key_field: Option<&str>,
+        candidates: Option<JsonB>,
+    ) -> JsonB {
+        require_superuser();
+        recheck::recheck(source, key_field, candidates)
+    }
+
+    /// Tagged identity encoding, without source reads or point-ID allocation.
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p0_identity_roundtrip(
+        bigint_key: Option<i64>,
+        uuid_key: Option<pgrx::Uuid>,
+        text_key: Option<&str>,
+    ) -> JsonB {
+        require_superuser();
+        identity::roundtrip(bigint_key, uuid_key, text_key)
+    }
 
     /// Candidate SQL types only: backend validation and owned JSON roundtrip.
     #[pg_extern(volatile, parallel_unsafe)]
@@ -137,8 +161,9 @@ mod qdrant_internal {
         let operation = match kind {
             "panic" => ipc::Operation::Panic,
             "abort" => ipc::Operation::Abort,
+            "oom" => ipc::Operation::Oom,
             _ => ipc::raise(ipc::ProbeError::invalid(
-                "fault kind must be panic or abort",
+                "fault kind must be panic, abort or oom",
             )),
         };
         JsonB(ipc::call(operation, timeout_ms).unwrap_or_else(|e| ipc::raise(e)))

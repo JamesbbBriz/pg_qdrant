@@ -5,6 +5,8 @@
 //! All shard ownership, threads, and temporary storage are local to this call.
 
 pub mod api_inventory;
+#[cfg(feature = "p0-fault-injection")]
+pub mod oom_probe;
 
 use std::collections::{BTreeSet, HashMap};
 use std::time::Instant;

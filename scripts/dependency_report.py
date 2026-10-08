@@ -14,6 +14,13 @@ import subprocess
 import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+PROFILES = {
+    "direct-normal": ["pg_qdrant/pg17"],
+    "direct-private": ["pg_qdrant/pg17", "pg_qdrant/p0-fault-injection"],
+    "helper-normal": ["pg_qdrant/pg17", "pg_qdrant/p0-managed-helper"],
+    "helper-private": ["pg_qdrant/pg17", "pg_qdrant/p0-managed-helper",
+                       "pg_qdrant/p0-fault-injection", "pg-qdrant-helper/p0-fault-injection"],
+}
 
 
 def manifest_inputs() -> list[dict[str, str]]:
@@ -28,7 +35,7 @@ def command(*args: str) -> str:
     return subprocess.check_output(args, cwd=ROOT, text=True)
 
 
-def collect() -> dict:
+def collect(profile: str = "direct-normal") -> dict:
     lock_bytes = (ROOT / "Cargo.lock").read_bytes()
     locked = tomllib.loads(lock_bytes.decode("utf-8"))
     checksums = {
@@ -36,7 +43,7 @@ def collect() -> dict:
     }
     metadata = json.loads(command(
         "cargo", "metadata", "--locked", "--format-version", "1",
-        "--no-default-features", "--features", "pg_qdrant/pg17",
+        "--no-default-features", "--features", ",".join(PROFILES[profile]),
         "--filter-platform", "x86_64-unknown-linux-gnu",
     ))
     names = {p["id"]: f'{p["name"]}@{p["version"]}' for p in metadata["packages"]}
@@ -65,7 +72,7 @@ def collect() -> dict:
         "schema_version": 1,
         "evidence_kind": "cargo_locked_resolution",
         "target": "x86_64-unknown-linux-gnu",
-        "requested_features": ["pg_qdrant/pg17", "pgrx/cshim"],
+        "requested_features": [*PROFILES[profile], "pgrx/cshim"],
         "cargo_lock_sha256": hashlib.sha256(lock_bytes).hexdigest(),
         "manifest_inputs": manifest_inputs(),
         "packages": packages,
@@ -77,18 +84,86 @@ def collect() -> dict:
     }
 
 
+def serialize(report: dict) -> str:
+    return json.dumps(report, indent=2, ensure_ascii=False) + "\n"
+
+
+def compare_profiles(reports: dict[str, dict]) -> dict:
+    base = reports["direct-normal"]
+    baseline = {p["package"]: p for p in base["packages"]}
+
+    def registry(packages: list[dict]) -> set[tuple]:
+        return {(p["package"], p["source"], p["checksum"])
+                for p in packages if p["source"] != "workspace"}
+
+    profiles = []
+    for name, report in reports.items():
+        if (report["cargo_lock_sha256"] != base["cargo_lock_sha256"]
+                or report["manifest_inputs"] != base["manifest_inputs"]):
+            raise ValueError("Dependency inputs changed during profile resolution.")
+        packages = {p["package"]: p for p in report["packages"]}
+        changes = []
+        for package in sorted(baseline.keys() & packages.keys()):
+            before, after = baseline[package], packages[package]
+            delta = {key + "_" + direction: sorted(set(left[key]) - set(right[key]))
+                     for key in ("features", "dependencies")
+                     for direction, left, right in [("added", after, before), ("removed", before, after)]}
+            if any(delta.values()):
+                changes.append({"package": package, **delta})
+        profiles.append({
+            "profile": name,
+            "metadata_feature_arguments": PROFILES[name],
+            "requested_features": report["requested_features"],
+            "full_inventory_sha256": hashlib.sha256(serialize(report).encode()).hexdigest(),
+            "package_count": len(packages),
+            "registry_coordinates_checksums_match_direct_normal": registry(report["packages"]) == registry(base["packages"]),
+            "workspace_packages": [p for p in report["packages"] if p["source"] == "workspace"],
+            "changes_from_direct_normal": {
+                "packages_added": [packages[p] for p in sorted(packages.keys() - baseline.keys())],
+                "packages_removed": sorted(baseline.keys() - packages.keys()),
+                "package_feature_dependency_changes": changes,
+            },
+        })
+    return {
+        "schema_version": 1,
+        "evidence_kind": "cargo_locked_profile_resolution_comparison",
+        "target": base["target"],
+        "baseline_profile": "direct-normal",
+        "cargo_lock_sha256": base["cargo_lock_sha256"],
+        "manifest_inputs": base["manifest_inputs"],
+        "profiles": profiles,
+        "limitations": [
+            "Resolution only: this comparison does not verify compilation, runtime, or release support.",
+            "Cargo metadata resolves workspace packages; inclusion is not proof that a package is linked into a selected binary.",
+            "Helper-private explicitly selects both extension and helper-binary private features used by the image build.",
+            "Inventory hashes cover the same serialized full report produced by --profile; comparisons are against direct-normal.",
+        ],
+    }
+
+
+def write_or_check(path: pathlib.Path, report: dict, check: bool) -> None:
+    if check:
+        if json.loads(path.read_text()) != report:
+            raise SystemExit(f"Dependency inventory differs from the locked graph: {path.name}; regenerate and review it.")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(serialize(report))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=pathlib.Path, default=ROOT / "docs/dependency-graph.json")
+    parser.add_argument("--profile", choices=PROFILES, default="direct-normal")
+    parser.add_argument("--output", type=pathlib.Path)
+    parser.add_argument("--comparison-output", type=pathlib.Path,
+                        help="Also resolve all four profiles and write/check their concise comparison")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    report = collect()
-    if args.check:
-        if json.loads(args.output.read_text()) != report:
-            raise SystemExit("Dependency inventory differs from the locked graph; regenerate and review it.")
-    else:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
+    report = collect(args.profile)
+    filename = "dependency-graph.json" if args.profile == "direct-normal" else f"dependency-graph-{args.profile}.json"
+    write_or_check(args.output or ROOT / "docs" / filename, report, args.check)
+    if args.comparison_output:
+        reports = {name: report if name == args.profile else collect(name) for name in PROFILES}
+        write_or_check(args.comparison_output, compare_profiles(reports), args.check)
     missing = [p["package"] for p in report["packages"]
                if not p["license_expression"] and not p["license_file_sha256"]]
     print(json.dumps({"packages": len(report["packages"]), "license_metadata_missing": missing,

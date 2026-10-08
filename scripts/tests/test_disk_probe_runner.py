@@ -1,7 +1,9 @@
 """Exercise wrapper decisions with real, owned child processes; no disk filling."""
 from __future__ import annotations
 
+import copy
 import importlib.util
+import json
 from pathlib import Path
 import signal
 import sys
@@ -107,6 +109,95 @@ class DiskProbeRunnerTest(unittest.TestCase):
         self.assertTrue(report["execution"]["stderr_tail_truncated"])
         self.assertEqual(report["execution"]["last_stage"], "before_reopen")
         self.assertEqual(report["execution"]["observations"], [{"stage": "before_reopen", "free_bytes": 4096}])
+
+
+class FullTextCapacityRefusalTest(unittest.TestCase):
+    def fixture(self):
+        refusal = RUNNER.FULL_TEXT_CAPACITY_REFUSAL
+        body = {"kind": RUNNER.CAPACITY_REFUSAL_KIND, "status": "passed", "profile": "full_text",
+                "observed_capacity_bytes": RUNNER.REFUSED_FULL_TEXT_BYTES,
+                "required_capacity_bytes": RUNNER.FULL_TEXT_BYTES, "expected_refusal": refusal,
+                "disk_writes_attempted": False, "engine_open_attempted": False, "filler_created": False,
+                "enospc_verified": False, "recovery_verified": False,
+                "entry_refusals": {"enospc_exit_code": 2, "clean_error": refusal,
+                    "enospc": {"kind": "edge_enospc_probe", "profile": "full_text", "status": "not_run",
+                               "reason_code": "unsafe_environment", "reason": refusal,
+                               "disk_writes_attempted": False}}}
+        empty = {"status": "observed", "filesystem": {"type": "tmpfs",
+                 "capacity_bytes": RUNNER.REFUSED_FULL_TEXT_BYTES,
+                 "free_bytes": RUNNER.REFUSED_FULL_TEXT_BYTES, "available_bytes": RUNNER.REFUSED_FULL_TEXT_BYTES},
+                 "mount_identity": {"device": 17, "inode": 1},
+                 "storage": {"files": 0, "directories": 0, "logical_bytes": 0, "allocated_bytes": 0}}
+        return body, empty
+
+    def child(self, body, extra=""):
+        stages = "capacity_refusal_guard guard capacity_refusal_completed".split()
+        code = ("import sys; "
+                + "; ".join(f"print({(RUNNER.STAGE_PREFIX+stage)!r}, file=sys.stderr, flush=True)" for stage in stages)
+                + f"; print({json.dumps(body)!r}, flush=True); " + extra)
+        return RUNNER.run_probe([sys.executable, "-c", code], timeout=2,
+                                required_profile="full_text", required_kind=RUNNER.CAPACITY_REFUSAL_KIND)
+
+    def test_exact_refusal_requires_both_entry_paths_and_zero_write_evidence(self):
+        body, empty = self.fixture()
+        parsed = self.child(body)
+        self.assertEqual(RUNNER.validate_capacity_refusal(parsed, empty, empty)["status"], "passed")
+        for path, value in [
+            (["expected_refusal"], "arbitrary rejection"), (["required_capacity_bytes"], 128*1024*1024),
+            (["entry_refusals", "clean_error"], "unrelated error"),
+            (["entry_refusals", "enospc", "reason_code"], "missing_mount"),
+            (["entry_refusals", "enospc", "status"], "passed"),
+            (["entry_refusals", "enospc_exit_code"], 0),
+            (["disk_writes_attempted"], True), (["engine_open_attempted"], True),
+            (["enospc_verified"], True), (["recovery_verified"], True),
+            (["entry_refusals"], None), (["entry_refusals", "enospc"], []),
+        ]:
+            with self.subTest(path=path):
+                changed = copy.deepcopy(body)
+                parent = changed
+                for key in path[:-1]: parent = parent[key]
+                parent[path[-1]] = value
+                report = self.child(changed)
+                self.assertEqual(RUNNER.validate_capacity_refusal(report, empty, empty)["status"], "failed")
+        for path, value in [(["status"], "observation_failed"), (["storage", "files"], 1),
+                            (["storage", "directories"], 1), (["storage", "allocated_bytes"], 4096),
+                            (["mount_identity", "inode"], 2), (["filesystem", "free_bytes"], 0)]:
+            changed = copy.deepcopy(empty)
+            parent = changed
+            for key in path[:-1]: parent = parent[key]
+            parent[path[-1]] = value
+            report = self.child(body)
+            self.assertEqual(RUNNER.validate_capacity_refusal(report, empty, changed)["status"], "failed")
+
+    def test_capacity_characterization_never_accepts_crash_nonzero_or_not_run(self):
+        body, empty = self.fixture()
+        for extra in ["raise SystemExit(2)", "import os, signal; os.kill(os.getpid(), signal.SIGBUS)"]:
+            with self.subTest(extra=extra):
+                # Disable core dumps before the synthetic child signal. No Edge
+                # process, mapped fixture, tmpfs allocation or filling is used.
+                extra = "import resource; resource.setrlimit(resource.RLIMIT_CORE, (0,0)); " + extra
+                parsed = self.child(body, extra)
+                self.assertEqual(RUNNER.validate_capacity_refusal(parsed, empty, empty)["status"], "failed")
+        body["status"] = "not_run"
+        self.assertEqual(RUNNER.validate_capacity_refusal(self.child(body), empty, empty)["status"], "failed")
+        body["status"] = "failed"
+        self.assertEqual(RUNNER.validate_capacity_refusal(self.child(body), empty, empty)["status"], "failed")
+
+    def test_capacity_characterization_cannot_substitute_for_native_success(self):
+        body, _ = self.fixture()
+        command = [sys.executable, "-c", f"print({json.dumps(body)!r})"]
+        for kind in ["edge_enospc_probe", "edge_disk_fixture_probe"]:
+            self.assertEqual(RUNNER.run_probe(command, required_profile="full_text", required_kind=kind)["status"], "failed")
+
+    def test_readonly_observer_keeps_profile_specific_fixed_bounds(self):
+        for profile, allowed, refused in [
+            ("vector_keyword", [1, 32*1024*1024, 64*1024*1024], [0, 64*1024*1024+1, RUNNER.FULL_TEXT_BYTES]),
+            ("full_text", [128*1024*1024, RUNNER.FULL_TEXT_BYTES], [0, RUNNER.FULL_TEXT_BYTES+1]),
+            ("full_text_128_capacity_refusal", [RUNNER.REFUSED_FULL_TEXT_BYTES], [0, 64*1024*1024, RUNNER.FULL_TEXT_BYTES]),
+        ]:
+            for capacity in allowed: self.assertTrue(RUNNER.observation_capacity_allowed(profile, capacity))
+            for capacity in refused: self.assertFalse(RUNNER.observation_capacity_allowed(profile, capacity))
+        self.assertFalse(RUNNER.observation_capacity_allowed("unknown", 1))
 
 
 if __name__ == "__main__":

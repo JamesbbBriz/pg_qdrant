@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "p0_narrow_enospc_verified_full_text_sigbus_current_sql_pending",
+  "status": "p0_ci6_four_profile_sql_verified_128m_full_text_failed_new_experiments_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -92,7 +92,7 @@
     "container_base": "ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
     "native_package_lock_complete": false,
     "container_execution_verified": true,
-    "container_evidence": "evidence/p0-helper-ci.json",
+    "container_evidence": "evidence/p0-capacity-and-sql-ci.json",
     "current_source_container_execution_verified": false,
     "managed_helper_default": false,
     "prototype_profiles": [
@@ -113,8 +113,26 @@
         "p0-fault-injection"
       ]
     ],
-    "latest_failed_container_evidence": "evidence/p0-full-text-disk-ci.json",
-    "last_complete_four_profile_runtime_evidence": "evidence/p0-helper-ci.json"
+    "latest_failed_container_evidence": "evidence/p0-capacity-and-sql-ci.json",
+    "last_complete_four_profile_runtime_evidence": "evidence/p0-capacity-and-sql-ci.json",
+    "profile_resolution_evidence": "dependency-profiles.json",
+    "profile_resolution_status": "locked_metadata_verified_runtime_separate",
+    "private_fault_feature_forwarding": {
+      "pg_qdrant/p0-fault-injection": [
+        "pg-qdrant-edge-probe/p0-fault-injection"
+      ],
+      "pg-qdrant-helper/p0-fault-injection": [
+        "pg-qdrant-edge-probe/p0-fault-injection"
+      ],
+      "edge_probe_optional_direct_dependency": {
+        "name": "libc",
+        "requirement": "=0.2.189",
+        "already_present_in_lockfile": true,
+        "normal_profile_edge_enabled": false
+      },
+      "default_enabled": false,
+      "positive_oom_verified": false
+    }
   },
   "build_evidence": [
     {
@@ -314,7 +332,37 @@
       "status": "passed",
       "rust": "1.96.0",
       "evidence": "evidence/p0-input-formats-local.json",
-      "scope": "Corrected candidate-format source compiles against PG17.11. The earlier linked iteration is separately identified; all three new SQL assertion groups remain pending."
+      "scope": "Corrected candidate-format source compiles against PG17.11. The earlier linked iteration is separately identified; all three new SQL assertion groups were pending at this local checkpoint. Their later four-profile runtime success is recorded in the CI6 entry below."
+    },
+    {
+      "kind": "ci6_four_profile_sql_and_capacity_regression",
+      "status": "partially_verified",
+      "rust": "1.96.0",
+      "verified_source_commit": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+      "evidence": "evidence/p0-capacity-and-sql-ci.json",
+      "scope": "All four images installed and SQL groups 13/15/13/19 plus helper pipes 7/8 passed;20 engine,2 child,9 Python and narrow32 MiB ENOSPC passed. Overall workflow failed: full-text128 MiB fault and no-filler clean reopen both SIGBUS with all mount capacity allocated. No dirty recovery, OOM, P0 exit or later-source runtime claim."
+    },
+    {
+      "kind": "postgres_format_runtime",
+      "status": "passed",
+      "rust": "1.96.0",
+      "verified_source_commit": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+      "evidence": "evidence/p0-capacity-and-sql-ci.json",
+      "scope": "Three candidate-format groups passed in all four SQL profiles, including signed-zero bit evidence, finite float32 extremes, shape/budget/null rejection and ACL/runtime-superuser checks. Backend-only serialization; no public API freeze or source-recheck claim."
+    },
+    {
+      "kind": "locked_profile_resolution",
+      "status": "passed",
+      "evidence": "dependency-profiles.json",
+      "command": "python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check",
+      "scope": "All four locked Linux x86_64 metadata profiles resolve 440 packages with unchanged registry coordinates/checksums; private Edge probe adds only an optional direct edge to already locked libc 0.2.189. Resolution is not linking or runtime evidence."
+    },
+    {
+      "kind": "integrated_local_validation",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-integrated-local.json",
+      "scope": "Recorded integration snapshot passes 23 normal engine tests, 3 private native OOM guard tests, 21 Python tests, all 4 extension compile profiles and both helper binary compile profiles. No new local link/install, SQL, dedicated fault mount or positive OOM execution; no P0/release claim."
     }
   ]
 }

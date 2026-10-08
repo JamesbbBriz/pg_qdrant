@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [features]
 default = []
-p0-fault-injection = []
+p0-fault-injection = ["pg-qdrant-edge-probe/p0-fault-injection"]
 
 [dependencies]
 pg-qdrant-protocol = { path = "../pg_qdrant-protocol" }

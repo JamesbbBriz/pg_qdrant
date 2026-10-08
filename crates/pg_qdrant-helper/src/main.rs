@@ -116,6 +116,8 @@ fn execute(operation: Operation) -> Result<Value, ProbeError> {
         Operation::Panic => panic!("intentional P0 managed-helper engine panic"),
         #[cfg(feature = "p0-fault-injection")]
         Operation::Abort => std::process::abort(),
+        #[cfg(feature = "p0-fault-injection")]
+        Operation::Oom => Ok(pg_qdrant_edge_probe::oom_probe::run("managed_helper")),
         _ => Err(ProbeError::invalid(
             "unsupported helper operation in this build",
         )),

@@ -9,6 +9,7 @@ fn main() {
             || command == "--disk-fixture-probe"
             || command == "--full-text-disk-fixture-probe"
             || command == "--full-text-tmpfs-fixture-probe"
+            || command == "--full-text-128-capacity-refusal-probe"
         {
             if args.next().is_some() {
                 eprintln!("fault probes do not accept positional arguments");
@@ -19,6 +20,8 @@ fn main() {
                     Ok(report) => (report, 0),
                     Err(error) => (fault_probes::failure("edge_corruption_probe", error), 1),
                 }
+            } else if command == "--full-text-128-capacity-refusal-probe" {
+                fault_probes::full_text_128_capacity_refusal_probe()
             } else if command == "--disk-fixture-probe"
                 || command == "--full-text-disk-fixture-probe"
                 || command == "--full-text-tmpfs-fixture-probe"

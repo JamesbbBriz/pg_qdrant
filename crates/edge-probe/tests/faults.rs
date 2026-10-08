@@ -156,3 +156,37 @@ fn full_text_fixture_clean_reopen_without_filling() {
     assert!(!refused.status.success());
     assert_eq!(std::fs::read_dir(owned.path()).unwrap().count(), 0);
 }
+
+#[test]
+fn capacity_refusal_characterization_rejects_missing_or_unsafe_mounts_without_writes() {
+    let executable = env!("CARGO_BIN_EXE_pg-qdrant-edge-probe");
+    let owned = tempfile::tempdir().unwrap();
+    for path in [
+        Some(owned.path()),
+        Some(std::path::Path::new("/dev/shm")),
+        None,
+    ] {
+        let mut command = Command::new(executable);
+        command.arg("--full-text-128-capacity-refusal-probe");
+        if let Some(path) = path {
+            command.env("PG_QDRANT_ENOSPC_DIR", path);
+        } else {
+            command.env_remove("PG_QDRANT_ENOSPC_DIR");
+        }
+        let output = bounded_output(command);
+        assert_eq!(output.status.code(), Some(1));
+        let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(report["kind"], "edge_full_text_128_capacity_refusal_probe");
+        assert_eq!(report["status"], "failed");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        for stage in [
+            "clean_fixture_create",
+            "full_text_fixture",
+            "fill",
+            "config_save",
+        ] {
+            assert!(!stderr.contains(&format!("pg_qdrant_p0_stage={stage}\n")));
+        }
+        assert_eq!(std::fs::read_dir(owned.path()).unwrap().count(), 0);
+    }
+}

@@ -53,6 +53,43 @@ pg17 = ["pgrx/pg17"]
 
 The actual pgrx template, needed features, and supporting dependencies must be resolved by compilation. Exact pins select an intentional direct dependency version; Cargo.lock records the resolved graph. Use locked builds for release reproducibility. [Cargo version requirements](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html), [Cargo.lock](https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html).
 
+## Resolved P0 build profiles
+
+`scripts/dependency_report.py` defaults to the existing PG17 direct-normal
+inventory in `docs/dependency-graph.json`. Its explicit `--profile` selector also
+supports `direct-private`, `helper-normal`, and `helper-private`. Each profile
+uses locked, Linux x86_64 Cargo metadata with default features disabled at the
+command boundary. The helper-private profile selects the private feature on
+both the extension and helper binary, matching their separate image build
+commands. The required pgrx `cshim` feature still comes from the manifest.
+
+Generate or check the normal full inventory and all-profile comparison together:
+
+```sh
+python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json
+python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check
+```
+
+For a full individual inventory, use `--profile helper-private --output PATH`.
+Without `--output`, a nondefault profile writes `dependency-graph-PROFILE.json`
+under `docs`, so it does not overwrite the normal baseline. The
+[profile comparison](dependency-profiles.json) binds the exact lockfile and
+manifest hashes, records selected feature arguments, gives each complete
+inventory's content hash, and lists package/feature/dependency differences from
+direct-normal. It is resolution evidence only. Cargo metadata includes workspace
+packages; their presence does not show that every package is linked into a
+selected executable.
+
+The private Edge probe adds an optional exact `libc =0.2.189` dependency behind
+`p0-fault-injection`. That version was already locked and used by the PostgreSQL
+and helper integration. Only the private profiles enable the Edge probe's direct
+`libc` edge; the normal profile gains no such edge. Its explicitly declared empty
+`default` feature does not enable the allocator fault path. This change adds no
+registry package, changes no registry version/checksum, and enables no inference
+library or network Qdrant client. Local BM25 and BYOV retain their core dependency
+contract. Profile resolution does not promote compilation, runtime, isolation,
+or release support status.
+
 ## Boundaries that make upgrades manageable
 
 Keep project-owned SQL request/response types and configuration schemas outside upstream engine structs. Translate them in one adapter. Upstream Rust/serde layout changes must not silently change the public SQL JSON contract.

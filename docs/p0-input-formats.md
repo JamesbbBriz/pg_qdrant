@@ -118,67 +118,23 @@ number to retain its sign. The original compile/link checkpoint above preceded
 this diagnostic-evidence correction. The corrected source has since passed
 `cargo check --locked -p pg_qdrant --no-default-features --features pg17`.
 The [source-bound local record](evidence/p0-input-formats-local.json) separates
-that check from the earlier linked iteration. Actual SQL execution remains pending.
+that check from the earlier linked iteration. Subsequently, all three format
+assertion groups passed in all four PostgreSQL profiles in
+[CI6 at `d843706`](evidence/p0-capacity-and-sql-ci.json). That runtime evidence
+covers this candidate-format source; it does not certify later identity/recheck
+additions or freeze a public API.
 
-## Proposed identity and visible-result recheck experiment
+## Separate identity and visible-result recheck experiment
 
-The following is a separate, **unimplemented** next experiment. It needs review
-before introducing source relation lookup or dynamic SQL:
+The additive [source-recheck prototype](p0-source-recheck.md) now has private
+source, a linked normal PostgreSQL 17 schema, and authored disposable-cluster
+assertions. Its SQL runtime remains unverified. It accepts tagged bigint/uuid/text
+keys and checks candidate fixture versions against an explicitly named source
+snapshot; it does not implement durable point-ID allocation, source capture,
+incarnation generation, production permissions or MVCC top-k.
 
-```text
-qdrant_internal.p0_identity_roundtrip(
-    bigint_key bigint, uuid_key uuid, text_key text
-) -> jsonb
-
-qdrant_internal.p0_recheck_candidates(
-    source regclass, key_field name, candidates jsonb
-) -> jsonb
-```
-
-Both would remain superuser-only, security invoker, called-on-null, VOLATILE and
-PARALLEL UNSAFE. The identity probe should encode a tagged representation:
-signed 64-bit integer as a decimal string, UUID as its exact 16 bytes/canonical
-string, and UTF-8 text without case or Unicode normalization. All three required
-keys would reject SQL NULL. Text may be empty but is capped at 1,024 UTF-8 bytes.
-The cases include bigint minimum/maximum and values above JavaScript's exact
-integer range; UUID zero/nonzero/case-equivalent inputs; empty text, multibyte
-text, and composed/decomposed Unicode remaining distinct. Type tags must keep
-bigint `1` and text `1` distinct. No ctid/xmin identity, stable point-ID mapping,
-primary-key reuse or incarnation claim follows from encoding alone.
-
-The recheck prototype would accept at most 32 synthetic candidates, each with a
-tagged source key and explicit fixture `revision bigint`, `incarnation uuid`
-and content fingerprint. These are columns supplied by an isolated test fixture,
-not inferred reliable production metadata. It would require a local ordinary
-table with one declared, non-null primary key of exactly bigint/uuid/text and
-reject RLS-enabled/forced-RLS tables, unsupported relation kinds, unknown or
-extra candidate fields, mismatched key tags and malformed versions. A table
-lock must cover catalog validation through the SELECT. Identifiers must come
-from catalog-validated attributes and proper identifier quoting; all key/version
-values must be bound parameters. Arbitrary SQL or caller-supplied predicates
-must never be accepted.
-
-Proposed bounded CI scenarios, using two ordinary PostgreSQL sessions:
-
-1. Exact key/revision/incarnation/fingerprint accepts a currently visible row;
-   missing/deleted rows and any mismatched version component are excluded.
-2. Session B's uncommitted update/delete is invisible to session A. After B
-   commits, a fresh READ COMMITTED statement in A observes the change and rejects
-   the stale candidate. REPEATABLE READ is tested separately against its fixed
-   snapshot; the result must name that visibility scope.
-3. Delete/reinsert of the same key with a different explicit fixture incarnation
-   rejects the old candidate, including a late candidate delivered afterward.
-   This demonstrates comparison only, not durable incarnation allocation.
-4. Bigint/uuid/text fixtures use their native key types and binary-safe bound
-   values; identifiers containing quotes cannot escape quoting. A schema-qualified
-   regclass prevents search-path substitution. Concurrent DDL has a measured
-   lock/rejection outcome.
-5. RLS tables and unsupported key definitions are rejected explicitly. An
-   unauthorized diagnostic call is rejected independently of ACLs. Because this
-   remains a superuser diagnostic, it cannot establish production source SELECT,
-   tenant authorization, RLS semantics, snippet safety or statistics safety.
-
-No current candidate-format code performs these rechecks. Even a passing future
-recheck experiment cannot recall relevant rows absent from the candidate set,
-prove arbitrary historical MVCC top-k, or implement transactional outbox/replay.
-Those remain separate P1/P2/P3 acceptance requirements.
+The recheck diagnostic's `PgRelation` SQL conversion acquires a source relation
+lock before its function-body superuser guard. Its P0-only namespace guard also
+uses a broad conditional catalog lock. These limitations do not apply to the
+vector-format probe, which performs no source reads. Neither diagnostic freezes
+a public product SQL API.

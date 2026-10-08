@@ -39,7 +39,7 @@ RUN cargo install cargo-pgrx --version 0.19.3 --locked
 WORKDIR /src
 COPY . .
 RUN cargo fmt --all -- --check \
-    && python3 scripts/dependency_report.py --check \
+    && python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check \
     && cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1 \
     && cargo test --locked -p pg-qdrant-helper --test supervisor_child \
     && cargo run --locked -p pg-qdrant-edge-probe >/tmp/edge-probe.json
@@ -49,7 +49,9 @@ ARG P0_FAULTS=0
 ARG P0_HELPER=0
 RUN pgq_features=pg17 \
     && if [ "${P0_FAULTS}" = 1 ]; then \
-         pgq_features="${pgq_features} p0-fault-injection"; \
+         pgq_features="${pgq_features} p0-fault-injection" \
+         && cargo test --locked -p pg-qdrant-edge-probe \
+           --features p0-fault-injection --lib oom_probe::tests; \
        fi \
     && if [ "${P0_HELPER}" = 1 ]; then \
          pgq_features="${pgq_features} p0-managed-helper"; \

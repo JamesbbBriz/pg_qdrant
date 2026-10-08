@@ -1,0 +1,439 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "cargo_locked_profile_resolution_comparison",
+  "target": "x86_64-unknown-linux-gnu",
+  "baseline_profile": "direct-normal",
+  "cargo_lock_sha256": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d",
+  "manifest_inputs": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+    },
+    {
+      "path": "crates/edge-probe/Cargo.toml",
+      "sha256": "99118fc920d732fb569bc002276fcce78f06115505356b4b9591afaebdb0a066"
+    },
+    {
+      "path": "crates/pg_qdrant/Cargo.toml",
+      "sha256": "5f717b6eaa3fd711bb65780aef4e391713d8c6e37ea64f98144fb47ef480e5eb"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/Cargo.toml",
+      "sha256": "c1cca09fe0b0d590b93942ce03b29814da88071b6ec9151e7ac89a95d4be020c"
+    },
+    {
+      "path": "crates/pg_qdrant-protocol/Cargo.toml",
+      "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+    }
+  ],
+  "profiles": [
+    {
+      "profile": "direct-normal",
+      "metadata_feature_arguments": [
+        "pg_qdrant/pg17"
+      ],
+      "requested_features": [
+        "pg_qdrant/pg17",
+        "pgrx/cshim"
+      ],
+      "full_inventory_sha256": "434b6640820a4880b738e3dde7f07f0afcff962139f297c9713264b05740b354",
+      "package_count": 440,
+      "registry_coordinates_checksums_match_direct_normal": true,
+      "workspace_packages": [
+        {
+          "package": "pg-qdrant-edge-probe@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "default"
+          ],
+          "dependencies": [
+            "qdrant-edge@0.8.0",
+            "serde_json@1.0.151",
+            "tempfile@3.27.0"
+          ]
+        },
+        {
+          "package": "pg-qdrant-helper@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [],
+          "dependencies": [
+            "libc@0.2.189",
+            "pg-qdrant-edge-probe@0.0.1",
+            "pg-qdrant-protocol@0.0.1",
+            "serde_json@1.0.151"
+          ]
+        },
+        {
+          "package": "pg-qdrant-protocol@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [],
+          "dependencies": [
+            "serde@1.0.229",
+            "serde_json@1.0.151"
+          ]
+        },
+        {
+          "package": "pg_qdrant@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "pg17"
+          ],
+          "dependencies": [
+            "libc@0.2.189",
+            "pg-qdrant-edge-probe@0.0.1",
+            "pg-qdrant-protocol@0.0.1",
+            "pgrx@0.19.3",
+            "serde@1.0.229",
+            "serde_json@1.0.151"
+          ]
+        }
+      ],
+      "changes_from_direct_normal": {
+        "packages_added": [],
+        "packages_removed": [],
+        "package_feature_dependency_changes": []
+      }
+    },
+    {
+      "profile": "direct-private",
+      "metadata_feature_arguments": [
+        "pg_qdrant/pg17",
+        "pg_qdrant/p0-fault-injection"
+      ],
+      "requested_features": [
+        "pg_qdrant/pg17",
+        "pg_qdrant/p0-fault-injection",
+        "pgrx/cshim"
+      ],
+      "full_inventory_sha256": "c905c257f761cd4b330404fb8e351f182c292c7ad4df94abbab74524e7d8ae0c",
+      "package_count": 440,
+      "registry_coordinates_checksums_match_direct_normal": true,
+      "workspace_packages": [
+        {
+          "package": "pg-qdrant-edge-probe@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "default",
+            "p0-fault-injection"
+          ],
+          "dependencies": [
+            "libc@0.2.189",
+            "qdrant-edge@0.8.0",
+            "serde_json@1.0.151",
+            "tempfile@3.27.0"
+          ]
+        },
+        {
+          "package": "pg-qdrant-helper@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [],
+          "dependencies": [
+            "libc@0.2.189",
+            "pg-qdrant-edge-probe@0.0.1",
+            "pg-qdrant-protocol@0.0.1",
+            "serde_json@1.0.151"
+          ]
+        },
+        {
+          "package": "pg-qdrant-protocol@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [],
+          "dependencies": [
+            "serde@1.0.229",
+            "serde_json@1.0.151"
+          ]
+        },
+        {
+          "package": "pg_qdrant@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "p0-fault-injection",
+            "pg17"
+          ],
+          "dependencies": [
+            "libc@0.2.189",
+            "pg-qdrant-edge-probe@0.0.1",
+            "pg-qdrant-protocol@0.0.1",
+            "pgrx@0.19.3",
+            "serde@1.0.229",
+            "serde_json@1.0.151"
+          ]
+        }
+      ],
+      "changes_from_direct_normal": {
+        "packages_added": [],
+        "packages_removed": [],
+        "package_feature_dependency_changes": [
+          {
+            "package": "pg-qdrant-edge-probe@0.0.1",
+            "features_added": [
+              "p0-fault-injection"
+            ],
+            "features_removed": [],
+            "dependencies_added": [
+              "libc@0.2.189"
+            ],
+            "dependencies_removed": []
+          },
+          {
+            "package": "pg_qdrant@0.0.1",
+            "features_added": [
+              "p0-fault-injection"
+            ],
+            "features_removed": [],
+            "dependencies_added": [],
+            "dependencies_removed": []
+          }
+        ]
+      }
+    },
+    {
+      "profile": "helper-normal",
+      "metadata_feature_arguments": [
+        "pg_qdrant/pg17",
+        "pg_qdrant/p0-managed-helper"
+      ],
+      "requested_features": [
+        "pg_qdrant/pg17",
+        "pg_qdrant/p0-managed-helper",
+        "pgrx/cshim"
+      ],
+      "full_inventory_sha256": "9c4af7978abd20a96e9c91c551f9798d36ad46c1fde52035f6edd0a2766a1051",
+      "package_count": 440,
+      "registry_coordinates_checksums_match_direct_normal": true,
+      "workspace_packages": [
+        {
+          "package": "pg-qdrant-edge-probe@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "default"
+          ],
+          "dependencies": [
+            "qdrant-edge@0.8.0",
+            "serde_json@1.0.151",
+            "tempfile@3.27.0"
+          ]
+        },
+        {
+          "package": "pg-qdrant-helper@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [],
+          "dependencies": [
+            "libc@0.2.189",
+            "pg-qdrant-edge-probe@0.0.1",
+            "pg-qdrant-protocol@0.0.1",
+            "serde_json@1.0.151"
+          ]
+        },
+        {
+          "package": "pg-qdrant-protocol@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [],
+          "dependencies": [
+            "serde@1.0.229",
+            "serde_json@1.0.151"
+          ]
+        },
+        {
+          "package": "pg_qdrant@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "p0-managed-helper",
+            "pg17"
+          ],
+          "dependencies": [
+            "libc@0.2.189",
+            "pg-qdrant-edge-probe@0.0.1",
+            "pg-qdrant-protocol@0.0.1",
+            "pgrx@0.19.3",
+            "serde@1.0.229",
+            "serde_json@1.0.151"
+          ]
+        }
+      ],
+      "changes_from_direct_normal": {
+        "packages_added": [],
+        "packages_removed": [],
+        "package_feature_dependency_changes": [
+          {
+            "package": "pg_qdrant@0.0.1",
+            "features_added": [
+              "p0-managed-helper"
+            ],
+            "features_removed": [],
+            "dependencies_added": [],
+            "dependencies_removed": []
+          }
+        ]
+      }
+    },
+    {
+      "profile": "helper-private",
+      "metadata_feature_arguments": [
+        "pg_qdrant/pg17",
+        "pg_qdrant/p0-managed-helper",
+        "pg_qdrant/p0-fault-injection",
+        "pg-qdrant-helper/p0-fault-injection"
+      ],
+      "requested_features": [
+        "pg_qdrant/pg17",
+        "pg_qdrant/p0-managed-helper",
+        "pg_qdrant/p0-fault-injection",
+        "pg-qdrant-helper/p0-fault-injection",
+        "pgrx/cshim"
+      ],
+      "full_inventory_sha256": "2fc0facf90200367a38e9485dd5ca21f268a898bc1f07540f0cdec0992df741a",
+      "package_count": 440,
+      "registry_coordinates_checksums_match_direct_normal": true,
+      "workspace_packages": [
+        {
+          "package": "pg-qdrant-edge-probe@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "default",
+            "p0-fault-injection"
+          ],
+          "dependencies": [
+            "libc@0.2.189",
+            "qdrant-edge@0.8.0",
+            "serde_json@1.0.151",
+            "tempfile@3.27.0"
+          ]
+        },
+        {
+          "package": "pg-qdrant-helper@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "p0-fault-injection"
+          ],
+          "dependencies": [
+            "libc@0.2.189",
+            "pg-qdrant-edge-probe@0.0.1",
+            "pg-qdrant-protocol@0.0.1",
+            "serde_json@1.0.151"
+          ]
+        },
+        {
+          "package": "pg-qdrant-protocol@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [],
+          "dependencies": [
+            "serde@1.0.229",
+            "serde_json@1.0.151"
+          ]
+        },
+        {
+          "package": "pg_qdrant@0.0.1",
+          "source": "workspace",
+          "checksum": null,
+          "license_expression": "Apache-2.0",
+          "license_file_sha256": null,
+          "features": [
+            "p0-fault-injection",
+            "p0-managed-helper",
+            "pg17"
+          ],
+          "dependencies": [
+            "libc@0.2.189",
+            "pg-qdrant-edge-probe@0.0.1",
+            "pg-qdrant-protocol@0.0.1",
+            "pgrx@0.19.3",
+            "serde@1.0.229",
+            "serde_json@1.0.151"
+          ]
+        }
+      ],
+      "changes_from_direct_normal": {
+        "packages_added": [],
+        "packages_removed": [],
+        "package_feature_dependency_changes": [
+          {
+            "package": "pg-qdrant-edge-probe@0.0.1",
+            "features_added": [
+              "p0-fault-injection"
+            ],
+            "features_removed": [],
+            "dependencies_added": [
+              "libc@0.2.189"
+            ],
+            "dependencies_removed": []
+          },
+          {
+            "package": "pg-qdrant-helper@0.0.1",
+            "features_added": [
+              "p0-fault-injection"
+            ],
+            "features_removed": [],
+            "dependencies_added": [],
+            "dependencies_removed": []
+          },
+          {
+            "package": "pg_qdrant@0.0.1",
+            "features_added": [
+              "p0-fault-injection",
+              "p0-managed-helper"
+            ],
+            "features_removed": [],
+            "dependencies_added": [],
+            "dependencies_removed": []
+          }
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Resolution only: this comparison does not verify compilation, runtime, or release support.",
+    "Cargo metadata resolves workspace packages; inclusion is not proof that a package is linked into a selected binary.",
+    "Helper-private explicitly selects both extension and helper-binary private features used by the image build.",
+    "Inventory hashes cover the same serialized full report produced by --profile; comparisons are against direct-normal."
+  ]
+}

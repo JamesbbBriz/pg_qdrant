@@ -7,24 +7,21 @@ source-table synchronization, a product search function, or a durable indexing
 service. The 54 product requirements remain in the capability registry as
 planned and not release-supported.
 
-The [latest CI evidence](../../docs/evidence/p0-full-text-disk-ci.json), run
-37729282903 at head `77f9ecc`, built and installed the normal extension and
-passed 15 standalone engine tests, two helper child-bookkeeping tests, six
-Python runner tests and narrow 32 MiB configuration-save ENOSPC. Its separate
-128 MiB full-text experiment terminated with SIGBUS at `recovery_reopen`; all
-four SQL profiles were skipped. This is not a current SQL integration pass.
-Historical [CI2](../../docs/evidence/p0-helper-ci.json) passed direct SQL 10/12
-and helper SQL 10/15 checks; [CI4](../../docs/evidence/p0-regression-ci.json)
-passed direct SQL 10/12 and normal-helper SQL 10, then failed in a private pipe
-observer before private-helper SQL. Those results retain their recorded source
-and feature boundaries.
+The [latest recorded CI](../../docs/evidence/p0-capacity-and-sql-ci.json), run
+37732857051 at `d843706`, built all four profiles and passed SQL 13/15/13/19
+(direct normal/private, helper normal/private), helper pipes 7/8, 20 standalone
+engine tests, two child tests and nine Python tests. All three candidate-vector
+format groups ran in every SQL profile. The workflow failed independently:
+both full-text 128 MiB fault and no-filler clean controls received SIGBUS during
+reopen after exhausting their mounts. The [P0 report](../../docs/p0-report.md)
+retains prior outcomes and the precise scope of this regression.
 
-Current local verification passes 20 engine tests and nine Python runner tests.
-These include no PostgreSQL source-table indexing or authorization proof. The
-candidate-format experiment linked in an earlier iteration. The corrected
-source passes normal PG17 checking; its signed-zero and compact float-bit SQL
-assertions still await execution. Proposed `real[]`, sparse and token-matrix product
-contracts remain unfrozen.
+New tagged identity/source-recheck diagnostics and the guarded OOM comparison
+have all four local PG17 compile profiles passing. The source-recheck normal
+schema was also linked in a separately recorded earlier source snapshot. Their
+new SQL/positive fault assertions remain pending; the prior CI does not certify
+later additions. Proposed vector, source and public search contracts remain
+unfrozen.
 
 ## Build inputs
 
@@ -81,6 +78,16 @@ status. `capabilities(index_name)` returns SQLSTATE `0A000` because this prototy
 has no index catalog. Unknown/invalid transport parameters use `22023`, timeouts
 use `57014`, queue saturation uses `53400`, and an unavailable worker uses
 `55000`. Errors include a diagnostic detail rather than a successful placeholder.
+
+The [format diagnostic](../../docs/p0-input-formats.md) validates dense, sparse
+and rectangular token arrays. The separate
+[identity/recheck diagnostic](../../docs/p0-source-recheck.md) accepts tagged
+bigint/uuid/text keys and checks explicit fixture versions against source
+visibility. Both remain nullable, volatile, parallel-unsafe, superuser-only
+internal functions. The latter's `PgRelation` input conversion locks the source
+before the function-body role check, and its conditional namespace lock is a
+broad P0-only mechanism. No source SELECT/RLS authorization or durable identity
+allocation follows from these diagnostic checks.
 
 ## Process, ownership and cancellation experiment
 
@@ -197,17 +204,19 @@ owner, and that three restart attempts end in an observable unavailable state.
 A separate CI assertion freezes the active helper with `SIGSTOP`, cancels the
 SQL caller, and waits for the unchanged 125-second process-stop limit to replace
 that helper while preserving the PostgreSQL supervisor and a companion query.
-The standalone helper suite also checks pipe cleanup after killing its own pure
-controller. Forced **PostgreSQL** supervisor `SIGKILL` remains a separate gate;
-none of these test implementations count as passing until their run is recorded.
+The standalone helper suite checks pipe cleanup after killing its own pure
+controller. CI6 separately exercised forced PostgreSQL-supervisor SIGKILL:
+PostgreSQL recovery terminated companion SQL, retained postmaster identity and
+the committed marker, stopped the old helper before replacement, and reacquired
+the same fence inode. That is expected supervisor collateral, not failure of
+the separate native-helper containment assertion.
 
-The historical passing comparison establishes only its measured P0 fault
-behavior. Current SQL regression, forced PostgreSQL-supervisor SIGKILL, source
-outbox durability, memory/disk limits, production generations, recovery, upgrade
-safety and an architecture adoption decision still have independent acceptance
-gates. The latest full-text disk signal is documented separately from the
-helper containment results; a clean ordinary-filesystem reopen cannot turn it
-into a full-text ENOSPC pass.
+These results establish only the recorded P0 behavior. Source outbox durability,
+positive kernel OOM, full-text recovery at the supported experiment capacity,
+production generations, permissions, upgrade safety and topology acceptance
+remain separate gates. The [OOM harness](../../docs/p0-oom-experiment.md) uses
+fresh inspected fixed-limit containers and exact kernel victim attribution;
+its private selector is not part of the ordinary fault script or normal build.
 
 The sibling engine suite also verifies read-only loading/refresh using a
 test-supplied manifest and update-only preview/no-write branches. In fixed Edge
@@ -215,6 +224,12 @@ test-supplied manifest and update-only preview/no-write branches. In fixed Edge
 panics and remain unavailable. Those experiments do not provide a replacement
 for the ordinary EdgeShard mutation path, a snapshot restore mechanism, or a
 PostgreSQL committed-change ACK contract.
+
+The [durability ADR](../../docs/adr/0003-edge-durability-and-recovery.md) also
+records that Edge update return is not durable ACK and the fixed loader does
+not replay logical WAL operations. Load can mutate/repair storage; a future
+source-index owner must validate or reconstruct an unclean generation before
+serving it. The current diagnostics do not implement that protocol.
 
 ## Versioned source evidence
 

@@ -134,6 +134,21 @@
         "finding": "CI5 full-text 128 MiB writable reopen terminated with SIGBUS while the narrow profile passed. A subsequent ordinary-filesystem full-fixture reopen showed about 211 MiB mapped fixture RSS.",
         "effect": "Keep the full-text recovery gate open; measure clean tmpfs control and post-exit space before changing capacity assumptions. All 70 primary work items and their estimate ranges remain unchanged.",
         "source": "docs/evidence/p0-full-text-disk-ci.json"
+      },
+      {
+        "finding": "CI6 completed four SQL profiles13/15/13/19 and helper pipes7/8, including vector formats and PostgreSQL-supervisor SIGKILL/fence recovery.",
+        "effect": "Reduces uncertainty in diagnostic conversion and process lifecycle. New source rechecks, positive OOM, product permissions and persistent generations remain work; estimates are not shortened.",
+        "evidence": "docs/evidence/p0-capacity-and-sql-ci.json"
+      },
+      {
+        "finding": "Both full-text128MiB fault and clean controls consumed all mount capacity and terminated with SIGBUS during reopen.",
+        "effect": "An explicit capacity-correct experiment and no-write refusal test are required. Original failed results remain; increased test capacity is not a production admission or recovery fix.",
+        "evidence": "docs/evidence/p0-capacity-and-sql-ci.json"
+      },
+      {
+        "finding": "Fixed Edge load has no logical WAL replay; update return is not durable ACK and public durable-cursor/reclamation APIs were not found.",
+        "effect": "L04/L05/I-09/I-14 include exact-event flush/ACK, dirty-state preservation, validated reconstruction, retained history or full rebuild, and bounded WAL growth. Integration remains unimplemented; no fork/internal decoder is adopted.",
+        "evidence": "docs/evidence/p0-edge-durability-source.json"
       }
     ]
   },
@@ -6712,6 +6727,16 @@
           "positive_enospc_verified": false,
           "kernel_oom_verified": false,
           "retry_required": true
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "source/API-reviewed",
+          "status": "source_verified",
+          "source": "docs/evidence/p0-edge-durability-source.json",
+          "scope": "Fixed0.8.0 update/flush/load and WAL-growth audit; negative boundaries and proposed integration only. No source capture, logical replay, dirty reconstruction or release implementation.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -6849,6 +6874,16 @@
           "source_paths": [
             "crates/edge-probe/src/api_inventory.rs"
           ]
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "source/API-reviewed",
+          "status": "source_verified",
+          "source": "docs/evidence/p0-edge-durability-source.json",
+          "scope": "Fixed0.8.0 update/flush/load and WAL-growth audit; negative boundaries and proposed integration only. No source capture, logical replay, dirty reconstruction or release implementation.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7329,6 +7364,18 @@
             "normal": 7,
             "private_fault": 8
           }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "status": "passed",
+          "source": "docs/evidence/p0-capacity-and-sql-ci.json",
+          "verified_source_commit": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+          "scope": "Candidate-vector format SQL groups pass in every recorded profile; public driver/model/API acceptance and later identity/recheck SQL remain pending.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "workflow_conclusion": "failure"
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7962,6 +8009,18 @@
           "positive_enospc_verified": false,
           "kernel_oom_verified": false,
           "retry_required": true
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "status": "passed",
+          "source": "docs/evidence/p0-capacity-and-sql-ci.json",
+          "verified_source_commit": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+          "scope": "Native-helper faults preserve supervisor/companion; PostgreSQL-supervisor SIGKILL causes expected collateral and verified fence/replacement recovery. Positive OOM, production memory and persistent-index recovery remain pending.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "workflow_conclusion": "failure"
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -8668,6 +8727,18 @@
             "normal": 7,
             "private_fault": 8
           }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "status": "passed",
+          "source": "docs/evidence/p0-capacity-and-sql-ci.json",
+          "verified_source_commit": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+          "scope": "Four exact-version diagnostic images built and installed; later changes and full CPU/native/license/platform gates remain pending.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "workflow_conclusion": "failure"
         }
       ],
       "deliverable": "Real manifests and Cargo.lock, exact compiler and matched pgrx tool, selected features, container/system libraries/PG headers/CPU inputs, actual dependency and license inventories.",
@@ -9181,6 +9252,18 @@
           "positive_enospc_verified": false,
           "kernel_oom_verified": false,
           "retry_required": true
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "status": "passed",
+          "source": "docs/evidence/p0-capacity-and-sql-ci.json",
+          "verified_source_commit": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+          "scope": "Four diagnostic profiles and forced PostgreSQL-supervisor SIGKILL executed. Managed helper is preferred but not an accepted production topology.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "workflow_conclusion": "failure"
         }
       ],
       "deliverable": "Minimal loaded extension, owned IPC and two sessions plus panic/native crash/SIGKILL/constrained OOM/disk-full experiments; measured background-worker versus managed-helper go/no-go.",
@@ -9676,6 +9759,16 @@
           "positive_enospc_verified": false,
           "kernel_oom_verified": false,
           "retry_required": true
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "source/API-reviewed",
+          "status": "source_verified",
+          "source": "docs/evidence/p0-edge-durability-source.json",
+          "scope": "Fixed0.8.0 update/flush/load and WAL-growth audit; negative boundaries and proposed integration only. No source capture, logical replay, dirty reconstruction or release implementation.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Concurrent queries pin generations while mutations/late outputs/deletes/rebuild/optimize/restarts interleave; crash, disk-full and corruption cannot create false readiness or lost durable events.",
@@ -10368,6 +10461,18 @@
           "positive_enospc_verified": false,
           "kernel_oom_verified": false,
           "retry_required": true
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "status": "passed",
+          "source": "docs/evidence/p0-capacity-and-sql-ci.json",
+          "verified_source_commit": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+          "scope": "Queue, response, timeout and frozen-helper stop budget pass. Full-text128MiB fails and positive OOM/resource envelope is not yet verified.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "workflow_conclusion": "failure"
         }
       ],
       "deliverable": "Enforced queues, candidate/HasId/token/matrix/response bounds, engine threads and RSS/mmap, cancellation from SQL through every stage, overload behavior and resumable maintenance.",
@@ -10591,7 +10696,7 @@
     "report": "docs/p0-report.md",
     "engine_evidence": "docs/evidence/p0-engine-extended.json",
     "dependency_evidence": "docs/dependency-baseline.json",
-    "source_identity": "CI5 engine/base-image and narrow ENOSPC evidence apply only to 77f9ecca and its identical merge tree. All four SQL profiles were skipped; complete four-profile SQL evidence remains historical CI2.",
+    "source_identity": "CI6 engine/container and four-profile PostgreSQL results apply only to d8437068 and its identical merge tree. The later integrated local snapshot has 23 ordinary engine tests, three private OOM guard tests and successful compilation of all four extension profiles; its new SQL and positive resource experiments remain pending.",
     "p0_exit_passed": false,
     "sql_runtime_verified": true,
     "product_completed": false,
@@ -10602,9 +10707,9 @@
     "container_runtime_verified": true,
     "postgres_fault_cdylib_and_schema_verified": true,
     "postgresql_ci_evidence": "docs/evidence/p0-postgresql-ci.json",
-    "verified_ci_head": "77f9ecca11ede76e42ba197e294b177ea865d830",
-    "verified_ci_checkout": "69f8cf3b07d5219755f3cd2804320518cde2b83d",
-    "verified_ci_tree": "3f745e5b736ad73566352a6d1e48150528ed86fe",
+    "verified_ci_head": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+    "verified_ci_checkout": "5009fbbf07630690a4909133566ac5ed748f6fc8",
+    "verified_ci_tree": "baba67b93ffceca35eaadfbbf524d4c04b8efc5a",
     "diagnostic_sql_runtime_verified": true,
     "sql_runtime_scope": "Recorded direct-worker and managed-helper P0 diagnostics only; source-table indexing, source permissions and public search remain unimplemented.",
     "direct_worker_production_containment": "failed",
@@ -10613,22 +10718,22 @@
     "metadata_corruption_runtime_verified": true,
     "positive_enospc_runtime_verified": true,
     "evidence_scope": "Every verification level applies only to its named probe. All product completion and release flags remain false.",
-    "helper_initial_standalone_observation": "Historical local 7/8 pass records do not independently prove controller-SIGKILL cleanup without a live PID precondition; CI2 independently passed both suites. Current guarded local runs each pass six then fail live PID visibility before kill.",
+    "helper_initial_standalone_observation": "Historical local 7/8 pass records do not independently prove controller-SIGKILL cleanup without a live PID precondition. CI2 and CI6 independently passed both pipe suites; the CI4 process-observer failure remains a separate historical result.",
     "helper_hard_stop_runtime_verified": true,
-    "latest_ci_evidence": "docs/evidence/p0-full-text-disk-ci.json",
-    "verified_ci_scope": "Base image, 15 engine tests, 2 child tests, 6 Python diagnostics and narrow 32 MiB ENOSPC passed; full-text 128 MiB SIGBUS at recovery_reopen; all PostgreSQL profiles skipped.",
-    "latest_ci_run": 37729282903,
-    "latest_ci_job": 113154495454,
+    "latest_ci_evidence": "docs/evidence/p0-capacity-and-sql-ci.json",
+    "verified_ci_scope": "Four images, 20 engine tests, two child tests, nine Python diagnostics, all four SQL profiles (13/15/13/19), both helper pipe suites (7/8) and narrow 32 MiB ENOSPC passed. Both separate 128 MiB full-text experiments failed with SIGBUS at recovery_reopen; no steps were skipped.",
+    "latest_ci_run": 37732857051,
+    "latest_ci_job": 113165715578,
     "latest_ci_workflow_conclusion": "failed",
     "helper_postgresql_containment": "passed_named_native_failures",
     "helper_hard_stop_limit_ms": 125000,
     "helper_native_query_cancellation": false,
     "helper_supervisor_sigterm_runtime_verified": true,
     "helper_restart_exhaustion_runtime_verified": true,
-    "forced_postgresql_supervisor_sigkill_verified": false,
+    "forced_postgresql_supervisor_sigkill_verified": true,
     "kernel_oom_runtime_verified": false,
     "positive_enospc_experiment_status": "passed_narrow_configuration_save_only",
-    "positive_enospc_child_exit_cause": "exit 0 for narrow CI4/CI5; SIGBUS for full-text CI5; initial CI2 cause remains unknown",
+    "positive_enospc_child_exit_cause": "Exit 0 for narrow CI4/CI5/CI6; SIGBUS for full-text CI5 and both full-text CI6 experiments; initial CI2 cause remains unknown.",
     "preferred_topology_candidate": "managed_helper",
     "ci_history": [
       {
@@ -10670,14 +10775,22 @@
         "tree": "3f745e5b736ad73566352a6d1e48150528ed86fe",
         "workflow_conclusion": "failed",
         "scope": "Base image, 15 engine tests, 2 child tests, 6 Python diagnostics and narrow 32 MiB ENOSPC passed; full-text 128 MiB SIGBUS at recovery_reopen; all PostgreSQL profiles skipped."
+      },
+      {
+        "run": 37732857051,
+        "source": "docs/evidence/p0-capacity-and-sql-ci.json",
+        "head": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+        "tree": "baba67b93ffceca35eaadfbbf524d4c04b8efc5a",
+        "workflow_conclusion": "failed",
+        "scope": "Four images, 20 engine tests, two child tests, nine Python diagnostics, all four SQL profiles (13/15/13/19), both helper pipe suites (7/8) and narrow 32 MiB ENOSPC passed. Both separate 128 MiB full-text experiments failed with SIGBUS at recovery_reopen; no steps were skipped."
       }
     ],
-    "positive_enospc_scope": "32 MiB vector/keyword configuration-save recovery only; the full mutable-text 128 MiB experiment failed with SIGBUS in CI5.",
-    "current_engine_tests_passed": 20,
+    "positive_enospc_scope": "32 MiB vector/keyword configuration-save recovery only. Both full mutable-text 128 MiB CI6 experiments exhausted the mount during writable reopen and failed with SIGBUS; exact 384 MiB positive experiments and a separate 128 MiB zero-write refusal are implemented but not runtime verified.",
+    "current_engine_tests_passed": 23,
     "current_engine_tests_failed": 0,
     "current_engine_tests_ignored": 0,
     "current_source_postgres_regression_verified": false,
-    "current_forced_pg_supervisor_sigkill_test": "implemented_not_runtime_verified",
+    "current_forced_pg_supervisor_sigkill_test": "CI6 passed the named PostgreSQL-supervisor failure, PostgreSQL crash-recovery and helper ownership-fence assertions; later source regression pending.",
     "helper_child_bookkeeping_tests_passed": 2,
     "upstream_projection_followup": {
       "capability_ids": [
@@ -10715,10 +10828,19 @@
       "source": "docs/p0-input-formats.md",
       "initial_compile_and_link": "passed",
       "corrected_diagnostic_source_check": "passed_normal_pg17",
-      "sql_runtime_verified": false,
+      "sql_runtime_verified": true,
       "public_api_frozen": false,
-      "local_evidence": "docs/evidence/p0-input-formats-local.json"
-    }
+      "local_evidence": "docs/evidence/p0-input-formats-local.json",
+      "sql_runtime_evidence": "docs/evidence/p0-capacity-and-sql-ci.json",
+      "sql_runtime_scope": "Three assertion groups passed in each of the four CI6 PostgreSQL profiles; backend-only candidate formats, no public API freeze or cross-process model contract."
+    },
+    "current_engine_evidence": "docs/evidence/p0-integrated-local.json",
+    "current_private_oom_guard_tests_passed": 3,
+    "current_python_diagnostic_tests_passed": 21,
+    "current_positive_oom_runtime_verified": false,
+    "current_source_recheck_sql_runtime_verified": false,
+    "current_full_text_384_runtime_verified": false,
+    "current_full_text_128_refusal_runtime_verified": false
   },
   "remaining_p0_estimate_review": {
     "observed_on": "2026-10-08",
@@ -10795,8 +10917,8 @@
     "superseding_evidence": "docs/p0-report.md"
   },
   "disk_fixture_correction": {
-    "evidence": "docs/evidence/p0-engine-extended.json",
-    "engine_tests_passed": 20,
+    "evidence": "docs/evidence/p0-integrated-local.json",
+    "engine_tests_passed": 23,
     "engine_tests_failed": 0,
     "engine_tests_ignored": 0,
     "preserved_full_phrase_tests": [
@@ -10813,16 +10935,17 @@
       ],
       "text_indexes": [],
       "clean_reopen": "passed",
-      "positive_enospc": "passed_narrow_scope_ci4"
+      "positive_enospc": "passed_narrow_scope_ci4_ci5_ci6"
     },
     "retained_open_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes",
     "product_scope_completed": false,
     "historical_failed_attempts": [
       "docs/evidence/p0-helper-ci.json",
       "docs/evidence/p0-disk-ci.json",
-      "docs/evidence/p0-full-text-disk-ci.json"
+      "docs/evidence/p0-full-text-disk-ci.json",
+      "docs/evidence/p0-capacity-and-sql-ci.json"
     ],
-    "latest_failure": "CI5 full-text 128 MiB SIGBUS at recovery_reopen; all four SQL profiles skipped. CI4 helper observer and earlier disk failures remain separate historical records.",
-    "current_correction": "Keep narrow 32 MiB and full-text 128 MiB experiments; add separate clean full-text tmpfs control, bounded stage/post-exit observations and independent failure-preserving SQL scheduling."
+    "latest_failure": "CI6 full-text fault and clean-control 128 MiB mounts both exhausted available capacity during writable reopen and terminated with SIGBUS. All four SQL profiles nevertheless completed. Earlier failures retain their own evidence and causes.",
+    "current_correction": "Retain narrow 32 MiB recovery; require exactly 384 MiB for positive full-text fault and clean-control experiments. A separate exact 128 MiB characterization verifies zero-write capacity refusal. New positive experiments remain pending; neither the larger budget nor refusal is an upstream loader fix."
   }
 }

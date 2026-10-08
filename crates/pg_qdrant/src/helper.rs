@@ -136,15 +136,19 @@ impl Supervisor {
     }
 
     fn spawn(&mut self) -> Result<(), ProbeError> {
-        let mut child = Command::new(&self.executable)
+        let mut command = Command::new(&self.executable);
+        command
             .arg(&self.owner_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .env_clear()
-            .env("LANG", "C.UTF-8")
-            .spawn()
-            .map_err(ProbeError::io)?;
+            .env("LANG", "C.UTF-8");
+        #[cfg(feature = "p0-fault-injection")]
+        if let Some(nonce) = pg_qdrant_edge_probe::oom_probe::environment_nonce() {
+            command.env("PG_QDRANT_P0_OOM_RUN_ID", nonce);
+        }
+        let mut child = command.spawn().map_err(ProbeError::io)?;
         let pid = child.id();
         let input = child.stdin.take().expect("piped helper stdin");
         let mut output = child.stdout.take().expect("piped helper stdout");

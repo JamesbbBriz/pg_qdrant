@@ -1,6 +1,12 @@
 # Stage acceptance and release gates
 
-Status: required acceptance, with current local engine evidence and historical four-profile PostgreSQL diagnostics recorded. The latest CI skipped all four SQL profiles after a full-text disk failure. No complete P0 exit or release is declared. Checklists define exits, not a claim that those exits have passed. The [capability contract](capabilities.md) retains every formal requirement. The [work-item inventory](work-items.json) maps all 54 capability IDs and cross-cutting integration work to owners and deliverables. [User journeys](user-journeys.md) are proposed SQL contracts until integration tests prove them executable. The [P0 checkpoint](p0-report.md) records the direct-worker isolation failure, the helper's scoped fault passes and the failed provisioned disk experiment.
+Status: required acceptance with source-bound diagnostic evidence. The latest
+recorded CI6 ran all four PostgreSQL profiles successfully but failed both
+128 MiB full-text disk experiments. New identity/recheck, capacity and OOM
+changes require their own verification. No complete P0 exit or release is
+declared. The [capability contract](capabilities.md), [work ledger](work-items.json)
+and [user journeys](user-journeys.md) retain every formal requirement; the
+[P0 checkpoint](p0-report.md) separates executed results from proposed product SQL.
 
 ## Evidence rules
 
@@ -32,22 +38,56 @@ P0 is a decision gate. A 5–10 engineering-day investigation budget is a stop-l
 | P0-FAULT | Disposable-cluster experiments for Rust panic, native process crash, SIGKILL, constrained-memory/OOM and disk-full/I/O failure; observe affected PostgreSQL sessions, instance restart, owner reacquisition, on-disk state and recovery |
 | P0-DECISION | Go/no-go ADR cites the preceding evidence, accepts a process topology, records unavailable capabilities and alternatives, and revises work/critical-path estimates |
 
-The production process choice remains open until the necessary P0-FAULT evidence supports it. The [initial PostgreSQL CI](evidence/p0-postgresql-ci.json) passed 10 normal and 12 private-fault direct-worker checks at head `f5bda3519421ef294bac82b17c17957f9727b648`. Direct owner SIGKILL and native abort both terminated the companion SQL session; the committed PostgreSQL marker survived recovery. Those fault assertions passed while the production containment requirement failed.
+The production process choice remains open until the necessary fault, resource
+and persistence evidence supports it. [CI6](evidence/p0-capacity-and-sql-ci.json)
+at head `d843706` passed SQL 13/15/13/19 across direct-normal/private and
+helper-normal/private, plus 7/8 standalone helper checks. The workflow failed
+at the independent full-text disk experiments. Prior failed or skipped slices
+remain in the [historical records](p0-report.md#retained-historical-outcomes).
 
-The [helper comparison CI](evidence/p0-helper-ci.json), run 37720263848 at head `a22d3c73ad838ff606a080345b65d634f5144c39` and tree `9db0bd4a20780be31b07b018fdbc0d029983e5ab`, passed all four PostgreSQL profiles: direct 10/12 and helper 10/15 checks, plus 7/8 standalone pipe checks. Helper SIGKILL/native abort preserved the companion SQL session, same supervisor and committed marker. The actual 125-second process-stop path, supervisor SIGTERM/EOF cleanup and four-start/three-restart exhaustion also passed. The [architecture ADR](adr/0001-embedded-engine-boundary.md) therefore prefers the helper candidate, with production acceptance still pending. The complete workflow failed at its provisioned disk experiment; passing PostgreSQL profiles must not be reported as a passing workflow.
+These distinctions remain mandatory:
 
-The [regression CI](evidence/p0-regression-ci.json) at head `1f9d8bb` passed the narrow 32 MiB ENOSPC experiment, direct SQL 10/12 and normal-helper SQL 10 checks, but failed in the private helper pipe observer before private-helper SQL. The [latest CI](evidence/p0-full-text-disk-ci.json), run 37729282903 at head `77f9ecc`, built and installed the normal extension and passed 15 engine, two child-bookkeeping and six Python tests plus narrow ENOSPC. Its separate 128 MiB full-text experiment terminated with SIGBUS at `recovery_reopen`; all four SQL profiles were skipped. Neither run establishes a passing current four-profile regression.
+- Direct-worker SIGKILL/native abort terminate companion SQL, while native helper
+  SIGKILL/abort preserve the companion and PostgreSQL supervisor. Passing the
+  direct fault assertion records an unacceptable production failure domain.
+- Actual PostgreSQL-supervisor SIGKILL is now observed separately: PostgreSQL
+  recovery terminates companion SQL, retains the postmaster/committed marker,
+  stops the old helper before replacement and reacquires the same owner fence.
+  Helper containment does not protect against death of the PG supervisor itself.
+- The measured 125-second stop budget, cancelled queued work and restart limits
+  are process/queue contracts. They do not establish native Edge cancellation,
+  production index readiness or graceful durable shutdown.
+- CI6's 20 engine tests retain phrase, malformed copied-metadata and explicitly
+  flushed SIGKILL/reopen assertions. Read-only/manual-manifest paths and
+  update-only preview/no-write branches have narrow evidence. Store, Delete and
+  empty bootstrap in the fixed update-only type remain unavailable; manifest
+  inspection does not prove snapshot archive creation or restoration.
+- All three candidate-vector format groups passed in each CI6 SQL profile,
+  including shape/null/budget/float32/ACL checks. The new tagged-identity/source
+  fixture rechecks have compile/link evidence and six authored SQL groups,
+  with actual runtime still pending. Neither diagnostic is a public API freeze
+  or a production source SELECT/tenant/RLS proof.
+- A positive disk gate needs a dedicated bounded filesystem, actual errno 28,
+  retained child status, configuration observations, cleanup, retry, explicit
+  flush and successful reopen/query assertions. `not_run`, a crash or a timeout
+  cannot pass it. The narrow 32 MiB vector/keyword pass excludes mutable text
+  indexes. Both 128 MiB full-text fault and no-filler clean controls failed with
+  SIGBUS at reopen and exhausted the mount. Their evidence stays failed; a new
+  capacity profile and a separately named no-write refusal test do not fix the
+  upstream loader or prove dirty recovery. The older missing-exit failure is
+  still of unknown cause.
+- OOM requires bounded fresh-container evidence and exact victim/limiting-cgroup
+  attribution. Counter correlation or SIGKILL alone is insufficient. Safe
+  negative tests, compile success and absent journal access do not pass the gate.
+- The [durability ADR](adr/0003-edge-durability-and-recovery.md) records no
+  logical WAL replay in the fixed load path and no public durable cursor or
+  reclamation API. Update return is not durable ACK; load can repair/mutate
+  state. Exact-event flush/ACK ordering, dirty-generation readiness, preservation,
+  reconstruction and WAL growth remain implementation and crash-test gates.
 
-The following distinctions remain part of P0 acceptance:
-
-- The direct-worker control retains its companion-session termination assertions. The helper independently passed companion-session and supervisor-survival assertions at its recorded source tree for native helper SIGKILL/abort; neither profile's criteria were weakened to obtain the comparison.
-- Helper ownership, replacement ordering, restart exhaustion and the actual hard process-stop path have named passing SQL tests at the recorded tree. The frozen-helper test retains the cancelled caller's old owner until termination and proves `execution_budget` plus SIGKILL and replacement; this is not native cancellation. Future source/feature changes need regression evidence.
-- Standalone helper pipe tests do not prove PostgreSQL containment. Pure-controller SIGKILL and actual PG-supervisor SIGTERM/EOF cleanup are recorded separately; forced SIGKILL of the PostgreSQL supervisor remains untested.
-- The current local engine suite passes 20 tests; the Python runner suite passes nine. Engine coverage retains malformed owned-metadata rejection, intact-copy recovery and clean reopen checks for both the narrow disk fixture and full-text fixture on an ordinary filesystem. It does not prove arbitrary corruption detection, source reconstruction, full-text tmpfs recovery or PostgreSQL durable ACK behavior.
-- Read-only loading and explicit manifest refresh cover all fixture rows and score goldens with a test-supplied manifest. Update-only preview and no-write apply/replay pass, but Store, Delete and empty bootstrap reach unimplemented panics in Edge 0.8.0 and remain unavailable. Snapshot-manifest inspection is not archive creation, restoration or automatic manifest publication.
-- The historical full-fixture 32 MiB tmpfs experiment failed without a JSON report; stderr was empty and the original wrapper did not retain the child exit code/signal. Its cause is unknown and its historical result must remain visible. Every positive ENOSPC gate requires a dedicated bounded filesystem, retained child diagnostics, actual errno 28, persisted/in-memory configuration observations, retry/reopen assertions and a report with `status: "passed"`. An omitted environment can return `not_run` with exit code 0, which cannot pass the gate or replace the recorded failure. Storage capacity and engine RSS/OOM are separate constraints. The revised small disk fixture explicitly excludes both mutable text indexes while retaining all eight source rows, four representations and keyword/tenant/MaxSim checks. Narrow vector/keyword configuration-save recovery has now passed in recorded CI, but it does not close full mutable phrase/token-prefix index recovery. That combination remains required and failed with SIGBUS in the latest 128 MiB experiment. The independent full-fixture phrase assertions are retained.
-
-Actual `CREATE EXTENSION`, diagnostic owner/ACL/deadline/cancellation/backpressure behavior and real Edge calls have both-profile SQL evidence at earlier recorded revisions. The helper has historical scoped native-failure and bounded lifecycle evidence. The candidate-format probe linked in an earlier iteration; the corrected signed-zero and compact float-bit source now passes a normal PG17 compile check. Its SQL assertions remain unexecuted. Source identity/rechecks, product vector/array contracts, current SQL regression, forced PG-supervisor SIGKILL, actual kernel OOM, full-text ENOSPC recovery, dirty recovery, full analyzer quality and the overall topology decision remain open. No P0 requirement is removed by the successful diagnostic slices.
+All original requirements, including source authorization, complete analysis,
+resource faults and the overall topology decision, remain. Future source or
+feature changes must earn new regression evidence.
 
 For full dependency-graph failures, record the exact missing package/compiler/API/native requirement and whether it is an environmental acquisition problem or a version incompatibility. Do not substitute qdrant-client, advertise an unbuilt dependency graph, or change pins without reviewing the [upgrade contract](dependencies.md).
 

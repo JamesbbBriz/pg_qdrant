@@ -47,22 +47,30 @@ jobs:
           if docker inspect pg-qdrant-p0-disk-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-disk-run:/src/artifacts/. artifacts/enospc/
           fi
-      - name: Test full-text ENOSPC recovery on a dedicated 128 MiB tmpfs
+      - name: Test full-text ENOSPC recovery on an exact 384 MiB tmpfs
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: |
           docker create --name pg-qdrant-p0-full-text-disk-run --memory=5g --cpus=2 --network=none \
-            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \
             --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
             pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text
           docker start --attach pg-qdrant-p0-full-text-disk-run
-      - name: Observe a clean full-text reopen on a separate 128 MiB tmpfs
+      - name: Observe a clean full-text reopen on a separate exact 384 MiB tmpfs
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: |
           docker create --name pg-qdrant-p0-full-text-clean-run --memory=5g --cpus=2 --network=none \
-            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \
             --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
             pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text --clean
           docker start --attach pg-qdrant-p0-full-text-clean-run
+      - name: Require zero-write refusal of the unsupported 128 MiB full-text budget
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
+        run: |
+          docker create --name pg-qdrant-p0-full-text-capacity-run --memory=5g --cpus=2 --network=none \
+            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+            --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+            pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text --characterize-128-capacity-refusal
+          docker start --attach pg-qdrant-p0-full-text-capacity-run
       - name: Collect full-text disk-failure evidence
         if: always()
         run: |
@@ -72,6 +80,9 @@ jobs:
           fi
           if docker inspect pg-qdrant-p0-full-text-clean-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-full-text-clean-run:/src/artifacts/. artifacts/enospc-full-text/
+          fi
+          if docker inspect pg-qdrant-p0-full-text-capacity-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-full-text-capacity-run:/src/artifacts/. artifacts/enospc-full-text/
           fi
       - name: Run PostgreSQL integration probes as a non-root user
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
@@ -155,6 +166,20 @@ jobs:
           if docker inspect pg-qdrant-p0-helper-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-helper-run:/src/artifacts/. artifacts/helper/
           fi
+      - name: Observe kernel OOM and direct-worker PostgreSQL recovery
+        if: ${{ !cancelled() && steps.fault_image.outcome == 'success' && steps.helper_fault_image.outcome == 'success' }}
+        run: >-
+          python3 scripts/run_oom_container.py
+          --image pg-qdrant-p0-faults
+          --profile direct_worker
+          --artifacts artifacts/oom-direct
+      - name: Observe kernel OOM and managed-helper containment
+        if: ${{ !cancelled() && steps.fault_image.outcome == 'success' && steps.helper_fault_image.outcome == 'success' }}
+        run: >-
+          python3 scripts/run_oom_container.py
+          --image pg-qdrant-p0-helper
+          --profile managed_helper
+          --artifacts artifacts/oom-helper
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

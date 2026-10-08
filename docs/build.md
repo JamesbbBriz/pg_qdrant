@@ -45,7 +45,10 @@ engine API; they are not outputs of a claimed production model. The persistence
 test kills only a dedicated child process after explicit flush, then checks its
 reopened data. This does not establish atomicity with PostgreSQL commits.
 
-The current local locked suite passes 20 engine tests. It includes read-only
+The current local locked suite passes 23 normal harness tests, including three
+new safe capacity guards. Three private OOM guard tests pass separately. The
+[integrated evidence](evidence/p0-integrated-local.json) binds the source inputs.
+The engine coverage includes read-only
 loading and refresh with an explicitly test-supplied manifest, snapshot-manifest
 inspection, and update-only preview/no-write replay. Fixed Edge 0.8.0's
 update-only Store, Delete and empty bootstrap paths trigger unimplemented panics
@@ -107,14 +110,13 @@ Those results include a negative finding about direct-worker crash isolation.
 New code and additional profiles must earn their own run evidence before their
 verification status advances.
 
-The [latest CI](evidence/p0-full-text-disk-ci.json), run 37729282903 at head
-`77f9ecc`, built and installed the normal extension and passed 15 engine tests,
-two child-bookkeeping tests, six Python runner tests and narrow 32 MiB ENOSPC.
-The separate full-text 128 MiB experiment received SIGBUS at `recovery_reopen`;
-all four SQL profiles were skipped. Historical [four-profile helper evidence](evidence/p0-helper-ci.json)
-and the [partially passing later regression](evidence/p0-regression-ci.json)
-remain tied to their own revisions. Current local Python tests pass nine cases;
-they do not substitute for a current container/SQL regression.
+The [latest recorded CI](evidence/p0-capacity-and-sql-ci.json), run 37732857051
+at `d843706`, built and installed all four images and passed SQL 13/15/13/19,
+helper pipes 7/8, 20 engine tests, two child tests and nine Python tests. The
+workflow failed at both independent 128 MiB full-text reopen experiments,
+including a no-filler clean control. Historical and new-source results remain
+separate in the [P0 report](p0-report.md). Later source/feature changes require
+new build/runtime evidence.
 
 For intentionally destructive *disposable-cluster* experiments only:
 
@@ -196,41 +198,65 @@ attempt in [CI2](evidence/p0-helper-ci.json) produced no JSON and did not retain
 its exit code; its cause remains unknown. The intervening
 [errno-wrapper failure](evidence/p0-disk-ci.json) is a separate preserved result.
 
-The full-text combination has its own 128 MiB bound and remains a failing gate.
-Run the fault experiment and its clean control in **separate disposable
-containers**, each with an initially empty mount:
+The full-text experiment now requires **exactly 384 MiB**. Both ordinary entry
+paths reject every other capacity before writing. Use separate disposable
+containers with initially empty dedicated mounts:
 
 ```sh
 docker run --rm --memory=5g --cpus=2 --network=none \
-  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \
   --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
   pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text
 
 docker run --rm --memory=5g --cpus=2 --network=none \
-  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \
   --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
   pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text --clean
+
+docker run --rm --memory=5g --cpus=2 --network=none \
+  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+  pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text \
+    --characterize-128-capacity-refusal
 ```
 
-The clean control creates no filler and reports a different experiment kind; it
-cannot satisfy ENOSPC acceptance. CI5 observed SIGBUS after reaching
-`recovery_reopen` in the full-text fault profile. Added diagnostics retain
-stage-specific logical/allocated bytes, owned mapping RSS, filesystem free
-blocks and post-exit metadata without labeling those observations as the cause.
-The new instrumented tmpfs runs have no positive result yet.
+The third command tests only the exact no-write capacity refusal through both
+ordinary entry paths; it does not open Edge or verify ENOSPC/recovery. The clean
+control creates no filler and cannot satisfy the positive ENOSPC gate. A crash,
+`not_run`, wrong report or unrelated refusal cannot pass either recovery or the
+separate capacity characterization.
 
-A local clean full-text reopen on an ordinary filesystem passed and recorded
-289,807,352 logical bytes, 331,776 allocated bytes and approximately 215,756 KiB
-of owned mapping RSS after reopen. Mapping RSS exceeds the 128 MiB experiment
-capacity, but it is not a measurement of tmpfs allocation or proof of the
-failing operation. Eager mutable-text loading is a hypothesis to test; neither
-these measurements nor a clean ordinary-filesystem pass establishes full-text
-ENOSPC recovery.
-See the [fixture and fixed-source details](../crates/edge-probe/README.md#why-the-small-disk-fixture-excludes-mutable-text-indexes).
+[CI6](evidence/p0-capacity-and-sql-ci.json) observed SIGBUS in both original
+128 MiB full-text runs, including the no-filler control. Each had 99,254,272 bytes
+free before reopen and zero afterward; owned allocation reached the complete
+mount capacity. A larger fixed experiment budget addresses the demonstrated
+fixture-sizing problem, not the upstream loader or a production resource policy.
+The original failures remain recorded. The new 384 MiB positive results and
+exact 128 MiB guard result still require CI. See the
+[capacity follow-up](p0-full-text-capacity.md) and
+[fixed-source fixture details](../crates/edge-probe/README.md#why-the-small-disk-fixture-excludes-mutable-text-indexes).
 
 Separate corruption and explicitly flushed SIGKILL tests retain their phrase
-assertions. WAL exhaustion, dirty ingestion, source-event ACK durability,
-actual kernel OOM and power-loss behavior remain independent open gates.
+assertions. WAL growth, dirty ingestion, exact-event PostgreSQL ACK,
+positive kernel OOM and power-loss behavior remain independent open gates.
+
+## Bounded kernel OOM comparison
+
+The [separate OOM procedure](p0-oom-experiment.md) requires fresh disposable CI
+containers using both private images. It validates a fixed 768 MiB memory/no-swap
+limit, UID, process and cgroup isolation, one-shot ownership markers and resource
+budgets before native allocation. It records the actual victim and limiting
+cgroup from available kernel evidence. It does not elevate privileges or turn
+missing attribution into success. The ordinary cluster and disk runners never
+invoke this allocator. Compile and safe negative-test results are separate from
+the still-required positive runtime result.
+
+The [profile comparison](dependency-profiles.json) records exact manifests,
+lockfile and enabled features for all four builds. Check it with:
+
+```sh
+python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check
+```
 
 ## Keeping evidence current
 

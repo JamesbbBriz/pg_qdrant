@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_source_identity_recheck_local_evidence",
+  "stage": "P0",
+  "status": "normal_pg17_compile_and_link_verified_sql_runtime_not_run",
+  "source_scope": {
+    "base_commit": "77f9ecca11ede76e42ba197e294b177ea865d830",
+    "description": "Base source plus the recorded candidate-format, tagged-identity and fixture-only source-recheck additions.",
+    "build_input_scope": "Recorded workspace manifests, lockfile, toolchain, local Rust source snapshot and extension control file. Some snapshot files are excluded by the normal pg17 feature profile.",
+    "feature_profile": {
+      "package": "pg_qdrant",
+      "default_features": false,
+      "features": [
+        "pg17"
+      ],
+      "managed_helper": false,
+      "private_fault_injection": false
+    },
+    "later_combined_main_source_builds": "Separate evidence is required after integration with additional source changes; this record does not certify those builds.",
+    "rust_sources_changed_after_recorded_link": false
+  },
+  "environment": {
+    "rust": "1.96.0",
+    "pgrx": "0.19.3",
+    "cargo_pgrx": "0.19.3",
+    "postgresql_headers": "17.11",
+    "platform": "Linux x86_64"
+  },
+  "reproduction": {
+    "working_directory": "Repository root with the exact recorded source inputs.",
+    "prerequisites": "Rust 1.96.0; cargo-pgrx 0.19.3; PostgreSQL 17.11 pg_config and headers; the native compiler, libclang and system headers described in docs/build.md.",
+    "variables": {
+      "PGRX_PG_CONFIG_PATH": "Path to the PostgreSQL 17.11 pg_config executable.",
+      "PG_QDRANT_SCHEMA_OUT": "Writable output filename for the generated SQL schema."
+    },
+    "release_build_or_clean_container_proof": false
+  },
+  "build_inputs": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+    },
+    {
+      "path": "crates/edge-probe/Cargo.toml",
+      "sha256": "cf6109fc8f380c82b97f26985249d5b4430e9cd5483a7a6e426404cf95a9bbc2"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/Cargo.toml",
+      "sha256": "674a1166a52c7664bb4a523f4141e6381c62a2d4b8ac60ebf204bee7eb777ff9"
+    },
+    {
+      "path": "crates/pg_qdrant-protocol/Cargo.toml",
+      "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
+    },
+    {
+      "path": "crates/pg_qdrant/Cargo.toml",
+      "sha256": "6ab793bb104fe7b9913d0691fb6b4cb7ffc085acfc9910039186adcf9fe9e72f"
+    },
+    {
+      "path": "crates/edge-probe/src/api_inventory.rs",
+      "sha256": "4a269bb84608a28a6ee054b9ca68c1f7c24c6420621c43c165c1958a302a1fad"
+    },
+    {
+      "path": "crates/edge-probe/src/fault_probes.rs",
+      "sha256": "299ce4c5dfb0b0fe96f77717ef64918b7ae1b256c5114f9461f3c7b39c065df3"
+    },
+    {
+      "path": "crates/edge-probe/src/lib.rs",
+      "sha256": "7d67856d3c1bfd88ed031f0eea86cef6e6042197d13efcd9da9a21c7afd70d35"
+    },
+    {
+      "path": "crates/edge-probe/src/main.rs",
+      "sha256": "fe2a94ee4d0efa97cc783dce9467261e8b3623898d8a4c1aee17dd858818e971"
+    },
+    {
+      "path": "crates/pg_qdrant-protocol/src/lib.rs",
+      "sha256": "03736dac4f2253b2beddcc70322047ee1c95419b429b88d3f2d2c772775e1722"
+    },
+    {
+      "path": "crates/pg_qdrant/src/formats.rs",
+      "sha256": "db230bbc34ec2e6069cbba43c210269f48685cfe86febb3e4d80845d640761b3"
+    },
+    {
+      "path": "crates/pg_qdrant/src/helper.rs",
+      "sha256": "0a85df0caa960647249650258f68a656567f8d38c71c4521afb27f96e26e2f89"
+    },
+    {
+      "path": "crates/pg_qdrant/src/helper_child.rs",
+      "sha256": "ec051fa5efdd319debcb2b1dc74add0390dc0cf9e30a4eef08c0cca23ac41c9f"
+    },
+    {
+      "path": "crates/pg_qdrant/src/identity.rs",
+      "sha256": "0d862451a4f5219c6d75f807de42abc6493660d9233193e214e60be1db35483b"
+    },
+    {
+      "path": "crates/pg_qdrant/src/ipc.rs",
+      "sha256": "ebb1491f4b1d2677d5eb1018580fd84d96cc84a8396cd985b1dca8e91c315d4e"
+    },
+    {
+      "path": "crates/pg_qdrant/src/lib.rs",
+      "sha256": "a48d15214264afcb5988f7aa20641370e980eaa792139967a4dc98a607cfa2c3"
+    },
+    {
+      "path": "crates/pg_qdrant/src/recheck.rs",
+      "sha256": "bcd64c70bcae18a8f75204c359c6d927324e7a7b3636dbc4c09d88ee49154259"
+    },
+    {
+      "path": "crates/pg_qdrant/src/worker.rs",
+      "sha256": "6718b71694006d05a360937e4ff0de885858ded79bc05121b23dc569c63e09f8"
+    },
+    {
+      "path": "crates/pg_qdrant/pg_qdrant.control",
+      "sha256": "9cdf35094b23a4b4eb8690337fa099e58bf79069c329e5ea66118f571c3595eb"
+    }
+  ],
+  "commands": [
+    {
+      "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17",
+      "status": "passed",
+      "exit_code": 0,
+      "scope": "Normal pg17 compilation of the recorded Rust sources; no PostgreSQL SQL execution."
+    },
+    {
+      "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features pg17 --cargo=--locked --out \"$PG_QDRANT_SCHEMA_OUT\"",
+      "status": "passed",
+      "exit_code": 0,
+      "scope": "Normal pg17 extension linking and SQL generation; no PostgreSQL SQL execution."
+    },
+    {
+      "command": "python3 -m py_compile crates/pg_qdrant/tests/verify_source.py crates/pg_qdrant/tests/verify_formats.py crates/pg_qdrant/tests/verify_p0.py",
+      "status": "passed",
+      "exit_code": 0,
+      "scope": "Syntax check of the recorded Python test sources after the cancellation case was added; no SQL execution."
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "status": "passed",
+      "exit_code": 0,
+      "scope": "Formatting only."
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed",
+      "exit_code": 0,
+      "scope": "Whitespace/error check only."
+    }
+  ],
+  "generated_schema": {
+    "artifact_role": "Generated SQL output identified by PG_QDRANT_SCHEMA_OUT.",
+    "sha256": "5cd477308f39e65dd0590dd9b50296d8aed4ec9055929b95346080fe14195f11",
+    "hash_scope": "Exact observed output bytes. pgrx warns that entity ordering is not stable; regenerating equivalent SQL can produce a different byte digest.",
+    "entities": 12,
+    "schemas": 2,
+    "functions": 9,
+    "sql_blocks": 1,
+    "new_signatures": [
+      "qdrant_internal.p0_identity_roundtrip(bigint,uuid,text) -> jsonb",
+      "qdrant_internal.p0_recheck_candidates(regclass,text,jsonb) -> jsonb"
+    ],
+    "volatile": true,
+    "parallel_unsafe": true,
+    "strict": false,
+    "security_definer": false,
+    "final_internal_revokes": true,
+    "linked_artifact_kind": "ELF 64-bit x86-64 shared object"
+  },
+  "sql_tests": {
+    "status": "not_run",
+    "groups_authored": 6,
+    "groups_run": 0,
+    "source_inputs": [
+      {
+        "path": "crates/pg_qdrant/tests/verify_p0.py",
+        "sha256": "e9256ac2d814dbeba8a93aaeb2ebbb9b008f418a665cfd71d7ab9f1c14600035"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_formats.py",
+        "sha256": "60dd04ab77837b751daca0ec88adc85c193a007640a84d3499f36c412fbb2b0d"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_source.py",
+        "sha256": "1152af82be2a9e7153fecf39a31f0e77ae82f90c099fd3606790d7ab167c39f8"
+      }
+    ],
+    "groups": [
+      {
+        "name": "tagged_bigint_uuid_text_identity",
+        "status": "not_run"
+      },
+      {
+        "name": "source_key_version_incarnation_and_quoted_binding",
+        "status": "not_run"
+      },
+      {
+        "name": "source_recheck_definition_input_and_error_lock_cleanup",
+        "status": "not_run"
+      },
+      {
+        "name": "source_recheck_active_statement_and_repeatable_snapshots",
+        "status": "not_run"
+      },
+      {
+        "name": "source_recheck_ddl_and_conditional_namespace_guard",
+        "status": "not_run"
+      },
+      {
+        "name": "source_identity_recheck_acl_and_runtime_superuser",
+        "status": "not_run"
+      }
+    ],
+    "post_link_change": {
+      "file": "crates/pg_qdrant/tests/verify_source.py",
+      "description": "Added a bounded native PostgreSQL cancellation case to the source_recheck_ddl_and_conditional_namespace_guard group after linked SQL generation. Only Python syntax was checked afterward; the Rust sources did not change.",
+      "required_observations": [
+        "Exact ungranted primary-index AccessShareLock.",
+        "Granted pg_namespace ShareLock before cancellation.",
+        "Caught query_canceled; no remaining namespace guard; same backend remains usable."
+      ],
+      "scope": "Cancellation during primary-index acquisition, before SPI; not evidence of SPI-execution ERROR cleanup."
+    }
+  },
+  "limits": {
+    "relation_conversion": "pgrx PgRelation FromDatum opens and locks the source before the function-body superuser check. The prototype does not claim its guard precedes all relation access.",
+    "namespace_guard": "Conditional ShareLock on pg_namespace is a broad P0-only guard, not a production locking recommendation.",
+    "authorization": "Superuser-only diagnostic with default internal ACL revocation; no production source SELECT, tenant or RLS authorization claim.",
+    "snapshot": "Explicit read_only=true SPI is implemented; active-statement and REPEATABLE READ outcomes remain SQL-runtime gates.",
+    "identity": "Tagged serialization and fixture version comparison do not allocate durable point IDs or incarnations, capture changes, or validate fingerprints against source content.",
+    "product_capabilities_completed": false,
+    "p0_complete": false,
+    "p1_complete": false,
+    "release_supported": false
+  },
+  "pending": [
+    "all new SQL runtime assertions",
+    "READ COMMITTED and REPEATABLE READ snapshot outcomes",
+    "native cancellation guard cleanup",
+    "PG-origin ERROR during SPI SELECT",
+    "nondeterministic collation/custom opclass/partition/inheritance runtime negatives",
+    "source schema rename race",
+    "production authorization, identity allocation, outbox and complete MVCC top-k",
+    "Malicious operator search-path runtime case.",
+    "SQL runtime rejection cases for unsupported source definitions not yet represented in the authored suite."
+  ]
+}

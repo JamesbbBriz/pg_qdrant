@@ -12,6 +12,7 @@ import time
 import traceback
 
 from verify_formats import exercise_formats
+from verify_source import exercise_identity_and_source
 
 
 PSQL = os.environ["PG_QDRANT_PSQL"]
@@ -137,6 +138,7 @@ def exercise():
     expect_error("SELECT qdrant_internal.p0_ping(0)", "22023")
     record("acl_runtime_superuser_and_input_validation")
     exercise_formats(scalar, jsql, run, expect_error, record)
+    exercise_identity_and_source(scalar, jsql, run, spawn, finish, wait_for, expect_error, record)
 
     begin = time.monotonic()
     concurrent = [spawn("SELECT qdrant_internal.p0_delay(250,5000)") for _ in range(2)]

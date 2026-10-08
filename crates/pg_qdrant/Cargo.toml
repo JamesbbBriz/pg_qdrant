@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["pg17"]
 pg17 = ["pgrx/pg17"]
 # Private disposable-cluster experiments. Never enabled in a release build.
-p0-fault-injection = []
+p0-fault-injection = ["pg-qdrant-edge-probe/p0-fault-injection"]
 # Separate P0 comparison. The direct PostgreSQL-worker experiment stays default.
 p0-managed-helper = []
 

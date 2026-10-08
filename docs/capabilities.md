@@ -131,6 +131,21 @@ Evidence: [Edge lifecycle](https://qdrant.tech/documentation/edge/edge-api/shard
 
 The [public-lifecycle probe](../crates/edge-probe/tests/public_lifecycle.rs) verifies read-only fixture coverage and manual manifest refresh, snapshot-manifest inspection, update-only preview, and no-write skip/missing replay. Edge 0.8.0 update-only Store, Delete and empty bootstrap instead trigger actual unimplemented panics; its flush body is also source-reviewed as unimplemented. These subpaths are unavailable, not supported mutation alternatives. Ordinary `EdgeShard` writes have separate tests. The read-only experiment supplies its own manifest and does not establish automatic publication, snapshot archive production/restoration, production panic recovery or a PostgreSQL timeline contract. L01–L04 and L12 retain those remaining requirements.
 
+The [fixed-source durability audit](evidence/p0-edge-durability-source.json) and
+[ADR 0003](adr/0003-edge-durability-and-recovery.md) additionally constrain L04/L05:
+update return is not a durable ACK, the inspected load path does not replay
+logical WAL records, and loading can repair/mutate state. There is no reviewed
+public durable cursor or WAL reclamation API. Successful load cannot alone
+justify READY; exact-event PostgreSQL ACK after serialized explicit flush,
+unclean-artifact preservation, reconstruction and WAL-growth handling remain
+required. These are source-reviewed boundaries, not completed SQL behavior.
+
+The [CI6 record](evidence/p0-capacity-and-sql-ci.json) adds diagnostic SQL evidence
+for L08 array conversion and L10 supervisor/fence recovery. New
+[identity/recheck probes](p0-source-recheck.md) remain superuser-only with SQL
+runtime pending. They do not complete L05 identity allocation, L09 source
+permissions/RLS or any product capability. The full 54-ID registry remains open.
+
 ## Feature combinations and release gates
 
 Validate combinations, not only isolated functions:

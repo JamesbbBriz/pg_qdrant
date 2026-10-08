@@ -14,6 +14,11 @@ import subprocess
 OUTPUT_TAIL_LIMIT = 8000
 STAGE_PREFIX = "pg_qdrant_p0_stage="
 OBSERVATION_PREFIX = "pg_qdrant_p0_observation="
+VECTOR_KEYWORD_MAX_BYTES = 64 * 1024 * 1024
+FULL_TEXT_BYTES = 384 * 1024 * 1024
+REFUSED_FULL_TEXT_BYTES = 128 * 1024 * 1024
+FULL_TEXT_CAPACITY_REFUSAL = "full-text tmpfs capacity must be exactly 384 MiB"
+CAPACITY_REFUSAL_KIND = "edge_full_text_128_capacity_refusal_probe"
 
 
 def decode_output(value: str | bytes | None) -> str:
@@ -124,15 +129,26 @@ def run_probe(command: list[str], timeout: float = 90, required_profile: str | N
     return report
 
 
-def observe_provisioned_tmpfs() -> dict:
+def observation_capacity_allowed(profile: str, capacity: int) -> bool:
+    if profile == "vector_keyword":
+        return 0 < capacity <= VECTOR_KEYWORD_MAX_BYTES
+    if profile == "full_text":
+        return 0 < capacity <= FULL_TEXT_BYTES
+    if profile == "full_text_128_capacity_refusal":
+        return capacity == REFUSED_FULL_TEXT_BYTES
+    return False
+
+
+def observe_provisioned_tmpfs(profile: str = "vector_keyword") -> dict:
     """Read bounded metadata after exit; never mount, fill, repair or remove it."""
     root = Path("/pgq-p0-faults")
     if os.environ.get("PG_QDRANT_ENOSPC_DIR") != str(root):
         return {"status": "not_requested"}
     try:
         metadata = root.lstat()
-        if not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700:
-            raise ValueError("expected the exact dedicated 0700 directory")
+        if (not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700
+                or metadata.st_uid != os.geteuid()):
+            raise ValueError("expected the exact dedicated owned 0700 directory")
         command = subprocess.run(
             ["/usr/bin/stat", "--file-system", "--format=%T %S %b %f %a", "--", str(root)],
             check=True, text=True, capture_output=True, timeout=2)
@@ -140,7 +156,7 @@ def observe_provisioned_tmpfs() -> dict:
         if len(fields) != 5 or fields[0] != "tmpfs":
             raise ValueError("post-exit observation requires tmpfs")
         unit, blocks, free, available = map(int, fields[1:])
-        if not 0 < unit * blocks <= 128 * 1024 * 1024:
+        if not observation_capacity_allowed(profile, unit * blocks):
             raise ValueError("post-exit observation exceeds the fixed capacity budget")
         files = logical = allocated = directories = 0
         stack = [(root, 0)]
@@ -174,36 +190,98 @@ def observe_provisioned_tmpfs() -> dict:
         return {"status": "observed", "stage": "after_child_exit",
                 "filesystem": {"type": "tmpfs", "capacity_bytes": unit * blocks,
                                "free_bytes": unit * free, "available_bytes": unit * available},
-                "storage": {"files": files, "logical_bytes": logical, "allocated_bytes": allocated,
+                "mount_identity": {"device": metadata.st_dev, "inode": metadata.st_ino},
+                "storage": {"files": files, "directories": directories,
+                            "logical_bytes": logical, "allocated_bytes": allocated,
                             "largest_allocated_files": largest[:8]},
                 "scope": "post-exit metadata only; no native fault attribution or content inspection"}
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         return {"status": "observation_failed", "reason": str(error)}
 
 
+def validate_capacity_refusal(report: dict, before: dict, after: dict) -> dict:
+    """Accept only the separately named no-write guard characterization."""
+    entries = report.get("entry_refusals", {})
+    entries = entries if isinstance(entries, dict) else {}
+    fault = entries.get("enospc", {})
+    fault = fault if isinstance(fault, dict) else {}
+    expected_native = (
+        report.get("status") == "passed"
+        and report.get("kind") == CAPACITY_REFUSAL_KIND
+        and report.get("profile") == "full_text"
+        and report.get("observed_capacity_bytes") == REFUSED_FULL_TEXT_BYTES
+        and report.get("required_capacity_bytes") == FULL_TEXT_BYTES
+        and report.get("expected_refusal") == FULL_TEXT_CAPACITY_REFUSAL
+        and all(report.get(key) is False for key in ["disk_writes_attempted", "engine_open_attempted",
+                                                    "filler_created", "enospc_verified", "recovery_verified"])
+        and entries.get("enospc_exit_code") == 2
+        and fault.get("status") == "not_run"
+        and fault.get("kind") == "edge_enospc_probe"
+        and fault.get("profile") == "full_text"
+        and fault.get("reason_code") == "unsafe_environment"
+        and fault.get("reason") == FULL_TEXT_CAPACITY_REFUSAL
+        and fault.get("disk_writes_attempted") is False
+        and entries.get("clean_error") == FULL_TEXT_CAPACITY_REFUSAL
+        and report.get("execution", {}).get("returncode") == 0
+        and report.get("execution", {}).get("stages") == [
+            "capacity_refusal_guard", "guard", "capacity_refusal_completed"]
+    )
+
+    def empty_observation(value: dict) -> bool:
+        storage = value.get("storage", {})
+        filesystem = value.get("filesystem", {})
+        return (value.get("status") == "observed"
+                and filesystem.get("type") == "tmpfs"
+                and filesystem.get("capacity_bytes") == REFUSED_FULL_TEXT_BYTES
+                and all(storage.get(key) == 0 for key in ["files", "directories", "logical_bytes", "allocated_bytes"])
+                and isinstance(value.get("mount_identity", {}).get("device"), int)
+                and isinstance(value.get("mount_identity", {}).get("inode"), int))
+
+    unchanged_empty_mount = (empty_observation(before) and empty_observation(after)
+                            and before["filesystem"] == after["filesystem"]
+                            and before["mount_identity"] == after["mount_identity"])
+    if not expected_native or not unchanged_empty_mount:
+        report["status"] = "failed"
+        report["reason"] = "Exact native capacity refusals and unchanged empty 128 MiB mount observations are required"
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", choices=["vector-keyword", "full-text"], default="vector-keyword")
-    parser.add_argument("--clean", action="store_true", help="full-text clean reopen control; no filler")
+    controls = parser.add_mutually_exclusive_group()
+    controls.add_argument("--clean", action="store_true", help="full-text clean reopen control; no filler")
+    controls.add_argument("--characterize-128-capacity-refusal", action="store_true",
+                          help="full-text guard characterization only; no engine or disk writes")
     args = parser.parse_args()
     full_text = args.profile == "full-text"
-    if args.clean and not full_text:
-        parser.error("the clean tmpfs control requires --profile full-text")
+    refusal = args.characterize_128_capacity_refusal
+    if (args.clean or refusal) and not full_text:
+        parser.error("full-text controls require --profile full-text")
     artifacts = Path(os.environ.get("PG_QDRANT_ARTIFACT_DIR", "artifacts"))
     artifacts.mkdir(parents=True, exist_ok=True)
-    flag = ("--full-text-tmpfs-fixture-probe" if args.clean else
+    flag = ("--full-text-128-capacity-refusal-probe" if refusal else
+            "--full-text-tmpfs-fixture-probe" if args.clean else
             "--full-text-disk-full-probe" if full_text else "--disk-full-probe")
     profile = "full_text" if full_text else "vector_keyword"
-    kind = "edge_disk_fixture_probe" if args.clean else "edge_enospc_probe"
+    observation_profile = "full_text_128_capacity_refusal" if refusal else profile
+    kind = CAPACITY_REFUSAL_KIND if refusal else "edge_disk_fixture_probe" if args.clean else "edge_enospc_probe"
+    before = observe_provisioned_tmpfs(observation_profile) if refusal else None
     report = run_probe(["target/debug/pg-qdrant-edge-probe", flag],
                        required_profile=profile, required_kind=kind)
-    report["requested_experiment"] = {"kind": kind, "profile": profile, "clean_control": args.clean}
-    report["post_exit_observation"] = observe_provisioned_tmpfs()
+    report["requested_experiment"] = {"kind": kind, "profile": profile, "clean_control": args.clean,
+                                      "capacity_refusal_characterization": refusal}
+    after = observe_provisioned_tmpfs(observation_profile)
+    report["post_exit_observation"] = after
+    if refusal:
+        report["pre_execution_observation"] = before
+        validate_capacity_refusal(report, before, after)
     if args.clean and report["status"] == "passed" and not (
             report.get("filler_created") is False and report.get("provisioned_tmpfs") is True):
         report["status"] = "failed"
         report["reason"] = "A clean control must prove no filler and the provisioned tmpfs"
-    filename = ("edge-full-text-clean.json" if args.clean else
+    filename = ("edge-full-text-128-capacity-refusal.json" if refusal else
+                "edge-full-text-clean.json" if args.clean else
                 "edge-full-text-enospc.json" if full_text else "edge-enospc.json")
     (artifacts / filename).write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))

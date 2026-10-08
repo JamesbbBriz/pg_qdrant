@@ -6,7 +6,7 @@
     "pg_qdrant/pg17",
     "pgrx/cshim"
   ],
-  "cargo_lock_sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f",
+  "cargo_lock_sha256": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d",
   "manifest_inputs": [
     {
       "path": "Cargo.toml",
@@ -14,15 +14,15 @@
     },
     {
       "path": "crates/edge-probe/Cargo.toml",
-      "sha256": "cf6109fc8f380c82b97f26985249d5b4430e9cd5483a7a6e426404cf95a9bbc2"
+      "sha256": "99118fc920d732fb569bc002276fcce78f06115505356b4b9591afaebdb0a066"
     },
     {
       "path": "crates/pg_qdrant/Cargo.toml",
-      "sha256": "6ab793bb104fe7b9913d0691fb6b4cb7ffc085acfc9910039186adcf9fe9e72f"
+      "sha256": "5f717b6eaa3fd711bb65780aef4e391713d8c6e37ea64f98144fb47ef480e5eb"
     },
     {
       "path": "crates/pg_qdrant-helper/Cargo.toml",
-      "sha256": "674a1166a52c7664bb4a523f4141e6381c62a2d4b8ac60ebf204bee7eb777ff9"
+      "sha256": "c1cca09fe0b0d590b93942ce03b29814da88071b6ec9151e7ac89a95d4be020c"
     },
     {
       "path": "crates/pg_qdrant-protocol/Cargo.toml",
@@ -3539,7 +3539,9 @@
       "checksum": null,
       "license_expression": "Apache-2.0",
       "license_file_sha256": null,
-      "features": [],
+      "features": [
+        "default"
+      ],
       "dependencies": [
         "qdrant-edge@0.8.0",
         "serde_json@1.0.151",

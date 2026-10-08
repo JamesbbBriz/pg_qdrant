@@ -15,7 +15,31 @@ use serde_json::{Value, json};
 const MAX_FAULT_BYTES: u64 = 64 * 1024 * 1024;
 // The fixed full-text loader eagerly populates more than the small fixture's
 // budget. Its separate, explicit profile has a larger, still bounded mount.
-const MAX_FULL_TEXT_FAULT_BYTES: u64 = 128 * 1024 * 1024;
+const FULL_TEXT_FAULT_BYTES: u64 = 384 * 1024 * 1024;
+const REFUSED_FULL_TEXT_BYTES: u64 = 128 * 1024 * 1024;
+const FULL_TEXT_CAPACITY_REFUSAL: &str = "full-text tmpfs capacity must be exactly 384 MiB";
+
+#[derive(Clone, Copy)]
+enum TmpfsBudget {
+    VectorKeyword,
+    FullText,
+    Refusal128,
+}
+
+impl TmpfsBudget {
+    fn validate_capacity(self, bytes: u64) -> Result<(), &'static str> {
+        match self {
+            Self::VectorKeyword if bytes > 0 && bytes <= MAX_FAULT_BYTES => Ok(()),
+            Self::FullText if bytes == FULL_TEXT_FAULT_BYTES => Ok(()),
+            Self::Refusal128 if bytes == REFUSED_FULL_TEXT_BYTES => Ok(()),
+            Self::VectorKeyword => {
+                Err("tmpfs capacity exceeds the selected fixed experiment budget")
+            }
+            Self::FullText => Err(FULL_TEXT_CAPACITY_REFUSAL),
+            Self::Refusal128 => Err("capacity-refusal characterization requires exactly 128 MiB"),
+        }
+    }
+}
 const MAX_COPY_LOGICAL_BYTES: u64 = 512 * 1024 * 1024;
 const TMPFS_ROOT: &str = "/pgq-p0-faults";
 const TMPFS_ENV: &str = "PG_QDRANT_ENOSPC_DIR";
@@ -177,7 +201,7 @@ pub fn disk_fixture_probe(full_text: bool, provisioned_tmpfs: bool) -> Result<Va
         )?;
         let path =
             std::env::var_os(TMPFS_ENV).ok_or("clean tmpfs control requires its explicit mount")?;
-        Some(validate_tmpfs(Path::new(&path), MAX_FULL_TEXT_FAULT_BYTES)?)
+        Some(validate_tmpfs(Path::new(&path), TmpfsBudget::FullText)?)
     } else {
         None
     };
@@ -546,7 +570,7 @@ struct TmpfsGuard {
 }
 
 #[cfg(target_os = "linux")]
-fn validate_tmpfs(input: &Path, max_bytes: u64) -> Result<TmpfsGuard, String> {
+fn validate_tmpfs(input: &Path, budget: TmpfsBudget) -> Result<TmpfsGuard, String> {
     use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
     require(
@@ -675,10 +699,7 @@ fn validate_tmpfs(input: &Path, max_bytes: u64) -> Result<TmpfsGuard, String> {
     let capacity_bytes = block_size
         .checked_mul(blocks)
         .ok_or("tmpfs capacity overflow")?;
-    require(
-        capacity_bytes > 0 && capacity_bytes <= max_bytes,
-        "tmpfs capacity exceeds the selected fixed experiment budget",
-    )?;
+    budget.validate_capacity(capacity_bytes)?;
     Ok(TmpfsGuard {
         root,
         capacity_bytes,
@@ -836,12 +857,12 @@ pub fn disk_full_probe(full_text: bool) -> (Value, i32) {
     }
     #[cfg(target_os = "linux")]
     {
-        let max_bytes = if full_text {
-            MAX_FULL_TEXT_FAULT_BYTES
+        let budget = if full_text {
+            TmpfsBudget::FullText
         } else {
-            MAX_FAULT_BYTES
+            TmpfsBudget::VectorKeyword
         };
-        let guard = match validate_tmpfs(Path::new(&path), max_bytes) {
+        let guard = match validate_tmpfs(Path::new(&path), budget) {
             Ok(guard) => guard,
             Err(reason) => {
                 skipped["reason_code"] = "unsafe_environment".into();
@@ -861,6 +882,153 @@ pub fn disk_full_probe(full_text: bool) -> (Value, i32) {
                 .into();
                 (result, 1)
             }
+        }
+    }
+}
+
+/// Dedicated, non-writing characterization of the old 128 MiB budget. This
+/// cannot count a native crash or an arbitrary guard rejection as a pass.
+pub fn full_text_128_capacity_refusal_probe() -> (Value, i32) {
+    let kind = "edge_full_text_128_capacity_refusal_probe";
+    #[cfg(not(target_os = "linux"))]
+    {
+        (
+            failure(
+                kind,
+                "capacity-refusal characterization requires Linux".into(),
+            ),
+            1,
+        )
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let outcome = (|| {
+            progress("capacity_refusal_guard");
+            let path = std::env::var_os(TMPFS_ENV)
+                .ok_or("capacity-refusal characterization requires its explicit mount")?;
+            // All existing ownership, mount, empty-directory and PGDATA checks
+            // still apply. Refusal128 is only admitted to this read-only probe.
+            let guard = validate_tmpfs(Path::new(&path), TmpfsBudget::Refusal128)?;
+            require(
+                TmpfsBudget::FullText.validate_capacity(guard.capacity_bytes)
+                    == Err(FULL_TEXT_CAPACITY_REFUSAL),
+                "expected full-text capacity refusal was not produced",
+            )?;
+            let before = disk_observation("capacity_refusal_before", &guard.root)?;
+
+            // Exercise the real entry paths, both of which must stop at the
+            // shared capacity guard before tempfile or engine construction.
+            let (enospc, code) = disk_full_probe(true);
+            require(
+                code == 2
+                    && enospc["status"] == "not_run"
+                    && enospc["reason_code"] == "unsafe_environment"
+                    && enospc["reason"] == FULL_TEXT_CAPACITY_REFUSAL
+                    && enospc["disk_writes_attempted"] == false,
+                "ordinary full-text ENOSPC entry did not produce the exact capacity refusal",
+            )?;
+            let clean_error = match disk_fixture_probe(true, true) {
+                Err(error) => error,
+                Ok(_) => return Err("ordinary clean entry unexpectedly accepted 128 MiB".into()),
+            };
+            require(
+                clean_error == FULL_TEXT_CAPACITY_REFUSAL,
+                "ordinary clean entry did not produce the exact capacity refusal",
+            )?;
+            let after_guard = validate_tmpfs(Path::new(&path), TmpfsBudget::Refusal128)?;
+            require(
+                guard.device == after_guard.device && guard.inode == after_guard.inode,
+                "capacity-refusal mount identity changed",
+            )?;
+            let after = disk_observation("capacity_refusal_after", &guard.root)?;
+            require(
+                before["filesystem"] == after["filesystem"]
+                    && before["storage"]["files"] == 0
+                    && after["storage"]["files"] == 0
+                    && before["storage"]["logical_bytes"] == 0
+                    && after["storage"]["logical_bytes"] == 0
+                    && before["storage"]["allocated_bytes"] == 0
+                    && after["storage"]["allocated_bytes"] == 0,
+                "capacity-refusal observation changed the empty mount",
+            )?;
+            let mut result = report(kind, "passed");
+            result["profile"] = "full_text".into();
+            result["observed_capacity_bytes"] = REFUSED_FULL_TEXT_BYTES.into();
+            result["required_capacity_bytes"] = FULL_TEXT_FAULT_BYTES.into();
+            result["expected_refusal"] = FULL_TEXT_CAPACITY_REFUSAL.into();
+            result["entry_refusals"] = json!({"enospc":enospc,"enospc_exit_code":code,
+                "clean_error":clean_error});
+            result["observations"] = json!([before, after]);
+            result["disk_writes_attempted"] = false.into();
+            result["engine_open_attempted"] = false.into();
+            result["filler_created"] = false.into();
+            result["enospc_verified"] = false.into();
+            result["recovery_verified"] = false.into();
+            result["scope"] = "exact 128 MiB capacity refusal by both full-text entry paths; no engine execution, ENOSPC or recovery claim".into();
+            progress("capacity_refusal_completed");
+            Ok(result)
+        })();
+        match outcome {
+            Ok(result) => (result, 0),
+            Err(error) => (failure(kind, error), 1),
+        }
+    }
+}
+
+#[cfg(test)]
+mod capacity_tests {
+    use super::*;
+
+    #[test]
+    fn fixed_full_text_capacity_refuses_every_other_budget() {
+        for bytes in [
+            0,
+            1,
+            MAX_FAULT_BYTES,
+            REFUSED_FULL_TEXT_BYTES,
+            FULL_TEXT_FAULT_BYTES - 1,
+            FULL_TEXT_FAULT_BYTES + 1,
+            u64::MAX,
+        ] {
+            assert_eq!(
+                TmpfsBudget::FullText.validate_capacity(bytes),
+                Err(FULL_TEXT_CAPACITY_REFUSAL)
+            );
+        }
+        assert_eq!(
+            TmpfsBudget::FullText.validate_capacity(FULL_TEXT_FAULT_BYTES),
+            Ok(())
+        );
+        assert_eq!(
+            TmpfsBudget::Refusal128.validate_capacity(REFUSED_FULL_TEXT_BYTES),
+            Ok(())
+        );
+        assert!(
+            TmpfsBudget::Refusal128
+                .validate_capacity(FULL_TEXT_FAULT_BYTES)
+                .is_err()
+        );
+        assert!(
+            TmpfsBudget::Refusal128
+                .validate_capacity(REFUSED_FULL_TEXT_BYTES - 1)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn vector_keyword_capacity_retains_its_original_bound() {
+        assert_eq!(TmpfsBudget::VectorKeyword.validate_capacity(1), Ok(()));
+        assert_eq!(
+            TmpfsBudget::VectorKeyword.validate_capacity(MAX_FAULT_BYTES),
+            Ok(())
+        );
+        for bytes in [
+            0,
+            MAX_FAULT_BYTES + 1,
+            REFUSED_FULL_TEXT_BYTES,
+            FULL_TEXT_FAULT_BYTES,
+        ] {
+            assert!(TmpfsBudget::VectorKeyword.validate_capacity(bytes).is_err());
         }
     }
 }

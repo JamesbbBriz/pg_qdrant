@@ -40,7 +40,7 @@ On 2026-10-08, with Rust 1.96.0 on Linux x86_64 and the repository lockfile:
 | `cargo test --locked -p pg-qdrant-edge-probe --test advanced -- --nocapture --test-threads=1` | 7 passed, 0 failed or ignored: exact recommendation/discover/context/feedback scores, root MMR, Formula, OrderBy/Sample and wrong-dimension errors. |
 | `cargo test --locked -p pg-qdrant-edge-probe --test lifecycle -- --test-threads=1` | 2 passed, 0 failed or ignored: conditional and partial mutations with flush/reopen; selective reads, filtered scroll/facets and exact matrix scores. |
 | `cargo test --locked -p pg-qdrant-edge-probe --test schema -- --test-threads=1` | 2 passed, 0 failed or ignored: payload-index create/delete and named dense/sparse vector create/delete, including replay, rejected configuration changes and persisted queries. |
-| Current integrated `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | All 20 engine tests passed, with 0 failed or ignored: the previous 15 plus three lexical tests, one bounded public-lifecycle test and a clean full-text reopen control. PostgreSQL and positive fault profiles require their own runs. |
+| Current integrated `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | All 23 normal harness tests passed, with 0 failed or ignored: the previous 20 plus two fixed-capacity guard tests and one missing/unsafe-mount refusal test. The three private OOM guard tests pass separately. [Integrated source evidence](../../docs/evidence/p0-integrated-local.json); new PostgreSQL and positive fault profiles require their own runs. |
 | `cargo check --locked -p pg-qdrant-edge-probe` after nested inventory expansion | Public nested enum mappings and typed scalar/product/binary, ACORN/search and LoadProfile inputs compiled without errors or warnings. Constructors do not execute an engine operation. |
 | `target/debug/pg-qdrant-edge-probe` after the locked test build | All 16 synthetic check groups passed; engine version `0.8.0`. |
 | `target/debug/pg-qdrant-edge-probe --corruption-probe` | Both malformed copied-metadata loads returned errors; intact-copy recovery, original preservation, representation equality and phrase/MaxSim queries passed. |
@@ -50,8 +50,9 @@ On 2026-10-08, with Rust 1.96.0 on Linux x86_64 and the repository lockfile:
 | Full-text 128 MiB tmpfs configuration-save experiment, CI5 | Failed with actual SIGBUS at `recovery_reopen`; no successful native report. The narrow profile passed again, but all PostgreSQL profiles were skipped. [Exact source and observations](../../docs/evidence/p0-full-text-disk-ci.json). |
 
 The original four tests, eleven advanced/lifecycle/schema cases and five
-additional lexical/public-lifecycle/clean-control cases comprise 20 tests;
-the 16-group executable smoke report is a different count. The focused runs
+additional lexical/public-lifecycle/clean-control cases comprise the historical
+20-test suite. The three new capacity tests bring the normal suite to 23; the
+16-group executable smoke report and private OOM tests are different counts. The focused runs
 above were recorded independently, followed by the actual integrated run.
 CI acceptance is still recorded against its own code version and commands.
 These commands compiled and linked the engine harness and its enumerated
@@ -105,7 +106,7 @@ it checks all of these conditions:
   tmpfs, with no other mount aliases for its device in the current namespace.
 - `/usr/bin/stat` confirms tmpfs and reports total capacity within the selected
   profile's fixed cap. The default vector/keyword profile retains its 64 MiB
-  cap; the explicit full-text profile has a separate 128 MiB cap.
+  cap; the explicit full-text profile requires exactly 384 MiB.
   Missing/unparseable filesystem information refuses the experiment.
 - No PostgreSQL data marker in the path's ancestors; any configured `PGDATA`
   or `PG_QDRANT_PGDATA` must resolve, be disjoint, and use a different device.
@@ -149,14 +150,14 @@ docker run --rm --user 10001:10001 --memory=5g --cpus=2 --network=none \
 
 The opt-in `--full-text-disk-full-probe` uses the original eight-row fixture,
 including its mutable phrase and token-prefix indexes. CI provisions it in a
-separate container with a dedicated 128 MiB tmpfs and invokes
+separate container with a dedicated exact 384 MiB tmpfs and invokes
 `python3 scripts/run_disk_probe.py --profile full-text`. It does not change the
 32 MiB narrow run or its 64 MiB guard. Its report must identify
 `profile: "full_text"`, preserve every retrieved representation, and pass both
-phrase and token-prefix queries after recovery. CI5 failed this path with
-SIGBUS at `recovery_reopen`, after the filler-release and recovery stages.
-No full-text recovery pass is recorded, and the exact native cause is not yet
-identified.
+phrase and token-prefix queries after recovery. CI5 and CI6 failed the earlier 128 MiB version with SIGBUS at
+`recovery_reopen`; CI6's no-filler clean control also failed after consuming all
+mount capacity. The new 384 MiB result remains pending. No loader fix or precise
+native fault instruction is established by changing the experiment budget.
 The wrapper rejects a wrong-profile or `not_run` report even with exit code 0,
 and writes full-text evidence separately as `edge-full-text-enospc.json`.
 
@@ -165,8 +166,17 @@ reopen in an ordinary owned directory. The guarded
 `--full-text-tmpfs-fixture-probe` uses the same full-text fixture on its own
 validated mount without creating a filler. CI invokes that control with
 `python3 scripts/run_disk_probe.py --profile full-text --clean` in a separate
-128 MiB container mount and writes `edge-full-text-clean.json`. A clean-control
+exact 384 MiB container mount and writes `edge-full-text-clean.json`. A clean-control
 report cannot satisfy the ENOSPC gate.
+
+The separate `--full-text-128-capacity-refusal-probe` verifies the exact
+unsupported-capacity refusal through both ordinary full-text entry paths on an
+empty dedicated 128 MiB mount. It opens no engine and performs no disk writes.
+The wrapper's `--characterize-128-capacity-refusal` mode requires the exact
+native refusal and unchanged empty mount observations; it never treats a crash
+or unrelated `not_run` as success. See the
+[capacity contract](../../docs/p0-full-text-capacity.md). Original 128 MiB
+failures remain in the [CI6 evidence](../../docs/evidence/p0-capacity-and-sql-ci.json).
 
 Stage observations retain logical file length, allocated bytes, mapped fixture
 RSS and filesystem free/available bytes separately. The wrapper also reads
@@ -212,8 +222,8 @@ restoring the count to eight. Writable reopen still observed
 ensures an appendable segment, and its [segment constructor](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/shard/segment_holder/mod.rs)
 copies the payload-index schema into that segment. Optimization therefore did
 not remove the eager mutable-text reopen requirement. The narrow fixture
-continues to exclude those indexes. The separate 128 MiB full-text experiment
-keeps the original indexes and records a different storage budget; it cannot
+continues to exclude those indexes. The full-text follow-up retains the original indexes and uses an explicit
+384 MiB budget after the recorded 128 MiB failures; it cannot
 retroactively establish the failed 32 MiB full-fixture combination.
 
 The first CI attempt with the full fixture on a 32 MiB tmpfs failed before
@@ -226,8 +236,8 @@ filesystem: 85 files, 289,807,352 logical bytes and 331,776 allocated bytes.
 Its mapped fixture RSS was 34,080 KiB after creation and about 215,756 KiB after
 writable reopen. This larger result uses the original placement configuration;
 it must not be replaced by the earlier cold-storage/optimization measurements.
-It exceeds the failed profile's 128 MiB capacity and motivates a clean tmpfs
-control. Sparse-file logical size, filesystem allocation and mapped RSS have
+It exceeds the failed profile's 128 MiB capacity. The subsequent clean tmpfs
+control also failed with SIGBUS and zero available bytes after reopen. Sparse-file logical size, filesystem allocation and mapped RSS have
 different meanings; the ordinary-filesystem measurement alone does not prove
 the cause of the CI5 SIGBUS.
 
@@ -467,12 +477,13 @@ outer fusion. None of F13–F20 is marked complete by this crate.
 The [recorded direct-worker PostgreSQL CI](../../docs/evidence/p0-postgresql-ci.json)
 verified diagnostic concurrency, cancellation and bounded queues. Its native
 abort and SIGKILL experiments terminated companion SQL sessions; this is a
-negative isolation result. Current-source and managed-helper PostgreSQL results
-need separate evidence. The [helper comparison](../../docs/evidence/p0-helper-ci.json)
-records prior positive helper-isolation cases; the
-[subsequent regression](../../docs/evidence/p0-regression-ci.json) records the
-32 MiB ENOSPC pass and a later private-helper process-observer failure. Its
-skipped PostgreSQL fault suite must be rerun after the observer correction.
+negative isolation result. The [helper comparison](../../docs/evidence/p0-helper-ci.json)
+records prior positive helper-isolation cases. The later
+[CI6 regression](../../docs/evidence/p0-capacity-and-sql-ci.json) passed all four
+PostgreSQL profiles, including 19 private-helper SQL groups and eight private
+pipe assertions, resolving the historical CI4 observer gap. PostgreSQL regression
+of the later integrated source, including the new source-recheck diagnostics,
+remains pending.
 Actual OOM, full-text ENOSPC, dirty-index/source recovery, transaction rollback,
 authority mapping, generations and cross-version migration remain open.
 The owned metadata-corruption test covers only the

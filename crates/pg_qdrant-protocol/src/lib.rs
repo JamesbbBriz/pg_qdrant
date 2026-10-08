@@ -20,6 +20,7 @@ pub enum Operation {
     Delay { delay_ms: u64 },
     Panic,
     Abort,
+    Oom,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

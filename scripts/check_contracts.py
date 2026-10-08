@@ -133,6 +133,25 @@ def main() -> None:
             coordinate = dependency["name"] + "@" + dependency["cargo_requirement"][1:]
             require(resolved_features.get(coordinate) == set(dependency["features"]),
                     f"Resolved feature/baseline drift for {dependency['name']}.")
+    profiles_path = ROOT / "docs/dependency-profiles.json"
+    if profiles_path.exists():
+        comparison = read_json("docs/dependency-profiles.json")
+        require(comparison["schema_version"] == 1, "Unsupported profile inventory schema.")
+        require(comparison["cargo_lock_sha256"] == hashlib.sha256(lock_path.read_bytes()).hexdigest(),
+                "Profile comparison is stale after a lockfile change.")
+        for manifest in comparison["manifest_inputs"]:
+            path = ROOT / manifest["path"]
+            require(path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == manifest["sha256"],
+                    f"Profile comparison is stale after changing {manifest['path']}.")
+        profiles = {profile["profile"]: profile for profile in comparison["profiles"]}
+        require(len(profiles) == len(comparison["profiles"]) == 4 and set(profiles) == {
+            "direct-normal", "direct-private", "helper-normal", "helper-private"},
+            "All four distinct P0 feature profiles are required.")
+        require(profiles["direct-normal"]["full_inventory_sha256"] ==
+                hashlib.sha256(graph_path.read_bytes()).hexdigest(),
+                "Normal inventory and profile comparison disagree.")
+        require(baseline["build_configuration"].get("profile_resolution_evidence") ==
+                "dependency-profiles.json", "Baseline must identify the profile comparison.")
     print(json.dumps({"status": "passed", "capabilities": 54, "work_items": len(work),
                       "scope_completed": False, "compiled_graph_claim": baseline["compiled_dependency_graph_verified"]}))
 

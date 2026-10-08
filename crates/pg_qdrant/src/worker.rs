@@ -361,6 +361,7 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                     Operation::Ping => "ping",
                     Operation::Panic => "panic",
                     Operation::Abort => "abort",
+                    Operation::Oom => "oom",
                 };
                 #[cfg(feature = "p0-managed-helper")]
                 let Some(connection) = supervisor.connection() else {
@@ -424,7 +425,10 @@ fn validate_request(request: Request) -> Result<Request, ProbeError> {
         }
     }
     #[cfg(not(feature = "p0-fault-injection"))]
-    if matches!(request.operation, Operation::Panic | Operation::Abort) {
+    if matches!(
+        request.operation,
+        Operation::Panic | Operation::Abort | Operation::Oom
+    ) {
         return Err(ProbeError::invalid(
             "fault operation is not compiled into this build",
         ));
@@ -476,8 +480,10 @@ fn execute(operation: Operation) -> Result<Value, ProbeError> {
         Operation::Panic => panic!("intentional P0 engine-thread panic"),
         #[cfg(feature = "p0-fault-injection")]
         Operation::Abort => std::process::abort(),
+        #[cfg(feature = "p0-fault-injection")]
+        Operation::Oom => Ok(pg_qdrant_edge_probe::oom_probe::run("direct_worker")),
         #[cfg(not(feature = "p0-fault-injection"))]
-        Operation::Panic | Operation::Abort => {
+        Operation::Panic | Operation::Abort | Operation::Oom => {
             Err(ProbeError::invalid("fault operation is disabled"))
         }
     })
