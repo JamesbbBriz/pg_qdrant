@@ -10,7 +10,9 @@ It currently admits one non-null text column (at most 65,536 UTF-8 bytes per row
 and a bigint, UUID or text primary
 key on an ordinary permanent heap table. [Declared dense BYOV](dense-representations.md)
 adds fixed-generation named vectors through ordinary source-table updates.
-Multiple text fields, learned sparse/token-vector BYOV, RLS,
+[Declared learned sparse BYOV](sparse-representations.md) uses independent vocabulary
+and IDF contracts, including native BM25/sparse RRF and DBSF.
+Multiple text fields, token-vector BYOV, RLS,
 partitions and alternative table access methods remain unimplemented. These
 requirements remain in the formal acceptance contract.
 

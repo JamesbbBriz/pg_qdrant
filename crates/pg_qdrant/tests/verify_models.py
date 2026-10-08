@@ -103,7 +103,7 @@ def run(sql, ready, ticket_from, checks):
     assert '55000' in sql("SELECT * FROM qdrant.search('model_docs','model','semantic',10,'"+query+"')",ok=False)
     assert '55000' in sql("SELECT * FROM qdrant.search('model_docs','model','hybrid',10,'"+query+"')",ok=False)
     # Inspect actual native candidates; SQL admission cannot hide a retained slot.
-    native = "SELECT qdrant_internal.p1_search((SELECT jsonb_build_object('operation','source_search','index_id',i.index_id,'generation',i.generation,'storage_epoch',c.storage_epoch,'q','model','top_k',10,'dense_query',jsonb_build_object('representation','dense','model_id','fixture-model','model_version','r1','vector','[1,0]'::jsonb)) FROM qdrant_internal.index_catalog i JOIN qdrant_internal.consumer_state c USING(index_name) WHERE i.index_name='model_docs'),10000)"
+    native = "SELECT qdrant_internal.p1_search((SELECT jsonb_build_object('operation','source_search','index_id',i.index_id,'generation',i.generation,'storage_epoch',c.storage_epoch,'q','model','top_k',10,'representation_query',jsonb_build_object('representation','dense','model_id','fixture-model','model_version','r1','vector','[1,0]'::jsonb)) FROM qdrant_internal.index_catalog i JOIN qdrant_internal.consumer_state c USING(index_name) WHERE i.index_name='model_docs'),10000)"
     candidates=json.loads(sql(native))
     assert [h['payload']['source_key']['value'] for h in candidates]==['2'],candidates
     current=json.loads(sql("SELECT qdrant.encoding_inputs('model_docs','dense')"))[0]
