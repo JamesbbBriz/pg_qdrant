@@ -1,6 +1,6 @@
-# P0 decision, remaining gates and preliminary effort
+# P0 decision and preliminary product effort
 
-Status: **planning assumptions after CI7; no calendar or completion promise**.
+Status: **P0 feasibility passed in CI8; subsequent effort remains planning assumptions, not a calendar or completion promise**.
 Reviewed: 2026-10-08. This allocation supports
 [ADR 0004](adr/0004-p0-go-no-go.md). It supplements the
 [70-item work ledger](work-items.json), rather than replacing or adding to its
@@ -10,9 +10,12 @@ per-capability estimates. All [54 capabilities](capabilities.md) and
 ## What the evidence changes
 
 The direct published Rust graph, four diagnostic PostgreSQL profiles, actual
-SQL/Edge calls and the helper fault comparison have evidence at the exact CI7
-revision. That reduces uncertainty about embedding and process layout. It does
-not reduce source consistency, production authorization or retrieval-quality
+SQL/Edge calls and the helper fault comparison have evidence at the exact CI8
+revision `57c58fcee51efb0067f04b03ffb44e300f76ce72`, run `37743504259`. Native/CPU
+inputs, the seventh source group, dirty reconstruction and lexical primitives
+now have that clean-run evidence too. This reduces uncertainty about embedding
+and process layout. It does not reduce source consistency, production
+authorization or retrieval-quality
 work merely because a synthetic query is fast or an engine call compiles.
 
 The constraints increase specific costs: native faults require a packaged
@@ -22,26 +25,34 @@ source; WAL growth requires admission/rotation; some malformed public inputs
 reach accepted/panic paths; and Tantivy primitives do not provide bounded work,
 array-safe proximity or fuzzy/source-offset highlights by themselves.
 
-The [CI7 evidence](evidence/p0-source-capacity-oom-ci.json),
+The [current CI8 evidence](evidence/p0-current-ci.json),
+[native baseline](evidence/p0-native-ci.json), [lexical CI](evidence/p0-tantivy-ci.json),
+and preceding [CI7 evidence](evidence/p0-source-capacity-oom-ci.json),
 [later engine/compile checkpoint](evidence/p0-method-input-rebuild-local.json),
 [negative-input characterization](evidence/p0-negative-inputs-local.json),
 [dirty rebuild policy experiment](evidence/p0-dirty-rebuild-local.json), and
 [isolated lexical probe](evidence/p0-tantivy-local.json) remain separate source
-and scope records. None is a completed product work item.
+and scope records. The [composite decision](evidence/p0-feasibility.json) closes
+the scoped P0 integration deliverables I-01 and I-03. It does not complete the
+54 full capability scopes or other product-stage work.
 
-## Remaining P0 work is finite
+## Completed finite P0 investigation
 
-| Work package | Owner / existing IDs | Planning range | Exit condition |
+The ranges below preserve the pre-CI8 planning allocation. All three packages
+are now closed for feasibility by the source-bound evidence and accepted ADR;
+the ranges are not measured elapsed effort and are no longer remaining work.
+
+| Work package | Owner / existing IDs | Historical planning range | Exit evidence |
 | --- | --- | --- | --- |
-| Freeze current source and rerun the clean combined/native baseline | Build, worker, engine; I-01–I-03, L08/L10/L11 | 2–5 engineering days | All required current tests run; failures resolved or architecture decision reopened. Includes the new seventh source/inside-SPI group and unchanged private/normal separation. |
-| Final API/CPU/native/license evidence reconciliation | Engine and distribution; I-01/I-02/I-12, V05/V08/L11 | 1–3 engineering days | Public-call/absence dispositions agree with code; CPU minimum is enforced or claims narrowed; actual selected native package and license metadata are recorded. Full distribution notices remain P5 work. |
-| Accept topology/recovery and update lexical gap/cost decisions | Source, lifecycle, lexical; I-03/I-07, L04/L05/L07/L10, F13–F20 | 1–3 engineering days | Costed ADR and phase ownership accepted without claiming production implementation. Lexical adoption criteria and pre-Alpha decision remain explicit. |
+| Freeze current source and rerun the clean combined/native baseline | Build, worker, engine; I-01–I-03, L08/L10/L11 | 2–5 engineering days | Passed CI8: all current engine tests, four SQL profiles with seven source groups and unchanged private/normal separation; prior failures remain recorded. |
+| Final API/CPU/native/license evidence reconciliation | Engine and distribution; I-01/I-02/I-12, V05/V08/L11 | 1–3 engineering days | Recorded callable/absence dispositions, 246 native package entries/seven archive hashes, enforced CPU floor and actual license metadata. Exact libclang path and 121 license parsing gaps stay explicit; full distribution review remains P5 work. |
+| Accept topology/recovery and update lexical gap/cost decisions | Source, lifecycle, lexical; I-03/I-07, L04/L05/L07/L10, F13–F20 | 1–3 engineering days | Accepted ADR 0004 and seven-gate feasibility exit; costed product ownership and finite pre-Alpha lexical adoption decision remain explicit. |
 
-These ranges are a **4–11 person-day planning allocation if no new architecture
-failure appears**, not measured work or a deadline. They exclude waiting for
-external infrastructure and overlap review with CI execution. A new failure is
-diagnosed and re-estimated; the range is not a reason to drop a check. The
-original 5–10 day investigation stop-loss remains historical planning context.
+The former **4–11 person-day planning allocation if no architecture failure
+appeared** was not measured work or a deadline. It excluded infrastructure
+waiting and allowed review overlap with CI. It must not be reported as actual
+effort spent or carried forward as remaining P0 work. The original 5–10 day
+investigation stop-loss likewise remains historical planning context.
 
 ## P0 exit versus later product acceptance
 
@@ -53,8 +64,9 @@ original 5–10 day investigation stop-loss remains historical planning context.
 | Persistence | Explicit flush is the minimum source-reviewed fence; process-death and complete-fixture reconstruction primitives work in the tested scopes. | PostgreSQL dirty/clean and exact-ACK ordering, all crash cuts, concurrent source backfill/rebuild/switch, bounded retention and actual operating recovery. |
 | Lexical gaps | Edge gaps and mature-library candidates are measured enough to cost the next route; no invented Meilisearch equivalence. | Before Alpha: decide adoption using the frozen quality/budget/lifecycle criteria. By P4: deliver each F13–F20 contract and any required second-engine integration. |
 
-The seven P0 acceptance rows are not deleted or weakened. A failed prerequisite
-keeps P0 conditional. A passed P0 slice also leaves the full associated
+The seven P0 acceptance rows are not deleted or weakened; the composite CI8
+decision records them passed for the tested feasibility scope. Future failures
+can reopen that decision. A passed P0 slice leaves the full associated
 capability open: for example, source fixture checks do not complete L05/L09,
 and successful dirty-refusal reconstruction does not complete L04/L07.
 
@@ -121,3 +133,7 @@ change the plan substantially. A new upstream public lifecycle contract could
 reduce integration work only after its own upgrade, compatibility and rollback
 tests. Parallel contributors reduce calendar time only where dependencies and
 review capacity permit; no division of person-days is promised here.
+
+Optional M0–M2 design notes do not change this allocation or imply completed
+implementation. They remain proposals subordinate to the original P1–P5
+acceptance rows and the retained 70-item work ledger.

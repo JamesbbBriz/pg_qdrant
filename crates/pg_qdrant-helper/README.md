@@ -1,7 +1,10 @@
 # P0 managed engine helper
 
-This executable is an optional process-isolation comparison for the PostgreSQL
-P0 prototype. It calls the sibling Edge adapter directly and contains no
+This executable is the managed-helper diagnostic profile for the PostgreSQL
+P0 prototype. The [feasibility decision](../../docs/evidence/p0-feasibility.json)
+selects this same-package process topology for product implementation; the
+current executable remains a bounded diagnostic, not a source-index service.
+It calls the sibling Edge adapter directly and contains no
 PostgreSQL dependency or network-service API. The PostgreSQL supervisor selects
 the installed binary and supplies its private engine-owner path.
 
@@ -10,6 +13,14 @@ messages with process and request identities, and exits all native work when
 the supervisor's stdin writer closes. Private panic/abort operations require
 the explicit `p0-fault-injection` build feature. Parent-death cleanup, native
 failure containment and production durability are distinct acceptance gates.
+
+The [current CI record](../../docs/evidence/p0-current-ci.json) passes both
+standalone protocol suites (seven normal and eight private assertion groups),
+the two real-child bookkeeping tests, both helper SQL profiles and the separate
+helper kernel-OOM experiment. Native-helper abort/SIGKILL/OOM preserve the
+supervisor and companion in these fixtures; killing the PostgreSQL supervisor
+still triggers PostgreSQL recovery. The selected-victim OOM experiment does not
+prove general memory isolation or durable index recovery.
 
 The standalone process test creates only owned temporary files and can run
 without a PostgreSQL cluster:

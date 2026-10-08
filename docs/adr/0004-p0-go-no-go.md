@@ -1,11 +1,12 @@
-# ADR 0004: Conditional go for a packaged Edge helper and source rebuild recovery
+# ADR 0004: Go for a packaged Edge helper and source rebuild recovery
 
-Status: **accepted conditional go for product implementation; P0 exit pending**.
+Status: **accepted go for product implementation; P0 feasibility passed at CI8**.
 Reviewed: 2026-10-08. Owners: PostgreSQL integration, engine adapter, source,
 lifecycle, lexical policy, quality and distribution.
 
-This decision selects the implementation route after the finite conditions below
-pass. It does not declare a production indexing service, a supported release or
+This decision selects the implementation route after the finite P0 conditions
+below passed at head `57c58fcee51efb0067f04b03ffb44e300f76ce72`, CI run
+`37743504259` (CI8). It does not declare a production indexing service, a supported release or
 completion of any of the 54 capabilities. It refines the process choice in
 [ADR 0001](0001-embedded-engine-boundary.md), retains the lexical obligations in
 [ADR 0002](0002-lexical-gap-strategy.md), and adopts the conservative recovery
@@ -34,33 +35,36 @@ authoritative source** as the initial recovery policy. Do not select automatic
 Edge WAL replay, private WAL decoding, in-place dirty repair, or the incomplete
 update-only writer as substitutes.
 
-This is a conditional engineering go, not a statement that the current code
-implements those catalog, source, ACK or generation policies. P1 starts only
-after the P0 conditions below are recorded as passed or resolved by an explicit
-costed replacement decision.
+This is an engineering go to implement the product, not a statement that the
+current code implements those catalog, source, ACK or generation policies.
+The [composite P0 decision](../evidence/p0-feasibility.json) records the seven
+feasibility gates together. Individual experiment records can retain
+`p0_exit_passed: false`: no experiment alone decides the phase. P1 implementation
+is now eligible under its unchanged acceptance requirements.
 
 ## Evidence and its limits
 
-[CI7](../evidence/p0-source-capacity-oom-ci.json) identifies head
-`88885db08d17c074af097ddca14bc85d6978980c`, merge checkout
-`18282abe660b4a3a59a8222f072c5b1cd069a2ae` and their common tree
-`7d02f181cc1c6ca8d14d5b82c03cc74d4a349265`. Its complete job log and downloaded
-53-file artifact have verified hashes. All four SQL profiles passed at that
-revision. Later additions have separate local evidence and need a new frozen
-source/container run.
+[CI8](../evidence/p0-current-ci.json) identifies implementation head
+`57c58fcee51efb0067f04b03ffb44e300f76ce72`, merge checkout
+`716cb2871d325dfd629a40177c9cfee613af4cfc` and their common tree
+`8b1d6d863be52229f8b15b49ad0b58b96b28608f`. Run `37743504259`, job
+`113199465881`, completed successfully. Its downloaded 100-file artifact and
+complete job log have verified hashes. The current engine, SQL, helper, native,
+CPU, lexical and bounded fault slices ran together. Earlier failed and narrower
+runs remain in the [historical record](../p0-report.md#retained-historical-outcomes).
 
 | Observation | Decision consequence | Limit retained |
 | --- | --- | --- |
 | Direct worker native abort, SIGKILL and genuine kernel OOM terminate companion SQL and trigger PostgreSQL recovery. | A native engine thread in that worker is an unacceptable default failure boundary. | A passing characterization assertion records collateral damage; it does not approve it. |
-| Native helper abort/SIGKILL preserve companion SQL and the same supervisor. CI7 kernel records identify the exact helper PID and limiting memory cgroup; one OOM victim is recorded, with zero supervisor/client kill attempts. | Prefer the same-package helper for native code containment. | The controlled OOM test raises the target's `oom_score_adj` and limits the entire disposable container. It does not prove production memory isolation or guarantee the kernel chooses the helper under arbitrary pressure. |
+| Native helper abort/SIGKILL preserve companion SQL and the same supervisor. CI8 kernel records identify the exact helper PID and limiting memory cgroup; one OOM victim is recorded, with zero supervisor/client kill attempts. | Prefer the same-package helper for native code containment. | The controlled OOM test raises the target's `oom_score_adj` and limits the entire disposable container. It does not prove production memory isolation or guarantee the kernel chooses the helper under arbitrary pressure. |
 | SQL cancellation retains active ownership; queued canceled work never executes. A frozen helper is stopped after the separate 125,000 ms budget, and replacement waits for exit/reaping. | Keep owned request IDs, bounded queues, independent operation deadlines and explicit process-stop recovery. | Caller cancellation is not native Edge query cancellation. Killing an owner can invalidate a writable generation. |
 | PostgreSQL supervisor SIGKILL triggers PostgreSQL recovery; the old helper stops before the same fence is reacquired. Restart exhaustion is visible after four starts. | Keep the supervisor small, use EOF-driven child shutdown, and fail visibly after bounded restart attempts. | The helper does not protect PostgreSQL against failures in its own supervisor. The tested fence is a P0 owner fence, not a production multi-generation catalog. |
 | Full-text configuration-save ENOSPC/retry/flush/reopen and an independent clean reopen pass on separate exact 384 MiB tmpfs mounts. A separate 128 MiB case refuses before writes. | A bounded installation can exercise the required engine paths; storage admission needs explicit headroom. | The earlier 128 MiB SIGBUS failures remain failures. Eight-row fixture capacity is not a sizing formula, and config-save recovery is not arbitrary partial-write recovery. |
-| Six source/identity groups pass in each CI7 SQL profile; a seventh inside-SPI cancellation group and a heap-only source guard are later additions. | There is a concrete source/visibility integration route; retain explicit supported source definitions and native-error tests. | These functions are superuser-only P0 diagnostics. They do not establish production SELECT/tenant authorization, an incarnation allocator or transaction capture. The later seventh group is not a CI7 pass. |
-| The new dirty-generation test kills an owned child after applied mutations and before explicit flush, never opens the old generation afterward, verifies unchanged old file hashes, and rebuilds matching records/vectors from a complete fixture into a different generation. | Fresh reconstruction is a demonstrated primitive for the conservative recovery route. | This is a local test-controller policy. It does not inspect survival in the dirty shard, replay Edge WAL, persist PG dirty state, recover ACKs or switch a live production generation. |
+| Seven source/identity groups pass in all four CI8 SQL profiles, including observed inside-SPI cancellation followed by a successful same-backend retry. The tested source contains the heap-only restriction; no adversarial custom-AM fixture is claimed. | There is a concrete source/visibility integration route; retain explicit supported source definitions and native-error tests. | These functions are superuser-only P0 diagnostics. They do not establish production SELECT/tenant authorization, an incarnation allocator or transaction capture; planning cancellation does not cover every executor error. |
+| The CI8 dirty-generation test kills an owned child after applied mutations and before explicit flush, never opens the old generation afterward, verifies unchanged old file hashes, and rebuilds matching records/vectors from a complete fixture into a different generation. | Fresh reconstruction is a demonstrated primitive for the conservative recovery route. | This is a local test-controller policy. It does not inspect survival in the dirty shard, replay Edge WAL, persist PG dirty state, recover ACKs or switch a live production generation. |
 | Callable public-method probes and 17 isolated negative-input cases expose both typed errors and accepted malformed inputs/panic paths. | Validate names, dimensions, sparse structure, finite values, phrase prerequisites and budgets before every engine call; quarantine uncertain state after an engine error/panic. | A characterization pass does not mean the engine rejects all malformed data or that owner reuse after arbitrary errors is safe. |
 
-The later evidence is [callable-method and integrated local validation](../evidence/p0-method-input-rebuild-local.json),
+The preceding local evidence remains [callable-method and integrated local validation](../evidence/p0-method-input-rebuild-local.json),
 [negative inputs](../evidence/p0-negative-inputs-local.json), and
 [dirty refusal/reconstruction](../evidence/p0-dirty-rebuild-local.json).
 Method compile coverage and explicit public/private/unavailable dispositions
@@ -123,7 +127,7 @@ public lifecycle API or a new costed architecture decision is required.
 Keep Edge for the core P1 data path and the P2 BM25/hybrid/MaxSim plans. Keep
 project-owned matching/analysis/identifier/result policy regardless of the later
 lexical backend. The [isolated Tantivy experiment](../../experiments/tantivy-probe/README.md)
-and [its evidence](../evidence/p0-tantivy-local.json) make direct Tantivy 0.26.2
+and [its CI8 evidence](../evidence/p0-tantivy-ci.json) make direct Tantivy 0.26.2
 the leading mature-library candidate for F13/F14 primitives; they do not adopt
 it into the core build.
 
@@ -149,13 +153,13 @@ it is not permission to omit F13–F20 or announce complete FTS. No capability I
 work item or acceptance row is deleted: the 54 capabilities, 70 capability and integration work
 items and 45 stage rows remain the formal product scope.
 
-## Finite conditions to record P0 exit
+## Recorded P0 exit conditions
 
 | Condition | Required evidence | Current disposition |
 | --- | --- | --- |
-| Freeze and validate the complete selected source | One identified clean container/CI tree with callable-method, negative-input and dirty-rebuild tests; all four SQL profiles including the new inside-SPI group; both helper pipe profiles; normal fault-path exclusion; bounded disk/OOM cases. Retain earlier failures. | CI7 passed its earlier source. Later local engine/compile results are separate; new combined SQL/native-package run pending. |
-| Freeze reproducible native and CPU inputs | Verify the revised native package snapshot/pins, installed package inventory and selected license metadata against that same build. Declare and enforce the minimum CPU features used by the actual native code, or remove the corresponding generic-CPU claim. | Revised native-input work and conservative CPU guard require their own recorded verification. Generic x86_64 compatibility is not inferred from one runner. |
-| Reconcile and accept the decision | Update the three contracts and evidence/report references without promoting product capabilities; accept this topology/recovery boundary and the costed plan, including the unresolved lexical adoption before Alpha. | Topology/recovery and planning allocations accepted conditionally; current native/CPU/CI evidence reconciliation remains pending. [Effort and phase allocation](../p0-effort.md). |
+| Freeze and validate the complete selected source | One identified clean container/CI tree with callable-method, negative-input and dirty-rebuild tests; all four SQL profiles including the new inside-SPI group; both helper pipe profiles; normal fault-path exclusion; bounded disk/OOM cases. Retain earlier failures. | Passed in [CI8](../evidence/p0-current-ci.json): 27 ordinary engine tests, SQL 20/22/20/26 and helper pipes 7/8, with separately scoped disk/OOM outcomes. |
+| Freeze reproducible native and CPU inputs | Verify the revised native package snapshot/pins, installed package inventory and selected license metadata against that same build. Declare and enforce the minimum CPU features used by the actual native code, or remove the corresponding generic-CPU claim. | Passed for the restricted [CI8 build](../evidence/p0-native-ci.json): 246 installed package/version entries, seven PGDG archives and 20-feature CPU admission in all four profiles, with generated-object/ELF evidence. Exact loaded libclang path remains unobserved; 121 package license declarations remain unparsed. Neither is represented as a completed P5 distribution review or broad CPU certification. |
+| Reconcile and accept the decision | Update the three contracts and evidence/report references without promoting product capabilities; accept this topology/recovery boundary and the costed plan, including the unresolved lexical adoption before Alpha. | Accepted: this ADR and the [composite seven-gate decision](../evidence/p0-feasibility.json) record P0 feasibility passed; the [effort and phase allocation](../p0-effort.md) preserves subsequent product obligations. |
 
 P0 is an architecture feasibility gate. Production capture/backfill/tickets,
 ACK crash cuts, source authorization, live generation switching, WAL admission
@@ -168,7 +172,7 @@ would not make the evidence stronger; claiming they already work would be false.
 | Alternative | Decision and cost consequence |
 | --- | --- |
 | Native Edge inside PG worker | No-go default: measured native and OOM failures terminate unrelated SQL. Avoiding a helper saves packaging/IPC work but accepts the failure domain the product seeks to reduce. |
-| Same-package managed helper | Conditional go: retains one installation and direct Rust Edge dependency; adds helper lifecycle, framing, ownership, resource and packaging work. Preliminary remaining worker allocation is 12–22 engineering days, within the broader plan, not a measured duration. |
+| Same-package managed helper | Go after P0 feasibility: retains one installation and direct Rust Edge dependency; adds helper lifecycle, framing, ownership, resource and packaging work. Preliminary remaining worker allocation is 12–22 engineering days, within the broader plan, not a measured duration. |
 | Separately operated Qdrant Server/client SDK | Not the selected product: adds a network service and operator/application integration, and does not meet the embedded-dependency contract. |
 | Fork/internal WAL replay/reclamation | Not adopted: requires ownership of upstream disk format and recovery invariants, compatibility and license/notice work. A separate bounded investigation and ADR would be needed before estimating implementation. |
 | Fresh source rebuild after uncertainty | Selected baseline: relies on retained authoritative data, costs source scan/encoding availability and temporary generations. Its implementation allocation is included in lifecycle work; no constant-time recovery claim. |

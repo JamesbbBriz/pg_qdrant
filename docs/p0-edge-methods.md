@@ -11,8 +11,9 @@ interfaces remain in the wider [capability inventory](capabilities.md).
 The [compile inventory](../crates/edge-probe/src/api_inventory.rs) contains
 concrete argument-bearing call bodies for 43 declarations. `refresh_with` has
 the explicit public-construction exclusion below. The
-[local compilation record](evidence/p0-method-input-rebuild-local.json) verifies
-these bodies with the pinned lockfile and Rust 1.96.0. This is compile evidence for their signatures and
+[local compilation record](evidence/p0-method-input-rebuild-local.json) and
+[current CI build](evidence/p0-current-ci.json) verify these bodies with the
+pinned lockfile and Rust 1.96.0. This is compile evidence for their signatures and
 arguments; it does not execute the methods, expose a supported SQL entry point,
 or complete a capability. Independent runtime observations remain scoped by
 the [probe README](../crates/edge-probe/README.md).
@@ -144,9 +145,12 @@ cargo check --locked -p pg-qdrant-edge-probe
 
 The same [local record](evidence/p0-method-input-rebuild-local.json) separately
 records 25 normal engine tests and four PostgreSQL profile compilation checks.
-Those tests have their own fixtures and assertions; their success is not
-runtime coverage of all 43 method call bodies. PostgreSQL profile compilation
-is not a SQL execution result.
+Those historical tests have their own fixtures and assertions; their success is
+not runtime coverage of all 43 method call bodies. The [current CI record](evidence/p0-current-ci.json)
+separately passes 27 named normal engine tests and actual SQL 20/22/20/26 groups.
+Its four archived SQL engine reports retain all 16 named smoke groups. Neither
+those runs nor the [accepted P0 decision](evidence/p0-feasibility.json) execute
+every method argument combination or promote these methods to product support.
 
 The [negative-input matrix](evidence/p0-negative-inputs-local.json) and
 [dirty-generation reconstruction experiment](evidence/p0-dirty-rebuild-local.json)

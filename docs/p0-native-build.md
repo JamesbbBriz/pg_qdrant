@@ -1,8 +1,12 @@
 # P0 native package freeze
 
-Status: proposed build gate, with signed repository metadata and the historical
-CI inventory verified. A clean build using this configuration has **not** run.
-This does not yet close P0-BUILD, CPU compatibility, or the release gate.
+Status: the finite native-input freeze and clean installation are **verified**
+for all four diagnostic profiles in [CI8](evidence/p0-native-ci.json), run
+[37743504259](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259),
+implementation `57c58fcee51efb0067f04b03ffb44e300f76ce72`, tree
+`8b1d6d863be52229f8b15b49ad0b58b96b28608f`. This establishes the observed
+P0 build inputs, not bit-identical binaries, a general CPU support matrix, or
+a product release.
 
 The image retains its Ubuntu 24.04 digest. Its Ubuntu sources now use the fixed
 `20261008T061600Z` snapshot for noble, noble-updates, noble-security and
@@ -66,8 +70,9 @@ A read-only local check downloaded and verified this archive, parsed its real
 package identity and extracted its roots. A handshake using only that bundle
 failed certificate verification in the review network; no private root was
 added and no TLS check was disabled to make it pass. This observation is
-preserved in the source evidence. The proposed clean-container TLS bootstrap
-remains an explicit next-CI requirement.
+preserved in the source evidence. The later CI8 clean-container TLS/bootstrap
+and authenticated APT installation passed without weakening those checks;
+this does not rewrite the earlier local handshake failure.
 
 The eight CI7 artifact inventories were byte-identical: 246 package/version
 entries, SHA-256
@@ -79,6 +84,9 @@ check compares the entire inventory, ignoring order only. Missing, extra or
 changed packages fail. This avoids a 246-package installation command while
 checking the complete observed result in every image profile. The image emits
 archive and inventory verification JSON alongside the existing package TSV.
+CI8 observed the same exact 246 entries in all four profiles and recorded seven
+archive-verification successes bound to the fixed manifest. Its actual package,
+compiler, PG configure and ELF reports are in the [native evidence](evidence/p0-native-ci.json).
 
 The expected inventory is a deliberate upgrade boundary. Dependency or base
 updates require new signed metadata, explicit package changes and a clean
@@ -103,12 +111,13 @@ The integrated [CPU admission](p0-cpu-baseline.md) separately defines 20
 required features and checks usable AVX state before engine entry, with a
 generated-object audit for the explicit HLE exclusion. Pure policy tests cover
 missing-feature refusal; no unsupported physical CPU or OS-state emulation
-has run. The revised clean image and its actual host report remain pending.
+has run. CI8 records successful admission on its actual host in all four
+profiles, with the same 20 usable features and audited native objects.
 For a narrower x86-64-v3 promise, first audit the actual pinned-compiler native
 objects for instructions outside that level. Upstream dispatch names alone
 are insufficient evidence.
 
-## Validation before marking the native gate complete
+## Recorded validation and remaining limits
 
 The safe script tests cover complete/missing/duplicate archives, changed bytes
 of the same length, changed version, unexpected PGDG input, symlink refusal,
@@ -118,12 +127,18 @@ and full-inventory drift/duplicate rejection:
 python3 -m unittest discover -s scripts/tests -p test_verify_native.py -v
 ```
 
-Next CI must prove the checksum/TLS bootstrap, frozen APT resolution,
-seven-archive verification and exact 246-entry inventory from an uncached
-image build, then execute the existing Rust/PostgreSQL profiles. Capture
-`cc --version`, `ld --version`, `pg_config --configure`, observed libclang diagnostics and
-direct ELF dependencies alongside that evidence. The [native metadata collector](p0-native-inventory.md)
-is wired into each image profile; unobserved libclang paths, unparsed package
-licenses and transitive loader closure remain explicit gaps. Native license/notices and
-CPU checks remain explicit requirements. No bit-identical compiler output,
-new platform support, or successful clean reinstall is claimed here.
+CI8 executed the checksum/TLS bootstrap and frozen APT resolution, then passed
+the seven-archive verifier, complete installed inventory, CPU admission/object
+audit, and selected Rust/PostgreSQL profiles. [Current CI evidence](evidence/p0-current-ci.json)
+records the whole run separately from the native artifact measurements.
+`cc --version`, `ld --version`, `pg_config --configure`, loaded libclang version
+and direct ELF dependencies were captured by the [native collector](p0-native-inventory.md).
+
+All 246 installed packages have reported copyright-file hashes; 125 have parsed
+DEP5 labels and 121 retain explicit parsing gaps. Exact libclang paths, full
+transitive loader closure, complete dependency ISA proof and P5 license/notices
+review remain unresolved. Downloaded JSON binds those measurements to the
+recorded build tools; it does not contain the original binary/archive/license
+bytes for an independent second hash calculation. Archive availability and
+retention remain external dependencies. No bit-identical compiler output or
+additional platform support is claimed.

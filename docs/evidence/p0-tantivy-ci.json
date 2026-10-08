@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "kind": "p0_isolated_tantivy_ci_evidence",
+  "observed_on": "2026-10-08",
+  "status": "passed_primitive_characterization",
+  "source": {
+    "head_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+    "checkout_merge_commit": "716cb2871d325dfd629a40177c9cfee613af4cfc",
+    "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+    "sha256": {
+      ".github/workflows/p0.yml": "96e5cd6363cbfe18cfd253967ceada2a38c9def1bd8dd6d9b52eb536b2584e26",
+      "Dockerfile.p0": "2dfb0633d342d77a4a3b7d092e54f9ec695bcfc492af0c5df995cf45b159d076",
+      "Dockerfile.p0-lexical": "46c4e0fe5eb2e38124e365adb78ed3d9934a2016a0a0a47afe4e1902d59cb3f1",
+      "rust-toolchain.toml": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2",
+      "LICENSE": "d8a6cc31abc16b6748c7a21f21611f5a1ec33f67d22ca23d7da1c19b95496bee",
+      "experiments/tantivy-probe/Cargo.toml": "9a63fa7e06b53dcf7fdcc64b523429dfda23b8e8cb8232099328f9c35800e333",
+      "experiments/tantivy-probe/Cargo.lock": "682510ef1ea440b46198830c47b0d6e13b5a2c18ae63c9263f9e4ab592421e50",
+      "experiments/tantivy-probe/src/main.rs": "7a5b02ff84f712beb04745e5ecf1da08a51cd544a59ec2d9e459401e0e463182",
+      "experiments/tantivy-probe/inventory.py": "711206da61f1cb7c5112f588b35172cdaa2f2594d253ecd4e5b5a1be26b8f8d6",
+      "experiments/tantivy-probe/dependency-inventory.json": "66a70e496e32b73a73c3ead95d532348f3a4a68e150ef2ff0be9918e093cf179"
+    }
+  },
+  "ci": {
+    "run_id": 37743504259,
+    "job_id": 113199465881,
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259",
+    "conclusion": "success",
+    "job_log_sha256": "e243ef198530020d635e812eaae1a0dbe6202b6510110c04fbdd43fc1da06287",
+    "report_job_log_line": 3199,
+    "steps": [
+      {
+        "name": "Build the independent lexical candidate experiment",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Characterize isolated Tantivy lexical primitives",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      }
+    ],
+    "artifact_id": 11534954414,
+    "artifact_archive_sha256": "ec10a029e1f15f2fd46aaa8814d9624e1184546476f7c3558db604808c549772",
+    "artifact_member": "tantivy/tantivy-probe.json",
+    "artifact_member_sha256": "d1588a08066a3a6dc730ea4ad7ee1ac513e914bf1b77a2a90d6312c239456ae8",
+    "artifact_and_log_reports_equal": true
+  },
+  "execution": {
+    "independent_workspace": true,
+    "network": "none",
+    "memory_limit_bytes": 536870912,
+    "combined_memory_swap_limit_bytes": 536870912,
+    "pids_limit": 64,
+    "cpus": 1,
+    "deadline_seconds": 45,
+    "kill_after_seconds": 5,
+    "writer_threads": 1,
+    "writer_memory_budget_bytes": 15000000,
+    "selected_linux_packages": 109,
+    "command": "timeout --kill-after=5s 45s target/tantivy-probe/debug/pg-qdrant-tantivy-feasibility"
+  },
+  "observed_report": {
+    "cases": [
+      {
+        "case": "fuzzy_and_identifier",
+        "distance_3": "rejected_at_query_execution",
+        "edit_distances": [
+          0,
+          1,
+          2
+        ],
+        "keyword_equality_case_sensitive": true,
+        "passed": true,
+        "production_identifier_policy": false,
+        "transposition_costs_distinguished": true,
+        "whole_token_and_prefix_distinguished": true
+      },
+      {
+        "authorization_security_proven": false,
+        "case": "fuzzy_budget_boundary",
+        "distinct_matching_fixture_terms": 40,
+        "enumeration_work_measured": false,
+        "matched_documents": 40,
+        "native_expansion_cap": null,
+        "native_fuzzy_score": 1.0,
+        "passed": true,
+        "production_fuzzy_budget_satisfied": false,
+        "public_dictionary_bridge": {
+          "diary_expansions": [
+            "dairy",
+            "diary"
+          ],
+          "match_set_equivalence": true,
+          "maximum_returned_terms": 32,
+          "overflow": "error_without_partial_results",
+          "ranking_equivalence": false
+        },
+        "tenant_a_matches": 20,
+        "top_docs_limit": 1
+      },
+      {
+        "case": "phrase_and_parser",
+        "explicit_conjunction": "AND",
+        "multi_value_phrase_not_matched_at_slop_0": true,
+        "parser_default": "OR",
+        "passed": true,
+        "production_array_boundary_satisfied": false,
+        "project_query_grammar_implemented": false,
+        "slop_0_ids": [
+          1,
+          4
+        ],
+        "slop_1_crosses_repeated_field_values": true,
+        "slop_1_ids": [
+          1,
+          2,
+          4,
+          9
+        ],
+        "slop_2_admits_reversal": true,
+        "slop_2_ids": [
+          1,
+          2,
+          3,
+          4,
+          9
+        ],
+        "tenant_filtered_phrase_ids": [
+          1
+        ],
+        "unknown_field_and_malformed_quote": "rejected"
+      },
+      {
+        "case": "source_snippet_boundaries",
+        "chinese_segmentation_parity": false,
+        "fragment_utf8_byte_range": [
+          33,
+          41
+        ],
+        "fuzzy_highlights": [],
+        "fuzzy_match_ids": [
+          5,
+          6
+        ],
+        "fuzzy_visited_terms": 0,
+        "literal_fragment": "ＣＡＦÉ café café <tag> & recovery",
+        "literal_html_escaped": true,
+        "original_array_element_identity": null,
+        "passed": true,
+        "production_fuzzy_highlighting": false,
+        "repeated_values_joined": "transaction recovery",
+        "source_offset_mapping_for_general_fragments": false
+      },
+      {
+        "case": "replacement_and_reader_boundary",
+        "commit_does_not_reload_manual_reader": true,
+        "crash_recovery_verified": false,
+        "old_searcher_pins_previous_view": true,
+        "passed": true,
+        "postgres_or_dual_engine_transaction": false,
+        "repeated_delete_add_live_source_ids": 1,
+        "writer_rollback_retains_committed_replacement": true
+      }
+    ],
+    "combined_edge_pg_build_verified": false,
+    "core_dependency_adopted": false,
+    "default_features": false,
+    "f13_f20_completed": false,
+    "features": [
+      "mmap",
+      "lz4-compression"
+    ],
+    "fixture_kind": "small_synthetic_semantic_controls",
+    "held_out_relevance_evaluation": false,
+    "kind": "isolated_tantivy_public_api_probe",
+    "production_authorization": false,
+    "schema_version": 1,
+    "status": "passed",
+    "tantivy_version": "0.26.2",
+    "writer_memory_budget_bytes": 15000000,
+    "writer_threads": 1
+  },
+  "interpretation": [
+    "The five small synthetic semantic cases are not a held-out relevance or performance evaluation.",
+    "Native fuzzy TopDocs output does not bound term enumeration. The public bridge caps returned terms, not all work or tenant-vocabulary exposure.",
+    "Proximity can cross repeated values; fuzzy matches supply no query terms for native snippet highlighting. Product source offsets and array semantics remain work.",
+    "Tantivy commit/manual-reader visibility is not a PostgreSQL or dual-engine transaction.",
+    "A separate container workspace build does not link Tantivy into the core Edge/pgrx dependency graph. Adoption and all F13-F20 product gates remain open."
+  ],
+  "reproduction": {
+    "source_revision": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+    "build": "docker build --file Dockerfile.p0-lexical --tag pg-qdrant-p0-lexical .",
+    "prerequisite": "Build the exact Dockerfile.p0 base first, as in the identified workflow.",
+    "workflow": "https://github.com/JamesbbBriz/pg_qdrant/blob/57c58fcee51efb0067f04b03ffb44e300f76ce72/.github/workflows/p0.yml"
+  },
+  "normalization": {
+    "script_sha256": "ae1116133381f88497b3d8a38ef88fd7c0d251ddaffd9d877602cf59c5b7ff25",
+    "network_or_engine_execution": false,
+    "method": "Verify actual artifact digest, exact semantic assertions, full log agreement and git-show source hashes; preserve every reported limitation."
+  }
+}

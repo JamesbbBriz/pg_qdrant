@@ -1,41 +1,46 @@
 # P0 feasibility checkpoint
 
-Observed: **2026-10-08**. **P0 remains in progress**, with a conditional go for
-Rust/pgrx and the same-package managed helper. The latest recorded complete CI
-passed its diagnostic and fault assertions. Current-source/native/CPU regression
-remains a distinct gate under the accepted conditional decision. No source-indexing product or
-release is declared.
+Observed: **2026-10-08**. **P0 feasibility passed** at implementation head
+`57c58fcee51efb0067f04b03ffb44e300f76ce72`, CI run `37743504259` (CI8).
+The accepted implementation route is Rust/pgrx with a managed Edge helper in
+the same installation package. This closes the architecture investigation and
+allows P1 product implementation; it does not declare a source-indexing product,
+a supported release or completion of all capabilities. The
+[composite decision](evidence/p0-feasibility.json) and
+[ADR 0004](adr/0004-p0-go-no-go.md) reconcile all seven P0 gates.
 
 ## Latest recorded execution
 
-[CI7 evidence](evidence/p0-source-capacity-oom-ci.json) records run
-[37736655218](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37736655218),
-job `113177607334`, implementation head
-`88885db08d17c074af097ddca14bc85d6978980c` and actual pull-request merge checkout
-`18282abe660b4a3a59a8222f072c5b1cd069a2ae`. Both have tree
-`7d02f181cc1c6ca8d14d5b82c03cc74d4a349265`. The workflow **passed**; no regression
-step was skipped. The downloaded 90,589-byte artifact's SHA-256 and all 53
-members were independently checked, including the inner OOM and SQL reports.
+[CI8 evidence](evidence/p0-current-ci.json) records run
+[37743504259](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259),
+job `113199465881`, implementation head
+`57c58fcee51efb0067f04b03ffb44e300f76ce72` and actual pull-request merge checkout
+`716cb2871d325dfd629a40177c9cfee613af4cfc`. Both have tree
+`8b1d6d863be52229f8b15b49ad0b58b96b28608f`. All workflow steps passed. The
+downloaded 605,977-byte artifact's SHA-256 and all 100 members were verified,
+including the inner SQL/OOM reports and the native and lexical artifacts.
 
 | Executed slice at that revision | Result | Evidence boundary |
 | --- | --- | --- |
-| Rust 1.96.0, Edge 0.8.0, pgrx/cargo-pgrx 0.19.3, PostgreSQL 17.11 | Four images built and installed | Diagnostic Linux x86_64 environment; not a release matrix |
-| Ordinary engine suite | 23 passed, zero failed or ignored | Synthetic engine correctness, not relevance or performance |
-| Child bookkeeping / Python diagnostics | 2 / 21 passed | Separate from SQL and positive native faults |
+| Rust 1.96.0, Edge 0.8.0, pgrx/cargo-pgrx 0.19.3, PostgreSQL 17.11 | Four profiles built, installed and executed | Restricted Linux x86_64/native CPU baseline; not a release matrix |
+| Ordinary engine suite | 27 passed, zero failed or ignored | Includes two CPU-policy tests; synthetic correctness, not relevance or performance |
+| Child bookkeeping / Python diagnostics | 2 / 38 passed | Separate from SQL and positive native faults |
 | Private OOM guard tests | Three distinct tests passed in both private builds | Guard tests alone cannot prove OOM |
-| Direct-worker normal/private SQL | 19 / 21 passed | Expected collateral is part of the fault characterization |
-| Managed-helper normal/private SQL | 19 / 25 passed | Includes original six source-identity/recheck groups in each profile |
+| Direct-worker normal/private SQL | 20 / 22 passed | Expected collateral remains a negative topology finding |
+| Managed-helper normal/private SQL | 20 / 26 passed | Seven source/identity groups in each of all four profiles |
 | Helper normal/private pipe protocol | 7 / 8 passed | Exact owned process identities and lifecycle checks |
+| Native package/CPU evidence | 246 package/version entries, seven PGDG archive hashes, 20 required CPU features verified in each profile | Scoped native-object/ELF and declared-license metadata; not complete redistribution clearance |
+| Isolated Tantivy 0.26.2 experiment | Five semantic cases passed in its separate image | No core dependency adoption or completed F13–F20 product contract |
 | Vector/keyword ENOSPC, 32 MiB | Passed | Eight rows/four representations; no mutable text indexes |
-| Full-text ENOSPC and separate clean reopen, exactly 384 MiB | Both passed | Already-flushed fixture, full representation/phrase/prefix/MaxSim checks |
+| Full-text ENOSPC and separate clean reopen, exactly 384 MiB | Both passed | Already-flushed fixture, representation/phrase/prefix/MaxSim checks |
 | Full-text refusal, exactly 128 MiB | Passed before writes | No Edge open, ENOSPC or recovery claim at 128 MiB |
-| Kernel OOM, two fresh 768 MiB/no-swap containers | Both attribution/behavior characterizations passed | Direct-worker containment failed; helper containment passed for this experiment |
+| Kernel OOM, two fresh 768 MiB/no-swap containers | Both strict attribution/behavior characterizations passed | Direct-worker containment failed; helper containment passed for this controlled experiment |
 
 SQL counts include repeated common groups. The 16-group engine smoke nested in
 SQL is one containing assertion group; counts cannot be added as completed
 capabilities. The 128 MiB historical failures below remain failures.
 
-## Later local source checkpoint
+## Preceding local source checkpoints
 
 The [method/input/rebuild record](evidence/p0-method-input-rebuild-local.json)
 binds exact source hashes for six successful commands: engine compile, the full
@@ -56,8 +61,9 @@ binds exact source hashes for six successful commands: engine compile, the full
   automatic replay is used. [Reconstruction evidence](evidence/p0-dirty-rebuild-local.json).
 - **PostgreSQL cleanup:** a seventh test waits inside SPI planning on a secondary
   index, cancels the query, checks guard release and reuses the same backend.
-  The built-in heap-only source restriction also compiles. These changes are
-  absent from CI7 and still require their own SQL execution.
+  At that local checkpoint the built-in heap-only restriction and this test
+  were compile-only additions absent from CI7. CI8 now executes that source and
+  the new cancellation assertion; no adversarial custom-AM fixture is claimed.
 
 An independent [Tantivy 0.26.2 workspace](../experiments/tantivy-probe/README.md)
 passes five local primitive experiments with its own locked graph. Native fuzzy
@@ -66,7 +72,8 @@ bound returned expansions but does not cap all FST work. Phrase slop can cross
 repeated field values or admit reversal. Native fuzzy queries provide no snippet
 terms, while repeated-value snippets lose value identity. These observations
 preserve the product requirements and guide the lexical decision; they do not
-adopt a second engine or complete F13–F20. Its added CI execution is pending.
+adopt a second engine or complete F13–F20. Its five cases also passed in the
+separate [CI8 lexical image](evidence/p0-tantivy-ci.json).
 
 The subsequent [CPU-integrated local record](evidence/p0-cpu-native-local.json)
 checks 33 exact source inputs and passes **27 ordinary engine tests**, all four
@@ -83,8 +90,12 @@ The [native package freeze](p0-native-build.md) fixes the Ubuntu snapshot and
 seven PGDG archives and requires all 246 installed package/version entries to
 match. Every image is configured to retain the [native build report](p0-native-inventory.md),
 including tool and ELF hashes, actual libclang diagnostics when present,
-package copyright hashes and explicit unparsed license gaps. These hooks and
-the current source still need their identified clean CI run.
+package copyright hashes and explicit unparsed license gaps. The
+[CI8 native record](evidence/p0-native-ci.json) now verifies these inputs
+against all four clean images. The exact loaded libclang path remains unobserved
+and 121 package license files are not parsed into structured declarations; their
+metadata and gaps remain explicit. These are not completed distribution notices
+or a fully resolved transitive link/license clearance.
 
 ## Foundation and product boundary
 
@@ -126,19 +137,22 @@ bit evidence, error recovery and restricted access. JSONB numeric normalization
 is not claimed to retain negative-zero sign. Backend serialization is not a
 frozen public model/vector contract or cross-process transport benchmark.
 
-The [source-recheck probe](p0-source-recheck.md) passes its original six groups
-in all CI7 profiles, including active-statement/repeatable-read visibility,
+The [source-recheck probe](p0-source-recheck.md) passes all seven groups
+in every CI8 profile, including active-statement/repeatable-read visibility,
 strict primary-key/source validation, RLS refusal, quoted/bound input,
 namespace/DDL guards and pre-SPI cancellation cleanup. Fixture revisions,
 incarnations and fingerprints are compared correctly; production identities,
 capture and SELECT/tenant authorization do not exist yet. The superuser-only
 boundary, pre-body relation conversion and broad conditional namespace lock
-are explicit prototype restrictions. Later heap and inside-SPI checks remain
-separately pending.
+are explicit prototype restrictions. The tested source contains the heap-only
+restriction. The observed secondary-index wait inside SPI planning passes; after
+cancellation, the namespace guard is released and the same backend performs a
+matched recheck. No custom-AM adversarial runtime fixture is claimed. This does
+not exercise every possible executor error.
 
 ## Disk and OOM interpretation
 
-CI7's two full-text reopens use independent exact 402,653,184-byte mounts. Each
+CI8's two full-text reopens use independent exact 402,653,184-byte mounts. Each
 fixture rises from 34,963,456 allocated bytes before reopen to 220,508,160 after,
 leaving 182,145,024 bytes. Both preserve all eight rows/four representations and
 actual phrase/token-prefix/MaxSim behavior. The fault profile additionally
@@ -156,7 +170,7 @@ and mapping RSS remain distinct. [Capacity contract](p0-full-text-capacity.md).
 
 The [OOM evidence](p0-oom-experiment.md) has an exact mapped host PID and matching
 kernel `oom_memcg` selector/kill record for each container. Direct/helper local
-counter deltas are respectively `max=219/224`, `oom=1`, `oom_kill=1`, with no
+counter deltas are respectively `max=204/203`, `oom=1`, `oom_kill=1`, with no
 group kill. Direct faulting and companion clients exit 2; helper faulting client
 exits 1 and companion exits 0. No supervisor, client or external kill intervenes.
 Both replacements pass 16 engine groups without a second OOM kill. The helper's
@@ -194,22 +208,26 @@ findings:
 
 ## Phase exit assessment
 
-| P0 exit | Current evidence | Finite remaining P0 work |
-| --- | --- | --- |
-| P0-BUILD | Real graph, exact Rust/tools/PG; CI7 four-profile build/install/runtime | Verify frozen native package/CPU inputs and latest integrated source in clean CI; record license scope |
-| P0-API | Full public type/variant mapping; 44 method declarations, 43 concrete compiled calls and explicit exclusion | Current-source CI and evidence reconciliation; runtime/release levels stay separately scoped |
-| P0-ENGINE | Required BM25/dense/sparse/MaxSim/prefetch/fusion/filter/group paths; 25 later local tests and negative matrix | Run added tests in fixed clean environment; accept mandatory adapter validation policy |
-| P0-LEXICAL | Fixed Edge semantics and standalone locked Tantivy primitive experiments expose concrete gaps | Accept necessary lexical path and costed follow-up; run separate experiment in clean CI |
-| P0-PG | CI7 owner/IPC/concurrency/cancellation/formats and original six source-recheck groups | Execute later inside-SPI cleanup and heap restriction; no requirement to finish P1 here |
-| P0-FAULT | Scoped native containment/OOM; flushed SIGKILL; ENOSPC and full-text clean controls; local dirty-refusal/full-source reconstruction | Verify reconstruction fixture in clean CI; accept fail-closed recovery and resource limitations |
-| P0-DECISION | Managed helper supported; direct engine-in-worker default rejected | Review conditional go, retained risks and module/critical-path allocations |
+The [composite source-bound decision](evidence/p0-feasibility.json) records the
+following outcomes without changing the original acceptance rows:
 
-**No complete P0 exit is declared at this checkpoint.** The
-[conditional decision](adr/0004-p0-go-no-go.md) and [effort model](p0-effort.md)
-separate feasibility blockers from production work. Transactional outbox/ACK
-crash cuts, source authorization, production memory/WAL admission and rotation,
-dual-engine consistency, held-out retrieval quality and platform/upgrade tests
-remain required P1–P5 deliverables; CI7 cannot establish them.
+| P0 exit | CI8 evidence and accepted decision | Work retained after feasibility |
+| --- | --- | --- |
+| P0-BUILD — passed | Locked core graph and four clean installed/runtime profiles; exact native packages, CPU admission and scoped object/ELF/license metadata | Complete distribution notices, supported packages, broader platform/CPU matrix and upgrade/rollback |
+| P0-API — passed | Full public type/variant mapping; 44 method declarations, 43 concrete compiled calls and explicit exclusion | Runtime argument combinations, stable project adapters and release support remain separately scoped |
+| P0-ENGINE — passed | 27 ordinary tests including required BM25/dense/sparse/MaxSim/prefetch/fusion/filter/group paths and negative-input characterization | Product validation, permissions, relevance/latency budgets and cross-capability integration |
+| P0-LEXICAL — passed | Fixed Edge lexical primitives/gaps and five isolated Tantivy cases; accepted gap strategy and costed pre-Alpha adoption gate | Backend adoption/quality decision before Alpha; all F13–F20 delivery and any dual-engine lifecycle work |
+| P0-PG — passed | Four SQL profiles, two-session ownership, cancellation/queues, formats and seven source groups including inside-SPI cleanup | Production authorization, persistent identities, capture/backfill, exact tickets and user-facing API |
+| P0-FAULT — passed as characterization | Native/direct/helper faults, exact kernel OOM attribution, explicit-flush SIGKILL, scoped ENOSPC/corruption and dirty-refusal/source reconstruction | PG/Edge ACK crash cuts, power loss, live generation recovery, production memory/storage admission and rotation |
+| P0-DECISION — passed | [ADR 0004](adr/0004-p0-go-no-go.md) accepts the packaged helper, conservative recovery fence and [costed module/critical path](p0-effort.md) | Reopen the decision when its measured limits or future correctness gates fail |
+
+**P0 feasibility is complete for this tested revision and restricted baseline.**
+No individual smoke or fault report alone grants phase exit; raw records that
+retain `p0_exit_passed: false` keep that narrower meaning. Negative direct-worker
+containment and malformed-input findings are accepted design constraints, not
+successful production behavior. The scoped P0 integration deliverables I-01 and
+I-03 can close; all 54 capability scopes and the remaining work in P1–P5 stay
+open. The 70 work items and 45 acceptance rows are retained in full.
 
 ## Retained historical outcomes
 
@@ -228,10 +246,11 @@ into a pass. Every record retains source identity, commands, outcomes and limits
 
 ## Next implementation dependency
 
-The immediate P0 path is fixed native/CPU build input, the latest integrated CI,
-and the costed architecture/lexical decision. Once those exit conditions pass,
-P1 implements stable identity/incarnation, same-transaction persistent capture,
-consistent backfill/catch-up, idempotent revision decisions, explicit-flush ACK
-and fixed committed-event-set waits. P2 then connects text/balanced/precision,
-permissions and result contracts to that source loop. All formal scope remains
-in the work ledger; an investigation budget cannot substitute for acceptance.
+The next implementation stage, P1, must add stable identity/incarnation,
+same-transaction persistent capture, consistent backfill/catch-up and idempotent
+revision decisions,
+explicit-flush ACK and fixed committed-event-set waits. P2 connects
+text/balanced/precision, permissions and result contracts to that source loop.
+Optional M0–M2 design notes remain proposals, not implemented milestones or a
+replacement for the P1–P5 acceptance gates. All formal scope remains in the
+work ledger; the passed investigation is not completion of the product.

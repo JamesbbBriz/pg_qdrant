@@ -1,6 +1,6 @@
 # Capability coverage contract
 
-Status: formal product scope with P0 probes in progress. This document maps the intended embedded retrieval surface to dependencies, extension work, and acceptance conditions. The repository contains private feasibility SQL functions and tests; it does not yet provide the source-table indexing/search product or any release-supported capability.
+Status: formal product scope with the selected P0 feasibility baseline verified. The [P0 decision](evidence/p0-feasibility.json) accepts an implementation route; it does not complete these capability contracts. This document maps the intended embedded retrieval surface to dependencies, extension work, and acceptance conditions. The repository contains private feasibility SQL functions and tests; it does not yet provide the source-table indexing/search product or any release-supported capability.
 
 Baseline: [dependency versions and upgrade policy](dependencies.md). Public API/source inspection refers to Qdrant Edge `0.8.0`; rolling Qdrant Server documentation is supplementary, not a replacement for that version's embedded API.
 
@@ -9,6 +9,8 @@ Baseline: [dependency versions and upgrade policy](dependencies.md). Public API/
 Each capability ID must acquire: input/configuration contract, dependency/API mapping, owner, SQL exposure or managed internal use, budgets, authorization semantics, compile probe, runtime acceptance test, example, and upgrade/rebuild classification.
 
 Evidence progresses through source/API-reviewed, compile-verified, engine-runtime-verified, SQL-integration-verified, and release-supported. Product implementation remains pending. Public API compile sentinels and synthetic runtime probes are recorded in the [P0 inventory](../crates/edge-probe/README.md); their scope is narrower than full product acceptance. Source review is not implementation evidence. Every ID has a detailed owner, contract and acceptance entry in the [work ledger](work-items.json).
+
+The [current CI record](evidence/p0-current-ci.json) binds 27 named normal engine tests, four SQL profiles with seven source groups each, and the bounded fault experiments to head `57c58fc`. Its [native/CPU evidence](evidence/p0-native-ci.json) has a restricted platform scope. The registry remains planned; fixture evidence does not imply full capability acceptance.
 
 The [fixed-version shard method audit](p0-edge-methods.md) maps 44 declarations
 on four selected public shard/read surfaces. Its 43 concrete call bodies are
@@ -69,7 +71,7 @@ The following are product requirements, not verified native Edge features. Evalu
 Fuzzy matching, synonyms, or prefix tokenization alone do not establish Meilisearch-equivalent behavior. Expanded sparse terms do not establish where a word occurred in source text; semantic hits must not receive invented lexical highlights.
 
 The [standalone Tantivy 0.26.2 experiment](../experiments/tantivy-probe/README.md)
-has a separate locked dependency graph and [five local semantic observations](evidence/p0-tantivy-local.json).
+has a separate locked dependency graph. Its [five CI semantic cases](evidence/p0-tantivy-ci.json) repeat the [local observations](evidence/p0-tantivy-local.json) on the identified current build.
 It exercises fuzzy matching and returned-expansion rejection, phrase/slop and
 parser behavior, literal snippets, and writer/reader visibility. These are
 candidate-engine runtime checks. Tantivy is not linked into the extension or
@@ -113,8 +115,8 @@ unimplemented.
 
 Evidence: [vector concepts](https://qdrant.tech/documentation/manage-data/vectors/), [quantization](https://qdrant.tech/documentation/manage-data/quantization/), [Edge configuration](https://qdrant.tech/documentation/edge/edge-api/configuration/). This inventory is a review scope; it does not promise all listed representations or storage combinations are valid in Edge `0.8.0`.
 
-The [17-case engine input characterization](evidence/p0-negative-inputs-local.json)
-observes typed errors for missing vector names and wrong dense/MaxSim widths,
+The [17-case engine input characterization](evidence/p0-negative-inputs-local.json),
+whose named harness also passes in [current CI](evidence/p0-current-ci.json), observes typed errors for missing vector names and wrong dense/MaxSim widths,
 and checked-constructor errors for ragged tokens and malformed/duplicate sparse
 indices. It also records acceptance of nonfinite values, nonfinite scores or
 empty results, and an actual caught Rust panic after a public sparse struct
@@ -177,7 +179,8 @@ justify READY; exact-event PostgreSQL ACK after serialized explicit flush,
 unclean-artifact preservation, reconstruction and WAL-growth handling remain
 required. These are source-reviewed boundaries, not completed SQL behavior.
 
-The [dirty-generation experiment](evidence/p0-dirty-rebuild-local.json) adds a
+The [dirty-generation experiment](evidence/p0-dirty-rebuild-local.json), also
+executed by the named harness in [current CI](evidence/p0-current-ci.json), adds a
 narrow controller-policy observation for L01/L04/L05/L07. After a known applied
 mutation and before an explicit post-mutation flush, an owned child is killed.
 The test controller refuses to reopen that dirty generation, preserves its
@@ -192,9 +195,12 @@ machine-loss durability.
 The [CI6 record](evidence/p0-capacity-and-sql-ci.json) adds diagnostic SQL evidence
 for L08 array conversion and L10 supervisor/fence recovery. The
 [CI7 record](evidence/p0-source-capacity-oom-ci.json) executes the original six
-superuser-only [identity/recheck groups](p0-source-recheck.md). Later validation
-of the source table's heap access method and inside-SPI cancellation changes
-have separate runtime gates. These diagnostics do not complete L05 identity allocation, L09 product
+superuser-only [identity/recheck groups](p0-source-recheck.md). The [current CI
+record](evidence/p0-current-ci.json) passes all seven groups in each of the four
+SQL profiles, including cancellation during SPI planning, namespace-guard
+cleanup and a matched retry in the same backend. The tested source includes
+the heap-only restriction; this does not claim an adversarial custom-AM runtime
+case. These diagnostics do not complete L05 identity allocation, L09 product
 permissions/RLS or any product capability. The full 54-ID registry remains open.
 
 ## Feature combinations and release gates

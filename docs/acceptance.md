@@ -1,14 +1,13 @@
 # Stage acceptance and release gates
 
-Status: required acceptance with source-bound diagnostic evidence. The latest
-recorded [CI7](evidence/p0-source-capacity-oom-ci.json) passed all four PostgreSQL
-profiles, bounded capacity experiments and the victim-attributed OOM comparison.
-[ADR 0004](adr/0004-p0-go-no-go.md) conditionally selects the packaged helper and
-source-rebuild route. The later source additions and revised native/CPU inputs
-still require a clean combined run; no complete P0 exit or release is declared.
-The [capability contract](capabilities.md), [work ledger](work-items.json)
+Status: **P0 feasibility passed** at head `57c58fcee51efb0067f04b03ffb44e300f76ce72`,
+[CI8](evidence/p0-current-ci.json), run `37743504259`. The
+[composite decision](evidence/p0-feasibility.json) and
+[ADR 0004](adr/0004-p0-go-no-go.md) accept the packaged helper and conservative
+source-rebuild route. P1–P5 product and release gates remain open. The
+[capability contract](capabilities.md), [70-item work ledger](work-items.json)
 and [user journeys](user-journeys.md) retain every formal requirement; the
-[P0 checkpoint](p0-report.md) separates executed results from proposed product SQL.
+[P0 report](p0-report.md) separates feasibility evidence from production SQL.
 
 ## Evidence rules
 
@@ -40,16 +39,16 @@ P0 is a decision gate. A 5–10 engineering-day investigation budget is a stop-l
 | P0-FAULT | Disposable-cluster experiments for Rust panic, native process crash, SIGKILL, constrained-memory/OOM and disk-full/I/O failure; observe affected PostgreSQL sessions, instance restart, owner reacquisition, on-disk state and recovery |
 | P0-DECISION | Go/no-go ADR cites the preceding evidence, accepts a process topology, records unavailable capabilities and alternatives, and revises work/critical-path estimates |
 
-The conditional implementation choice and finite remaining P0 conditions are
-recorded in [ADR 0004](adr/0004-p0-go-no-go.md), with the
-[phase allocation](p0-effort.md). CI7 at head `88885db` passed SQL 19/21/19/25
-across direct-normal/private and helper-normal/private, plus 7/8 standalone
-helper checks. It ran 23 normal engine tests, two helper child tests and 21
-Python tests. The later [local checkpoint](evidence/p0-method-input-rebuild-local.json)
-passed 25 normal engine tests and four PostgreSQL compile profiles; this is
-separate from SQL execution. The current combined/container run, including the
-new inside-SPI assertion and native/CPU baseline, remains pending. Prior failed
-or skipped slices remain in the [historical records](p0-report.md#retained-historical-outcomes).
+The accepted implementation choice and completed seven-gate P0 reconciliation
+are recorded in [ADR 0004](adr/0004-p0-go-no-go.md), with the
+[phase allocation](p0-effort.md). CI8 passed SQL 20/22/20/26 across direct
+normal/private and helper normal/private, including all seven source groups;
+helper pipes 7/8; 27 ordinary engine, two child-bookkeeping and 38 Python tests.
+Native/CPU inputs and the separate lexical experiment have current clean-image
+evidence. The [composite record](evidence/p0-feasibility.json) makes the phase
+decision; individual raw experiments retain their own narrower scope. Prior
+failed or skipped slices remain in the
+[historical records](p0-report.md#retained-historical-outcomes).
 
 These distinctions remain mandatory:
 
@@ -68,17 +67,18 @@ These distinctions remain mandatory:
   update-only preview/no-write branches have narrow evidence. Store, Delete and
   empty bootstrap in the fixed update-only type remain unavailable; manifest
   inspection does not prove snapshot archive creation or restoration.
-- All three candidate-vector format groups and six tagged-identity/source
-  recheck groups passed in each CI7 SQL profile. A later heap-only guard and
-  seventh inside-SPI cancellation/retry group have compile evidence but await
-  their SQL run. These are superuser-only diagnostics, not a public API freeze
-  or a production source SELECT/tenant/RLS proof.
+- All three candidate-vector format groups and seven tagged-identity/source
+  recheck groups pass in every CI8 SQL profile, including observed inside-SPI
+  cancellation/retry. The tested source has a heap-only restriction; a custom-AM
+  adversarial fixture is not claimed. These are superuser-only
+  diagnostics, not a public API freeze or a production source SELECT/tenant/RLS
+  proof. Planning cancellation does not cover every executor error.
 - A positive disk gate needs a dedicated bounded filesystem, actual errno 28,
   retained child status, configuration observations, cleanup, retry, explicit
   flush and successful reopen/query assertions. `not_run`, a crash or a timeout
   cannot pass it. The narrow 32 MiB vector/keyword pass excludes mutable text
   indexes. Both 128 MiB full-text fault and no-filler clean controls failed with
-  SIGBUS at reopen and exhausted the mount. Their evidence stays failed. CI7's
+  SIGBUS at reopen and exhausted the mount. Their evidence stays failed. CI8's
   separate exact 384 MiB full-text configuration-save/retry/flush/reopen and
   clean-reopen cases pass; its exact 128 MiB refusal makes no writes. These
   observations neither fix the upstream loader nor establish a general sizing
@@ -87,7 +87,7 @@ These distinctions remain mandatory:
 - OOM requires bounded fresh-container evidence and exact victim/limiting-cgroup
   attribution. Counter correlation or SIGKILL alone is insufficient. Safe
   negative tests, compile success and absent journal access do not pass the gate.
-  CI7 identifies the actual victims in two fresh 768 MiB/no-swap containers:
+  CI8 identifies the actual victims in two fresh 768 MiB/no-swap containers:
   direct-worker OOM terminates companion SQL; helper OOM preserves the supervisor
   and companion, then a replacement runs Edge. Both retain the committed marker.
   The selected victim score and container limit do not prove production memory
@@ -95,8 +95,8 @@ These distinctions remain mandatory:
 - The [durability ADR](adr/0003-edge-durability-and-recovery.md) records no
   logical WAL replay in the fixed load path and no public durable cursor or
   reclamation API. Update return is not durable ACK; load can repair/mutate
-  state. The later [dirty-rebuild experiment](evidence/p0-dirty-rebuild-local.json)
-  demonstrates controller refusal without opening the killed generation,
+  state. The [dirty-rebuild experiment](evidence/p0-dirty-rebuild-local.json),
+  now repeated in [CI8](evidence/p0-current-ci.json), demonstrates controller refusal without opening the killed generation,
   unchanged old-file hashes, and reconstruction from a separate complete fixture.
   It does not establish unflushed WAL survival, PostgreSQL ACK or live generation
   switching. Exact-event flush/ACK, persistent dirty state, production
@@ -106,13 +106,14 @@ These distinctions remain mandatory:
   records typed errors alongside accepted nonfinite/malformed inputs and a
   caught panic. It requires adapter validation; it is not a passing claim that
   Edge rejects every invalid request. The isolated
-  [Tantivy experiment](evidence/p0-tantivy-local.json) measures five primitive
+  [Tantivy experiment](evidence/p0-tantivy-ci.json) measures five primitive
   cases without adopting a second engine or completing F13–F20.
 
-All 54 capabilities, 70 work items and 45 acceptance rows remain. The finite P0
-conditions distinguish feasibility and the conditional architecture decision
-from production capture, authorization, recovery, resource policy and quality
-work in P1–P5. Future source or feature changes must earn new regression evidence.
+All 54 capabilities, 70 work items and 45 acceptance rows remain. The completed
+P0 feasibility decision closes only its scoped deliverables, including I-01 and
+I-03; production capture, authorization, recovery, resource policy and quality
+work in P1–P5 remain required. Future source or feature changes must earn new
+regression evidence.
 
 For full dependency-graph failures, record the exact missing package/compiler/API/native requirement and whether it is an environmental acquisition problem or a version incompatibility. Do not substitute qdrant-client, advertise an unbuilt dependency graph, or change pins without reviewing the [upgrade contract](dependencies.md).
 

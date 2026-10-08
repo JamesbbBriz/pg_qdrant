@@ -27,8 +27,10 @@ The [native freeze](p0-native-build.md) now fixes Ubuntu to snapshot
 `20261008T061600Z`, pins and verifies all seven PGDG archives, and compares the
 entire 246-entry installed inventory with the successful CI7 build. The base
 image digest, Rust, cargo-pgrx and core Cargo graph remain fixed. The new native
-configuration has signed-metadata and safe verifier evidence; its clean TLS/APT
-reinstall is still pending. Bit-identical compiler output is not claimed.
+configuration passed clean TLS/APT installation in all four CI8 diagnostic
+profiles. The [native evidence](evidence/p0-native-ci.json) binds the exact 246
+installed entries, seven archive pins, compiler/PG/ELF observations and CPU
+reports. Bit-identical compiler output and full license review are not claimed.
 
 ## Standalone engine
 
@@ -51,7 +53,8 @@ The method/input local locked checkpoint passes 25 normal harness tests, includi
 invalid-input characterization and unclean-generation refusal/reconstruction.
 The [method/input/rebuild record](evidence/p0-method-input-rebuild-local.json)
 binds its exact source and all four PG compile profiles. CI7 separately passed
-23 tests at its earlier source; private OOM guard tests have their own count.
+23 tests at its earlier source; CI8 passes 27 ordinary engine tests at `57c58fc`,
+including the two CPU policy tests. Private OOM guard tests have their own count.
 The engine coverage includes read-only
 loading and refresh with an explicitly test-supplied manifest, snapshot-manifest
 inspection, and update-only preview/no-write replay. Fixed Edge 0.8.0's
@@ -80,8 +83,9 @@ The separate `Dockerfile.p0-lexical` image compiles this binary after the core
 image succeeds. Its failure cannot skip the independent core SQL/fault paths.
 CI runs it as the ordinary user
 in a network-disabled 512 MiB container with one CPU, 64 PIDs and a 45-second
-execution deadline, then retains its JSON report. That added CI path is pending
-its first recorded run. The small fixture is not a held-out quality comparison,
+execution deadline, then retains its JSON report. All five cases passed in
+[CI8](evidence/p0-tantivy-ci.json), independently from the core image and SQL
+profiles. The small fixture is not a held-out quality comparison,
 a selected production lexical adapter or a completed license review.
 
 ## PostgreSQL prototype
@@ -135,14 +139,21 @@ Those results include a negative finding about direct-worker crash isolation.
 New code and additional profiles must earn their own run evidence before their
 verification status advances.
 
-The [latest recorded CI](evidence/p0-source-capacity-oom-ci.json), run 37736655218
-at `88885db`, passed all four image builds/installations and SQL 19/21/19/25,
-helper pipes 7/8, 23 normal engine tests, two child tests and 21 Python tests.
-All four disk/capacity profiles and both kernel-attributed OOM comparisons passed
-their stated assertions. Direct-worker OOM containment is a negative finding.
-The independently downloaded artifact digest and all 53 members were verified.
-Historical failures and later-source evidence remain separate in the
-[P0 report](p0-report.md). New code must earn its own validation.
+The [latest recorded CI](evidence/p0-current-ci.json), run
+[37743504259](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259),
+passed at implementation `57c58fcee51efb0067f04b03ffb44e300f76ce72`, merge
+`716cb2871d325dfd629a40177c9cfee613af4cfc`, tree
+`8b1d6d863be52229f8b15b49ad0b58b96b28608f`. All four images built/installed
+and SQL 20/22/20/26, helper pipes 7/8, 27 ordinary engine tests, two child tests
+and 38 Python tests passed. The private native OOM guard suite passed three
+tests in each private build. All four disk/capacity profiles and both
+kernel-attributed OOM comparisons passed their stated assertions. Direct-worker
+OOM containment remains a negative finding. The independent lexical image
+also passed its five scoped cases. The artifact ZIP digest and all 100 members
+were verified; [native/CPU evidence](evidence/p0-native-ci.json) separately
+records the frozen build inputs and their limits. Historical results, including
+CI7's earlier 53-member artifact, remain separate in the [P0 report](p0-report.md).
+New source or dependencies must earn their own validation.
 
 For intentionally destructive *disposable-cluster* experiments only:
 
@@ -277,10 +288,11 @@ limit, UID, process and cgroup isolation, one-shot ownership markers and resourc
 budgets before native allocation. It records the actual victim and limiting
 cgroup from available kernel evidence. It does not elevate privileges or turn
 missing attribution into success. The ordinary cluster and disk runners never
-invoke this allocator. CI7 produced exact kernel victim/cgroup records in both
-profiles: direct-worker death caused PostgreSQL collateral, while helper death
-preserved the supervisor and companion SQL. Both replacement engine smokes
-passed; no external, supervisor or client kill caused either OOM outcome.
+invoke this allocator. [CI8](evidence/p0-current-ci.json) repeated the earlier
+CI7 comparison with exact kernel victim/cgroup attribution in both profiles:
+direct-worker death caused PostgreSQL collateral, while helper death preserved
+the supervisor and companion SQL. Both replacement engine smokes passed; no
+external, supervisor or client kill caused either OOM outcome.
 Production memory isolation and unflushed-index recovery remain unverified.
 
 The [profile comparison](dependency-profiles.json) records exact manifests,
@@ -310,7 +322,8 @@ validator rejects a pgrx update without the matching cargo-pgrx tool change.
 The configuration becomes active only when present on the repository's default
 branch and enabled by GitHub. No automatic release or merge is configured.
 
-The P0 decision distinguishes feasibility from product implementation. Current
-source and native/CPU build verification are finite P0 gates; product transactions,
+The [P0 decision](evidence/p0-feasibility.json) distinguishes feasibility from
+product implementation. Current source and native/CPU build verification passed
+the finite CI8 gates for the recorded inputs; product transactions,
 source authorization, resource admission, lexical quality, index upgrades/rollback
 and clean release installation retain their P1–P5 owners in `work-items.json`.

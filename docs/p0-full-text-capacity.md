@@ -1,11 +1,13 @@
 # P0 full-text tmpfs capacity follow-up
 
-Status: all four bounded disk/capacity profiles passed in
-[CI7](evidence/p0-source-capacity-oom-ci.json), head `88885db`. Both independent
+Status: all four bounded disk/capacity profiles passed again in
+[CI8](evidence/p0-current-ci.json), head `57c58fc`, following the retained
+[CI7 result](evidence/p0-source-capacity-oom-ci.json). Both independent
 384 MiB full-text reopens passed, as did the exact 128 MiB zero-write refusal.
 The earlier [local record](evidence/p0-integrated-local.json) separately covers
-guard/wrapper tests. These results do not establish dirty-ingestion recovery,
-a production capacity recommendation or a complete P0 exit.
+guard/wrapper tests. These results do not establish dirty-ingestion recovery
+or a production capacity recommendation. The composite P0 decision is recorded
+separately in [ADR 0004](adr/0004-p0-go-no-go.md).
 
 The historical 128 MiB full-text runs remain failures. In CI6
 ([run 37732857051](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37732857051)),

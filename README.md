@@ -4,7 +4,7 @@
 
 Full-text, vector, and hybrid search over ordinary PostgreSQL tables, with optional local models and learning to rank.
 
-> **Early development:** P0 feasibility work is in progress. A buildable diagnostic extension and scoped engine/SQL experiments exist; there is no installable product release. Table indexing, the search APIs below, and optional model workflows remain planned. See the [P0 evidence and remaining gates](docs/p0-report.md).
+> **Early development:** P0 feasibility is verified for the recorded Linux/PostgreSQL 17 build. A buildable diagnostic extension and scoped engine/SQL experiments exist; there is no installable product release. Table indexing, the search APIs below, and optional model workflows remain planned. See the [P0 evidence and product gates](docs/p0-report.md).
 
 ## Why pg_qdrant?
 
@@ -65,7 +65,7 @@ Hybrid queries, native JSON requests, and optional model ranking use the same in
 
 The implementation uses **Rust + pgrx + Qdrant Edge**. Optional managed Rust model adapters remain a separate design track. The first target is self-hosted PostgreSQL 17 on Linux x86_64, subject to the explicit native-library and CPU baseline in the [build guide](docs/build.md).
 
-Recorded P0 CI has built and installed the diagnostic extension and exercised SQL-to-engine queries, cancellation, process faults, and bounded recovery experiments. These private diagnostic paths do not implement source-table indexing or the proposed product API. Current-source checks and release gates remain separate; the [P0 report](docs/p0-report.md) identifies exact tested revisions and limits.
+The [verified P0 run](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259) built and installed four diagnostic profiles and exercised SQL-to-engine queries, cancellation, process faults, and bounded recovery experiments. The selected implementation route uses a PostgreSQL supervisor and an Edge helper installed in the same package. These private diagnostic paths do not implement source-table indexing or the proposed product API; the [P0 report](docs/p0-report.md) identifies exact tested revisions and limits.
 
 The immediate priority is a working community extension: reliable indexing and core search, followed by optional local ranking. Supported capabilities and deployment environments will be published as they are validated.
 

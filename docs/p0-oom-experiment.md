@@ -1,7 +1,8 @@
 # P0 directed OOM comparison
 
-Status: both directed OOM comparisons passed their stated assertions in
-[CI7](evidence/p0-source-capacity-oom-ci.json), head `88885db`. Exact kernel
+Status: both directed OOM comparisons passed their stated assertions again in
+[CI8](evidence/p0-current-ci.json), head `57c58fc`, following the retained
+[CI7 result](evidence/p0-source-capacity-oom-ci.json). Exact kernel
 victim/cgroup records support the result; source and negative tests alone do not.
 Direct-worker containment failed as expected; the native helper preserved its
 PostgreSQL supervisor and companion session. This remains separate from ordinary

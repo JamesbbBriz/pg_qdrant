@@ -1,6 +1,12 @@
 # Isolated Tantivy feasibility probe
 
-Status: **five local semantic experiments passed; dependency adoption pending**.
+Status: **five semantic experiments passed locally and in the isolated CI8 container; dependency adoption pending**.
+
+The [current candidate evidence](../../docs/evidence/p0-tantivy-ci.json) binds
+the five named outcomes to head `57c58fc`, its independent locked build and
+archived report. The container uses a 512 MiB memory/no-swap limit, one CPU,
+64 PIDs, no network and a 45-second executable deadline. These are experiment
+limits, not complete fuzzy-work bounds or a production performance result.
 
 This separate Cargo workspace investigates the first candidate selected by
 [ADR 0002](../../docs/adr/0002-lexical-gap-strategy.md). It does not add Tantivy to
@@ -40,7 +46,7 @@ uses a complete-match assertion limit of 128 documents. These controls do not
 measure or cap total process RSS, mmap residency or all internal query work.
 The temporary data is deleted after the handles are released.
 
-## What actually passed
+## What passed locally and in CI8
 
 | Experiment | Observed boundary | Product work retained |
 | --- | --- | --- |

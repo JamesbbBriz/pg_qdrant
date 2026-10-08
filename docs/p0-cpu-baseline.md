@@ -1,8 +1,13 @@
 # P0 native CPU admission
 
-Status: conservative admission is implemented. The local preflight and two pure
-policy tests pass; the revised clean image and SQL/helper profiles require their
-own run. This is a restricted build baseline, not a processor benchmark or a
+Status: conservative admission and its scoped object audit are verified in all
+four clean CI8 image profiles at implementation
+`57c58fcee51efb0067f04b03ffb44e300f76ce72`, tree
+`8b1d6d863be52229f8b15b49ad0b58b96b28608f`, run
+[37743504259](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259).
+The [native reports](evidence/p0-native-ci.json) record actual host observations;
+[current CI evidence](evidence/p0-current-ci.json) separately records SQL/helper
+execution. This is a restricted build baseline, not a processor benchmark or a
 release platform matrix.
 
 ## Why the default Rust target is insufficient
@@ -87,6 +92,18 @@ or demonstrate an operating system with disabled AVX state. The local CPU
 preflight is an actual host observation. The [integrated local record](evidence/p0-cpu-native-local.json)
 passes 27 ordinary engine tests including those two policy tests, all four
 PostgreSQL compile profiles, both helper compile profiles and the actual
-local object audit. The
-[native package freeze](p0-native-build.md) and the current integrated CI remain
-separate requirements before closing P0-BUILD.
+local object audit. CI8 subsequently passed the current integrated native,
+engine, SQL and helper checks. Its four identical CPU reports admit all 20
+required features. The same GCC 13.3.0/objdump 2.42 build reports 1,152 decoded
+SSE-object instructions and 296 AVX2-object instructions, with no audited
+HLE/RTM instructions or AVX-512 register operands. The reported object hashes
+are identical across the four profiles:
+
+- SSE: `a7f199042280bc49f9776355f8e704de2b2986761c08c5b2b7ff57d5f614d7d4`.
+- AVX2: `3b4405cafff5cb03cc34c5ad92c1bae47b3347fe2e984e4cf1a85945b5ea6a4b`.
+
+These are build-tool measurements retained in [native evidence](evidence/p0-native-ci.json);
+the uploaded JSON does not include the original object bytes for independent
+rehashing. Unsupported-hardware execution, OS-disabled AVX, every dependency
+ISA and broader platform support remain outside the observed scope. The
+[native package freeze](p0-native-build.md) records the separate input closure.

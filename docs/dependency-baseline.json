@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "p0_ci7_passed_current_cpu_engine_compile_verified_native_and_current_ci_pending",
+  "status": "p0_ci8_current_source_native_cpu_verified_product_release_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -80,8 +80,10 @@
       "lz4-compression"
     ],
     "experiment_inventory": "../experiments/tantivy-probe/dependency-inventory.json",
-    "experiment_evidence": "evidence/p0-tantivy-local.json",
-    "experiment_status": "five_local_primitive_characterizations_passed_ci_pending"
+    "experiment_evidence": "evidence/p0-tantivy-ci.json",
+    "experiment_status": "five_isolated_ci_primitive_characterizations_passed_not_adopted",
+    "experiment_verified_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+    "experiment_ci_run_id": 37743504259
   },
   "mandatory_inference_dependencies": [],
   "mandatory_network_qdrant_client_dependencies": [],
@@ -101,10 +103,10 @@
     ],
     "fault_injection_default": false,
     "container_base": "ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
-    "native_package_lock_complete": false,
+    "native_package_lock_complete": true,
     "container_execution_verified": true,
-    "container_evidence": "evidence/p0-source-capacity-oom-ci.json",
-    "current_source_container_execution_verified": false,
+    "container_evidence": "evidence/p0-current-ci.json",
+    "current_source_container_execution_verified": true,
     "managed_helper_default": false,
     "prototype_profiles": [
       [
@@ -125,7 +127,7 @@
       ]
     ],
     "latest_failed_container_evidence": "evidence/p0-capacity-and-sql-ci.json",
-    "last_complete_four_profile_runtime_evidence": "evidence/p0-source-capacity-oom-ci.json",
+    "last_complete_four_profile_runtime_evidence": "evidence/p0-current-ci.json",
     "profile_resolution_evidence": "dependency-profiles.json",
     "profile_resolution_status": "locked_metadata_verified_runtime_separate",
     "private_fault_feature_forwarding": {
@@ -143,12 +145,12 @@
       },
       "default_enabled": false,
       "positive_oom_verified": true,
-      "positive_oom_evidence": "evidence/p0-source-capacity-oom-ci.json",
-      "positive_oom_source_commit": "88885db08d17c074af097ddca14bc85d6978980c",
+      "positive_oom_evidence": "evidence/p0-current-ci.json",
+      "positive_oom_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
       "production_memory_isolation_verified": false
     },
     "native_freeze_configuration": {
-      "status": "implemented_signed_metadata_and_safe_verifier_checked_clean_image_pending",
+      "status": "finite_inputs_clean_install_verified_four_ci_profiles",
       "ubuntu_snapshot": "20261008T061600Z",
       "postgres_repository": "https://apt-archive.postgresql.org/pub/repos/apt",
       "postgres_archive_manifest": "../packaging/native/pgdg-packages.json",
@@ -157,8 +159,17 @@
       "expected_installed_entries": 246,
       "expected_installed_inventory_sha256": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
       "source_evidence": "evidence/p0-native-source.json",
-      "clean_install_verified": false,
-      "complete_distribution_license_review": false
+      "clean_install_verified": true,
+      "complete_distribution_license_review": false,
+      "clean_install_evidence": "evidence/p0-native-ci.json",
+      "verified_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+      "verified_source_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+      "ci_run_id": 37743504259,
+      "lock_scope": "Digest-pinned base, fixed Ubuntu snapshot, seven verified PGDG archives and exact 246 installed package/version entries; no perpetual archive availability or bit-identical binary claim.",
+      "bit_identical_binary_reproducibility_verified": false,
+      "installed_copyright_files_hashed": 246,
+      "license_metadata_parsing_gaps": 121,
+      "packages_with_machine_readable_license_labels": 125
     },
     "cpu_admission": {
       "baseline": "edge-0.8.0-native-haswell-conservative-v1",
@@ -174,9 +185,30 @@
       "documentation": "p0-cpu-baseline.md",
       "source": "../crates/edge-probe/src/cpu.rs",
       "local_preflight_passed": true,
-      "clean_image_verified": false,
+      "clean_image_verified": true,
       "generic_x86_64_supported": false,
-      "equivalent_to_x86_64_v3": false
+      "equivalent_to_x86_64_v3": false,
+      "clean_image_evidence": "evidence/p0-native-ci.json",
+      "verified_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+      "verified_source_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+      "ci_run_id": 37743504259,
+      "all_four_profiles_admitted": true,
+      "complete_dependency_isa_proof": false,
+      "unsupported_hardware_execution_verified": false
+    },
+    "current_source_verified_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+    "current_source_verified_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+    "current_source_ci_run_id": 37743504259,
+    "native_build_observations": {
+      "evidence": "evidence/p0-native-ci.json",
+      "compiler_version": "13.3.0",
+      "linker_version": "GNU ld (GNU Binutils for Ubuntu) 2.42",
+      "bindgen_loaded_version": "Ubuntu clang version 19.1.1 (1ubuntu1~24.04.2)",
+      "selected_libclang_path": null,
+      "selected_libclang_status": "not_observed",
+      "resolved_transitive_link_closure_verified": false,
+      "measurement_scope": "CI build-tool reports contain original file hashes; downloaded JSON reports were independently hashed, not the absent original binaries, archives or copyright texts.",
+      "original_binary_archive_license_bytes_independently_rehashed": false
     }
   },
   "build_evidence": [
@@ -437,6 +469,46 @@
       "rust": "1.96.0",
       "evidence": "evidence/p0-cpu-native-local.json",
       "scope": "Exact source hashes pass local CPU admission, 27 ordinary engine tests (including two pure CPU policy tests), all four PostgreSQL compile profiles and both helper compile profiles. Actual local native objects pass the scoped HLE/RTM and AVX-512 audit. A mismatched historical saved compile log is retained but excluded; its verified fresh repeat passed. Revised clean native installation and current SQL/runtime remain pending."
+    },
+    {
+      "kind": "ci8_current_four_profile_runtime",
+      "status": "passed",
+      "rust": "1.96.0",
+      "verified_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+      "verified_source_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+      "ci_run_id": 37743504259,
+      "evidence": "evidence/p0-current-ci.json",
+      "scope": "All four frozen-input diagnostic images built and installed. 27 ordinary engine, two child, 38 Python, SQL 20/22/20/26, helper pipes 7/8, four disk/capacity cases and both exact kernel OOM comparisons passed. The three private allocator guard tests passed in each private build. Direct-worker containment remains a negative finding; production source indexing, authorization, atomicity and release support are not established."
+    },
+    {
+      "kind": "ci8_native_input_freeze",
+      "status": "passed",
+      "rust": "1.96.0",
+      "verified_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+      "verified_source_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+      "ci_run_id": 37743504259,
+      "evidence": "evidence/p0-native-ci.json",
+      "scope": "Clean TLS/bootstrap and authenticated frozen APT installation passed; every profile matches 246 installed package/version entries and seven exact PGDG archive pins. Tool/PG/ELF reports and all 246 copyright hashes were collected; 125 packages have parsed labels and 121 explicit parsing gaps remain. No bit-identical binaries, full loader closure, exact libclang path or distribution clearance."
+    },
+    {
+      "kind": "ci8_cpu_admission_and_objects",
+      "status": "passed",
+      "rust": "1.96.0",
+      "verified_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+      "verified_source_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+      "ci_run_id": 37743504259,
+      "evidence": "evidence/p0-native-ci.json",
+      "scope": "All four image profiles admit the 20 required usable features and report identical audited SSE/AVX2 object hashes under GCC 13.3.0/objdump 2.42. Scoped audit observes no HLE/RTM instructions or AVX-512 register operands; it is not complete dependency ISA or unsupported-hardware execution proof."
+    },
+    {
+      "kind": "ci8_isolated_tantivy_primitive_runtime",
+      "status": "passed",
+      "rust": "1.96.0",
+      "verified_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+      "verified_source_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+      "ci_run_id": 37743504259,
+      "evidence": "evidence/p0-tantivy-ci.json",
+      "scope": "Five isolated Tantivy 0.26.2 primitive cases passed in the separate 512 MiB, one-CPU, 64-PID, 45-second container. Independent 109-package locked graph remains outside the core dependency graph; fuzzy budgets, field/phrase/snippet behavior and quality/lifecycle limitations remain. No lexical adapter adoption or F13-F20 completion."
     }
   ],
   "project_license": {

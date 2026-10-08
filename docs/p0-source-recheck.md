@@ -1,9 +1,11 @@
 # P0 tagged identity and source visibility probe
 
-Status: the original six diagnostic groups passed in all four PostgreSQL profiles
-in [CI7](evidence/p0-source-capacity-oom-ci.json), head `88885db`. The later seventh
-inside-SPI cancellation group and built-in heap restriction compile but await
-their own SQL run. This experiment contributes evidence to L05, L08 and L09;
+Status: all seven diagnostic groups passed in all four PostgreSQL profiles in
+[CI8](evidence/p0-current-ci.json), head `57c58fc`. The source includes the
+built-in heap restriction, and the inside-SPI cancellation group verifies
+namespace-lock cleanup and a matched retry in the same backend. The earlier
+six-group [CI7 record](evidence/p0-source-capacity-oom-ci.json) is preserved.
+This experiment contributes evidence to L05, L08 and L09;
 none of those product capabilities is complete. It adds two diagnostic functions
 without implementing source capture, a point-ID registry, an asynchronous index,
 production authorization or a public SQL API.
@@ -39,8 +41,8 @@ DROP SCHEMA p0_fixture CASCADE;
 ```
 
 These examples target the additive private prototype and require its installation.
-The original fixture semantics have CI7 runtime evidence; later changes retain
-their separately stated validation boundary.
+The current seven-group runtime evidence is limited to these bounded diagnostic
+fixtures and their explicitly tested source definitions.
 All source data and versions above are fixture values supplied by the caller.
 
 ## Identity representation
@@ -140,8 +142,9 @@ extracting the qualified name, holds it through the source SELECT, and returns
 while holding the source lock. This is an experimental guard, **not a production
 locking recommendation**: it can conflict with unrelated schema DDL. Its Rust
 guard releases it on normal return/unwind; PostgreSQL transaction/subtransaction
-error cleanup provides a further ownership boundary. Actual error/cancellation
-cleanup assertions remain part of the pending SQL tests. PostgreSQL's ordinary
+error cleanup provides a further ownership boundary. The current SQL tests
+verify cleanup after caught extension errors and
+cancellation before SPI and during SPI planning. PostgreSQL's ordinary
 source SELECT can retain an additional relation lock until transaction end;
 that is distinct from the scoped catalog guard.
 
@@ -154,13 +157,13 @@ an XID, so it is deliberately not used for this contract. The intended semantics
 are the outer statement snapshot under READ COMMITTED and the transaction's
 established snapshot under REPEATABLE READ. The authored test assigns an XID
 before the READ COMMITTED statement to exercise this exact distinction. These
-snapshot outcomes have not yet been demonstrated by this prototype's SQL tests.
+snapshot outcomes pass in all four current diagnostic SQL profiles.
 
 Even a passing recheck cannot recover a correct row that the engine did not
 recall. It does not prove arbitrary historical MVCC top-k, transactionally
 synchronized Edge state or production permission enforcement.
 
-## Error contract and authored runtime gates
+## Error contract and runtime coverage
 
 | Failure | SQLSTATE |
 | --- | --- |
@@ -209,15 +212,13 @@ existing disposable-cluster harness:
 7. Default ACL denial and independent function-body superuser checks after
    explicit grants, including null input; no production authorization claim.
 
-These tests are authored and syntax-checked, not runtime-verified. The heap-AM
-restriction and seventh group are a follow-up to the local checkpoints below;
-neither compilation nor SQL execution of this follow-up has been performed.
-Explicit
-SQL cases for nondeterministic collations, custom operator classes, partition
-and inheritance rejection, malicious operator search paths, source-schema
-rename races and errors during the executor stage of SPI remain open. The new
-planning-stage cancellation is an authored experiment, not a general proof of
-cleanup after every PostgreSQL error.
+All seven groups pass in [CI8](evidence/p0-current-ci.json). The source includes
+the heap-AM restriction; a custom-AM adversarial runtime fixture is not claimed.
+Explicit SQL cases for nondeterministic collations, custom operator classes,
+partition and inheritance rejection, malicious operator search paths, source-schema
+rename races and errors during the executor stage of SPI remain open. The passing
+planning-stage cancellation is a specific native-error boundary, not a general
+proof of cleanup after every PostgreSQL error.
 
 ## Historical local checkpoint
 
@@ -236,8 +237,8 @@ Both exited zero. Normal schema generation linked the extension and found
 12 entities: two schemas, nine functions and the final privilege block.
 The two new signatures are `(bigint, uuid, text) -> jsonb` and
 `(regclass, text, jsonb) -> jsonb`, without STRICT or SECURITY DEFINER.
-The new SQL tests have not run in a PostgreSQL cluster. Neither compile success,
-source review nor schema generation closes the P0 visibility, cancellation,
+At that historical checkpoint, the new SQL tests had not run in a PostgreSQL
+cluster. Neither compile success, source review nor schema generation closes the P0 visibility, cancellation,
 permissions or error-cleanup runtime gates.
 
 [The local evidence record](evidence/p0-source-recheck-local.json) binds this
@@ -268,15 +269,17 @@ cancellation group.
 
 ## Latest execution boundary
 
-CI7 passed the original six groups in every direct/helper normal/private profile,
-including active-statement and repeatable-read visibility, strict source/RLS
-refusals, quoted identifiers and bound values, namespace/DDL guard behavior and
-cancellation before SPI execution. The local records above are preserved at their
-earlier source snapshots.
+[CI8](evidence/p0-current-ci.json) passes seven source groups in all four
+direct/helper normal/private profiles. Their complete SQL suites contain
+20/22/20/26 assertion groups respectively. The seventh source group observes
+an ungranted secondary-index lock while the generated SPI SELECT is planned,
+then catches cancellation, verifies namespace-guard release and requires a
+matched recheck in the same backend. Active-statement and repeatable-read
+visibility, source/RLS refusals, quoted and bound inputs, and the separate
+pre-SPI cancellation case also pass.
 
-The [later method/input/rebuild checkpoint](evidence/p0-method-input-rebuild-local.json)
-compiles all four profiles with the explicit heap-only rule and seventh
-inside-SPI cancellation assertion. That assertion deliberately waits on a
-secondary-index lock while the SPI query is planned, catches cancellation,
-checks namespace-guard cleanup and reuses the same backend. It requires the next
-SQL run and does not retrospectively add a seventh CI7 pass.
+The [method/input/rebuild checkpoint](evidence/p0-method-input-rebuild-local.json),
+original local records and six-group CI7 run remain historical evidence. The
+[P0 feasibility decision](evidence/p0-feasibility.json) does not turn these
+superuser-only fixtures into production source permissions, automatic
+incarnation allocation, transaction capture or a committed-change protocol.

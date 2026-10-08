@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "p0_in_progress_with_scoped_probe_evidence",
+  "status": "p0_feasibility_passed_product_implementation_pending",
   "capability_contract": "docs/capabilities.md",
   "dependency_contracts": [
     "docs/dependencies.md",
@@ -74,7 +74,7 @@
     ],
     "not_a_calendar_commitment": true,
     "aggregation": "Do not sum capability and integration ranges without allocating shared work and resolving conditional lexical/process choices.",
-    "reestimate_gate": "After P0, record module \u00d7 stage \u00d7 capability deliverable allocation, dependencies, assumptions, estimate range, actual evidence and revised critical path.",
+    "reestimate_gate": "After P0, record module × stage × capability deliverable allocation, dependencies, assumptions, estimate range, actual evidence and revised critical path.",
     "included_work": [
       "design",
       "implementation",
@@ -86,7 +86,7 @@
       "packaging",
       "upgrade and maintenance"
     ],
-    "reestimate_status": "partial_risk_review_after_scoped_helper_sql_fault_passes; final allocation waits for remaining memory/storage/persistence and lexical decisions",
+    "reestimate_status": "post_p0_module_stage_allocation_recorded_in_docs/p0-effort.md; low_confidence_judgment_not_measured_time",
     "evidence_adjustments": [
       {
         "finding": "The direct published engine compiles and executes initial retrieval paths.",
@@ -149,6 +149,12 @@
         "finding": "Fixed Edge load has no logical WAL replay; update return is not durable ACK and public durable-cursor/reclamation APIs were not found.",
         "effect": "L04/L05/I-09/I-14 include exact-event flush/ACK, dirty-state preservation, validated reconstruction, retained history or full rebuild, and bounded WAL growth. Integration remains unimplemented; no fork/internal decoder is adopted.",
         "evidence": "docs/evidence/p0-edge-durability-source.json"
+      },
+      {
+        "finding": "CI8 passed the frozen current engine, four SQL profiles, actual native/CPU inputs and controlled disk/kernel-OOM experiments; P0 feasibility is accepted.",
+        "effect": "I-01 and I-03 complete their P0-only deliverables. I-02 discovery and I-07 lexical adoption retain later product gates. Use the module allocation and critical path in docs/p0-effort.md; do not sum historical overlapping ranges.",
+        "source": "docs/evidence/p0-feasibility.json",
+        "code_revision": "57c58fcee51efb0067f04b03ffb44e300f76ce72"
       }
     ]
   },
@@ -6463,17 +6469,17 @@
         "diagnostic_sql_runtime_verified": true,
         "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed",
         "direct_worker_production_containment": "failed",
         "helper_postgresql_containment": "passed_named_native_failures",
         "helper_comparison_required": true,
         "helper_comparison_scoped_result": "passed",
         "preferred_topology_candidate": "managed_helper",
-        "forced_postgresql_supervisor_sigkill_verified": false,
-        "kernel_oom_runtime_verified": false,
+        "forced_postgresql_supervisor_sigkill_verified": true,
+        "kernel_oom_runtime_verified": true,
         "helper_hard_stop_runtime_verified": true,
         "helper_supervisor_sigterm_runtime_verified": true,
         "helper_restart_exhaustion_runtime_verified": true,
@@ -6988,15 +6994,16 @@
         "sql_product_integration_verified": false,
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
-        "positive_enospc_experiment_status": "failed",
-        "positive_enospc_runtime_verified": false,
-        "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true,
-        "latest_scoped_evidence": "docs/evidence/p0-dirty-rebuild-local.json",
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
-        "latest_ci_workflow_conclusion": "passed"
+        "positive_enospc_experiment_status": "passed_scoped_ci8_profiles",
+        "positive_enospc_runtime_verified": true,
+        "positive_enospc_child_exit_cause": "zero_current_native_exits; historical_failures_retained",
+        "positive_enospc_retry_required": false,
+        "latest_scoped_evidence": "docs/evidence/p0-current-ci.json",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+        "latest_ci_workflow_conclusion": "passed",
+        "positive_enospc_runtime_scope": "Already-flushed fixture configuration-save ENOSPC/retry/reopen on exact32MiB narrow and384MiB full-text mounts; not production dirty-ingestion or partial-write recovery."
       }
     },
     {
@@ -7151,9 +7158,9 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed"
       }
     },
@@ -7409,9 +7416,9 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "latest_scoped_evidence": "docs/evidence/p0-dirty-rebuild-local.json",
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed"
       }
     },
@@ -7706,9 +7713,9 @@
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed",
         "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
       }
@@ -7979,9 +7986,9 @@
         "authorization_limit": "Actual diagnostic ACL and runtime-superuser checks pass; synthetic tenant filters and restricted diagnostics do not establish indexed-source SELECT/column/RLS safety.",
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed",
         "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
@@ -8385,23 +8392,24 @@
         "helper_comparison_required": true,
         "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed",
         "helper_comparison_scoped_result": "passed",
         "preferred_topology_candidate": "managed_helper",
-        "forced_postgresql_supervisor_sigkill_verified": false,
-        "kernel_oom_runtime_verified": false,
+        "forced_postgresql_supervisor_sigkill_verified": true,
+        "kernel_oom_runtime_verified": true,
         "helper_hard_stop_runtime_verified": true,
         "helper_supervisor_sigterm_runtime_verified": true,
         "helper_restart_exhaustion_runtime_verified": true,
         "native_query_cancellation": false,
-        "positive_enospc_experiment_status": "failed",
-        "positive_enospc_runtime_verified": false,
-        "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true,
-        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
+        "positive_enospc_experiment_status": "passed_scoped_ci8_profiles",
+        "positive_enospc_runtime_verified": true,
+        "positive_enospc_child_exit_cause": "zero_current_native_exits; historical_failures_retained",
+        "positive_enospc_retry_required": false,
+        "latest_scoped_evidence": "docs/evidence/p0-current-ci.json",
+        "positive_enospc_runtime_scope": "Already-flushed fixture configuration-save ENOSPC/retry/reopen on exact32MiB narrow and384MiB full-text mounts; not production dirty-ingestion or partial-write recovery."
       }
     },
     {
@@ -8672,10 +8680,10 @@
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed"
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+        "latest_ci_workflow_conclusion": "passed"
       }
     },
     {
@@ -8853,7 +8861,7 @@
       "title": "Reproducible dependency and build baseline",
       "phase": "P0",
       "owner": "build/engine",
-      "status": "partially_verified",
+      "status": "completed",
       "evidence": [
         {
           "observed_on": "2026-10-08",
@@ -9008,6 +9016,18 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "kind": "p0_composite_feasibility",
+          "status": "passed",
+          "source": "docs/evidence/p0-feasibility.json",
+          "code_revision": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+          "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+          "scope": "P0-BUILD accepted: locked combined/native/CPU baseline and actual inventories. Full distribution review remains I-12/P5.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Real manifests and Cargo.lock, exact compiler and matched pgrx tool, selected features, container/system libraries/PG headers/CPU inputs, actual dependency and license inventories.",
@@ -9030,7 +9050,7 @@
         "Failures and unsupported combinations are retained; no source-only or authored-test result is marked runtime-verified."
       ],
       "evidence_requirements": {
-        "status": "pending",
+        "status": "satisfied_for_p0_scope",
         "required": [
           "code_revision",
           "exact_build_features",
@@ -9041,7 +9061,7 @@
           "limits_and_failures"
         ]
       },
-      "full_acceptance_complete": false,
+      "full_acceptance_complete": true,
       "release_supported": false,
       "probe_progress": {
         "checkpoint": "docs/p0-report.md",
@@ -9051,12 +9071,14 @@
         "release_supported": false,
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed",
-        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
-      }
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "current_p0_evidence": "docs/evidence/p0-feasibility.json"
+      },
+      "completion_scope": "The stated P0-only integration deliverable, not its associated full product capabilities."
     },
     {
       "id": "I-02",
@@ -9209,6 +9231,18 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "kind": "p0_composite_feasibility",
+          "status": "passed",
+          "source": "docs/evidence/p0-feasibility.json",
+          "code_revision": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+          "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+          "scope": "P0 public API/call/absence inventory accepted. Index-aware product planner/capability discovery remains P2-DISCOVERY.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Every selected public query/match/vector/storage/payload/read/update/lifecycle variant maps to a formal ID or explicit scope exclusion; probes cover real invocations and negative unsupported types.",
@@ -9255,11 +9289,12 @@
         "release_supported": false,
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed",
-        "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+        "latest_ci_workflow_conclusion": "passed",
+        "latest_scoped_evidence": "docs/evidence/p0-current-ci.json",
+        "current_p0_evidence": "docs/evidence/p0-feasibility.json"
       }
     },
     {
@@ -9275,7 +9310,7 @@
       "title": "SQL owner and fault-domain decision",
       "phase": "P0",
       "owner": "worker/sql",
-      "status": "in_progress",
+      "status": "completed",
       "evidence": [
         {
           "observed_on": "2026-10-08",
@@ -9581,6 +9616,18 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "kind": "p0_composite_feasibility",
+          "status": "passed",
+          "source": "docs/evidence/p0-feasibility.json",
+          "code_revision": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+          "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+          "scope": "P0-PG/FAULT/DECISION accepted for diagnostics; select same-package managed helper. Production source, permission, persistence and helper lifecycle gates remain separate work.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Minimal loaded extension, owned IPC and two sessions plus panic/native crash/SIGKILL/constrained OOM/disk-full experiments; measured background-worker versus managed-helper go/no-go.",
@@ -9607,7 +9654,7 @@
         "Failures and unsupported combinations are retained; no source-only or authored-test result is marked runtime-verified."
       ],
       "evidence_requirements": {
-        "status": "pending",
+        "status": "satisfied_for_p0_scope",
         "required": [
           "code_revision",
           "exact_build_features",
@@ -9618,7 +9665,7 @@
           "limits_and_failures"
         ]
       },
-      "full_acceptance_complete": false,
+      "full_acceptance_complete": true,
       "release_supported": false,
       "probe_progress": {
         "checkpoint": "docs/p0-report.md",
@@ -9632,24 +9679,27 @@
         "release_supported": false,
         "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed",
         "helper_comparison_scoped_result": "passed",
         "preferred_topology_candidate": "managed_helper",
-        "forced_postgresql_supervisor_sigkill_verified": false,
-        "kernel_oom_runtime_verified": false,
+        "forced_postgresql_supervisor_sigkill_verified": true,
+        "kernel_oom_runtime_verified": true,
         "helper_hard_stop_runtime_verified": true,
         "helper_supervisor_sigterm_runtime_verified": true,
         "helper_restart_exhaustion_runtime_verified": true,
         "native_query_cancellation": false,
-        "positive_enospc_experiment_status": "failed",
-        "positive_enospc_runtime_verified": false,
-        "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true,
-        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
-      }
+        "positive_enospc_experiment_status": "passed_scoped_ci8_profiles",
+        "positive_enospc_runtime_verified": true,
+        "positive_enospc_child_exit_cause": "zero_current_native_exits; historical_failures_retained",
+        "positive_enospc_retry_required": false,
+        "latest_scoped_evidence": "docs/evidence/p0-current-ci.json",
+        "current_p0_evidence": "docs/evidence/p0-feasibility.json",
+        "positive_enospc_runtime_scope": "Already-flushed fixture configuration-save ENOSPC/retry/reopen on exact32MiB narrow and384MiB full-text mounts; not production dirty-ingestion or partial-write recovery."
+      },
+      "completion_scope": "The stated P0-only integration deliverable, not its associated full product capabilities."
     },
     {
       "id": "I-04",
@@ -9805,9 +9855,9 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed"
       }
     },
@@ -9932,6 +9982,18 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "kind": "p0_composite_feasibility",
+          "status": "passed",
+          "source": "docs/evidence/p0-feasibility.json",
+          "code_revision": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+          "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+          "scope": "P0 primitive/gap ADR accepted with five isolated Tantivy cases. Pre-Alpha library adoption/quality comparison and all F13-F20 delivery remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Compare bounded extension policies, direct Tantivy and pg_search using fixed-version primitives, multilingual quality, install/license cost, lifecycle and outer-fusion requirements; select a concrete completion path before core Alpha.",
@@ -9974,10 +10036,13 @@
       "probe_progress": {
         "checkpoint": "docs/p0-report.md",
         "observed_on": "2026-10-08",
-        "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json",
+        "latest_scoped_evidence": "docs/evidence/p0-tantivy-ci.json",
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
-        "release_supported": false
+        "release_supported": false,
+        "current_p0_evidence": "docs/evidence/p0-feasibility.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f"
       }
     },
     {
@@ -10201,15 +10266,16 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "positive_enospc_experiment_status": "failed",
-        "positive_enospc_runtime_verified": false,
-        "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true,
-        "latest_scoped_evidence": "docs/evidence/p0-dirty-rebuild-local.json",
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
-        "latest_ci_workflow_conclusion": "passed"
+        "positive_enospc_experiment_status": "passed_scoped_ci8_profiles",
+        "positive_enospc_runtime_verified": true,
+        "positive_enospc_child_exit_cause": "zero_current_native_exits; historical_failures_retained",
+        "positive_enospc_retry_required": false,
+        "latest_scoped_evidence": "docs/evidence/p0-current-ci.json",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+        "latest_ci_workflow_conclusion": "passed",
+        "positive_enospc_runtime_scope": "Already-flushed fixture configuration-save ENOSPC/retry/reopen on exact32MiB narrow and384MiB full-text mounts; not production dirty-ingestion or partial-write recovery."
       }
     },
     {
@@ -10395,10 +10461,10 @@
         "release_supported": false,
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed"
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+        "latest_ci_workflow_conclusion": "passed"
       }
     },
     {
@@ -10586,9 +10652,9 @@
         "release_supported": false,
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed",
         "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
@@ -10617,6 +10683,18 @@
             "LICENSE",
             "NOTICE"
           ]
+        },
+        {
+          "observed_on": "2026-10-08",
+          "kind": "p0_composite_feasibility",
+          "status": "passed",
+          "source": "docs/evidence/p0-feasibility.json",
+          "code_revision": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+          "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+          "scope": "Owner-selected AGPL-3.0-only metadata and all246 native copyright report hashes recorded.121 license parsing gaps and distribution/notices review remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Finalize independent-code license after fixed dependency/native-license review; package required notices/source obligations; no unreviewed AGPL copying or official-brand implication.",
@@ -10654,7 +10732,16 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "current_p0_evidence": "docs/evidence/p0-feasibility.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "latest_scoped_evidence": "docs/evidence/p0-native-ci.json"
+      }
     },
     {
       "id": "I-13",
@@ -10936,19 +11023,20 @@
         "release_supported": false,
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed",
         "helper_hard_stop_runtime_verified": true,
         "helper_supervisor_sigterm_runtime_verified": true,
         "helper_restart_exhaustion_runtime_verified": true,
         "native_query_cancellation": false,
-        "positive_enospc_experiment_status": "failed",
-        "positive_enospc_runtime_verified": false,
-        "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true,
-        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
+        "positive_enospc_experiment_status": "passed_scoped_ci8_profiles",
+        "positive_enospc_runtime_verified": true,
+        "positive_enospc_child_exit_cause": "zero_current_native_exits; historical_failures_retained",
+        "positive_enospc_retry_required": false,
+        "latest_scoped_evidence": "docs/evidence/p0-current-ci.json",
+        "positive_enospc_runtime_scope": "Already-flushed fixture configuration-save ENOSPC/retry/reopen on exact32MiB narrow and384MiB full-text mounts; not production dirty-ingestion or partial-write recovery."
       }
     },
     {
@@ -11138,9 +11226,9 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+        "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
         "latest_ci_workflow_conclusion": "passed"
       }
     }
@@ -11149,10 +11237,10 @@
     "observed_on": "2026-10-08",
     "starting_revision": "f3b4cff09e3abc2aaaa3c647028aef4942d89636",
     "report": "docs/p0-report.md",
-    "engine_evidence": "docs/evidence/p0-method-input-rebuild-local.json",
+    "engine_evidence": "docs/evidence/p0-current-ci.json",
     "dependency_evidence": "docs/dependency-baseline.json",
-    "source_identity": "CI7 results bind head 88885db and its identical merge tree. Later callable-method, invalid-input and dirty-rebuild source passes 25 normal engine tests and four PG compile profiles locally; the new inside-SPI group, heap restriction and native/CPU changes require their own clean CI.",
-    "p0_exit_passed": false,
+    "source_identity": "CI8 binds head 57c58fcee51efb0067f04b03ffb44e300f76ce72 and merge 716cb2871d325dfd629a40177c9cfee613af4cfc to the identical tree 8b1d6d863be52229f8b15b49ad0b58b96b28608f. The current clean build executes 27 ordinary engine tests and all four SQL profiles with seven source groups; native/CPU inputs are verified separately in the same artifact. Detailed local and historical observations retain their own source identities.",
+    "p0_exit_passed": true,
     "sql_runtime_verified": true,
     "product_completed": false,
     "release_supported": false,
@@ -11161,24 +11249,24 @@
     "postgres_local_install_verified": true,
     "container_runtime_verified": true,
     "postgres_fault_cdylib_and_schema_verified": true,
-    "postgresql_ci_evidence": "docs/evidence/p0-postgresql-ci.json",
-    "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
-    "verified_ci_checkout": "18282abe660b4a3a59a8222f072c5b1cd069a2ae",
-    "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+    "postgresql_ci_evidence": "docs/evidence/p0-current-ci.json",
+    "verified_ci_head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+    "verified_ci_checkout": "716cb2871d325dfd629a40177c9cfee613af4cfc",
+    "verified_ci_tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
     "diagnostic_sql_runtime_verified": true,
     "sql_runtime_scope": "Recorded direct-worker and managed-helper P0 diagnostics only; source-table indexing, source permissions and public search remain unimplemented.",
     "direct_worker_production_containment": "failed",
-    "managed_helper_comparison": "scoped_sql_native_and_kernel_oom_passed; conditional_go; production_data_loop_pending",
+    "managed_helper_comparison": "scoped_sql_native_and_kernel_oom_passed; p0_go_accepted; production_data_loop_pending",
     "helper_postgresql_runtime_verified": true,
     "metadata_corruption_runtime_verified": true,
     "positive_enospc_runtime_verified": true,
     "evidence_scope": "Every verification level applies only to its named probe. All product completion and release flags remain false.",
     "helper_initial_standalone_observation": "Historical local 7/8 pass records do not independently prove controller-SIGKILL cleanup without a live PID precondition. CI2 and CI6 independently passed both pipe suites; the CI4 process-observer failure remains a separate historical result.",
     "helper_hard_stop_runtime_verified": true,
-    "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
-    "verified_ci_scope": "All four images, SQL 19/21/19/25, helper pipes 7/8, 23 normal engine tests, two child tests, 21 Python tests and three distinct private OOM guards pass. The original six source-recheck groups pass per profile. Narrow 32 MiB and full-text 384 MiB fault/clean reopen and exact 128 MiB zero-write refusal pass. Exact kernel OOM attribution passes both profiles; direct-worker containment fails and helper containment passes this controlled experiment.",
-    "latest_ci_run": 37736655218,
-    "latest_ci_job": 113177607334,
+    "latest_ci_evidence": "docs/evidence/p0-current-ci.json",
+    "verified_ci_scope": "CI8 builds and installs all four profiles; SQL20/22/20/26, seven source groups per profile, pipes7/8, 27 ordinary engine, two child, 38 Python and three private guard tests repeated twice pass. Four bounded disk/capacity cases and both exact kernel OOM attributions pass. All246 native tuples, seven archives and CPU admission/object checks match. Product source synchronization, authorization, recovery and release remain unimplemented.",
+    "latest_ci_run": 37743504259,
+    "latest_ci_job": 113199465881,
     "latest_ci_workflow_conclusion": "passed",
     "helper_postgresql_containment": "passed_named_native_failures",
     "helper_hard_stop_limit_ms": 125000,
@@ -11188,8 +11276,8 @@
     "forced_postgresql_supervisor_sigkill_verified": true,
     "kernel_oom_runtime_verified": true,
     "positive_enospc_experiment_status": "passed_narrow_and384m_flushed_full_text_configuration_save_recovery",
-    "positive_enospc_child_exit_cause": "CI7 narrow and full-text native exits are zero. The CI5/CI6 128 MiB SIGBUS failures and the unknown CI2 cause remain recorded.",
-    "preferred_topology_candidate": "managed_helper",
+    "positive_enospc_child_exit_cause": "CI8 narrow/full-text native exits are zero. Historical CI5/CI6 SIGBUS failures and unknown CI2 exit cause remain retained.",
+    "preferred_topology_candidate": "managed_helper_selected_for_product_implementation",
     "ci_history": [
       {
         "run": 37716391262,
@@ -11246,14 +11334,22 @@
         "tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
         "workflow_conclusion": "passed",
         "scope": "All four images, SQL 19/21/19/25, helper pipes 7/8, 23 normal engine tests, two child tests, 21 Python tests and three distinct private OOM guards pass. The original six source-recheck groups pass per profile. Narrow 32 MiB and full-text 384 MiB fault/clean reopen and exact 128 MiB zero-write refusal pass. Exact kernel OOM attribution passes both profiles; direct-worker containment fails and helper containment passes this controlled experiment."
+      },
+      {
+        "run": 37743504259,
+        "source": "docs/evidence/p0-current-ci.json",
+        "head": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+        "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+        "workflow_conclusion": "passed",
+        "scope": "CI8 builds and installs all four profiles; SQL20/22/20/26, seven source groups per profile, pipes7/8, 27 ordinary engine, two child, 38 Python and three private guard tests repeated twice pass. Four bounded disk/capacity cases and both exact kernel OOM attributions pass. All246 native tuples, seven archives and CPU admission/object checks match. Product source synchronization, authorization, recovery and release remain unimplemented."
       }
     ],
     "positive_enospc_scope": "Already-flushed tiny fixture config-save ENOSPC/retry/reopen only; no transactional dirty-ingestion recovery.",
-    "current_engine_tests_passed": 25,
+    "current_engine_tests_passed": 27,
     "current_engine_tests_failed": 0,
     "current_engine_tests_ignored": 0,
-    "current_source_postgres_regression_verified": false,
-    "current_forced_pg_supervisor_sigkill_test": "CI6 passed the named PostgreSQL-supervisor failure, PostgreSQL crash-recovery and helper ownership-fence assertions; later source regression pending.",
+    "current_source_postgres_regression_verified": true,
+    "current_forced_pg_supervisor_sigkill_test": "CI8 passes the PostgreSQL-supervisor failure, PostgreSQL crash-recovery and helper ownership-fence assertions at the recorded current source.",
     "helper_child_bookkeeping_tests_passed": 2,
     "upstream_projection_followup": {
       "capability_ids": [
@@ -11297,11 +11393,11 @@
       "sql_runtime_evidence": "docs/evidence/p0-capacity-and-sql-ci.json",
       "sql_runtime_scope": "Three assertion groups passed in each of the four CI6 PostgreSQL profiles; backend-only candidate formats, no public API freeze or cross-process model contract."
     },
-    "current_engine_evidence": "docs/evidence/p0-method-input-rebuild-local.json",
+    "current_engine_evidence": "docs/evidence/p0-current-ci.json",
     "current_private_oom_guard_tests_passed": 3,
-    "current_python_diagnostic_tests_passed": 21,
+    "current_python_diagnostic_tests_passed": 38,
     "current_positive_oom_runtime_verified": true,
-    "current_source_recheck_sql_runtime_verified": false,
+    "current_source_recheck_sql_runtime_verified": true,
     "current_full_text_384_runtime_verified": true,
     "current_full_text_128_refusal_runtime_verified": true,
     "original_six_source_recheck_sql_runtime_verified": true,
@@ -11309,7 +11405,12 @@
     "dirty_generation_refusal_and_synthetic_reconstruction_local_verified": true,
     "production_dirty_recovery_implemented": false,
     "costed_p0_decision": "docs/adr/0004-p0-go-no-go.md",
-    "module_effort_model": "docs/p0-effort.md"
+    "module_effort_model": "docs/p0-effort.md",
+    "p0_decision_evidence": "docs/evidence/p0-feasibility.json",
+    "current_native_evidence": "docs/evidence/p0-native-ci.json",
+    "current_lexical_candidate_evidence": "docs/evidence/p0-tantivy-ci.json",
+    "current_native_clean_install_verified": true,
+    "current_cpu_admission_verified": true
   },
   "remaining_p0_estimate_review": {
     "observed_on": "2026-10-08",
@@ -11382,8 +11483,8 @@
       }
     ],
     "rule": "These overlap shared work and must not be added to existing capability estimates without allocation. The 5-10 day investigation budget is not a completion criterion.",
-    "status": "historical_pre_ci_allocations_retained; no new remaining-work estimate is claimed",
-    "superseding_evidence": "docs/p0-report.md"
+    "status": "historical_planning_ranges_retained; finite_p0_exit_passed_at_ci8; post_p0_allocation_in_docs/p0-effort.md",
+    "superseding_evidence": "docs/evidence/p0-feasibility.json"
   },
   "disk_fixture_correction": {
     "evidence": "docs/evidence/p0-integrated-local.json",
@@ -11406,7 +11507,7 @@
       "clean_reopen": "passed",
       "positive_enospc": "passed_narrow_scope_ci4_ci5_ci6"
     },
-    "retained_open_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes",
+    "retained_open_combination": "Production partial-write/dirty-ingestion recovery; scoped full-text configuration-save recovery passed in CI7 and CI8.",
     "product_scope_completed": false,
     "historical_failed_attempts": [
       "docs/evidence/p0-helper-ci.json",
@@ -11415,6 +11516,6 @@
       "docs/evidence/p0-capacity-and-sql-ci.json"
     ],
     "latest_failure": "CI6 full-text fault and clean-control 128 MiB mounts both exhausted available capacity during writable reopen and terminated with SIGBUS. All four SQL profiles nevertheless completed. Earlier failures retain their own evidence and causes.",
-    "current_correction": "Retain narrow 32 MiB recovery; require exactly 384 MiB for positive full-text fault and clean-control experiments. A separate exact 128 MiB characterization verifies zero-write capacity refusal. New positive experiments remain pending; neither the larger budget nor refusal is an upstream loader fix."
+    "current_correction": "CI8 passes the unchanged exact32MiB narrow profile, separate384MiB full-text fault and clean controls, and exact128MiB zero-write refusal. This is bounded fixture evidence, not an upstream loader fix or production sizing recommendation."
   }
 }

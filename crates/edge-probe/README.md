@@ -41,7 +41,8 @@ On 2026-10-08, with Rust 1.96.0 on Linux x86_64 and the repository lockfile:
 | `cargo test --locked -p pg-qdrant-edge-probe --test lifecycle -- --test-threads=1` | 2 passed, 0 failed or ignored: conditional and partial mutations with flush/reopen; selective reads, filtered scroll/facets and exact matrix scores. |
 | `cargo test --locked -p pg-qdrant-edge-probe --test schema -- --test-threads=1` | 2 passed, 0 failed or ignored: payload-index create/delete and named dense/sparse vector create/delete, including replay, rejected configuration changes and persisted queries. |
 | CI7 `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | All 23 normal tests passed at `88885db`, alongside all four SQL profiles, full-text capacity/recovery and directed OOM experiments. [CI7 evidence](../../docs/evidence/p0-source-capacity-oom-ci.json). |
-| Later integrated `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | 25 normal tests passed, zero failed or ignored: adds owned-child invalid-input characterization and dirty-generation refusal/full-fixture reconstruction. All four PG compile profiles also pass; the later inside-SPI SQL group is pending. [Source-bound local evidence](../../docs/evidence/p0-method-input-rebuild-local.json). |
+| Historical integrated `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | 25 normal tests passed, zero failed or ignored: adds owned-child invalid-input characterization and dirty-generation refusal/full-fixture reconstruction. All four PG compile profiles passed; the inside-SPI SQL group was unexecuted at this checkpoint. [Source-bound local evidence](../../docs/evidence/p0-method-input-rebuild-local.json). |
+| Current CI8 `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | 27 normal tests passed, zero failed or ignored at `57c58fc`, including two CPU-policy tests. Four actual SQL profiles passed 20/22/20/26 groups with seven source groups each; both helper pipe suites and all four disk/two kernel-OOM profiles passed. [Current CI evidence](../../docs/evidence/p0-current-ci.json). |
 | `cargo check --locked -p pg-qdrant-edge-probe` after nested inventory expansion | Public nested enum mappings and typed scalar/product/binary, ACORN/search and LoadProfile inputs compiled without errors or warnings. Constructors do not execute an engine operation. |
 | `target/debug/pg-qdrant-edge-probe` after the locked test build | All 16 synthetic check groups passed; engine version `0.8.0`. |
 | `target/debug/pg-qdrant-edge-probe --corruption-probe` | Both malformed copied-metadata loads returned errors; intact-copy recovery, original preservation, representation equality and phrase/MaxSim queries passed. |
@@ -53,7 +54,8 @@ On 2026-10-08, with Rust 1.96.0 on Linux x86_64 and the repository lockfile:
 The original four tests, eleven advanced/lifecycle/schema cases and five
 additional lexical/public-lifecycle/clean-control cases comprise the historical
 20-test suite. Three capacity tests bring CI7 to 23; the later invalid-input
-and dirty-generation fixtures bring the local normal suite to 25. The
+and dirty-generation fixtures brought that local normal suite to 25. Two
+CPU-policy tests bring the current CI suite to 27. The
 16-group executable smoke and private OOM tests are different counts. The focused runs
 above were recorded independently, followed by the actual integrated run.
 CI acceptance is still recorded against its own code version and commands.
@@ -480,22 +482,32 @@ Tantivy remains a candidate, not an adopted dependency. A future second
 lexical engine must include dual-index lifecycle, authorization, recovery and
 outer fusion. None of F13–F20 is marked complete by this crate.
 
-## Open P0 gates
+## Feasibility result and remaining product gates
 
-The [CI7 regression](../../docs/evidence/p0-source-capacity-oom-ci.json) passes
-four SQL profiles, the original six source-recheck groups, both helper pipe
-suites, all four disk/capacity profiles and both directed kernel-OOM comparisons.
+The [current CI8 record](../../docs/evidence/p0-current-ci.json) passes 27 normal
+engine tests, four SQL profiles with seven source-recheck groups each, both
+helper pipe suites, all four disk/capacity profiles and both directed kernel-OOM
+comparisons. The [native/CPU record](../../docs/evidence/p0-native-ci.json)
+verifies the selected diagnostic build boundary. The earlier
+[CI7 regression](../../docs/evidence/p0-source-capacity-oom-ci.json) remains
+evidence for its own six-group source revision.
 Direct-worker native failures terminate companion SQL. Helper native failures
 preserve the supervisor and companion, while supervisor SIGKILL still causes
 PostgreSQL recovery. These are separate fault domains.
 
-The [later local checkpoint](../../docs/evidence/p0-method-input-rebuild-local.json)
-passes the 43-call audit, 25 normal engine tests and four PG compile profiles.
-Its inside-SPI cancellation/heap source changes need their own SQL run, and the
-integrated native/CPU baseline needs clean verification. The
-[dirty-generation experiment](../../docs/evidence/p0-dirty-rebuild-local.json)
-preserves the unclean fixture and reconstructs from a complete synthetic source;
-it does not establish PostgreSQL capture, ACK or generation cutover.
+The 43-call audit compiles on this current tree; its uninhabited compile-only
+inputs prevent accidental runtime invocation. The dirty-generation and
+negative-input named harnesses pass in CI8, but their captured successful child
+JSON is not a separate archived CI report. The [local detailed observations](../../docs/evidence/p0-dirty-rebuild-local.json)
+retain their original source identity. Dirty refusal and reconstruction use a
+complete synthetic source; they do not establish PostgreSQL capture, ACK or
+generation cutover. The [P0 feasibility decision](../../docs/evidence/p0-feasibility.json)
+accepts the helper/source-rebuild implementation route with those limits.
+
+The standalone executable also completes in the CI build. Its JSON is
+redirected inside the build image and is not in the downloaded artifact. The
+four separate SQL engine artifacts each retain the exact 16 passing named
+smoke groups; no missing standalone or captured-child report is inferred.
 
 The owned metadata-corruption test covers malformed copied JSON and an intact
 recovery source. Explicit-flush/SIGKILL covers only the stated process-reopen

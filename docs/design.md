@@ -1,6 +1,6 @@
 # Product and implementation design
 
-Status: proposed product design, with a buildable P0 diagnostic implementation. There is no installable product release, source-table indexing pipeline, or implemented public search/model API. Private, superuser-only feasibility diagnostics have recorded engine and PostgreSQL runtime evidence; they do not establish supported product capabilities. The [P0 report](p0-report.md) identifies tested revisions and remaining gates.
+Status: proposed product design, with a verified P0 diagnostic implementation at the recorded Linux/PostgreSQL 17 revision. There is no installable product release, source-table indexing pipeline, or implemented public search/model API. Private, superuser-only feasibility diagnostics have recorded engine and PostgreSQL runtime evidence; they do not establish supported product capabilities. The [P0 report](p0-report.md) identifies tested revisions and remaining product gates.
 
 The optional M0/M1/M2 model milestones, Qdrant-shaped query adapter, and model-management SQL in this document are design requirements, not implemented capabilities. They remain separate from offline BM25 and BYOV core installation requirements. The [54-capability contract](capabilities.md), [stage acceptance](acceptance.md), and [work ledger](work-items.json) retain the existing retrieval and lifecycle scope; this model roadmap does not replace those gates.
 
@@ -44,7 +44,7 @@ Typo tolerance, synonyms, query syntax, proximity, highlighting, and autocomplet
 
 ## Dependencies and upstream upgrades
 
-The implementation depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. Edge `0.8.0`, pgrx/cargo-pgrx `0.19.3`, and Rust `1.96.0` have a locked dependency graph and recorded combined Linux/PostgreSQL 17.11 build and diagnostic runtime evidence. The [version baseline](dependency-baseline.json) and [P0 report](p0-report.md) distinguish historical tested revisions, later local checks, current clean-CI requirements, and unsupported product/release claims.
+The implementation depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. Edge `0.8.0`, pgrx/cargo-pgrx `0.19.3`, and Rust `1.96.0` have a locked dependency graph and recorded combined Linux/PostgreSQL 17.11 build and diagnostic runtime evidence. The [version baseline](dependency-baseline.json) and [P0 report](p0-report.md) distinguish the verified current P0 build, retained historical results, and unsupported product/release claims.
 
 Optional model serving uses Rust adapters for [FastEmbed](https://github.com/Anush008/fastembed-rs) and [ONNX Runtime](https://onnxruntime.ai/). These are not required for local BM25 or BYOV retrieval. Their exact versions, native libraries, execution providers, and combined dependency graph must be pinned and validated before a model-enabled package is supported. Model weights and tokenizers have their own licenses and version contracts.
 
@@ -199,7 +199,7 @@ flowchart TD
     L --> E
 ```
 
-The logical owner boundary gives each database a managed owner worker. P0 exercised both direct engine ownership and an engine helper managed by that worker; the same-package helper is the conditional choice for further integration, as recorded in the [process-boundary ADR](adr/0001-embedded-engine-boundary.md) and [P0 decision](adr/0004-p0-go-no-go.md). Each index generation must have one shard owner; SQL sessions must not independently open the same shard directory. The production catalog, transactional outbox, generation ownership, and optional model runtime shown above remain implementation work.
+The logical owner boundary gives each database a managed owner worker. P0 exercised both direct engine ownership and an engine helper managed by that worker; the same-package helper is the selected route for further integration, as recorded in the [process-boundary ADR](adr/0001-embedded-engine-boundary.md) and [P0 decision](adr/0004-p0-go-no-go.md). Each index generation must have one shard owner; SQL sessions must not independently open the same shard directory. The production catalog, transactional outbox, generation ownership, and optional model runtime shown above remain implementation work.
 
 Engine threads receive owned data and must not use PostgreSQL pointers, memory contexts, or SPI. PostgreSQL-facing work remains on the appropriate process thread. This boundary follows [pgrx's documented threading constraints](https://github.com/pgcentralfoundation/pgrx#caveats--known-issues).
 

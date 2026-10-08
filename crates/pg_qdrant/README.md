@@ -7,11 +7,13 @@ source-table synchronization, a product search function, or a durable indexing
 service. The 54 product requirements remain in the capability registry as
 planned and not release-supported.
 
-The [latest recorded CI](../../docs/evidence/p0-source-capacity-oom-ci.json), run
-37736655218 at `88885db`, passed all four builds/installations and SQL 19/21/19/25
-(direct normal/private, helper normal/private), helper pipes 7/8, 23 normal engine
-tests, two child tests and 21 Python tests. The original six source-identity/recheck
-and three vector-format groups passed in every SQL profile. Full-text ENOSPC and
+The [latest recorded CI](../../docs/evidence/p0-current-ci.json), run
+37743504259 at `57c58fc`, passed all four core builds/installations and SQL
+20/22/20/26 (direct normal/private, helper normal/private), helper pipes 7/8,
+27 normal engine tests, two child tests and 38 Python tests. All seven
+source-identity/recheck and three vector-format groups passed in every SQL
+profile. The [native/CPU record](../../docs/evidence/p0-native-ci.json) binds the
+selected build environment; it is not distribution clearance. Full-text ENOSPC and
 an independent clean reopen passed on exactly 384 MiB; exactly 128 MiB was refused
 before writes. Historical 128 MiB SIGBUS failures remain recorded.
 
@@ -20,10 +22,13 @@ Direct-worker OOM interrupts companion SQL; helper OOM preserves the supervisor
 and companion, and its replacement runs the engine smoke. This is scoped
 process-failure evidence, not durable source indexing or general memory isolation.
 
-The [later local checkpoint](../../docs/evidence/p0-method-input-rebuild-local.json)
-compiles all four profiles with the built-in heap restriction and seventh
-inside-SPI cancellation assertion. Those changes still require SQL execution.
-Proposed vector, source and public search contracts remain unfrozen.
+The inside-SPI cancellation assertion now passes in all four profiles: it
+observes the secondary-index wait during SPI planning, verifies namespace-lock
+cleanup after cancellation, and retries successfully in the same backend. The
+[P0 feasibility decision](../../docs/evidence/p0-feasibility.json) selects the
+packaged helper and conservative source-rebuild route for implementation. It
+does not change this prototype's direct-worker compile default or freeze the
+product vector, source and search contracts.
 
 ## Build inputs
 
@@ -155,11 +160,12 @@ engine ENOSPC pass does not close these PostgreSQL durability gates. It does
 not allocate until the host is exhausted or fill the host filesystem. OOM and disk-full tests require isolated resource domains.
 
 PostgreSQL background workers attach to shared memory. Their process boundary
-must not be advertised as unconditional crash isolation. If the measured worker
-failure terminates an unrelated session, the default architecture needs a
-packaged helper-process evaluation before a reliability claim or release.
+must not be advertised as unconditional crash isolation. The measured direct-worker
+failure terminates unrelated SQL. The [accepted feasibility decision](../../docs/evidence/p0-feasibility.json)
+therefore selects the same-package helper as the product implementation route;
+the direct-worker prototype remains a diagnostic control.
 
-## Optional managed-helper comparison
+## Managed-helper diagnostic profile
 
 `p0-managed-helper` selects a separate P0 process experiment. The same PostgreSQL
 worker owns the SQL socket, queue, signals and permission boundary. It executes
@@ -213,8 +219,10 @@ the committed marker, stopped the old helper before replacement, and reacquired
 the same fence inode. That is expected supervisor collateral, not failure of
 the separate native-helper containment assertion.
 
-These results establish only the recorded P0 behavior. CI7 adds positive kernel
-OOM characterization and full-text recovery at the fixed experiment capacity.
+These results establish only the recorded P0 behavior. CI7 introduced positive
+kernel OOM characterization and full-text recovery at the fixed experiment
+capacity; [CI8](../../docs/evidence/p0-current-ci.json) repeats both on the
+current identified source.
 Source outbox durability, production generations, memory admission, permissions
 and upgrade safety remain separate product gates. The [OOM harness](../../docs/p0-oom-experiment.md) uses
 fresh inspected fixed-limit containers and exact kernel victim attribution;

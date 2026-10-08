@@ -6,8 +6,8 @@ Status: active dependency and upgrade contract. The [machine-readable baseline](
 
 | Component | Dependency decision | Upgrade owner |
 | --- | --- | --- |
-| Retrieval, local BM25, sparse/dense/multivector indexing | Direct published `qdrant-edge` crate, candidate `=0.8.0` | Engine adapter |
-| PostgreSQL types, functions, triggers, hooks, workers | Direct `pgrx`, candidate `=0.19.3`, PG17 feature | PostgreSQL adapter |
+| Retrieval, local BM25, sparse/dense/multivector indexing | Direct published `qdrant-edge` crate, P0-verified `=0.8.0` | Engine adapter |
+| PostgreSQL types, functions, triggers, hooks, workers | Direct `pgrx`, P0-verified `=0.19.3`, PG17 feature | PostgreSQL adapter |
 | Extension build/package tool | `cargo-pgrx 0.19.3`, matching the library | Build and distribution |
 | Tokenization used by Edge | Edge-owned dependency graph and analyzer configuration | Engine adapter and lexical policy |
 | Application vector generation | Optional application/model integration, outside the core build | Model contract |
@@ -18,19 +18,19 @@ The core integration should use published Edge types and methods. The `qdrant-cl
 
 Keep the upstream engine as a dependency rather than copying its BM25, tokenizer, HNSW, sparse-index, or quantization implementations into the extension. The registry crate can bundle its own internal implementation modules; those remain upstream-owned. Imports should use its supported public surface. Anything under an upstream `internal` namespace needs a recorded exception and compatibility tests, even if technically exported.
 
-## Candidate baseline evidence
+## Pinned baseline evidence
 
 The Edge `0.8.0` registry archive was checked against the registry SHA-256 recorded in the baseline. Its manifest uses Rust edition 2024 and does not declare a package-level `rust-version`; this is not evidence that all dependency versions build on an arbitrary older compiler. [Published Edge manifest](https://docs.rs/crate/qdrant-edge/0.8.0/source/Cargo.toml), [registry record](https://crates.io/api/v1/crates/qdrant-edge/0.8.0).
 
-pgrx and cargo-pgrx `0.19.3` registry records declare Rust `1.96` as the minimum. Freeze an exact toolchain only after resolving and building the complete Linux dependency graph. [pgrx record](https://crates.io/api/v1/crates/pgrx/0.19.3), [cargo-pgrx record](https://crates.io/api/v1/crates/cargo-pgrx/0.19.3).
+pgrx and cargo-pgrx `0.19.3` registry records declare Rust `1.96` as the minimum. Rust `1.96.0` is fixed after locked Linux dependency resolution and the recorded combined PostgreSQL build. [pgrx record](https://crates.io/api/v1/crates/pgrx/0.19.3), [cargo-pgrx record](https://crates.io/api/v1/crates/cargo-pgrx/0.19.3).
 
-Edge `0.8.0` requests Charabia `0.9.9` with selected multilingual features. This is a version requirement, not a resolved transitive version. Its multilingual tokenizer uses Charabia with additional engine processing, including a distinct Japanese path. Charabia is also used by Meilisearch; sharing a tokenizer does not provide Meilisearch's ranking, typo policies, or UI behavior. [Edge package source](https://docs.rs/crate/qdrant-edge/0.8.0/source/), [Charabia](https://github.com/meilisearch/charabia).
+Edge `0.8.0` requests Charabia `0.9.9` with selected multilingual features. The current Cargo.lock resolves that dependency to `0.9.9`; the upstream requirement alone would not establish the resolved version. Its multilingual tokenizer uses Charabia with additional engine processing, including a distinct Japanese path. Charabia is also used by Meilisearch; sharing a tokenizer does not provide Meilisearch's ranking, typo policies, or UI behavior. [Edge package source](https://docs.rs/crate/qdrant-edge/0.8.0/source/), [Charabia](https://github.com/meilisearch/charabia).
 
 If highlighting or a future Tantivy adapter needs a direct analyzer dependency, declare it explicitly and prove parity with the selected engine: normalization, stemming, stopwords, token boundaries, offsets, and field positions. Do not assume importing the same Charabia version reproduces the whole Edge analysis pipeline.
 
 ## P0 dependency deliverables
 
-P0 must complete and validate the following. The manifest, lockfile and probes now exist; presence alone does not complete the gate:
+The following define the finite P0 dependency/build scope. [CI8](evidence/p0-current-ci.json) and the [native evidence](evidence/p0-native-ci.json) verify the current diagnostic inputs at implementation `57c58fcee51efb0067f04b03ffb44e300f76ce72`, tree `8b1d6d863be52229f8b15b49ad0b58b96b28608f`, run [37743504259](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259). Capability mapping includes explicit fixed-version exclusions; probe success does not make all 54 product requirements supported:
 
 - A real Cargo workspace with exact engine and PostgreSQL integration requirements.
 - The matching cargo-pgrx tool, exact Rust toolchain, explicit PG major feature, and package feature list.
@@ -51,7 +51,7 @@ default = ["pg17"]
 pg17 = ["pgrx/pg17"]
 ```
 
-The actual pgrx template, needed features, and supporting dependencies must be resolved by compilation. Exact pins select an intentional direct dependency version; Cargo.lock records the resolved graph. Use locked builds for release reproducibility. [Cargo version requirements](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html), [Cargo.lock](https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html).
+The pgrx integration, selected features, and supporting dependencies have compiled in the recorded four diagnostic profiles. Exact pins select an intentional direct dependency version; Cargo.lock records the resolved graph. Use locked builds for release reproducibility. [Cargo version requirements](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html), [Cargo.lock](https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html).
 
 ## Resolved P0 build profiles
 
@@ -95,17 +95,26 @@ or release support status.
 The [native build contract](p0-native-build.md) supplements Cargo.lock with a
 fixed Ubuntu snapshot, seven exact PGDG archive checksums, the unchanged image
 digest and a complete installed-package comparison. Its source metadata and
-verifier are reviewed; the revised clean installation remains pending. The
-actual CPU and native-link boundary must be recorded by the same build. A Rust
-edition or default target cannot certify the upstream C compiler's ISA choices.
+verifier are reviewed. CI8 built and installed all four diagnostic image profiles
+with matching 246-entry inventories and seven verified archive pins. The same
+build records GCC 13.3.0, GNU ld/objdump 2.42, PostgreSQL 17.11, all 20 required
+CPU features, audited native-object hashes, and direct ELF dependencies. Exact
+libclang paths remain unobserved despite loaded-version 19.1.1 evidence. All 246
+package copyright files have hashes; 125 yield machine-readable labels and 121
+have explicit parsing gaps. This is an actual dependency/declared-license
+inventory, not distribution clearance, a full loader/ISA proof, or bit-identical
+binary reproducibility. A Rust edition or default target cannot certify the
+upstream C compiler's ISA choices.
 
 The [Tantivy experiment](../experiments/tantivy-probe/README.md) is a separate
 Cargo workspace with its own 0.26.2 pin, lockfile and 109-package Linux inventory.
 Only `mmap` and `lz4-compression` are enabled. Its public dictionary bridge pins
 `levenshtein_automata 0.2.1` and `tantivy-fst 0.5.0`, both already transitive in
 that graph. These are candidate evaluation inputs; the extension's root graph
-is unchanged. Five local primitive experiments and their negative findings do
-not adopt Tantivy or fulfill the pre-Alpha quality/lifecycle decision.
+is unchanged. The [five isolated CI8 primitive cases](evidence/p0-tantivy-ci.json)
+passed under the configured 512 MiB/one-CPU/45-second bounds, preserving their
+negative findings. They do not adopt Tantivy or fulfill the pre-Alpha
+quality/lifecycle decision.
 
 ## Boundaries that make upgrades manageable
 

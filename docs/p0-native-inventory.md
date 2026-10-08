@@ -1,7 +1,11 @@
 # P0 native build and license metadata artifact
 
 `scripts/native_build_report.py` is a read-only collector for the frozen native
-build. Its clean-image execution is pending. It does not install packages,
+build. [CI8](evidence/p0-native-ci.json) verifies its clean-image execution in
+all four diagnostic profiles at implementation `57c58fcee51efb0067f04b03ffb44e300f76ce72`,
+tree `8b1d6d863be52229f8b15b49ad0b58b96b28608f`, run
+[37743504259](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259).
+It does not install packages,
 execute the extension/helper, run `ldd`, or grant license clearance. The only
 write is the requested JSON artifact. The [native package freeze](p0-native-build.md)
 and the Cargo license inventory remain separate inputs.
@@ -86,7 +90,11 @@ python3 scripts/native_build_report.py "$@" --profile "$profile"
 The Docker hook additionally supplies the actual available Cargo PG17 binding
 files and `pgrx-pg-sys` build stderr files from that image. Each is individually
 hashed; no unique profile or loaded-library path is inferred if the evidence is
-ambiguous. A successful clean-image execution has not yet been recorded.
+ambiguous. CI8 produced all four reports with matching inventories and tool
+metadata. Bindgen reported `Ubuntu clang version 19.1.1 (1ubuntu1~24.04.2)`;
+its exact loaded-library path was not reported, so `selected_libclang` remains
+null with `selection_status=not_observed`. All four reported PG17 binding
+outputs have SHA-256 `031a40c8c67b67dc28e3d965958e06f646e41ca1c011d7ac040ff51282a17791`.
 The helper argument is mandatory for helper profiles and forbidden for direct
 profiles, so absence cannot be silently treated as a complete helper inventory.
 Every required tool, ELF artifact and the full package inventory must be readable;
@@ -101,5 +109,25 @@ python3 -m unittest discover -s scripts/tests -p test_native_build_report.py -v
 
 The tests exercise scoped DEP5 labels, legacy/ambiguous metadata, documentation
 aliases and boundary refusal, invalid encoding/file size, exact package entries,
-and ELF direct-entry parsing. They do not establish clean CI collection, selected
-libclang, a full runtime link closure or completed third-party notices.
+and ELF direct-entry parsing. The actual clean-CI collection is separate
+evidence; neither those tests nor collection establishes an unobserved
+libclang path, full runtime link closure or completed third-party notices.
+
+## CI8 inventory observations
+
+Every profile matches all 246 installed package/version entries and records
+architecture, actual copyright-file names and reported file hashes. No copyright
+file is missing. The identical parsing counts are 125 `parsed_dep5`, 75
+`unparsed_non_dep5`, 44 `unparsed_malformed_dep5` and 2
+`unparsed_empty_license_synopsis`. The 121 parsing gaps describe this collector
+and do not mean those packages lack licenses. Their hashes and package names
+remain available for distribution review.
+
+Compiler, linker/disassembler and PG configuration are identical across profiles:
+GCC 13.3.0, GNU binutils 2.42 and PostgreSQL 17.11. Installed extension/helper ELF
+reports name the direct dependencies `libgcc_s.so.1`, `libm.so.6`, `libc.so.6`
+and `ld-linux-x86-64.so.2`. They do not resolve the loader's transitive closure.
+The sanitized public evidence preserves report hashes and recorded measurements.
+Original copyright, archive, binary, binding and build-trace bytes were not
+separately uploaded for an independent second hash calculation. Distribution
+review and P5 notices remain false.
