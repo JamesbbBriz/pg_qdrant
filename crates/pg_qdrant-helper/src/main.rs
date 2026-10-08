@@ -118,6 +118,7 @@ fn run() -> Result<(), ProbeError> {
                 q,
                 top_k,
                 dense_query,
+                fusion,
             } => source_owner.search(
                 index_id,
                 &generation,
@@ -125,6 +126,7 @@ fn run() -> Result<(), ProbeError> {
                 &q,
                 top_k,
                 dense_query,
+                fusion,
             ),
             op => execute(op),
         };

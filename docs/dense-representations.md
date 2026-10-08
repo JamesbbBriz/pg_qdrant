@@ -83,8 +83,9 @@ every live captured source row. Missing/stale/failed rows cause 55000; there is 
 silent text fallback or partial-vector coverage. Query vectors must name exactly
 one declared slot and its matching model ID/revision. Scores are native Edge
 scores for that slot's distance. Results use the same authorized source JOIN,
-revision, incarnation and SHA-256 rechecks as text search. Hybrid fusion remains
-unimplemented. Excerpts are plain source prefixes, not model-generated highlights.
+revision, incarnation and SHA-256 rechecks as text search. [Native hybrid fusion](hybrid-search.md)
+combines the same declared representation with BM25. Excerpts are plain source
+prefixes, not model-generated highlights.
 
 The initial permission domain remains the registered owner and inheriting roles,
 with complete source SELECT. Encoding inputs additionally require UPDATE on all
