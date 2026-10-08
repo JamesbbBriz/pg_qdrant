@@ -15,6 +15,7 @@ mod ipc;
 mod recheck;
 mod worker;
 mod p1_lifecycle;
+mod p2_query;
 
 ::pgrx::pg_module_magic!();
 
