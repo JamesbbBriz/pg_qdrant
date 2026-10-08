@@ -8,7 +8,9 @@ of the two earlier capture branches.
 The managed-helper build installs the canonical ledger via `CREATE EXTENSION`.
 It currently admits one non-null text column (at most 65,536 UTF-8 bytes per row)
 and a bigint, UUID or text primary
-key on an ordinary permanent heap table. Multiple text fields, BYOV, RLS,
+key on an ordinary permanent heap table. [Declared dense BYOV](dense-representations.md)
+adds fixed-generation named vectors through ordinary source-table updates.
+Multiple text fields, learned sparse/token-vector BYOV, RLS,
 partitions and alternative table access methods remain unimplemented. These
 requirements remain in the formal acceptance contract.
 
@@ -96,7 +98,7 @@ representations and advanced APIs remain separate implementation gates.
 Run `crates/pg_qdrant/tests/run-p1.sh` against the installed helper build.
 `experiments/p1-ledger/run.sh` preserves the original independent transaction
 regressions. P0 automatic CI also runs the installed source-to-search and crash
-integration. Models, comprehensive DDL, storage/OOM faults, upgrade/rollback,
+integration. Remaining model kinds/migration, comprehensive DDL, storage/OOM faults, upgrade/rollback,
 quality, resource limits and public packaging still require acceptance.
 
 The dedicated storage fixture fills a 384 MiB tmpfs hosting only Edge indexes;

@@ -159,7 +159,7 @@ impl Client {
                     return None;
                 }
                 self.incoming.extend_from_slice(&chunk[..size]);
-                if self.incoming.len() > ipc::REQUEST_BYTES {
+                if self.incoming.len() > ipc::SEARCH_REQUEST_BYTES {
                     return Some(Err(ProbeError::invalid(
                         "P0 request exceeds the byte budget",
                     )));
@@ -170,13 +170,25 @@ impl Client {
                             "P0 accepts one request per connection",
                         )));
                     }
-                    Some(serde_json::from_slice(&self.incoming).map_err(|e| {
-                        ProbeError::new(
-                            "protocol_error",
-                            e.to_string(),
-                            "Use the matching P0 protocol version and documented operation.",
-                        )
-                    }))
+                    Some(
+                        serde_json::from_slice::<Request>(&self.incoming)
+                            .map_err(|e| {
+                                ProbeError::new(
+                                    "protocol_error",
+                                    e.to_string(),
+                                    "Use the matching P0 protocol version and documented operation.",
+                                )
+                            })
+                            .and_then(|request| {
+                                if self.incoming.len() > request.operation.request_byte_limit() {
+                                    Err(ProbeError::invalid(
+                                        "request exceeds its operation byte budget",
+                                    ))
+                                } else {
+                                    Ok(request)
+                                }
+                            }),
+                    )
                 } else {
                     None
                 }
@@ -329,6 +341,7 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                                 "expired_or_disconnected": expired_or_disconnected,
                                 "rejected": rejected,
                                 "request_bytes_limit": ipc::REQUEST_BYTES,
+                                "search_request_bytes_limit": ipc::SEARCH_REQUEST_BYTES,
                                 "response_bytes_limit": ipc::RESPONSE_BYTES,
                                 "engine_concurrency": 1,
                                 "stage": "P0_feasibility"

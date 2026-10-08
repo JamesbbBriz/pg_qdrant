@@ -168,6 +168,8 @@ impl Supervisor {
                         nonce.len() == 32 && nonce.bytes().all(|b| b.is_ascii_hexdigit())
                     })
                     && value["helper_version"] == env!("CARGO_PKG_VERSION")
+                    && value["source_contract_version"]
+                        == pg_qdrant_protocol::SOURCE_CONTRACT_VERSION
                     && value["fault_injection"] == cfg!(feature = "p0-fault-injection") =>
             {
                 set_nonblocking(&output, false)?;
@@ -240,11 +242,7 @@ pub fn execute(connection: Connection, operation: Operation) -> Result<Value, Pr
     };
     let mut bytes = serde_json::to_vec(&request).expect("owned protocol serializes");
     bytes.push(b'\n');
-    let byte_limit = if matches!(request.operation, Operation::SourceApply { .. }) {
-        pg_qdrant_protocol::CONSUMER_REQUEST_BYTES
-    } else {
-        ipc::REQUEST_BYTES
-    };
+    let byte_limit = request.operation.request_byte_limit();
     if bytes.len() > byte_limit {
         return Err(ProbeError::invalid("helper request exceeds byte budget"));
     }

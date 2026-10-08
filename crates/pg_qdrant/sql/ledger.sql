@@ -89,7 +89,7 @@ CREATE INDEX outbox_by_ticket
 -- Record a row mutation in the same PostgreSQL transaction as the source write.
 -- ACK is a separate, exact-set consumer receipt after successful Edge flush.
 CREATE FUNCTION qdrant_internal.p1_record(
-    p_name text, p_operation text, p_key text, p_body text, p_origin text
+    p_name text, p_operation text, p_key text, p_body text, p_origin text, p_models jsonb DEFAULT '{}'
 ) RETURNS bigint
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path = pg_catalog, qdrant_internal, pg_temp
@@ -107,6 +107,7 @@ DECLARE
     v_body text;
     v_fingerprint text;
     v_event bigint;
+    v_vectors jsonb;
 BEGIN
     SELECT * INTO STRICT v_idx FROM qdrant_internal.index_catalog WHERE index_name = p_name;
     IF p_operation NOT IN ('upsert','delete')
@@ -174,13 +175,17 @@ BEGIN
         VALUES (p_name, v_tagged, v_point, v_incarnation, v_revision,
                 v_fingerprint, p_operation='delete', v_body);
     END IF;
+    v_vectors:=qdrant_internal.capture_representations(p_name,v_tagged,v_incarnation,v_fingerprint,p_models,p_operation='delete');
+    IF p_operation='upsert' AND octet_length(jsonb_build_object('body',v_body,'vectors',v_vectors)::text)>458752 THEN
+      RAISE EXCEPTION 'Text and representation projection exceeds the 448 KiB consumer budget' USING ERRCODE='54000';
+    END IF;
     INSERT INTO qdrant_internal.outbox
       (index_name, source_xid, tagged_key, point_id, incarnation, revision,
        operation, fingerprint, projection, origin)
     VALUES
       (p_name, pg_current_xact_id(), v_tagged, v_point, v_incarnation, v_revision,
        p_operation, v_fingerprint,
-       CASE WHEN p_operation = 'upsert' THEN jsonb_build_object('body',v_body) ELSE NULL END,
+       CASE WHEN p_operation = 'upsert' THEN jsonb_build_object('body',v_body,'vectors',v_vectors) ELSE NULL END,
        p_origin)
     RETURNING event_id INTO v_event;
     RETURN v_event;
@@ -215,7 +220,8 @@ BEGIN
     ELSIF TG_OP = 'INSERT' THEN
         EXECUTE format('SELECT ($1).%I::text, ($1).%I',v_idx.key_field,v_idx.text_field)
           INTO v_new_key,v_new_body USING NEW;
-        PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',v_new_key,v_new_body,'source_write');
+        PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',v_new_key,v_new_body,'source_write',
+          qdrant_internal.model_projection(v_idx.index_name,NEW));
         RETURN NEW;
     ELSIF TG_OP = 'UPDATE' THEN
         EXECUTE format('SELECT ($1).%I::text',v_idx.key_field)
@@ -225,7 +231,8 @@ BEGIN
         IF v_old_key IS DISTINCT FROM v_new_key THEN
             PERFORM qdrant_internal.p1_record(v_idx.index_name,'delete',v_old_key,NULL,'source_write');
         END IF;
-        PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',v_new_key,v_new_body,'source_write');
+        PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',v_new_key,v_new_body,'source_write',
+          qdrant_internal.model_projection(v_idx.index_name,NEW));
         RETURN NEW;
     END IF;
     RAISE EXCEPTION 'unsupported P1 trigger event' USING ERRCODE = '0A000';

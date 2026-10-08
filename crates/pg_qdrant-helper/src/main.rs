@@ -1,6 +1,6 @@
 //! P0 exec-isolation comparison. No PostgreSQL symbols or shared memory.
 
-use pg_qdrant_protocol::{HelperRequest, Operation, ProbeError, REQUEST_BYTES, VERSION};
+use pg_qdrant_protocol::{HelperRequest, Operation, ProbeError, VERSION};
 use serde_json::{Value, json};
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, Read, Write};
@@ -73,9 +73,7 @@ fn run() -> Result<(), ProbeError> {
                     Ok(request) => request,
                     Err(_) => std::process::exit(65),
                 };
-                if bytes.len() > REQUEST_BYTES
-                    && !matches!(request.operation, Operation::SourceApply { .. })
-                {
+                if bytes.len() > request.operation.request_byte_limit() {
                     std::process::exit(65);
                 }
                 // Never block the EOF watchdog behind a native operation.
@@ -97,6 +95,7 @@ fn run() -> Result<(), ProbeError> {
         0,
         pid,
         Ok(json!({"ready": true, "protocol_version": VERSION,
+        "source_contract_version": pg_qdrant_protocol::SOURCE_CONTRACT_VERSION,
         "helper_version": env!("CARGO_PKG_VERSION"),
         "fault_injection": cfg!(feature="p0-fault-injection"), "owner_instance": owner_instance})),
     )?;
@@ -118,7 +117,15 @@ fn run() -> Result<(), ProbeError> {
                 storage_epoch,
                 q,
                 top_k,
-            } => source_owner.search(index_id, &generation, &storage_epoch, &q, top_k),
+                dense_query,
+            } => source_owner.search(
+                index_id,
+                &generation,
+                &storage_epoch,
+                &q,
+                top_k,
+                dense_query,
+            ),
             op => execute(op),
         };
         respond(request.request_id, pid, result)?;

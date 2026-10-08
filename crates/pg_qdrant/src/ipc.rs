@@ -177,7 +177,7 @@ pub fn call(operation: Operation, timeout_ms: i32) -> Result<Value, ProbeError> 
         )
     })?;
     bytes.push(b'\n');
-    if bytes.len() > REQUEST_BYTES {
+    if bytes.len() > request.operation.request_byte_limit() {
         return Err(ProbeError::invalid("P0 request exceeds the byte budget"));
     }
     let mut offset = 0;
