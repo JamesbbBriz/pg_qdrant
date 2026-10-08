@@ -95,6 +95,25 @@ assert json.loads(sql("SELECT qdrant.await_changes('"+slow_ticket+"',60000)"))['
 assert hits('slowcommit')=='["7001"]' and hits('fastcommit')=='["7002"]'
 checks += ['commit inversion uses exact event sets']
 
+# A locked first key cannot strand other indexes or advance a backfill cursor.
+sql('CREATE TABLE online_build(id bigint PRIMARY KEY,body text NOT NULL)')
+sql("INSERT INTO online_build SELECT n,'onlineinitial '||n FROM generate_series(1,96)n")
+blocked_scan=spawn("BEGIN; SELECT id FROM online_build WHERE id=1 FOR UPDATE; SELECT pg_sleep(5); UPDATE online_build SET body='onlinechanged' WHERE id=1; DELETE FROM online_build WHERE id=2; UPDATE online_build SET id=200 WHERE id=3; INSERT INTO online_build VALUES(100,'onlinenew'); COMMIT",'pgq_backfill_locked_key')
+wait_session('pgq_backfill_locked_key',"wait_event='PgSleep'")
+sql("SELECT qdrant.create_index('online_build','online_build','id','{\"text\":{\"fields\":[\"body\"]}}')")
+other_ticket=ticket_from(sql("BEGIN; UPDATE docs SET body='otherindexprogress' WHERE id=6; SELECT qdrant.track_changes('docs'); COMMIT"))
+assert json.loads(sql("SELECT qdrant.await_changes('"+other_ticket+"',4000)"))['durable']
+assert blocked_scan.poll() is None,'backfill must not block another index on the source row lock'
+assert sql("SELECT backfill_cursor IS NULL AND NOT backfill_done FROM qdrant_internal.index_catalog WHERE index_name='online_build'")=='t'
+finish(blocked_scan); ready('online_build')
+assert hits('onlinechanged','online_build')=='["1"]'
+assert hits('onlinenew','online_build')=='["100"]'
+assert sql("SELECT count(*) FROM qdrant_internal.source_state WHERE index_name='online_build' AND NOT tombstone")=='96'
+assert '2' not in [str(hit['payload']['source_key']['value']) for hit in native_hits('onlineinitial','online_build')]
+assert '200' in [str(hit['payload']['source_key']['value']) for hit in native_hits('onlineinitial','online_build')]
+sql("SELECT qdrant.drop_index('online_build')")
+checks += ['nonblocking backfill retains locked keys and captures build-time mutations']
+
 first=spawn("BEGIN; UPDATE docs SET body='firstserial' WHERE id=2; SELECT pg_sleep(2); COMMIT",'pgq_update_first')
 wait_session('pgq_update_first',"wait_event='PgSleep'")
 second=spawn("UPDATE docs SET body='secondserial' WHERE id=2",'pgq_update_second')

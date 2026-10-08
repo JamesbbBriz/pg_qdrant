@@ -202,6 +202,21 @@ jobs:
           if docker inspect pg-qdrant-p1-product >/dev/null 2>&1; then
             docker cp pg-qdrant-p1-product:/src/artifacts/. artifacts/p1-product/
           fi
+      - name: Test installed exact ACK under actual Edge storage exhaustion
+        if: ${{ !cancelled() && steps.helper_fault_image.outcome == 'success' }}
+        run: |
+          docker create --name pg-qdrant-p1-storage --memory=5g --cpus=2 --network=none \
+            --tmpfs /pgq-p1-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \
+            --env PG_QDRANT_P1_STORAGE_TEST=1 --env PG_QDRANT_P1_DISK_DIR=/pgq-p1-faults \
+            pg-qdrant-p0-helper bash crates/pg_qdrant/tests/run-p1.sh
+          docker start --attach pg-qdrant-p1-storage
+      - name: Collect installed storage-failure evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/p1-storage
+          if docker inspect pg-qdrant-p1-storage >/dev/null 2>&1; then
+            docker cp pg-qdrant-p1-storage:/src/artifacts/. artifacts/p1-storage/
+          fi
       - name: Observe kernel OOM and direct-worker PostgreSQL recovery
         if: ${{ !cancelled() && steps.fault_image.outcome == 'success' && steps.helper_fault_image.outcome == 'success' }}
         run: >-

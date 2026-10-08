@@ -33,7 +33,10 @@ ORDER BY h.rank;
 ```
 
 Capture precedes a bounded online scan of 32 source rows per transaction, using
-primary-key ordering and row locks. Catalog changes use non-key update locks,
+primary-key ordering and row locks. Source table/row locks use NOWAIT; conflict
+rolls back the scan batch without advancing its cursor, then retries. A locked
+first key cannot starve another index's committed event set.
+Catalog changes use non-key update locks,
 so a long source transaction's foreign-key references do not block consumption
 of another key's committed events. Existing tombstones and newer identities
 are never overwritten by backfill. Registration has no 1,000-row limit.
@@ -89,3 +92,13 @@ Run `crates/pg_qdrant/tests/run-p1.sh` against the installed helper build.
 regressions. P0 automatic CI also runs the installed source-to-search and crash
 integration. Models, comprehensive DDL, storage/OOM faults, upgrade/rollback,
 quality, resource limits and public packaging still require acceptance.
+
+The dedicated storage fixture fills a 384 MiB tmpfs hosting only Edge indexes;
+PostgreSQL WAL, source tables and IPC remain on another device. Native I/O
+failure or mapped-page SIGBUS must leave events unacknowledged. After capacity
+is released, helper replacement (or explicit supervisor restart after budget
+exhaustion) reconstructs a fresh storage epoch and proves exact-ticket durability
+and source search. Failed directories are retained. This is a bounded process
+recovery test; public recovery tasks and comprehensive capacity management remain
+open. The guarded kernel OOM fixture additionally checks pending delete/key-reuse
+events across helper replacement; kernel victim attribution remains required.

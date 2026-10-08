@@ -53,8 +53,13 @@ BEGIN
  IF qdrant_internal.p1_index_status(p_name)->>'capture_state'<>'capturing' THEN
    RAISE EXCEPTION 'Source binding changed' USING ERRCODE='55000';
  END IF;
+ -- A long source transaction or concurrent DDL cannot block the supervisor.
+ -- Roll back the entire scan step on conflict, retaining the previous cursor;
+ -- skipping a locked key while advancing the cursor would lose source facts.
+ BEGIN
+ EXECUTE format('LOCK TABLE ONLY %s IN ROW SHARE MODE NOWAIT',i.source_oid::regclass);
  FOR row_data IN EXECUTE format(
-   'SELECT %I::text AS key,%I AS body FROM ONLY %s WHERE ($1 IS NULL OR %I > $1::%s) ORDER BY %I LIMIT 32 FOR UPDATE',
+   'SELECT %I::text AS key,%I AS body FROM ONLY %s WHERE ($1 IS NULL OR %I > $1::%s) ORDER BY %I LIMIT 32 FOR UPDATE NOWAIT',
    i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.key_field)
    USING i.backfill_cursor LOOP
    IF NOT EXISTS (SELECT 1 FROM qdrant_internal.source_state WHERE index_name=p_name
@@ -65,6 +70,9 @@ BEGIN
    n:=n+1;
  END LOOP;
  IF n<32 THEN UPDATE qdrant_internal.index_catalog SET backfill_done=true WHERE index_name=p_name; END IF;
+ EXCEPTION WHEN lock_not_available THEN
+   RETURN;
+ END;
 END $$;
 
 CREATE FUNCTION qdrant.track_changes(index_name text) RETURNS uuid

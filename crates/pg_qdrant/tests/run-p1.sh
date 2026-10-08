@@ -19,4 +19,8 @@ trap cleanup EXIT
   -o "-c listen_addresses='' -c unix_socket_directories='$pgq_cluster/socket' -c port=55434 -c fsync=on -c synchronous_commit=on" -w start
 export PGHOST="$pgq_cluster/socket" PGPORT=55434 PGDATABASE=postgres PGUSER="$(id -un)"
 export PG_QDRANT_DISPOSABLE_DATA="$pgq_cluster/data"
-python3 /src/crates/pg_qdrant/tests/verify_p1.py | tee "$pgq_artifacts/p1-product-results.json"
+if [[ "${PG_QDRANT_P1_STORAGE_TEST:-0}" == 1 ]]; then
+  python3 /src/crates/pg_qdrant/tests/verify_p1_storage.py | tee "$pgq_artifacts/p1-storage-results.json"
+else
+  python3 /src/crates/pg_qdrant/tests/verify_p1.py | tee "$pgq_artifacts/p1-product-results.json"
+fi
