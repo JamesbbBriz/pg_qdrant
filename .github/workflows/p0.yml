@@ -1,8 +1,7 @@
 name: P0 embedded-engine feasibility
 
+## TEMPORARY HOLD on unfinished phase PRs; see docs/ci-temporary-hold.md.
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 permissions:
