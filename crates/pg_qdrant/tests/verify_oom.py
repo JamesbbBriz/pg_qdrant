@@ -143,6 +143,14 @@ def observe():
     assert build["native_engine_cancellation"] is False
     run("CREATE TABLE p0_oom_marker(id integer PRIMARY KEY, value text); "
         "INSERT INTO p0_oom_marker VALUES(1, 'committed before native OOM')")
+    if HELPER:
+        run("CREATE TABLE p1_oom_source(id bigint PRIMARY KEY,body text NOT NULL); "
+            "INSERT INTO p1_oom_source VALUES(1,'oomoriginal recovery'); "
+            "SELECT qdrant.create_index('oom_source','p1_oom_source','id','{\"text\":{\"fields\":[\"body\"]}}')", timeout=8)
+        def source_ready():
+            value = jsql("SELECT qdrant.index_status('oom_source')", timeout=8)
+            return value if value['engine_index_ready'] and value['pending_events'] == 0 else None
+        REPORT['source_before'] = wait_for(source_ready, seconds=15)
     state = jsql("SELECT qdrant_internal.p0_start_worker(5000)", timeout=8)
     assert state["engine_ready"] and state["active"] is None
     postmaster = identity(int(bounded_text(DATA / "postmaster.pid").splitlines()[0]))
@@ -183,6 +191,16 @@ def observe():
     assert armed_record["allocation_started"] is False
     assert armed_record["target"] == target and armed_record["requested_bytes_cap"] == 805306368
     assert companion.poll() is None and same(companion_identity, identity(companion_pid))
+    if HELPER:
+        # Commit while the exact native owner is held at its pre-allocation
+        # barrier. The pending source event must survive the kernel victim.
+        output = scalar("BEGIN; DELETE FROM p1_oom_source WHERE id=1; "
+            "INSERT INTO p1_oom_source VALUES(1,'oomreplacement recovery'); "
+            "SELECT qdrant.track_changes('oom_source'); COMMIT")
+        ticket = next(line for line in output.splitlines() if len(line) == 36 and line.count('-') == 4)
+        pending = jsql("SELECT qdrant_internal.ticket_status('" + ticket + "')")
+        assert pending['committed'] and not pending['durable'] and pending['pending_events'] == 2, pending
+        REPORT.update(source_ticket=ticket, source_ticket_pending=pending)
     REPORT["armed"] = armed_record
     REPORT["stage"] = "outer_barrier_and_kernel_event"
     write_owned(ARTIFACTS / "oom-ready.json", {"schema_version": 1, "nonce": NONCE,
@@ -248,7 +266,14 @@ def observe():
         assert last_exit["engine_pid"] == target["pid"] and last_exit["signal"] == signal.SIGKILL
         assert last_exit["supervisor_kill_requested"] is False and last_exit["kill_attempts"] == 0
         assert last_exit["stop_reason"] == "unexpected_exit"
-        assert replacement["helper_start_attempts"] == 2
+        if replacement["helper_start_attempts"] == 1:
+            # An exact durable source batch resets the consecutive-failure
+            # budget. Verify progress from the replacement execution identity.
+            progressed = source_ready()
+            assert progressed and progressed['engine_instance'] == replacement['engine_instance']
+            assert progressed['storage_epoch'] != REPORT['source_before']['storage_epoch']
+        else:
+            assert replacement["helper_start_attempts"] == 2
     else:
         assert replacement["worker_pid"] != supervisor["pid"]
         log = bounded_text(ARTIFACTS / "postgresql.log", limit=256*1024)
@@ -263,6 +288,23 @@ def observe():
     REPORT.update(companion_survived=HELPER, supervisor_preserved=HELPER,
                   postmaster_preserved=True, committed_marker_retained=True,
                   recovery_ms=int((time.monotonic()-started)*1000))
+    if HELPER:
+        durable = jsql("SELECT qdrant.await_changes('" + ticket + "',15000)", timeout=18)
+        after = source_ready()
+        assert durable['durable'] and durable['pending_events'] == 0 and after, durable
+        assert after['storage_epoch'] != REPORT['source_before']['storage_epoch']
+        assert after['engine_instance'] != REPORT['source_before']['engine_instance']
+        assert scalar("SELECT source_key FROM qdrant.search('oom_source','oomreplacement')") == '1'
+        assert scalar("SELECT count(*) FROM qdrant.search('oom_source','oomoriginal')") == '0'
+        # Verify obsolete incarnation cleanup before the SQL source JOIN.
+        native = jsql("SELECT qdrant_internal.p1_search((SELECT jsonb_build_object('operation','source_search',"
+            "'index_id',i.index_id,'generation',i.generation,'storage_epoch',c.storage_epoch,"
+            "'q','oomoriginal','top_k',10) FROM qdrant_internal.index_catalog i "
+            "JOIN qdrant_internal.consumer_state c USING(index_name) WHERE i.index_name='oom_source'),30000)",timeout=8)
+        assert native == [], native
+        REPORT.update(source_after=after, source_ticket_durable=durable,
+            source_ledger_recovery_verified=True, obsolete_native_incarnation_removed=True,
+            source_final_keys=['1'])
     smoke = jsql("SELECT qdrant_internal.p0_engine_probe(120000)", timeout=135)
     assert smoke["status"] == "passed" and smoke["engine_version"] == "0.8.0"
     write_owned(ARTIFACTS / "oom-replacement-engine.json", smoke)

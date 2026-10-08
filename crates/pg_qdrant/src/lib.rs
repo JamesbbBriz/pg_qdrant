@@ -1,10 +1,12 @@
-//! P0 only: an actual PostgreSQL-to-Edge experiment, not the indexing product.
+//! Development source indexing and retained P0 PostgreSQL-to-Edge diagnostics.
 //!
 //! The dynamic PostgreSQL worker owns a bounded request queue. It sends owned
 //! Rust data to at most one engine thread. Engine threads never call PostgreSQL.
 
 use pgrx::prelude::*;
 
+#[cfg(feature = "p0-managed-helper")]
+mod consumer;
 mod formats;
 #[cfg(feature = "p0-managed-helper")]
 mod helper;
@@ -12,6 +14,9 @@ mod helper;
 mod helper_child;
 mod identity;
 mod ipc;
+mod p1_lifecycle;
+mod p2_query;
+mod p3_operations;
 mod recheck;
 mod worker;
 
@@ -29,7 +34,7 @@ mod qdrant {
         JsonB(json!({
             "schema_version": 1,
             "extension_version": env!("CARGO_PKG_VERSION"),
-            "stage": "P0_feasibility",
+            "stage": if cfg!(feature="p0-managed-helper") {"development_source_indexing"} else {"P0_feasibility"},
             "engine": {"name": "qdrant-edge", "version": "0.8.0"},
             "pgrx_version": "0.19.3",
             "cpu_admission": pg_qdrant_edge_probe::cpu_report(),
@@ -37,12 +42,51 @@ mod qdrant {
             "features": {"pg17": cfg!(feature="pg17"), "cshim": true,
                 "p0_managed_helper": cfg!(feature="p0-managed-helper"),
                 "p0_fault_injection": cfg!(feature="p0-fault-injection")},
-            "product_indexing_api": false,
+            "product_indexing_api": cfg!(feature="p0-managed-helper"),
+            "indexing_scope": "development: one text field, owner domain, retained-event recovery",
             "release_supported_capabilities": [],
             "native_engine_cancellation": false,
             "prototype_process": if cfg!(feature="p0-managed-helper") {
                 "postgresql_supervisor_with_exec_helper"
             } else { "dynamic_postgresql_worker_with_engine_thread" }
+        }))
+    }
+
+    /// Validate an advanced request's bounded shape, not its permission or execution.
+    #[pg_extern(immutable, parallel_safe)]
+    fn validate_advanced_request(request: JsonB) -> JsonB {
+        // Reject oversized structures before recursive semantic validation.
+        // The JsonB input itself has already crossed PostgreSQL's datum bound.
+        let encoded = serde_json::to_vec(&request.0).unwrap_or_else(|_| {
+            pgrx::ereport!(
+                ERROR,
+                pgrx::PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
+                "advanced request cannot be serialized"
+            );
+        });
+        if encoded.len() > 16 * 1024 {
+            pgrx::ereport!(
+                ERROR,
+                pgrx::PgSqlErrorCode::ERRCODE_PROGRAM_LIMIT_EXCEEDED,
+                "advanced request exceeds 16 KiB admission limit"
+            );
+        }
+        let admission =
+            pg_qdrant_protocol::advanced::validate(request.0).unwrap_or_else(|reason| {
+                pgrx::ereport!(
+                    ERROR,
+                    pgrx::PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
+                    reason,
+                    "Validation does not authorize or execute native Edge work."
+                );
+            });
+        JsonB(json!({
+            "family": admission.family,
+            "candidate_limit": admission.candidate_limit,
+            "needs_source_authorization": admission.needs_source_authorization,
+            "source_authorization_checked": false,
+            "native_implementation_available": false,
+            "search_executable": false
         }))
     }
 
@@ -53,25 +97,26 @@ mod qdrant {
             pgrx::ereport!(
                 ERROR,
                 pgrx::PgSqlErrorCode::ERRCODE_FEATURE_NOT_SUPPORTED,
-                "index-specific capability discovery is not available in the P0 prototype",
+                "index-specific capability discovery remains unimplemented",
                 "Call qdrant.capabilities() to inspect the retained product requirements."
             );
         }
         let mut ids = Vec::new();
         for (prefix, count) in [("F", 20), ("V", 8), ("Q", 14), ("L", 12)] {
             for number in 1..=count {
+                let bm25_sql = cfg!(feature = "p0-managed-helper") && prefix == "F" && number == 1;
                 ids.push(json!({
                     "id": format!("{prefix}{number:02}"),
-                    "product_status": "planned",
+                    "product_status": if bm25_sql {"partial_sql_integration"} else {"planned"},
                     "release_supported": false,
-                    "sql_product_interface": false
+                    "sql_product_interface": bm25_sql,
+                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else {None}
                 }));
             }
         }
-        JsonB(
-            json!({"registry_schema_version": 1, "stage": "P0_feasibility",
-            "index_catalog_available": false, "capabilities": ids}),
-        )
+        JsonB(json!({"registry_schema_version": 1,
+            "stage": if cfg!(feature="p0-managed-helper") {"development_source_indexing"} else {"P0_feasibility"},
+            "index_catalog_available": cfg!(feature="p0-managed-helper"), "capabilities": ids}))
     }
 }
 
@@ -80,6 +125,39 @@ mod qdrant_internal {
     use super::{formats, identity, ipc, recheck, worker};
     use pgrx::JsonB;
     use pgrx::prelude::*;
+
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p1_start_consumer() -> JsonB {
+        require_superuser();
+        if !cfg!(feature = "p0-managed-helper") {
+            ipc::raise(ipc::ProbeError::invalid(
+                "source indexing requires managed helper installation",
+            ));
+        }
+        JsonB(worker::ensure_owner(5000).unwrap_or_else(|e| ipc::raise(e)))
+    }
+
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p1_service_ready(instance: &str) -> bool {
+        require_superuser();
+        cfg!(feature = "p0-managed-helper")
+            && ipc::call(ipc::Operation::Ping, 250).is_ok_and(|status| {
+                status["engine_ready"] == true && status["engine_instance"] == instance
+            })
+    }
+
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p1_search(request: JsonB, timeout_ms: i32) -> JsonB {
+        require_superuser();
+        worker::start(5000).unwrap_or_else(|e| ipc::raise(e));
+        let operation: ipc::Operation = serde_json::from_value(request.0).unwrap_or_else(|_| {
+            ipc::raise(ipc::ProbeError::invalid("invalid owned search request"))
+        });
+        if !matches!(operation, ipc::Operation::SourceSearch { .. }) {
+            ipc::raise(ipc::ProbeError::invalid("search operation required"));
+        }
+        JsonB(ipc::call(operation, timeout_ms).unwrap_or_else(|e| ipc::raise(e)))
+    }
 
     /// Fixture-only source recheck; no production authorization or capture.
     #[pg_extern(volatile, parallel_unsafe)]

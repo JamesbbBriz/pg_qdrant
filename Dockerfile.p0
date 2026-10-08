@@ -1,5 +1,5 @@
 # P0 build/test environment. This is not a production database image.
-FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55 AS build-tools
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG RUSTUP_SHA256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
@@ -55,10 +55,12 @@ RUN curl --fail --silent --show-error \
     && rm /tmp/rustup-init
 RUN cargo install cargo-pgrx --version 0.19.3 --locked
 
+FROM build-tools AS verification
 WORKDIR /src
 COPY . .
 RUN cargo fmt --all -- --check \
     && python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check \
+    && cargo test --locked -p pg-qdrant-protocol \
     && cargo run --locked -p pg-qdrant-edge-probe -- --cpu-check >/tmp/cpu-admission.json \
     && cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1 \
     && cargo test --locked -p pg-qdrant-helper --test supervisor_child \
@@ -117,4 +119,6 @@ RUN mkdir -p /src/artifacts \
     && chown builder:builder /src/artifacts
 USER builder
 ENV PG_QDRANT_ARTIFACT_DIR=/src/artifacts
+ARG PG_QDRANT_SOURCE_SHA=unrecorded
+ENV PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA}
 CMD ["bash", "crates/pg_qdrant/tests/run-p0.sh"]

@@ -8,6 +8,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+mod source;
 
 fn main() {
     if let Err(error) = run() {
@@ -37,7 +38,7 @@ fn run() -> Result<(), ProbeError> {
         .create(true)
         .truncate(false)
         .mode(0o600)
-        .open(owner_path)
+        .open(&owner_path)
         .map_err(ProbeError::io)?;
     owner.try_lock().map_err(|e| {
         ProbeError::new(
@@ -57,19 +58,26 @@ fn run() -> Result<(), ProbeError> {
                 let mut bytes = Vec::new();
                 match input
                     .by_ref()
-                    .take((REQUEST_BYTES + 1) as u64)
+                    .take((pg_qdrant_protocol::CONSUMER_REQUEST_BYTES + 1) as u64)
                     .read_until(b'\n', &mut bytes)
                 {
                     // The supervisor alone owns the write end. EOF terminates every
                     // native thread immediately, even during an uninterruptible call.
                     Ok(0) => std::process::exit(0),
-                    Ok(_) if bytes.len() <= REQUEST_BYTES && bytes.last() == Some(&b'\n') => {}
+                    Ok(_)
+                        if bytes.len() <= pg_qdrant_protocol::CONSUMER_REQUEST_BYTES
+                            && bytes.last() == Some(&b'\n') => {}
                     _ => std::process::exit(65),
                 }
                 let request = match serde_json::from_slice::<HelperRequest>(&bytes) {
                     Ok(request) => request,
                     Err(_) => std::process::exit(65),
                 };
+                if bytes.len() > REQUEST_BYTES
+                    && !matches!(request.operation, Operation::SourceApply { .. })
+                {
+                    std::process::exit(65);
+                }
                 // Never block the EOF watchdog behind a native operation.
                 if sender.try_send(request).is_err() {
                     std::process::exit(65);
@@ -79,14 +87,22 @@ fn run() -> Result<(), ProbeError> {
         .map_err(ProbeError::io)?;
 
     let pid = std::process::id();
+    // A PID can be reused. Each execution receives a fresh owner identity.
+    let mut nonce = [0_u8; 16];
+    std::fs::File::open("/dev/urandom")
+        .and_then(|mut random| random.read_exact(&mut nonce))
+        .map_err(ProbeError::io)?;
+    let owner_instance: String = nonce.iter().map(|byte| format!("{byte:02x}")).collect();
     respond(
         0,
         pid,
         Ok(json!({"ready": true, "protocol_version": VERSION,
         "helper_version": env!("CARGO_PKG_VERSION"),
-        "fault_injection": cfg!(feature="p0-fault-injection")})),
+        "fault_injection": cfg!(feature="p0-fault-injection"), "owner_instance": owner_instance})),
     )?;
     let mut previous_id = 0;
+    let mut source_owner =
+        source::SourceOwner::new(std::path::PathBuf::from(owner_path).with_extension("indexes"))?;
     while let Ok(request) = receiver.recv() {
         if request.protocol_version != VERSION || request.request_id <= previous_id {
             return Err(ProbeError::invalid(
@@ -94,7 +110,18 @@ fn run() -> Result<(), ProbeError> {
             ));
         }
         previous_id = request.request_id;
-        respond(request.request_id, pid, execute(request.operation))?;
+        let result = match request.operation {
+            Operation::SourceApply { batch } => source_owner.apply(batch),
+            Operation::SourceSearch {
+                index_id,
+                generation,
+                storage_epoch,
+                q,
+                top_k,
+            } => source_owner.search(index_id, &generation, &storage_epoch, &q, top_k),
+            op => execute(op),
+        };
+        respond(request.request_id, pid, result)?;
     }
     Ok(())
 }

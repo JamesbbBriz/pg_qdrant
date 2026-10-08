@@ -16,6 +16,7 @@ default = []
 p0-fault-injection = ["pg-qdrant-edge-probe/p0-fault-injection"]
 
 [dependencies]
+qdrant-edge = "=0.8.0"
 pg-qdrant-protocol = { path = "../pg_qdrant-protocol" }
 pg-qdrant-edge-probe = { path = "../edge-probe" }
 serde_json = "=1.0.151"

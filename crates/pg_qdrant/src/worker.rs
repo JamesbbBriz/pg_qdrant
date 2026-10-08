@@ -14,13 +14,22 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 pub fn start(timeout_ms: i32) -> Result<Value, ProbeError> {
+    start_owner(timeout_ms, true)
+}
+
+/// Product status/wait must observe a live supervisor during helper recovery.
+pub fn ensure_owner(timeout_ms: i32) -> Result<Value, ProbeError> {
+    start_owner(timeout_ms, false)
+}
+
+fn start_owner(timeout_ms: i32, require_engine: bool) -> Result<Value, ProbeError> {
     let deadline = Instant::now() + ipc::validate_timeout(timeout_ms)?;
     // Scalar database identity only; no backend pointer is sent to a worker.
     let database_oid = unsafe { pg_sys::MyDatabaseId };
     let mut existing_owner = false;
     if ipc::socket_path(database_oid.to_u32())?.exists() {
         if let Ok(mut status) = ipc::call(Operation::Ping, timeout_ms.min(250)) {
-            if status["engine_ready"] == true {
+            if !require_engine || status["engine_ready"] == true {
                 status["worker_reused"] = json!(true);
                 return Ok(status);
             }
@@ -57,8 +66,12 @@ pub fn start(timeout_ms: i32) -> Result<Value, ProbeError> {
             .saturating_duration_since(Instant::now())
             .as_millis()
             .max(1) as i32;
-        match ipc::call(Operation::Ping, remaining.min(100)) {
-            Ok(mut status) if status["engine_ready"] == true => {
+        // One reply may follow the worker's bounded SPI batch. Repeated tiny
+        // deadlines can expire every accepted socket while making a live owner
+        // appear unavailable. Use the existing overall startup budget; IPC
+        // remains nonblocking and checks PostgreSQL cancellation throughout.
+        match ipc::call(Operation::Ping, remaining) {
+            Ok(mut status) if !require_engine || status["engine_ready"] == true => {
                 let registered_pid = handle
                     .as_ref()
                     .and_then(|handle| handle.pid().ok())
@@ -205,6 +218,7 @@ struct Active {
     operation: &'static str,
     started: Instant,
     handle: JoinHandle<Result<Value, ProbeError>>,
+    batch: Option<pg_qdrant_protocol::SourceBatch>,
 }
 
 fn run(database_oid: u32) -> Result<(), ProbeError> {
@@ -248,12 +262,24 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
     let mut rejected = 0_u64;
     #[cfg(feature = "p0-managed-helper")]
     let mut supervisor = crate::helper::Supervisor::new(&directory, database_oid)?;
+    #[cfg(feature = "p0-managed-helper")]
+    let mut consumer_instance: Option<String> = None;
 
     loop {
         #[cfg(feature = "p0-managed-helper")]
         supervisor.tick(active.as_ref().map(|job| job.started.elapsed()));
         #[cfg(feature = "p0-managed-helper")]
         let process_status = supervisor.status();
+        #[cfg(feature = "p0-managed-helper")]
+        if process_status["engine_ready"] == true
+            && consumer_instance.as_deref() != process_status["engine_instance"].as_str()
+        {
+            let instance = process_status["engine_instance"]
+                .as_str()
+                .expect("ready owner identity");
+            crate::consumer::reset(instance);
+            consumer_instance = Some(instance.to_owned());
+        }
         #[cfg(not(feature = "p0-managed-helper"))]
         let process_status = json!({"engine_pid": worker_pid, "engine_ready": true});
         // Accept a bounded number per tick, even under connection flooding.
@@ -348,6 +374,13 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
             #[cfg(feature = "p0-managed-helper")]
             supervisor.completed(&result);
             completed += 1;
+            #[cfg(feature = "p0-managed-helper")]
+            if let Some(batch) = job.batch {
+                if result.as_ref().is_ok_and(|r| r["flushed"] == true) {
+                    supervisor.source_progress();
+                }
+                crate::consumer::complete(batch, &result);
+            }
             if let Some(client) = clients.get_mut(&job.client_id) {
                 client.respond(result);
             }
@@ -362,6 +395,8 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                     Operation::Panic => "panic",
                     Operation::Abort => "abort",
                     Operation::Oom => "oom",
+                    Operation::SourceApply { .. } => "source_apply",
+                    Operation::SourceSearch { .. } => "source_search",
                 };
                 #[cfg(feature = "p0-managed-helper")]
                 let Some(connection) = supervisor.connection() else {
@@ -385,6 +420,30 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                     operation: operation_name,
                     started: Instant::now(),
                     handle,
+                    batch: None,
+                });
+            }
+        }
+
+        #[cfg(feature = "p0-managed-helper")]
+        if active.is_none() && process_status["engine_ready"] == true {
+            if let Some(batch) = crate::consumer::next(
+                process_status["engine_instance"]
+                    .as_str()
+                    .expect("ready owner identity"),
+            ) {
+                let connection = supervisor.connection().expect("ready helper");
+                let operation = crate::consumer::operation(batch.clone());
+                let handle = thread::Builder::new()
+                    .name("pg_qdrant_source_io".into())
+                    .spawn(move || crate::helper::execute(connection, operation))
+                    .map_err(ProbeError::io)?;
+                active = Some(Active {
+                    client_id: 0,
+                    operation: "source_apply",
+                    started: Instant::now(),
+                    handle,
+                    batch: Some(batch),
                 });
             }
         }
@@ -415,6 +474,9 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
 fn validate_request(request: Request) -> Result<Request, ProbeError> {
     if request.protocol_version != ipc::VERSION {
         return Err(ProbeError::invalid("unsupported P0 protocol version"));
+    }
+    if matches!(request.operation, Operation::SourceApply { .. }) {
+        return Err(ProbeError::invalid("source mutations are worker-owned"));
     }
     if !(1..=ipc::MAX_TIMEOUT_MS as u64).contains(&request.timeout_ms) {
         return Err(ProbeError::invalid("P0 timeout outside accepted bounds"));
@@ -476,6 +538,9 @@ fn execute(operation: Operation) -> Result<Value, ProbeError> {
             Ok(json!({"completed_delay_ms": delay_ms, "engine_probe": false}))
         }
         Operation::Ping => Err(ProbeError::invalid("ping belongs on the owner main thread")),
+        Operation::SourceApply { .. } | Operation::SourceSearch { .. } => Err(ProbeError::invalid(
+            "source indexing requires the managed helper build",
+        )),
         #[cfg(feature = "p0-fault-injection")]
         Operation::Panic => panic!("intentional P0 engine-thread panic"),
         #[cfg(feature = "p0-fault-injection")]
