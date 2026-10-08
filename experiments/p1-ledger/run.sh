@@ -30,4 +30,12 @@ export PGHOST="$cluster/socket" PGPORT=55433 PGDATABASE=postgres PGUSER="$(id -u
 "$pgq_bin/psql" -X -v ON_ERROR_STOP=1 -f /src/experiments/p1-ledger/p1-ledger.sql >"$artifacts/p1-install.log" 2>&1
 "$pgq_bin/psql" -X -v ON_ERROR_STOP=1 -f /src/experiments/p1-ledger/test.sql >"$artifacts/p1-assertions.log" 2>&1
 python3 /src/experiments/p1-ledger/parallel.py >"$artifacts/p1-parallel.json" 2>"$artifacts/p1-parallel.log"
-echo "P1 ledger checks passed"
+# Immediate stop simulates crash recovery for PostgreSQL-owned source/outbox WAL.
+# It does not test Edge WAL, native process ownership or exact-event ACK.
+"$pgq_bin/pg_ctl" -D "$cluster/data" -m immediate -w stop >"$artifacts/p1-immediate-stop.log" 2>&1
+"$pgq_bin/pg_ctl" -D "$cluster/data" -l "$artifacts/p1-recovery-postgresql.log" \
+ -o "-c listen_addresses='' -c unix_socket_directories='$cluster/socket' -c port=55433 -c fsync=on -c synchronous_commit=on" \
+ -w start >"$artifacts/p1-restart.log" 2>&1
+"$pgq_bin/psql" -X -v ON_ERROR_STOP=1 -f /src/experiments/p1-ledger/restart.sql \
+ >"$artifacts/p1-restart-assertions.log" 2>&1
+echo "P1 ledger capture and PostgreSQL crash-recovery checks passed"

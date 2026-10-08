@@ -37,9 +37,11 @@ docker run --rm --memory=5g --cpus=2 --network=none \
   the current top-level transaction*, not event-ID max/watermarks. Tickets
   created after further writes are distinct. Tickets cannot be polled from the
   writing transaction. An uncommitted/aborted ticket does not become visible.
-- UUID/text key, bounded backfill refusal and disabled-trigger assertions are
-  covered by the SQL harness. Two-session tests exercise cross-key commit inversion and serialized
-  same-key updates.
+- UUID/text keys, COPY, multirow updates, a wide irrelevant bytea field,
+  deliberate trigger errors, bounded-backfill refusal and disabled-trigger
+  assertions are covered by SQL. Two-session tests exercise cross-key commit
+  inversion and same-key serialization. An immediate-stop/restart probe checks
+  committed outbox and ticket persistence across PostgreSQL recovery.
 
 ## Not implemented / correctness boundary
 
@@ -59,6 +61,13 @@ This probe stores only the selected text field and a tagged stable key; it
 does not claim multi-field analysis, BYOV model readiness, query-privacy
 guarantees or full source-table mapping. Event sequences are allocation order,
 not commit order. A source may disappear; the status reports degraded, and
-the probe has no automatic source-DDL cleanup yet.
+the probe has no automatic source-DDL cleanup yet. This status observes only
+current trigger/schema state. Disabling capture, making writes, then enabling
+capture again may cause an undetectable historical gap. The product must
+prevent unsafe source DDL or require source reconciliation/rebuild.
+
+The immediate-stop experiment covers PostgreSQL WAL recovery only, not Edge
+storage durability, a crash between Edge flush and PostgreSQL ACK, or automatic
+index reconstruction. Those remain open acceptance gates.
 
 **No public release or full P1 gate is considered passed by this experiment.**

@@ -386,6 +386,14 @@ AS $p1$
          OR c.relnamespace<>(SELECT n.oid FROM pg_namespace n WHERE n.nspname=i.source_schema)
          OR c.relrowsecurity OR c.relforcerowsecurity
          OR c.relam<>(SELECT am.oid FROM pg_am am WHERE am.amname='heap')
+         OR NOT EXISTS(
+           SELECT 1 FROM pg_attribute a WHERE a.attrelid=c.oid
+             AND a.attname=i.key_field AND a.atttypid=i.key_type
+             AND a.attnum>0 AND a.attnotnull AND NOT a.attisdropped)
+         OR NOT EXISTS(
+           SELECT 1 FROM pg_attribute a WHERE a.attrelid=c.oid
+             AND a.attname=i.text_field AND a.atttypid='pg_catalog.text'::regtype::oid
+             AND a.attnum>0 AND a.attnotnull AND NOT a.attisdropped)
          OR (SELECT count(*) FROM pg_trigger t
               WHERE t.tgrelid=c.oid AND NOT t.tgisinternal
                 AND t.tgenabled IN ('O','A')

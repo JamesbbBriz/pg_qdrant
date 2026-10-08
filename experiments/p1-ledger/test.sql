@@ -182,6 +182,52 @@ BEGIN
  THEN RAISE EXCEPTION 'failed backfill left registration metadata'; END IF;
 END $test$;
 
+
+-- COPY must traverse ordinary row triggers; wide unindexed columns must not
+-- be serialized into the search projection.
+CREATE TABLE public.p1_copy (id bigint PRIMARY KEY, body text NOT NULL, unrelated bytea);
+SELECT qdrant_internal.p1_register('copy_idx','public.p1_copy'::regclass,'id','body');
+COPY public.p1_copy (id,body) FROM STDIN;
+901	copy source a
+902	复制 row b
+\.
+INSERT INTO public.p1_copy VALUES (903,'narrow searchable body',repeat('Z', 1048576)::bytea);
+UPDATE public.p1_copy SET body=body||' updated' WHERE id IN (901,902);
+DELETE FROM public.p1_copy WHERE id=901;
+DO $test$
+BEGIN
+ IF (SELECT count(*) FROM qdrant_internal.p1_outbox WHERE index_name='copy_idx')<>6
+ THEN RAISE EXCEPTION 'COPY/multirow UPDATE/DELETE missed events'; END IF;
+ IF (SELECT revision FROM qdrant_internal.p1_source_state
+     WHERE index_name='copy_idx' AND tagged_key='{"type":"bigint","value":"902"}'::jsonb)<>2
+ THEN RAISE EXCEPTION 'multirow revision invalid'; END IF;
+ IF (SELECT projection->>'body' FROM qdrant_internal.p1_outbox
+     WHERE index_name='copy_idx' AND tagged_key='{"type":"bigint","value":"903"}'::jsonb)<> 'narrow searchable body'
+ THEN RAISE EXCEPTION 'wide unrelated column entered projection'; END IF;
+END $test$;
+DO $test$
+BEGIN
+ BEGIN
+   INSERT INTO public.p1_copy VALUES (904, repeat('Y',65537),NULL);
+   RAISE EXCEPTION 'over-budget body not rejected';
+ EXCEPTION WHEN SQLSTATE '22023' THEN NULL;
+ END;
+ IF EXISTS(SELECT 1 FROM public.p1_copy WHERE id=904)
+    OR EXISTS(SELECT 1 FROM qdrant_internal.p1_outbox
+       WHERE index_name='copy_idx' AND tagged_key='{"type":"bigint","value":"904"}'::jsonb)
+ THEN RAISE EXCEPTION 'trigger exception failed to roll back source/outbox together'; END IF;
+END $test$;
+
+
+-- Renaming an indexed column invalidates the registered capture contract.
+ALTER TABLE public.p1_copy RENAME COLUMN body TO renamed_body;
+DO $test$
+DECLARE j jsonb;
+BEGIN
+ j:=qdrant_internal.p1_index_status('copy_idx');
+ IF j->>'capture_state'<>'degraded'
+ THEN RAISE EXCEPTION 'renamed source field not reported degraded'; END IF;
+END $test$;
 DROP TABLE public.p1_chunks;
 DO $test$
 DECLARE j jsonb;
