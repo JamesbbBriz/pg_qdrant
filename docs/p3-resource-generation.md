@@ -39,6 +39,38 @@ and prevents cutover without claiming to interrupt a running native call.
 Management task IDs are distinct from change-ticket IDs. Task operations
 require the index owner; starting a build additionally requires source SELECT.
 
+## Transactional index removal
+
+`qdrant.drop_index(name)` returns a distinct drop task. Source triggers and the
+catalog are removed in the calling PostgreSQL transaction. A rollback restores
+them and performs no native deletion. After commit, the sole helper flushes,
+closes and retires each precisely recorded native generation/storage epoch.
+The task reports `physical_cleanup_completed=true` only after all matching
+retirement receipts are acknowledged. Logical removal alone is insufficient.
+
+```sql
+BEGIN;
+SELECT qdrant.drop_index('articles'); -- retain task_id
+COMMIT;
+SELECT qdrant.await_task('returned-drop-task-uuid', 60000);
+```
+
+Drop tasks remain owner-protected after the catalog has disappeared. Completed
+rebuild outcomes are archived, including their original failure or cancellation
+state. Pending rebuilds become cancelled by index removal. A committed drop
+cannot be cancelled: ownership cleanup remains necessary. A same-name new
+registration has a different internal index identity and storage path, so the
+old task cannot remove its shard.
+
+If a helper has changed since an epoch was owned, cleanup fails closed and
+preserves its uncertain directory. The task explicitly reports failure and
+remaining epochs; it does not claim physical cleanup or reopen that storage.
+Consumer epoch rotations retain prior ownership records, so recovery cannot
+erase an old directory from subsequent cleanup accounting.
+Automatic orphan reclamation across helper replacement is still unsupported.
+Wait for drop tasks before uninstalling the extension; dropping the extension
+does not itself prove that its asynchronous native cleanup completed.
+
 ## Verification and remaining scope
 
 `verify_generations.py` tests actual flush/receipt/cutover, out-of-order commits,
@@ -48,11 +80,16 @@ before and after flush leave the build failed and unacknowledged; the serving
 identity is retained, recovered and queried before a fresh successful build.
 The helper unit test verifies exact retirement replay, mismatched identities,
 directory removal and refusal to reopen or mutate a retired epoch.
+`verify_retirements.py` covers transactional rollback, uncommitted wait refusal,
+owner admission, forged receipts, same-name replacement, archived task outcomes,
+40 native create/drop cycles, unrelated directory preservation and actual helper
+SIGKILL with explicit failed cleanup and usable fresh registration.
 
 Rebuilding currently requires a trusted, capture-enabled source with completed
 backfill and a ready serving generation. It does not repair disabled capture,
 rescan changed schemas, change model/analyzer contracts or migrate disk formats.
-Failed/cancelled shadow directories and uncertain old epochs are retained.
+Failed/cancelled shadow directories remain retained while the index exists;
+index removal queues known owned epochs. Uncertain old epochs are retained.
 The helper's 32-open-shard limit and 256-retirement-receipt limit remain bounded
 capacity constraints; disk/RSS admission and failed-build cleanup remain open.
 

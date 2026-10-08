@@ -152,20 +152,11 @@ BEGIN
  END LOOP;
 END $$;
 
-CREATE FUNCTION qdrant.drop_index(p_index_name text) RETURNS void
+CREATE FUNCTION qdrant.drop_index(p_index_name text) RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-DECLARE i qdrant_internal.index_catalog%ROWTYPE; slot record;
 BEGIN
  PERFORM qdrant_internal.require_index(p_index_name,true);
- SELECT * INTO STRICT i FROM qdrant_internal.index_catalog WHERE index_name=p_index_name FOR UPDATE;
- IF EXISTS(SELECT 1 FROM pg_class WHERE oid=i.source_oid) THEN
-   EXECUTE format('DROP TRIGGER IF EXISTS qdrant_p1_rows ON %s',i.source_oid::regclass);
-   EXECUTE format('DROP TRIGGER IF EXISTS qdrant_p1_truncate ON %s',i.source_oid::regclass);
-   FOR slot IN SELECT name FROM qdrant_internal.representation_catalog WHERE index_name=p_index_name LOOP
-     EXECUTE format('DROP TRIGGER IF EXISTS %I ON %s','qdrant_model_'||slot.name,i.source_oid::regclass);
-   END LOOP;
- END IF;
- DELETE FROM qdrant_internal.index_catalog WHERE index_name=p_index_name;
+ RETURN qdrant_internal.queue_index_drop(p_index_name);
 END $$;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA qdrant_internal FROM PUBLIC;
