@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "_notice": "NON-PASSING EXAMPLE ONLY. Copy to dist/release-attestation.json only after real tests and replace all evidence; never use this as a passing certificate.",
+  "checkout_sha": null,
+  "ci": {
+    "checkout_sha": null,
+    "conclusion": "not_run",
+    "url": null
+  },
+  "gates": {},
+  "capabilities": {},
+  "artifacts": {}
+}
