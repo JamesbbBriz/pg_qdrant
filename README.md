@@ -4,7 +4,7 @@
 
 Full-text, vector, and hybrid search over ordinary PostgreSQL tables, with optional local models and learning to rank.
 
-> **Early development:** P0 feasibility is verified for the recorded Linux/PostgreSQL 17 build. A buildable diagnostic extension and scoped engine/SQL experiments exist; there is no installable product release. Table indexing, the search APIs below, and optional model workflows remain planned. See the [P0 evidence and product gates](docs/p0-report.md).
+> **Early development:** P0 feasibility is verified for the recorded Linux/PostgreSQL 17 build. A buildable diagnostic extension and scoped engine/SQL experiments exist; there is no installable product release. Experimental source capture is being developed on an unmerged P1 draft branch, but there is no applied Edge index or usable search API. Optional model workflows remain planned. See the [P0 evidence and product gates](docs/p0-report.md).
 
 ## Why pg_qdrant?
 
@@ -60,6 +60,8 @@ ORDER BY h.rank;
 ```
 
 Hybrid queries, native JSON requests, and optional model ranking use the same index and PostgreSQL permissions. See [the proposed API and architecture](docs/design.md#proposed-sql-experience).
+
+See the draft-only [P1 capture status](docs/p1-capture.md) and [temporary CI hold](docs/ci-temporary-hold.md). Opening a PR does not establish a tested installation.
 
 ## Development
 

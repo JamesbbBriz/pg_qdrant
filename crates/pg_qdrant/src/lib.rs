@@ -14,6 +14,7 @@ mod identity;
 mod ipc;
 mod recheck;
 mod worker;
+mod p1_lifecycle;
 
 ::pgrx::pg_module_magic!();
 
