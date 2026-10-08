@@ -31,7 +31,7 @@ DECLARE
     relation_info record;
     text_field text;
     request_plan text;
-    allowed_options text[] := ARRAY['plan','candidate_limit','timeout_ms','fallback','fusion'];
+    allowed_options text[] := ARRAY['plan','candidate_limit','timeout_ms','fallback','fusion','matching'];
     option_key text;
     candidate_limit integer;
     timeout_ms integer;
@@ -47,6 +47,9 @@ DECLARE
     maxsim_work bigint;
     fusion text;
     effective_plan text;
+    matching jsonb;
+    matching_entry record;
+    matching_bytes integer:=0;
 BEGIN
     IF index_name IS NULL OR q IS NULL
        OR octet_length(q) NOT BETWEEN 1 AND 8192 OR btrim(q) = '' THEN
@@ -72,6 +75,25 @@ BEGIN
               USING ERRCODE = '22023';
         END IF;
     END LOOP;
+    matching:=coalesce(options->'matching','{}'::jsonb);
+    IF jsonb_typeof(matching)<>'object' THEN
+        RAISE EXCEPTION 'matching must be an object' USING ERRCODE='22023';
+    END IF;
+    FOR matching_entry IN SELECT * FROM jsonb_each(matching) LOOP
+        IF matching_entry.key NOT IN ('all','any','exclude','phrase','token_prefix','key_exact','key_prefix')
+           OR jsonb_typeof(matching_entry.value)<>'string'
+           OR octet_length(matching_entry.value #>> '{}') NOT BETWEEN 1 AND 2048 THEN
+            RAISE EXCEPTION 'Unknown matching clause or invalid string/byte budget' USING ERRCODE='22023';
+        END IF;
+        matching_bytes:=matching_bytes+octet_length(matching_entry.value #>> '{}');
+        IF matching_entry.key IN ('key_exact','key_prefix') AND octet_length(matching_entry.value #>> '{}')>1024 THEN
+            RAISE EXCEPTION 'Key matching exceeds 1024 bytes' USING ERRCODE='22023';
+        END IF;
+    END LOOP;
+    IF matching_bytes>8192 THEN RAISE EXCEPTION 'Matching exceeds 8192 bytes' USING ERRCODE='22023'; END IF;
+    IF matching ? 'token_prefix' AND char_length(matching->>'token_prefix') NOT BETWEEN 2 AND 32 THEN
+        RAISE EXCEPTION 'token_prefix requires one alphanumeric token of 2..32 characters' USING ERRCODE='22023';
+    END IF;
     IF mode='text' AND query_vectors <> '{}'::jsonb THEN
         RAISE EXCEPTION 'Text search takes no model vector'
           USING ERRCODE = '0A000';
@@ -227,7 +249,17 @@ BEGIN
        'top_k',top_k,'candidate_limit',candidate_limit,
        'timeout_ms',timeout_ms,
        'permission_preflight','passed_for_registered_source',
+       'matching',matching,
        'native_predicates_compiled',false,
+       'native_predicates_available',true,
+       'matching_contract',jsonb_build_object('scope','before candidate truncation in every native branch',
+         'composition','all supplied clauses required; exclude rejects any analyzed excluded term',
+         'validation','SQL shapes/bytes checked; native analyzed-term validation at execution',
+         'body_analyzer','multilingual native lossy normalization; lowercase; extra ASCII folding, stopwords and stemming disabled',
+         'phrase','contiguous within the single source text field',
+         'token_prefix','separate prefix index; one alphanumeric token; 2..32 characters',
+         'key','whole primary-key text value; case sensitive; no tokenization',
+         'idf_scope','entire live owned generation; independent of matching'),
        'source_recheck_available',true,
        'edge_generation_ready',(SELECT state='ready' AND qdrant_internal.p1_service_ready(c.engine_instance) FROM qdrant_internal.consumer_state c WHERE c.index_name=selected.index_name),
        'search_executable',(SELECT state='ready' AND qdrant_internal.p1_service_ready(c.engine_instance) FROM qdrant_internal.consumer_state c WHERE c.index_name=selected.index_name),
@@ -269,6 +301,7 @@ BEGIN
       'representation_query',plan->'representation_query',
       'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',
+      'predicates',plan->'matching',
       'top_k',(plan->>'candidate_limit')::integer),(plan->>'timeout_ms')::integer);
     IF NOT EXISTS(SELECT 1 FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name
         AND cs.storage_epoch=c.storage_epoch AND cs.consumer_id=c.consumer_id AND cs.state='ready') THEN
@@ -280,7 +313,7 @@ BEGIN
     RETURN QUERY EXECUTE format(
       'SELECT t.%I::text,row_number() OVER(ORDER BY v.ordinality)::integer,(v.hit->>''score'')::double precision,
        t.%I::text,left(t.%I,240),jsonb_build_object(''generation'',$2,''storage_epoch'',$3,''plan'',$6,
-       ''statistics_scope'',''bounded_candidates'',''release_supported'',false)
+       ''matching'',$7,''statistics_scope'',''bounded_candidates'',''release_supported'',false)
        FROM jsonb_array_elements($1) WITH ORDINALITY v(hit,ordinality)
        JOIN ONLY %s t ON t.%I=(v.hit #>> ''{payload,source_key,value}'')::%s
        JOIN qdrant_internal.source_state s ON s.index_name=$4 AND s.point_id=(v.hit->>''id'')::bigint
@@ -289,7 +322,7 @@ BEGIN
          AND encode(sha256(convert_to(t.%I,''UTF8'')),''hex'')=v.hit #>> ''{payload,fingerprint}''
        ORDER BY v.ordinality LIMIT $5',
        i.key_field,i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.text_field)
-       USING hits,i.generation,c.storage_epoch,i.index_name,top_k,plan->>'effective_plan';
+       USING hits,i.generation,c.storage_epoch,i.index_name,top_k,plan->>'effective_plan',plan->'matching';
 END;
 $pgq$;
 

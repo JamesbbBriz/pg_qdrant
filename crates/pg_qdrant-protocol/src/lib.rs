@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 6;
+pub const SOURCE_CONTRACT_VERSION: u32 = 7;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
@@ -27,6 +27,60 @@ pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
 pub enum SourceFusion {
     Rrf,
     Dbsf,
+}
+
+/// Fixed owned payload paths; callers cannot supply arbitrary native filters.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourcePredicates {
+    pub all: Option<String>,
+    pub any: Option<String>,
+    pub exclude: Option<String>,
+    pub phrase: Option<String>,
+    pub token_prefix: Option<String>,
+    pub key_exact: Option<String>,
+    pub key_prefix: Option<String>,
+}
+
+impl SourcePredicates {
+    pub fn validate(&self) -> Result<(), ProbeError> {
+        let mut total = 0;
+        for value in [
+            &self.all,
+            &self.any,
+            &self.exclude,
+            &self.phrase,
+            &self.token_prefix,
+            &self.key_exact,
+            &self.key_prefix,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            total += value.len();
+            if value.is_empty() || value.len() > 2048 {
+                return Err(ProbeError::invalid(
+                    "matching strings require 1..2048 bytes",
+                ));
+            }
+        }
+        if total > 8192
+            || [&self.key_exact, &self.key_prefix]
+                .into_iter()
+                .flatten()
+                .any(|s| s.len() > 1024)
+        {
+            return Err(ProbeError::invalid("matching/key byte budget exceeded"));
+        }
+        if self.token_prefix.as_ref().is_some_and(|s| {
+            !(2..=32).contains(&s.chars().count()) || !s.chars().all(char::is_alphanumeric)
+        }) {
+            return Err(ProbeError::invalid(
+                "token_prefix requires one alphanumeric token of 2..32 characters",
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -164,6 +218,8 @@ pub enum Operation {
         rerank_query: Option<RepresentationQuery>,
         #[serde(default)]
         fusion: Option<SourceFusion>,
+        #[serde(default)]
+        predicates: SourcePredicates,
     },
 }
 
@@ -335,6 +391,26 @@ mod search_contract_tests {
         let value = json!({"operation":"source_search","index_id":1,
             "generation":"g","storage_epoch":"e","q":"word","top_k":10,"fusion":"sum"});
         assert!(serde_json::from_value::<Operation>(value).is_err());
+    }
+
+    #[test]
+    fn predicates_preserve_key_case_and_reject_arbitrary_paths_and_unbounded_prefixes() {
+        let good: SourcePredicates = serde_json::from_value(json!({"phrase":"alpha beta",
+            "key_exact":"PG-001","token_prefix":"事务"}))
+        .unwrap();
+        assert!(good.validate().is_ok());
+        assert_eq!(good.key_exact.as_deref(), Some("PG-001"));
+        assert!(serde_json::from_value::<SourcePredicates>(json!({"body.path":"x"})).is_err());
+        for value in [
+            json!({"all":""}),
+            json!({"key_prefix":"x".repeat(1025)}),
+            json!({"token_prefix":"a"}),
+            json!({"token_prefix":"a b"}),
+            json!({"token_prefix":"a".repeat(33)}),
+        ] {
+            let parsed: SourcePredicates = serde_json::from_value(value).unwrap();
+            assert!(parsed.validate().is_err());
+        }
     }
 
     #[test]

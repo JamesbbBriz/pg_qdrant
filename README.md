@@ -4,7 +4,7 @@
 
 Full-text, vector, and hybrid search over ordinary PostgreSQL tables, with optional local models and learning to rank.
 
-> **Early development:** P0 feasibility is verified for the recorded Linux/PostgreSQL 17 build. A buildable diagnostic extension and scoped engine/SQL experiments exist; there is no installable product release. Experimental source capture is being developed on an unmerged P1 draft branch, but there is no applied Edge index or usable search API. Optional model workflows remain planned. See the [P0 evidence and product gates](docs/p0-report.md).
+> **Early development:** The development branch installs source capture, managed embedded Edge consumption, flush-before-ACK tickets, local BM25 and declared BYOV dense/sparse/token queries. Native hybrid fusion, bounded MaxSim, generation rebuilds and scoped recovery have executable regressions. The full capability, quality, resource, upgrade and packaging gates remain open; there is no product release. See the [installed scope](docs/p1-integration.md) and [acceptance contract](docs/acceptance.md).
 
 ## Why pg_qdrant?
 
@@ -28,9 +28,12 @@ PostgreSQL remains the source of truth. The search index is an asynchronously up
 
 Models are optional. Ranking improvements follow a prepare, compare, activate, and rollback workflow. Detailed coverage and acceptance conditions are in [the capability contract](docs/capabilities.md) and [the design](docs/design.md).
 
-## Proposed SQL experience
+## Development SQL experience
 
-**API sketch, not an executable quickstart.** In the intended workflow, registration starts an asynchronous build, and search runs once the index is ready.
+After installing the managed-helper development build, registration starts an
+asynchronous build. This example uses an existing table with a bigint primary
+key and one non-null text body; execute the search after status reports ready.
+The registered owner must retain complete source SELECT, and RLS is rejected.
 
 ```sql
 -- After the extension binaries are installed:
@@ -41,7 +44,7 @@ SELECT qdrant.create_index(
     index_name => 'knowledge',
     source     => 'document_chunks'::regclass,
     key_field  => 'id',
-    settings   => '{"text":{"fields":["title","body"]}}'::jsonb
+    settings   => '{"text":{"fields":["body"]}}'::jsonb
 );
 
 -- After committing registration, check build progress.
@@ -55,11 +58,15 @@ FROM qdrant.search(
     mode       => 'text',
     top_k      => 10
 ) AS h
-JOIN document_chunks AS c ON c.id = h.key::bigint
+JOIN document_chunks AS c ON c.id = h.source_key::bigint
 ORDER BY h.rank;
 ```
 
-Hybrid queries, native JSON requests, and optional model ranking use the same index and PostgreSQL permissions. See [the proposed API and architecture](docs/design.md#proposed-sql-experience).
+See [declared dense models](docs/dense-representations.md),
+[native hybrid fusion](docs/hybrid-search.md) and
+[candidate-stage lexical matching](docs/lexical-matching.md) for implemented
+development contracts. Broader native JSON and model workflows remain in the
+[proposed API](docs/design.md#proposed-sql-experience).
 
 See the [P1 integration status](docs/p1-integration.md) and historical
 [CI hold](docs/ci-temporary-hold.md). The integration branch restores automatic

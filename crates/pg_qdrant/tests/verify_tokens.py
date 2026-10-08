@@ -41,10 +41,12 @@ def run(sql, ready, ticket_from, checks):
             result.update(vocabulary=c['vocabulary'], idf_revision=c['idf_revision'])
         return {name: result}
 
-    def hits(mode='maxsim', queries=None, cap=10, top=10, fusion=None, ok=True):
+    def hits(mode='maxsim', queries=None, cap=10, top=10, fusion=None, ok=True, matching=None):
         options = dict(candidate_limit=cap)
         if fusion:
             options['fusion'] = fusion
+        if matching is not None:
+            options['matching'] = matching
         return sql("SELECT coalesce(jsonb_agg(jsonb_build_object('key',source_key,'score',score,'plan',provenance->>'plan') ORDER BY rank),'[]') "
                    "FROM qdrant.search('token_docs','alpha','"+mode+"',"+str(top)+",'"+
                    json.dumps(queries if queries is not None else vectors())+"','"+json.dumps(options)+"')", ok=ok)
@@ -97,6 +99,34 @@ def run(sql, ready, ticket_from, checks):
                 assert [h['score'] for h in result] == [4, 2], result
                 kind = 'dense' if name == 'dense' else 'learned_sparse'
                 assert all(h['plan'] == 'precision_bm25_'+kind+'_'+fusion+'_maxsim' for h in result), result
+        # Higher scoring outsiders occur in lexical, dense/sparse and tokens.
+        # A cap of one forces the predicate into each recall branch, before
+        # truncation, and into the nested candidate/reranking stages.
+        plans = [('text', {}, None), ('semantic', vectors('dense'), None),
+                 ('sparse', vectors('learned'), None), ('maxsim', vectors(), None),
+                 ('precision', vectors(), None)]
+        for name in ['dense', 'learned']:
+            for fusion in ['rrf', 'dbsf']:
+                plans += [('hybrid', vectors(name), fusion),
+                          ('precision', dict(vectors(), **vectors(name)), fusion)]
+        for mode, queries, fusion in plans:
+            result = json.loads(hits(mode, queries, cap=1, top=1, fusion=fusion, matching={'phrase': 'alpha beta'}))
+            assert [h['key'] for h in result] == ['2'], (mode, fusion, result)
+            # Check native candidate identities without relying on final JOIN.
+            options = dict(candidate_limit=1, matching={'phrase': 'alpha beta'})
+            if fusion:
+                options['fusion'] = fusion
+            admitted = json.loads(sql("SELECT qdrant.explain_search('token_docs','alpha','"+mode+"',1,'"+
+                                      json.dumps(queries)+"','"+json.dumps(options)+"')"))
+            request = dict(operation='source_search', q='alpha', top_k=1,
+                           representation_query=admitted['representation_query'],
+                           rerank_query=admitted['rerank_query'], fusion=admitted['fusion'],
+                           predicates=admitted['matching'])
+            native = json.loads(sql("SELECT qdrant_internal.p1_search('"+json.dumps(request)+"'::jsonb || "
+                                    "(SELECT jsonb_build_object('index_id',i.index_id,'generation',i.generation,'storage_epoch',c.storage_epoch) "
+                                    "FROM qdrant_internal.index_catalog i JOIN qdrant_internal.consumer_state c USING(index_name) "
+                                    "WHERE i.index_name='token_docs'),5000)"))
+            assert [h['payload']['source_key']['value'] for h in native] == ['2'], (mode, fusion, native)
 
     goldens()
     for wrong in [[], [[1]], [[1, 0]]*5, [[1e100, 0]], [[1e30, 0]]]:
@@ -118,6 +148,7 @@ def run(sql, ready, ticket_from, checks):
     assert explain['maxsim_contract']['scalar_work_upper_bound'] == 16
     assert explain['maxsim_contract']['scalar_work_limit'] == 20000000
     checks += ['native token MaxSim matches independent per-token dot-product goldens',
+               'native phrase filter precedes cap-one text/dense/sparse/fusion/nested MaxSim truncation and source JOIN',
                'precision respects bounded lexical/hybrid candidate domain and excludes higher-scoring outsiders',
                'token shape/model/permission and real native scalar-work budget fail closed']
 

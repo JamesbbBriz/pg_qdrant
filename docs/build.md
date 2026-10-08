@@ -1,8 +1,10 @@
 # Build and feasibility verification
 
-The current code is a P0 investigation harness. It does not implement indexing an
-ordinary source table, automatic source change capture, or the proposed product
-search functions. Successful probes do not constitute a production release.
+The code retains the P0 investigation harness and adds the
+[installed development source-to-Edge path](p1-integration.md). Ordinary table
+capture, flush-before-ACK consumption and scoped public queries are tested
+separately from diagnostic probes. Full product acceptance, upgrades and public
+distribution remain open; successful probes do not constitute a release.
 
 ## Exact inputs
 

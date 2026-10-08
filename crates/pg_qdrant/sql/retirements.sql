@@ -159,7 +159,7 @@ BEGIN
  END IF;
  UPDATE qdrant_internal.drop_epochs SET state='running' WHERE drop_task=d.task_id AND generation=e.generation AND storage_epoch=e.storage_epoch;
  UPDATE qdrant_internal.drop_tasks SET state='running',updated_at=clock_timestamp() WHERE task_id=d.task_id;
- RETURN jsonb_build_object('source_contract_version',6,'task_id',e.native_task,'retire',true,'index_id',d.index_id,
+ RETURN jsonb_build_object('source_contract_version',7,'task_id',e.native_task,'retire',true,'index_id',d.index_id,
    'generation',e.generation,'storage_epoch',e.storage_epoch,'consumer_id',e.consumer_id,'representations','{}'::jsonb,'events','[]'::jsonb);
 END $$;
 
