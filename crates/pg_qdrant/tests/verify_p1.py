@@ -3,6 +3,7 @@ import json
 import hashlib
 import os
 import pathlib
+import resource
 import signal
 import subprocess
 import time
@@ -76,6 +77,25 @@ assert sql("SELECT xmax::text FROM qdrant_internal.consumer_state WHERE index_na
 assert sql("SELECT count(*) FROM qdrant_internal.source_state WHERE index_name='docs'")=='1100'
 assert hits('recovery')!='[]'
 checks += ['CREATE EXTENSION install','online backfill beyond 1000','real offline Edge BM25','narrow field capture','idle consumer does not rewrite tuple locks']
+
+guard_before = json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+guard_pid = guard_before['engine_pid']
+guard_limits = guard_before['helper_resource_limits']
+assert guard_limits['address_space_limit_enforced'] and not guard_limits['rss_limit_enforced']
+guard_bytes = guard_limits['address_space_soft_bytes']
+assert 512*1024**2 <= guard_bytes <= 8*1024**3 and guard_limits['address_space_hard_bytes'] == guard_bytes
+assert resource.prlimit(guard_pid,resource.RLIMIT_AS) == (guard_bytes,guard_bytes)
+supervisor_as = resource.prlimit(guard_before['worker_pid'],resource.RLIMIT_AS)[0]
+assert supervisor_as == resource.RLIM_INFINITY or supervisor_as > guard_bytes
+if json.loads(sql('SELECT qdrant.build_info()'))['features']['p0_fault_injection']:
+    guard_probe = json.loads(sql("SELECT qdrant_internal.p0_fault('address_space')"))
+    assert guard_probe['mapping_refused'] and guard_probe['errno'] == 12 and guard_probe['requested_mapping_bytes'] > guard_bytes
+    assert guard_probe['physical_pages_touched'] == 0 and not guard_probe['kernel_oom']
+    assert json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid'] == guard_pid
+    assert hits('recovery') != '[]'
+    checks.append('actual helper RLIMIT_AS/ENOMEM probe preserves native queries; PostgreSQL supervisor has separate limits')
+else:
+    checks.append('actual helper RLIMIT_AS observed independently; PostgreSQL supervisor has separate limits')
 
 sql("BEGIN; INSERT INTO docs VALUES(5000,'rollback ghost',NULL); SAVEPOINT s; UPDATE docs SET body='ghost' WHERE id=1; ROLLBACK TO s; ROLLBACK")
 assert sql("SELECT count(*) FROM qdrant_internal.outbox WHERE projection->>'body' LIKE '%ghost%'")=='0'

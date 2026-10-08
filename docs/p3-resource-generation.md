@@ -5,6 +5,30 @@ build task. The managed helper creates a separate native Edge shard while
 ordinary source DML and queries continue on the serving generation. This is
 partial L07/P3-GENERATION implementation, not full P3 acceptance.
 
+## Helper process limit
+
+The Linux helper sets both soft and hard `RLIMIT_AS` to at most 8 GiB before
+creating native threads or opening an engine. A tighter inherited administrator
+limit is preserved; less than 512 MiB refuses startup. Failure to install or
+verify the limit refuses the ready handshake. The PostgreSQL supervisor requires
+the observed limit in that handshake and exposes active `helper_resource_limits`
+in index owner status. PostgreSQL backend/supervisor limits are unchanged.
+
+This bounds virtual address space, including libraries, stacks and file-backed
+mmap. It is not an RSS/cgroup budget or an index sizing recommendation.
+Linux returns ENOMEM for address-space allocations exceeding the limit;
+native allocation failures can still abort the helper. Such failure cannot
+produce a successful flush receipt, and existing dirty-epoch reconstruction
+rules apply. Each opened source shard requests two Edge search threads; this
+does not cap all process threads or optimization work.
+See the [Linux resource-limit contract](https://man7.org/linux/man-pages/man2/getrlimit.2.html).
+
+The private fault build probes a real oversized mmap without touching physical
+pages, requires ENOMEM and queries the same live native index afterward. This
+test proves address-space refusal and is separate from actual kernel OOM tests.
+Standalone helper tests independently inspect `/proc`/prlimit and test preserved
+tighter inherited limits and refusal of an unsupported startup budget.
+
 ## Execution and durability
 
 Each task has its own generation, storage epoch, consumer and precise event

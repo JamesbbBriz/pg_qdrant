@@ -118,6 +118,8 @@ AS $pgq$
     'response_bytes_max',1048576,
     'deadline_ms_max',30000,
     'native_rss_limit_enforced',false,
+    'managed_helper_address_space_ceiling_bytes',8589934592,
+    'address_space_scope','managed helper virtual memory including mmap; inspect active helper_resource_limits',
     'native_cancel_available',false,
     'work_mem_is_edge_limit',false);
 $pgq$;

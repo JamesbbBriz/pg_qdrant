@@ -28,6 +28,7 @@ pub struct Supervisor {
     child: Option<ManagedChild>,
     connection: Option<Connection>,
     owner_instance: Option<String>,
+    resource_limits: Option<Value>,
     attempts: u32,
     next_attempt: Instant,
     last_error: Option<String>,
@@ -50,6 +51,7 @@ impl Supervisor {
             child: None,
             connection: None,
             owner_instance: None,
+            resource_limits: None,
             attempts: 0,
             next_attempt: Instant::now(),
             last_error: None,
@@ -60,6 +62,7 @@ impl Supervisor {
     pub fn status(&self) -> Value {
         json!({"engine_pid": self.child.as_ref().map(ManagedChild::id),
             "engine_instance": self.owner_instance,
+            "helper_resource_limits": self.resource_limits,
             "engine_ready": self.connection.is_some(),
             "helper_start_attempts": self.attempts,
             "helper_restart_limit": 3,
@@ -112,6 +115,7 @@ impl Supervisor {
         self.child = None;
         self.connection = None;
         self.owner_instance = None;
+        self.resource_limits = None;
         self.last_error = Some(format!("helper exited: {}", exit.status));
         self.backoff();
     }
@@ -137,6 +141,7 @@ impl Supervisor {
             }
         }
         self.connection = None;
+        self.resource_limits = None;
     }
 
     fn spawn(&mut self) -> Result<(), ProbeError> {
@@ -170,7 +175,17 @@ impl Supervisor {
                     && value["helper_version"] == env!("CARGO_PKG_VERSION")
                     && value["source_contract_version"]
                         == pg_qdrant_protocol::SOURCE_CONTRACT_VERSION
-                    && value["fault_injection"] == cfg!(feature = "p0-fault-injection") =>
+                    && value["fault_injection"] == cfg!(feature = "p0-fault-injection")
+                    && value["resource_limits"]["address_space_limit_enforced"] == true
+                    && value["resource_limits"]["address_space_soft_bytes"]
+                        .as_u64()
+                        .is_some_and(|bytes| {
+                            (pg_qdrant_protocol::HELPER_MIN_ADDRESS_SPACE_BYTES
+                                ..=pg_qdrant_protocol::HELPER_ADDRESS_SPACE_BYTES)
+                                .contains(&bytes)
+                                && value["resource_limits"]["address_space_hard_bytes"]
+                                    == json!(bytes)
+                        }) =>
             {
                 set_nonblocking(&output, false)?;
                 self.connection = Some(Arc::new(Mutex::new(Channel {
@@ -181,6 +196,7 @@ impl Supervisor {
                 })));
                 self.last_error = None;
                 self.owner_instance = value["owner_instance"].as_str().map(str::to_owned);
+                self.resource_limits = Some(value["resource_limits"].clone());
                 Ok(())
             }
             result => {

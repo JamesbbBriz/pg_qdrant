@@ -408,6 +408,7 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                     Operation::Panic => "panic",
                     Operation::Abort => "abort",
                     Operation::Oom => "oom",
+                    Operation::AddressSpaceProbe => "address_space_probe",
                     Operation::SourceApply { .. } => "source_apply",
                     Operation::SourceSearch { .. } => "source_search",
                 };
@@ -502,7 +503,7 @@ fn validate_request(request: Request) -> Result<Request, ProbeError> {
     #[cfg(not(feature = "p0-fault-injection"))]
     if matches!(
         request.operation,
-        Operation::Panic | Operation::Abort | Operation::Oom
+        Operation::Panic | Operation::Abort | Operation::Oom | Operation::AddressSpaceProbe
     ) {
         return Err(ProbeError::invalid(
             "fault operation is not compiled into this build",
@@ -551,7 +552,9 @@ fn execute(operation: Operation) -> Result<Value, ProbeError> {
             Ok(json!({"completed_delay_ms": delay_ms, "engine_probe": false}))
         }
         Operation::Ping => Err(ProbeError::invalid("ping belongs on the owner main thread")),
-        Operation::SourceApply { .. } | Operation::SourceSearch { .. } => Err(ProbeError::invalid(
+        Operation::SourceApply { .. }
+        | Operation::SourceSearch { .. }
+        | Operation::AddressSpaceProbe => Err(ProbeError::invalid(
             "source indexing requires the managed helper build",
         )),
         #[cfg(feature = "p0-fault-injection")]

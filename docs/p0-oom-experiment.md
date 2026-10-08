@@ -46,6 +46,14 @@ cgroup, exact PID/start identity of each participant, dedicated PostgreSQL data
 directory, and previously committed marker. The supervisor must be a child of
 the bound postmaster. The helper must be distinct from the PG participants.
 
+The private guard requires an unlimited data allocation limit. A finite helper
+address-space limit is admitted only when measured `/proc/self/statm` mappings
+leave at least twice the entire 768 MiB allocation cap available. The check runs
+before arming and again at the allocation barrier; its measured bounds appear in
+the native records. A finite direct-worker address-space limit remains refused.
+This permits the development helper's 8 GiB virtual limit while retaining the
+strict distinction between allocator refusal and a kernel-attributed OOM kill.
+
 Only the target process temporarily raises its own `oom_score_adj` to 1000.
 The prior nonnegative value is restored and checked if execution returns. This
 is a victim preference, not a guarantee. The outer runner maps the target to a

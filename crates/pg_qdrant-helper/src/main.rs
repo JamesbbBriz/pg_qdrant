@@ -8,6 +8,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+mod resources;
 mod source;
 
 fn main() {
@@ -18,6 +19,7 @@ fn main() {
 }
 
 fn run() -> Result<(), ProbeError> {
+    let resource_limits = resources::install()?;
     pg_qdrant_edge_probe::cpu::require().map_err(|message| {
         ProbeError::new(
             "cpu_unsupported",
@@ -97,7 +99,8 @@ fn run() -> Result<(), ProbeError> {
         Ok(json!({"ready": true, "protocol_version": VERSION,
         "source_contract_version": pg_qdrant_protocol::SOURCE_CONTRACT_VERSION,
         "helper_version": env!("CARGO_PKG_VERSION"),
-        "fault_injection": cfg!(feature="p0-fault-injection"), "owner_instance": owner_instance})),
+        "fault_injection": cfg!(feature="p0-fault-injection"), "owner_instance": owner_instance,
+        "resource_limits": resource_limits})),
     )?;
     let mut previous_id = 0;
     let mut source_owner =
@@ -163,6 +166,8 @@ fn execute(operation: Operation) -> Result<Value, ProbeError> {
         Operation::Abort => std::process::abort(),
         #[cfg(feature = "p0-fault-injection")]
         Operation::Oom => Ok(pg_qdrant_edge_probe::oom_probe::run("managed_helper")),
+        #[cfg(feature = "p0-fault-injection")]
+        Operation::AddressSpaceProbe => resources::probe(),
         _ => Err(ProbeError::invalid(
             "unsupported helper operation in this build",
         )),

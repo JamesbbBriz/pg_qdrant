@@ -248,8 +248,9 @@ mod qdrant_internal {
             "panic" => ipc::Operation::Panic,
             "abort" => ipc::Operation::Abort,
             "oom" => ipc::Operation::Oom,
+            "address_space" => ipc::Operation::AddressSpaceProbe,
             _ => ipc::raise(ipc::ProbeError::invalid(
-                "fault kind must be panic, abort or oom",
+                "fault kind must be panic, abort, oom or address_space",
             )),
         };
         JsonB(ipc::call(operation, timeout_ms).unwrap_or_else(|e| ipc::raise(e)))
