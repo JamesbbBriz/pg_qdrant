@@ -38,7 +38,7 @@
     },
     {
       "path": "crates/edge-probe/src/fault_probes.rs",
-      "sha256": "6d0d081bf130c2ce02870026bcf9a154540a1835c0f6bda99cb147e3b4108f04"
+      "sha256": "78c547690de82f28df701f87939b650d4782a86e987a97d32a27f44637a251cb"
     },
     {
       "path": "crates/edge-probe/tests/persistence.rs",
@@ -91,7 +91,7 @@
     "engine_version": "0.8.0",
     "kind": "synthetic_engine_smoke",
     "status": "passed",
-    "elapsed_ms": 2187,
+    "elapsed_ms": 2005,
     "fixture_points": 8,
     "search_threads": 2,
     "checks": [
@@ -441,7 +441,7 @@
         "files": 67,
         "logical_bytes": 220534047,
         "allocated_bytes": 258048,
-        "mapping_rss_kib": 16024,
+        "mapping_rss_kib": 15816,
         "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
       }
     },
@@ -450,5 +450,9 @@
     "scope": "clean disk-specific fixture reopen only; full mutable text indexes are excluded"
   },
   "enospc_with_mutable_text_indexes_verified": false,
-  "historical_enospc_failure_evidence": "p0-helper-ci.json"
+  "historical_enospc_failure_evidence": [
+    "p0-helper-ci.json",
+    "p0-disk-ci.json"
+  ],
+  "local_regression_scope": "All four engine tests reran after the owned-File errno fix. Positive ENOSPC requires the guarded container and remains unverified locally."
 }

@@ -247,10 +247,56 @@ branches. It does not assert an order among equal-score points.
 
 `api_inventory.rs` matches all current scoring/vector query variants, match
 variants, conditions, vector input/storage/quantization variants, payload schema
-variants, and update-operation variants without wildcard arms. It references
-lifecycle and read methods. Such compile sentinels detect surface additions but
-do not instantiate every valid parameter combination. Raw storage operations
-and native callback filters are explicitly outside the proposed SQL surface.
+variants, and update-operation variants without wildcard arms. These sentinels
+detect new variants in the enums explicitly matched. They do not detect newly
+exported methods, new configuration fields, or variants of nested enums without
+their own exhaustive matches. The file also references selected lifecycle and
+read methods; a method-item reference checks name resolution, not a call with
+concrete arguments. Typed constructor expressions likewise do not establish
+engine execution or accepted input semantics. Raw storage operations and native
+callback filters are explicitly outside the proposed SQL surface.
+
+### Remaining public API coverage
+
+The following fixed-version gaps remain in addition to the runtime limits above.
+Source paths are relative to the published
+[`qdrant-edge 0.8.0` archive](https://docs.rs/crate/qdrant-edge/0.8.0/source/).
+Owners refer to the existing [work ledger](../../docs/work-items.json); the
+complete [54-capability contract](../../docs/capabilities.md) remains unchanged.
+References and constructors in this table are not full capability compilation,
+runtime, PostgreSQL integration, or release evidence.
+
+| IDs | Public surface and source path | Current probe evidence | Owner and next gate |
+| --- | --- | --- | --- |
+| Q01 | `SearchRequest`, `EdgeShard::search` / `EdgeShardRead::search`; `src/edge/requests/search.rs`, `src/edge/read_view/shard_read.rs` | Neither referenced nor called. Upstream documents this alternate entry point as deprecated in favor of `query`, which the runner uses. | `engine/query`: record an explicit deprecated-entry exclusion, or add a concrete call if retaining it. |
+| Q04–Q08, Q10 | Recommendation, discover/context, feedback, MMR, Formula and Sample; `src/shard/query/{mod,query_enum,formula}.rs` | `construct_advanced_queries()` contains typed inputs but is never called by the runner/tests and never submits an engine query. | `planner/explore`, `engine/diversity`, `planner/formula`, `engine/read`: construct compatible fixture inputs, call `query`, and verify scoring, authorization and invalid inputs. |
+| F07, Q12 | `RangeInterface`, geo/range/value-count/null field conditions, `Filter::min_should`; `src/segment/types.rs` | Outer `Condition` variants are matched. Concrete fixture predicates cover selected text/keyword/ID filters; the other field forms and nested range enum are not covered. | `planner/filters`, `engine/filters`: exhaustive nested mappings, actual filtered calls and numeric/datetime/geo/cardinality boundaries. |
+| Q10, Q12, L09 | `WithPayloadInterface::{Fields,Selector}`, `PayloadSelector::{Include,Exclude}`, `WithVector::Selector`; `src/segment/types.rs` | Actual retrieval uses Boolean projection; the selector variants lack exhaustive mappings and calls. | `engine/read`, `engine/filters`: selective-return calls, result-shape assertions and authorization tests for omitted/returned fields. |
+| Q08, Q10 | `OrderByInterface`, `Direction`, `StartFrom`, `OrderValue`, `DecayKind`, `Sample`; `src/segment/data_types/order_by.rs`, `src/segment/index/query_optimization/rescore_formula/parsed_formula.rs`, `src/shard/query/mod.rs` | Outer OrderBy/Decay arms do not cover nested variants. `Sample::Random` is constructed, without an exhaustive Sample match or runtime query. | `engine/read`, `planner/formula`: nested mappings, concrete ordering/decay/sample inputs and result/budget assertions. |
+| V04, V05, Q13 | `CompressionRatio`, `ScalarType`, quantization configs, `QuantizationSearchParams`, `AcornSearchParams`; `src/segment/types.rs`, `src/edge/config/vectors.rs` | Quantization families and datatypes have sentinels. No quantized fixture or ACORN request is constructed/executed; nondefault precision/rescore combinations remain unverified. | `engine/quantization`, `engine/storage`, `engine/indexing`: real configurations and queries, rejected combinations, optimization/reopen and rescore goldens. |
+| L02 | `UpdateMode::{Upsert,InsertOnly,UpdateOnly}` and partial vector/payload/delete/schema operations; `src/shard/operations/{point_ops,vector_ops,payload_ops,vector_name_ops}.rs` | UpdateMode is not mapped. Ordinary checked-in fixture updates exercise point upsert and payload-index creation; other operation variants are sentinels. | `engine/source`: typed conditional-mode and mutation calls, idempotency and persisted result assertions. |
+| L04, V05, L10 | Read-only `open`, `refresh`, `refresh_with`, request `load_profile()` and `LoadProfile::{for_search,for_scroll,for_retrieve,merge}`; `src/edge/read_only/{lifecycle,refresh}.rs`, `src/segment/data_types/load_profile.rs` | Only `open_mmap` is referenced; `Option<LoadProfile> = None` is a type-name check. No follower or profile is exercised. | `lifecycle/recovery`, `engine/storage`: public manifest/setup decision, concrete follower calls, flush/refresh visibility and memory-placement tests. |
+| L02, L04 | `UpdateOnlyEdgeShard::{open,preview_batch,apply_batch,segment_configs}`, `UpdateBatchPlan::build`, `PointAction`; `src/edge/update_only/{mod,lifecycle,apply,preview}.rs`, `src/edge/update_only/batch/plan.rs` | Only `open_mmap` is referenced. Batch construction, action variants and execution are absent. | `engine/source`, `lifecycle/recovery`: explicit adoption/exclusion decision; if retained, existing-shard calls, negative bootstrap/operation probes and a separate persistence contract. |
+| Q10, Q11, L04 | `scroll`, `facet`, `search_matrix`, `info`, snapshot inspection/unpack/recovery; `src/edge/read_view/shard_read.rs`, `src/edge/edge_shard/snapshots.rs` | Method-item references only. This does not extend the existing retrieve/count/group runtime evidence to these operations. | `engine/read`, `results/statistics`, `lifecycle/recovery`: concrete requests, authorized bounded results and disposable-target restore/rollback tests. |
+
+Read-only loading requires a manifest: `open_mmap` selects the manifest
+enumerator, while ordinary manifest writing defaults off in
+`src/common/flags.rs` and is checked by `src/edge/edge_shard/mod.rs`.
+`refresh()` is caller-driven and can return success after three attempts
+without converging to the newest manifest. It does not establish a committed
+change wait. Load profiles do not demote mutable components; their construction
+alone cannot solve the mutable-text memory limit described above.
+
+The update-only writer has no WAL, optimizer or `EdgeConfig`. In this release,
+opening an empty directory reaches an unimplemented bootstrap path. Its batch
+planner rejects filter-selected operations, point sync, conditional upserts and
+schema operations. It must not inherit the ordinary `EdgeShard::update`
+persistence or operation contract by name alone.
+
+`recover_partial_snapshot` moves, replaces and deletes target files before its
+final `EdgeShard::load`. It is not an atomic generation switch. A future restore
+probe must use a disposable destination and independently prove cutover and
+rollback; the current method reference proves none of those behaviors.
 
 ## Lexical work retained
 

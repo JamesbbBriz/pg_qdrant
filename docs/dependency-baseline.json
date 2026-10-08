@@ -112,7 +112,8 @@
         "p0-managed-helper",
         "p0-fault-injection"
       ]
-    ]
+    ],
+    "latest_failed_container_evidence": "evidence/p0-disk-ci.json"
   },
   "build_evidence": [
     {
@@ -247,6 +248,15 @@
       "evidence": "evidence/p0-helper-ci.json",
       "verified_source_commit": "a22d3c73ad838ff606a080345b65d634f5144c39",
       "scope": "Attempted only in the dedicated 32 MiB tmpfs container. No JSON report returned; original wrapper did not preserve the exit code or signal, so exact cause and recovery remain unverified. A corrected probe must repeat this test."
+    },
+    {
+      "kind": "edge_enospc_runtime",
+      "command": "python3 scripts/run_disk_probe.py",
+      "status": "failed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-disk-ci.json",
+      "verified_source_commit": "cce2b41d1399424e845e135fac9e87df51764d13",
+      "scope": "Dedicated 32 MiB tmpfs filled, then the NamedTempFile error wrapper hid raw errno 28. Config save and recovery were not reached; all four PostgreSQL runtime profiles were skipped after the early failed gate. The owned-File correction requires another complete CI run."
     }
   ]
 }

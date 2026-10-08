@@ -637,7 +637,9 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
             let remaining = guard.capacity_bytes.saturating_sub(bytes_written);
             require(remaining > 0, "tmpfs byte budget exhausted without ENOSPC")?;
             let length = remaining.min(chunk.len() as u64) as usize;
-            match filler.write(&chunk[..length]) {
+            // NamedTempFile's Write wrapper replaces the outer io::Error with
+            // path context. The owned File preserves raw_os_error for this gate.
+            match filler.as_file_mut().write(&chunk[..length]) {
                 Ok(0) => return Err("tmpfs filler made no progress".into()),
                 Ok(count) => bytes_written += count as u64,
                 Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,

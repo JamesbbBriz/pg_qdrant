@@ -10726,7 +10726,12 @@
       "positive_enospc": "pending_new_ci"
     },
     "retained_open_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes",
-    "historical_failed_attempt": "docs/evidence/p0-helper-ci.json",
-    "product_scope_completed": false
+    "product_scope_completed": false,
+    "historical_failed_attempts": [
+      "docs/evidence/p0-helper-ci.json",
+      "docs/evidence/p0-disk-ci.json"
+    ],
+    "latest_failure": "cce2b41: filler reached real ENOSPC, but NamedTempFile wrapped the raw errno; config save/recovery were not reached and all PostgreSQL runtime profiles were skipped.",
+    "current_correction": "Write through the same owned File to retain raw errno 28; four local engine tests pass; dedicated ENOSPC and complete container regression pending."
   }
 }

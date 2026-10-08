@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_disk_ci_evidence",
+  "source": {
+    "head_commit": "cce2b41d1399424e845e135fac9e87df51764d13",
+    "checkout_merge_commit": "63340ba610236a6fe237ccf1bc9976493ea4a6eb",
+    "tree": "22b98d60a653b3f7521f48a6dda6bff38bb3e32f",
+    "checkout_tree_equals_head_tree": true
+  },
+  "ci": {
+    "run_id": 37724223470,
+    "job_id": 113138590878,
+    "status": "failure",
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37724223470",
+    "artifact_id": 11526882374,
+    "artifact_digest_sha256": "2241971a0d546521cf702429f0758844f68e5922e396a83bcfae5d232655d359",
+    "artifact_digest_source": "GitHub metadata; archive download not independently verified",
+    "records_source": "Completed job logs and official run/job/artifact/Git commit metadata"
+  },
+  "passed": {
+    "contract_validation": true,
+    "diagnostic_runner_tests": 5,
+    "engine_tests": 4,
+    "base_docker_build_and_normal_extension_install": true
+  },
+  "postgres_runtime_profiles": {
+    "direct_normal": "skipped_after_disk_failure",
+    "direct_private_faults": "skipped_after_disk_failure",
+    "helper_normal": "skipped_after_disk_failure",
+    "helper_private_faults": "skipped_after_disk_failure"
+  },
+  "disk": {
+    "environment": {
+      "tmpfs_capacity_bytes": 33554432,
+      "user_id": 10001,
+      "mode": "0700",
+      "network": "none"
+    },
+    "native_report": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_enospc_probe",
+      "status": "failed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "error": "tmpfs filler returned a non-ENOSPC error: No space left on device (os error 28) at path \"<owned-probe>/<filler>\"",
+      "native_report_status": "failed",
+      "native_report_reason": null,
+      "reason": "Probe terminated without a successful process exit",
+      "execution": {
+        "returncode": 1,
+        "exit_code": 1,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail": "pg_qdrant_p0_stage=guard\npg_qdrant_p0_stage=fixture_create\npg_qdrant_p0_stage=fixture_indexes\npg_qdrant_p0_stage=fixture_upsert\npg_qdrant_p0_stage=fixture_flush\npg_qdrant_p0_stage=fixture_ready\npg_qdrant_p0_stage=fixture_query\npg_qdrant_p0_stage=fill\n",
+        "stages": [
+          "guard",
+          "fixture_create",
+          "fixture_indexes",
+          "fixture_upsert",
+          "fixture_flush",
+          "fixture_ready",
+          "fixture_query",
+          "fill"
+        ],
+        "last_stage": "fill"
+      }
+    },
+    "config_save_reached": false,
+    "recovery_reached": false,
+    "classification": "NamedTempFile write error context hides the original syscall errno from raw_os_error",
+    "corrective_action": "Write through the same owned File using as_file_mut().write; retain exact errno 28, byte/time/device checks and cleanup.",
+    "source_basis": [
+      {
+        "crate": "tempfile",
+        "version": "3.27.0",
+        "path": "src/file/mod.rs",
+        "item": "impl Write for NamedTempFile"
+      },
+      {
+        "crate": "tempfile",
+        "version": "3.27.0",
+        "path": "src/error.rs",
+        "item": "IoResultExt::with_err_path"
+      }
+    ]
+  },
+  "retained_failures": [
+    "p0-helper-ci.json"
+  ],
+  "unverified": [
+    "Successful narrow ENOSPC configuration save/retry/flush/reopen",
+    "ENOSPC combined with full mutable text-index recovery",
+    "Current-source PostgreSQL/helper runtime regression",
+    "Overall P0 and production source-table behavior"
+  ],
+  "p0_exit_passed": false,
+  "release_supported": false
+}

@@ -98,13 +98,20 @@ same-package helper the preferred topology candidate. Process termination is
 distinct from native query cancellation or durable index recovery.
 
 The overall helper comparison workflow **failed** at a provisioned 32 MiB tmpfs
-experiment: the child returned no JSON, and its exit cause was not captured.
-The corrected small disk fixture explicitly tests vectors, keyword filtering and
-configuration persistence; full mutable-text ENOSPC recovery remains an open
-combination. Its independent clean-reopen test passes, while the positive disk
-experiment still needs a successful rerun. Forced
-PostgreSQL-supervisor SIGKILL, actual OOM and the remaining product/release gates
-are still open; the P0 report preserves the successful slices and the failure.
+experiment: the child returned no JSON, and its exit cause remains unknown.
+The revised small disk fixture retains vectors and keyword filtering while
+omitting the mutable text indexes; its independent clean-reopen checks pass.
+Full mutable-text ENOSPC recovery remains an open combination.
+
+The subsequent [disk retry CI](docs/evidence/p0-disk-ci.json), run 37724223470 at
+head `cce2b41`, **failed during filling** because the temporary-file wrapper hid
+the raw OS errno and the probe misclassified genuine ENOSPC. Configuration-save
+and recovery checks were not reached, and **all four PostgreSQL SQL profiles
+were skipped on that head**. The corrected direct-file write passes all four
+local Edge tests; positive disk recovery and current-source SQL regression still
+need a new CI run. This diagnosis does not explain the earlier missing-report
+failure. Forced PostgreSQL-supervisor SIGKILL, actual OOM and the remaining
+product/release gates stay open; the P0 report preserves both failures.
 
 [User journeys](docs/user-journeys.md), [phase acceptance](docs/acceptance.md),
 the [P0 evidence report](docs/p0-report.md), and the [work ledger](docs/work-items.json) retain all 54 formal capabilities and
