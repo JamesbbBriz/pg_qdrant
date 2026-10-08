@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "kind": "p0_composite_feasibility_decision",
+  "observed_on": "2026-10-08",
+  "status": "passed_for_recorded_feasibility_scope",
+  "source": {
+    "head_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+    "checkout_merge_commit": "716cb2871d325dfd629a40177c9cfee613af4cfc",
+    "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+    "baseline_main_commit": "8d1972b919b9e504a20586399df22f1904ca8e7f",
+    "scope": "The decision evaluates this frozen executable/configuration tree. Later documentation commits do not retroactively become the tested source."
+  },
+  "ci": {
+    "run_id": 37743504259,
+    "job_id": 113199465881,
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259",
+    "conclusion": "success",
+    "failed_steps": [],
+    "skipped_steps": [],
+    "job_log_sha256": "e243ef198530020d635e812eaae1a0dbe6202b6510110c04fbdd43fc1da06287",
+    "artifact_id": 11534954414,
+    "artifact_sha256": "ec10a029e1f15f2fd46aaa8814d9624e1184546476f7c3558db604808c549772",
+    "archive_bytes": 605977,
+    "members": 100,
+    "uncompressed_bytes": 5116310,
+    "download_digest_and_all_extracted_members_independently_verified": true
+  },
+  "evidence": [
+    {
+      "path": "docs/evidence/p0-current-ci.json",
+      "sha256": "f2a312f4453c966566f31d604721ea4f6a5a08927a08f42718c0f04ead4834d4"
+    },
+    {
+      "path": "docs/evidence/p0-native-ci.json",
+      "sha256": "e6c3f1bd76341b84b1b98079b17768bbe65f4d95e99cd1c7e839da1e223cb0cd"
+    },
+    {
+      "path": "docs/evidence/p0-tantivy-ci.json",
+      "sha256": "b8d9c77a9b26aaedaf29e4dca74c62ed3c51d376ad223eb08cdf66da144ff56a"
+    }
+  ],
+  "assessment": "This composite engineering decision follows inspection of named assertions, actual archived SQL/native/lexical reports, kernel attribution and source hashes. A successful CI badge alone is insufficient. The individual normalized experiment reports were produced before this composite decision and deliberately do not declare P0 exit by themselves.",
+  "acceptance": [
+    {
+      "gate": "P0-BUILD",
+      "status": "passed",
+      "evidence": "Locked Rust 1.96.0, Edge 0.8.0, pgrx/cargo-pgrx 0.19.3 and PG17.11 build/install in four profiles; all 246 native package tuples and seven archive pins match. The conservative CPU admission and selected native-object audit pass on the recorded runner.",
+      "evidence_files": [
+        "docs/evidence/p0-current-ci.json",
+        "docs/evidence/p0-native-ci.json"
+      ],
+      "limits": "One frozen P0 platform and feature set; no generic x86_64, bit-identical binary, full ISA/link closure, complete license review or supported distribution claim."
+    },
+    {
+      "gate": "P0-API",
+      "status": "passed",
+      "evidence": "Fixed public variant/type inventory is mapped to the 54 IDs or explicit exclusions. Forty-three concrete shard method call bodies compile; the remaining refresh_with declaration has an explicit public-construction exclusion. Negative-input and public-lifecycle assertions execute in bounded children.",
+      "evidence_files": [
+        "docs/evidence/p0-current-ci.json"
+      ],
+      "limits": "Public existence and compiled signatures do not establish all combinations. Native bit input, update-only Store/Delete/bootstrap and unavailable public WAL operations remain explicit exclusions or gaps."
+    },
+    {
+      "gate": "P0-ENGINE",
+      "status": "passed",
+      "evidence": "Twenty-seven ordinary named engine tests and the exact 16 smoke groups in each of four SQL profiles pass, including BM25/dense/sparse/MaxSim/prefetch/fusion/filter/group paths and the owned-child malformed-input matrix.",
+      "evidence_files": [
+        "docs/evidence/p0-current-ci.json"
+      ],
+      "limits": "Synthetic semantics and input characterization; malformed values accepted by Edge still require a product adapter guard. No held-out retrieval-quality or product query claim."
+    },
+    {
+      "gate": "P0-LEXICAL",
+      "status": "passed",
+      "evidence": "Independent BM25/text configuration, mixed-language defaults, phrase/array behavior and distinct token/keyword prefixes execute. The isolated Tantivy build and five semantic cases expose concrete F13-F20 gaps and support the owned pre-Alpha library decision in ADR0002/0004.",
+      "evidence_files": [
+        "docs/evidence/p0-current-ci.json",
+        "docs/evidence/p0-tantivy-ci.json"
+      ],
+      "limits": "Tantivy is not adopted or linked with Edge/pgrx. Fixed-comparator quality, analyzer parity, work budgets, authorization and dual-engine lifecycle still gate adoption and Alpha."
+    },
+    {
+      "gate": "P0-PG",
+      "status": "passed",
+      "evidence": "SQL profile totals 20/22/20/26, seven source/identity groups per profile, all three candidate-format groups, bounded owner IPC, queue cancellation, deadlines, same-backend SPI retry, and helper pipe totals 7/8 pass.",
+      "evidence_files": [
+        "docs/evidence/p0-current-ci.json"
+      ],
+      "limits": "Superuser-only diagnostic fixtures; no production source privilege/RLS proof, catalog, stable persistent identity allocator, capture/backfill, ticket API or real source-table search."
+    },
+    {
+      "gate": "P0-FAULT",
+      "status": "passed",
+      "evidence": "Owned panic/abort/SIGKILL, exact kernel OOM attribution, companion-session outcomes, owner replacement and the four dedicated disk/capacity profiles pass their characterization assertions. Dirty-generation refusal and complete-fixture fresh reconstruction execute without opening the old generation.",
+      "evidence_files": [
+        "docs/evidence/p0-current-ci.json"
+      ],
+      "limits": "Direct-worker native failure causes PostgreSQL collateral recovery and is rejected as the product default. Controlled helper containment does not establish arbitrary-pressure isolation, dirty WAL replay, PG/Edge atomicity, live cutover or power-loss durability."
+    },
+    {
+      "gate": "P0-DECISION",
+      "status": "passed",
+      "evidence": "Accept the same-package exec helper, ordinary EdgeShard public APIs, explicit flush before future exact-event ACK, and refusal/reconstruction of uncertain generations. The post-P0 module allocation and critical path retain source, lexical, security, recovery and release costs.",
+      "evidence_files": [
+        "docs/evidence/p0-current-ci.json",
+        "docs/evidence/p0-native-ci.json",
+        "docs/evidence/p0-tantivy-ci.json"
+      ],
+      "limits": "This is an engineering go to implement P1-P5; the selected protocol is not already implemented. Reopen the decision if future persistence, source retention, storage or containment gates fail."
+    }
+  ],
+  "decision_documents": [
+    "docs/adr/0004-p0-go-no-go.md",
+    "docs/p0-report.md",
+    "docs/p0-effort.md"
+  ],
+  "completed_work_items_for_p0_scope": [
+    "I-01",
+    "I-03"
+  ],
+  "scope_retained": {
+    "capability_ids": 54,
+    "work_items": 70,
+    "stage_acceptance_rows": 45,
+    "product_capabilities_completed": 0,
+    "release_supported_capabilities": 0
+  },
+  "follow_on_gates": {
+    "P1": "Production catalog, transactional capture, consistent backfill, persistent incarnation/revision/fingerprint arbitration, exact-event flush/ACK, post-commit tickets and crash cuts.",
+    "P2": "Source-table text/balanced/precision search, shared analyzers, branch-wide authorization, results/grouping/fallback, frozen bilingual relevance and complete source-to-search example.",
+    "P3": "Bounded resource policy, production rebuild/cutover, WAL admission/rotation, sustained performance, old/new index migration and executable rollback.",
+    "P4": "All remaining advanced retrieval and F13-F20 lexical contracts, plus shared source/permission/lifecycle/fusion if a second engine is adopted.",
+    "P5": "Installable supported packages, complete notices/license review, clean product journeys, upgrade/restore support and explicitly authorized publication.",
+    "M0_M1_M2": "Optional local-model and supervised-ranking design requirements remain separate and unimplemented; offline BM25 and BYOV do not gain mandatory inference dependencies."
+  },
+  "gates": {
+    "p0_exit_passed": true,
+    "product_complete": false,
+    "release_supported": false,
+    "production_source_sync_implemented": false,
+    "production_authorization_verified": false,
+    "production_memory_isolation_verified": false,
+    "postgresql_edge_atomicity_verified": false,
+    "power_loss_verified": false,
+    "lexical_backend_adopted": false,
+    "distribution_license_review_complete": false
+  },
+  "normalization": {
+    "script_sha256": "cea23130b3faa9fb85ac67ebf7a25270f81aab82637f9cefb5a6cca5d6740795",
+    "scope": "Combines verified reports with an explicit scoped engineering judgment; performs no new engine, PostgreSQL or fault execution."
+  }
+}

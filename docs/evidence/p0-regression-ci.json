@@ -1,0 +1,441 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_regression_ci_evidence",
+  "source": {
+    "head_commit": "1f9d8bb9de82f07a6d9440d8461d86505abf21c2",
+    "checkout_merge_commit": "773889cdb1b6a840ae9a35fc9b3bb1dde798ccd5",
+    "tree": "1d7e4a6582eabb9d0e32cdb14ff2b22c7a3584e4",
+    "checkout_tree_equals_head_tree": true
+  },
+  "ci": {
+    "run_id": 37725563600,
+    "job_id": 113142806882,
+    "status": "failure",
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37725563600",
+    "failed_step": "Test helper SQL behavior and process isolation",
+    "artifact_id": 11528043321,
+    "artifact_digest_sha256": "56dce06e611195b6a59d3d16a9cfcc78751a7b1d385603a13f973ac0a431bf46",
+    "artifact_digest_source": "GitHub metadata; archive download not independently verified",
+    "records_source": "Completed job logs and official run/job/artifact/Git commit metadata"
+  },
+  "environment": {
+    "edge": "0.8.0",
+    "pgrx": "0.19.3",
+    "cargo_pgrx": "0.19.3",
+    "rust": "1.96.0",
+    "postgres": "17.11",
+    "runtime_os_uid": 10001,
+    "container_memory_limit": "5g",
+    "container_cpu_limit": 2,
+    "runtime_network": "none"
+  },
+  "build": {
+    "all_four_container_profiles_built_and_extension_installed": true,
+    "engine_tests_passed": 4,
+    "diagnostic_runner_tests_passed": 5
+  },
+  "suites": {
+    "direct_normal": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed"
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed"
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5271973199999138
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.015591624000080628,
+          "native_call_cancelled": false
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07225976300003367
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed"
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "rejected"
+          ],
+          "queue_limit": 8
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_entrypoint_absent_in_normal_build",
+          "status": "passed"
+        }
+      ]
+    },
+    "direct_private_faults": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed"
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed"
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5267753489999905
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.015134185999954752,
+          "native_call_cancelled": false
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07223662699993838
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed"
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "rejected",
+            "completed",
+            "completed",
+            "completed",
+            "completed"
+          ],
+          "queue_limit": 8
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_engine_thread_panic",
+          "status": "passed",
+          "worker_survived": true
+        },
+        {
+          "name": "worker_sigkill_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": true,
+          "committed_postgresql_marker_retained": true,
+          "owner_process_preserved": false,
+          "native_owner_replaced": true
+        },
+        {
+          "name": "worker_abort_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": true,
+          "committed_postgresql_marker_retained": true,
+          "owner_process_preserved": false,
+          "native_owner_replaced": true
+        }
+      ]
+    },
+    "helper_normal": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed"
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed"
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5234018799999376
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.01555782199989153,
+          "native_call_cancelled": false
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.06946588799996789
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed"
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "completed",
+            "rejected"
+          ],
+          "queue_limit": 8
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_entrypoint_absent_in_normal_build",
+          "status": "passed"
+        }
+      ]
+    },
+    "standalone_helper_normal": {
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_operation_refused_without_private_feature",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed",
+          "exit_seconds": 0.007341949999954522
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed"
+        }
+      ]
+    },
+    "standalone_helper_private_faults": {
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_native_panic_preserves_helper",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed",
+          "exit_seconds": 0.007318887000110408
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        }
+      ],
+      "error": "[Errno 3] No such process",
+      "incomplete_check": "supervisor_sigkill_closes_pipe_and_stops_helper",
+      "failed_observation": "Reading the terminating helper's /proc stat returned ESRCH (ProcessLookupError). The observer only handled ENOENT (FileNotFoundError).",
+      "not_reached": [
+        "private_native_abort_terminates_only_child"
+      ]
+    },
+    "helper_private_faults": {
+      "status": "not_run",
+      "reason": "The standalone private-helper preflight failed before the shell invoked the PostgreSQL fault suite."
+    }
+  },
+  "enospc": {
+    "schema_version": 1,
+    "engine_version": "0.8.0",
+    "kind": "edge_enospc_probe",
+    "status": "passed",
+    "sql_integration_verified": false,
+    "release_supported": false,
+    "oom_verified": false,
+    "power_loss_verified": false,
+    "environment": {
+      "filesystem": "tmpfs",
+      "capacity_bytes": 33554432,
+      "no_mount_aliases_in_current_namespace": true,
+      "mode": "0700",
+      "pgdata_disjoint": true
+    },
+    "fixture": {
+      "points": 8,
+      "named_representations": [
+        "dense",
+        "bm25",
+        "learned",
+        "tokens"
+      ],
+      "wal_segment_capacity_bytes": 65536,
+      "payload_on_disk": true,
+      "dense_and_token_on_disk": true,
+      "keyword_indexes": [
+        "tenant",
+        "document",
+        "sku"
+      ],
+      "text_indexes": [],
+      "storage_scope": "cold payload/vectors and mutable keyword indexes; no text indexes",
+      "excluded_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes"
+    },
+    "fill": {
+      "bytes_written": 33288192,
+      "errno": 28,
+      "filler_removed": true
+    },
+    "engine_failure": {
+      "operation": "set_hnsw_config",
+      "error": "Service runtime error: Failed to save structure on disk with error: No space left on device (os error 28)",
+      "persisted_config_unchanged": true,
+      "in_memory_config_changed": false
+    },
+    "recovery": {
+      "config_retry": "passed",
+      "explicit_flush": "passed",
+      "reopen": "passed",
+      "records": 8,
+      "all_representation_records_equal": true,
+      "keyword_tenant_and_maxsim_queries": "passed",
+      "phrase_query": "not_tested"
+    },
+    "scope": "configuration atomic save with vector/keyword fixture only; mutable text-index recovery, WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified",
+    "execution": {
+      "returncode": 0,
+      "exit_code": 0,
+      "signal_number": null,
+      "signal_name": null,
+      "timed_out": false,
+      "timeout_seconds": 90,
+      "launch_error": null,
+      "stderr_tail": "pg_qdrant_p0_stage=guard\npg_qdrant_p0_stage=fixture_create\npg_qdrant_p0_stage=fixture_indexes\npg_qdrant_p0_stage=fixture_upsert\npg_qdrant_p0_stage=fixture_flush\npg_qdrant_p0_stage=fixture_ready\npg_qdrant_p0_stage=fixture_query\npg_qdrant_p0_stage=fill\npg_qdrant_p0_stage=config_save\npg_qdrant_p0_stage=config_result\npg_qdrant_p0_stage=filler_release\npg_qdrant_p0_stage=recovery\npg_qdrant_p0_stage=recovery_reopen\npg_qdrant_p0_stage=completed\n",
+      "stages": [
+        "guard",
+        "fixture_create",
+        "fixture_indexes",
+        "fixture_upsert",
+        "fixture_flush",
+        "fixture_ready",
+        "fixture_query",
+        "fill",
+        "config_save",
+        "config_result",
+        "filler_release",
+        "recovery",
+        "recovery_reopen",
+        "completed"
+      ],
+      "last_stage": "completed"
+    }
+  },
+  "findings": {
+    "narrow_configuration_save_enospc_recovery_verified": true,
+    "narrow_config_on_disk_unchanged_after_failed_save": true,
+    "narrow_config_in_memory_unchanged_in_this_run": true,
+    "full_mutable_text_enospc_recovery_verified": false,
+    "postgres_diagnostic_checks_passed": 32,
+    "standalone_checks_passed_before_failure": 13,
+    "overall_workflow_passed": false
+  },
+  "corrective_action": "Handle only ENOENT and ESRCH as disappearance of the observed process in bounded /proc polling; preserve other errors and repeat the complete private helper and SQL suites.",
+  "retained_failures": [
+    "p0-helper-ci.json",
+    "p0-disk-ci.json"
+  ],
+  "unverified": [
+    "Private helper SQL regression at this source",
+    "Forced PostgreSQL supervisor SIGKILL",
+    "Actual OOM",
+    "Full mutable text-index ENOSPC recovery",
+    "Dirty-index/outbox durability",
+    "Source-table search and complete P0/release gates"
+  ],
+  "p0_exit_passed": false,
+  "release_supported": false
+}

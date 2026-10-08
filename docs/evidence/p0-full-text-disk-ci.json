@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_full_text_disk_ci_evidence",
+  "source": {
+    "head_commit": "77f9ecca11ede76e42ba197e294b177ea865d830",
+    "checkout_merge_commit": "69f8cf3b07d5219755f3cd2804320518cde2b83d",
+    "tree": "3f745e5b736ad73566352a6d1e48150528ed86fe",
+    "checkout_tree_equals_head_tree": true
+  },
+  "ci": {
+    "run_id": 37729282903,
+    "job_id": 113154495454,
+    "status": "failure",
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37729282903",
+    "failed_step": "Test full-text ENOSPC recovery on a dedicated 128 MiB tmpfs",
+    "artifact_id": 11529676049,
+    "artifact_digest_sha256": "881f62cee1d470c6f168b828099e9d25bf920354a1165fdd3baa19cbdca66b95",
+    "artifact_digest_source": "GitHub metadata; archive download not independently verified",
+    "records_source": "Completed job logs and official run/job/artifact/Git commit metadata",
+    "job_log_sha256": "a0c85bebf89f0e08919af9ea074a96c49b9d3dd04bd49ba82498cf4dd7090957"
+  },
+  "environment": {
+    "edge": "0.8.0",
+    "pgrx": "0.19.3",
+    "cargo_pgrx": "0.19.3",
+    "rust": "1.96.0",
+    "postgres": "17.11",
+    "runtime_os_uid": 10001,
+    "container_memory_limit": "5g",
+    "container_cpu_limit": 2,
+    "runtime_network": "none"
+  },
+  "build": {
+    "normal_container_built_and_extension_installed": true,
+    "all_four_container_profiles_built_and_extension_installed": false,
+    "engine_tests_passed": 15,
+    "real_child_bookkeeping_tests_passed": 2,
+    "diagnostic_runner_tests_passed": 6
+  },
+  "suites": {
+    "narrow_vector_keyword_enospc": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_enospc_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "environment": {
+        "filesystem": "tmpfs",
+        "capacity_bytes": 33554432,
+        "no_mount_aliases_in_current_namespace": true,
+        "mode": "0700",
+        "pgdata_disjoint": true
+      },
+      "profile": "vector_keyword",
+      "fixture": {
+        "points": 8,
+        "named_representations": [
+          "dense",
+          "bm25",
+          "learned",
+          "tokens"
+        ],
+        "wal_segment_capacity_bytes": 65536,
+        "payload_on_disk": true,
+        "dense_and_token_on_disk": true,
+        "keyword_indexes": [
+          "tenant",
+          "document",
+          "sku"
+        ],
+        "text_indexes": [],
+        "storage_scope": "cold payload/vectors and mutable keyword indexes; no text indexes",
+        "excluded_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes"
+      },
+      "fill": {
+        "bytes_written": 33288192,
+        "errno": 28,
+        "filler_removed": true
+      },
+      "engine_failure": {
+        "operation": "set_hnsw_config",
+        "error": "Service runtime error: Failed to save structure on disk with error: No space left on device (os error 28)",
+        "persisted_config_unchanged": true,
+        "in_memory_config_changed": false
+      },
+      "recovery": {
+        "config_retry": "passed",
+        "explicit_flush": "passed",
+        "reopen": "passed",
+        "records": 8,
+        "all_representation_records_equal": true,
+        "keyword_tenant_and_maxsim_queries": "passed",
+        "phrase_query": "not_tested",
+        "token_prefix_query": "not_tested"
+      },
+      "scope": "configuration atomic save with vector/keyword fixture only; mutable text-index recovery, WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail": "pg_qdrant_p0_stage=guard\npg_qdrant_p0_stage=fixture_create\npg_qdrant_p0_stage=fixture_indexes\npg_qdrant_p0_stage=fixture_upsert\npg_qdrant_p0_stage=fixture_flush\npg_qdrant_p0_stage=fixture_ready\npg_qdrant_p0_stage=fixture_query\npg_qdrant_p0_stage=fill\npg_qdrant_p0_stage=config_save\npg_qdrant_p0_stage=config_result\npg_qdrant_p0_stage=filler_release\npg_qdrant_p0_stage=recovery\npg_qdrant_p0_stage=recovery_reopen\npg_qdrant_p0_stage=completed\n",
+        "stages": [
+          "guard",
+          "fixture_create",
+          "fixture_indexes",
+          "fixture_upsert",
+          "fixture_flush",
+          "fixture_ready",
+          "fixture_query",
+          "fill",
+          "config_save",
+          "config_result",
+          "filler_release",
+          "recovery",
+          "recovery_reopen",
+          "completed"
+        ],
+        "last_stage": "completed"
+      }
+    },
+    "full_text_enospc": {
+      "requested_profile": "full_text",
+      "provisioned_tmpfs_capacity_bytes": 134217728,
+      "fixture_contract": {
+        "points": 8,
+        "named_representations": [
+          "dense",
+          "bm25",
+          "learned",
+          "tokens"
+        ],
+        "keyword_indexes": [
+          "tenant",
+          "document",
+          "sku"
+        ],
+        "text_indexes": [
+          "body",
+          "body_prefix"
+        ],
+        "wal_segment_capacity_bytes": 65536
+      },
+      "status": "failed",
+      "reason": "Probe terminated without a successful process exit",
+      "native_report_status": null,
+      "native_report_reason": null,
+      "execution": {
+        "returncode": -7,
+        "exit_code": null,
+        "signal_number": 7,
+        "signal_name": "SIGBUS",
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail": "pg_qdrant_p0_stage=guard\npg_qdrant_p0_stage=full_text_fixture\npg_qdrant_p0_stage=fixture_query\npg_qdrant_p0_stage=fill\npg_qdrant_p0_stage=config_save\npg_qdrant_p0_stage=config_result\npg_qdrant_p0_stage=filler_release\npg_qdrant_p0_stage=recovery\npg_qdrant_p0_stage=recovery_reopen\n",
+        "stages": [
+          "guard",
+          "full_text_fixture",
+          "fixture_query",
+          "fill",
+          "config_save",
+          "config_result",
+          "filler_release",
+          "recovery",
+          "recovery_reopen"
+        ],
+        "last_stage": "recovery_reopen",
+        "stdout_tail": ""
+      },
+      "interpretation": "The process reached the recovery_reopen stage and then terminated with SIGBUS. Progress stages are observations, not a successful native JSON report or proof of the root cause. No full-text recovery pass is recorded."
+    },
+    "direct_normal": {
+      "status": "not_run",
+      "reason": "Skipped after the earlier full-text disk step failed"
+    },
+    "direct_private_faults": {
+      "status": "not_run",
+      "reason": "Image and SQL steps skipped after the earlier full-text disk step failed"
+    },
+    "helper_normal": {
+      "status": "not_run",
+      "reason": "Image, pipe and SQL steps skipped after the earlier full-text disk step failed"
+    },
+    "helper_private_faults": {
+      "status": "not_run",
+      "reason": "Image, pipe and SQL steps skipped after the earlier full-text disk step failed"
+    }
+  },
+  "findings": [
+    "Narrow configuration-save ENOSPC recovery passed again on a 32 MiB tmpfs; this does not establish full-text recovery.",
+    "The 128 MiB full-text experiment terminated with signal 7 (SIGBUS) at recovery_reopen, without timeout or a successful native report.",
+    "The recorded stages include filler_release and recovery before recovery_reopen; the exact allocation or I/O operation causing SIGBUS is not identified.",
+    "The earlier 32 MiB full-text run did not capture its termination cause. This later signal observation does not retroactively identify that cause.",
+    "The latest PostgreSQL-supervisor SIGKILL and helper observation changes received no SQL runtime evidence in this run."
+  ],
+  "follow_up": [
+    "Retain stage-specific filesystem free-space, allocated-file and mapped-page observations, including a clean full-text reopen control.",
+    "Run independently qualified PostgreSQL profiles even after another experiment fails, while preserving the failed overall CI conclusion.",
+    "Keep current-source helper regression, full-text disk recovery, kernel OOM and the remaining P0 exits open."
+  ],
+  "gates": {
+    "narrow_vector_keyword_config_enospc": true,
+    "full_text_enospc_recovery": false,
+    "current_source_sql_regression": false,
+    "postgres_supervisor_sigkill": false,
+    "actual_kernel_oom": false,
+    "p0_complete": false,
+    "product_indexing_supported": false,
+    "release_supported": false
+  }
+}

@@ -1,0 +1,473 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_managed_helper_ci_evidence",
+  "source": {
+    "head_commit": "a22d3c73ad838ff606a080345b65d634f5144c39",
+    "checkout_merge_commit": "6584812ae40f8850c1d43658ccbdfba184e1846d",
+    "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+    "checkout_tree_equals_head_tree": true
+  },
+  "ci": {
+    "run_id": 37720263848,
+    "job_id": 113126054532,
+    "status": "failure",
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37720263848",
+    "failed_step": "Test Edge ENOSPC on a dedicated 32 MiB tmpfs",
+    "artifact_id": 11526321952,
+    "artifact_digest_sha256": "42a73f8f728f708055501e3d5334a260c58357ef71e124a9712106a18e43028d",
+    "artifact_digest_source": "GitHub artifact metadata; archive download not independently verified",
+    "records_source": "Completed job logs and official run/job/artifact/Git commit metadata"
+  },
+  "environment": {
+    "container": "Ubuntu 24.04",
+    "architecture": "x86_64",
+    "postgres": "17.11",
+    "rust": "1.96.0",
+    "pgrx": "0.19.3",
+    "cargo_pgrx": "0.19.3",
+    "edge": "0.8.0",
+    "runtime_os_uid": 10001,
+    "container_memory_limit": "5 GiB",
+    "container_cpu_limit": 2,
+    "runtime_network": "none"
+  },
+  "suites": {
+    "direct_normal": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed"
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed"
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5260316940000394
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.014311623000025975,
+          "native_call_cancelled": false
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.0719666770000913
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed"
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "rejected",
+            "completed"
+          ],
+          "queue_limit": 8
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_entrypoint_absent_in_normal_build",
+          "status": "passed"
+        }
+      ]
+    },
+    "direct_private_faults": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed"
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed"
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5269680510000398
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.0141140919999998,
+          "native_call_cancelled": false
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07265652000000955
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed"
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "completed",
+            "completed",
+            "rejected"
+          ],
+          "queue_limit": 8
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_engine_thread_panic",
+          "status": "passed",
+          "worker_survived": true
+        },
+        {
+          "name": "worker_sigkill_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": true,
+          "committed_postgresql_marker_retained": true,
+          "same_supervisor_process": false,
+          "engine_process_replaced": true
+        },
+        {
+          "name": "worker_abort_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": true,
+          "committed_postgresql_marker_retained": true,
+          "same_supervisor_process": false,
+          "engine_process_replaced": true
+        }
+      ]
+    },
+    "helper_normal": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed"
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed"
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5224729179999485
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.013732691999848612,
+          "native_call_cancelled": false
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.06789184199988085
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed"
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "completed",
+            "rejected"
+          ],
+          "queue_limit": 8
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_entrypoint_absent_in_normal_build",
+          "status": "passed"
+        }
+      ]
+    },
+    "helper_private_faults": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed"
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed"
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.533961988999863
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.015605674999960684,
+          "native_call_cancelled": false
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.06798384800003987
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed"
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "rejected"
+          ],
+          "queue_limit": 8
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_engine_thread_panic",
+          "status": "passed",
+          "worker_survived": true
+        },
+        {
+          "name": "helper_sigkill_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": false,
+          "committed_postgresql_marker_retained": true,
+          "same_supervisor_process": true,
+          "engine_process_replaced": true
+        },
+        {
+          "name": "helper_abort_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": false,
+          "committed_postgresql_marker_retained": true,
+          "same_supervisor_process": true,
+          "engine_process_replaced": true
+        },
+        {
+          "name": "helper_operation_budget_stops_frozen_engine",
+          "status": "passed",
+          "fault": "SIGSTOP",
+          "configured_limit_ms": 125000,
+          "observed_remaining_seconds": 125.35843199100009,
+          "caller_cancelled": true,
+          "native_cancellation": false,
+          "supervisor_preserved": true,
+          "companion_session_completed": true,
+          "stop_reason": "execution_budget",
+          "engine_process_replaced": true
+        },
+        {
+          "name": "helper_supervisor_exit_closes_native_owner",
+          "status": "passed",
+          "old_engine_stopped": true,
+          "replacement_owner_ready": true,
+          "shutdown_signal": "SIGTERM"
+        },
+        {
+          "name": "helper_restart_budget_exhaustion_is_visible",
+          "status": "passed",
+          "start_attempts": 4,
+          "automatic_restarts": 3,
+          "supervisor_preserved": true,
+          "unavailable_requests_refused": true
+        }
+      ]
+    },
+    "standalone_helper_normal": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_operation_refused_without_private_feature",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed"
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed"
+        }
+      ]
+    },
+    "standalone_helper_private_faults": {
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_native_panic_preserves_helper",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed"
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed"
+        },
+        {
+          "name": "private_native_abort_terminates_only_child",
+          "status": "passed"
+        }
+      ]
+    }
+  },
+  "enospc": {
+    "status": "failed",
+    "attempted": true,
+    "tmpfs_capacity_bytes": 33554432,
+    "tmpfs_mode": "0700",
+    "container_user": 10001,
+    "report": {
+      "status": "failed",
+      "reason": "Probe did not return a JSON report"
+    },
+    "child_returncode": null,
+    "child_signal": null,
+    "child_stderr_observed": false,
+    "cause": "unknown; the original wrapper did not preserve the child exit code or signal",
+    "actual_errno_28_verified": false,
+    "recovery_verified": false,
+    "follow_up": "Retain this failed attempt; add exit/signal/phase diagnostics, verify the fixture storage footprint and repeat the provisioned experiment."
+  },
+  "findings": {
+    "direct_worker_sigkill_and_abort_terminate_companion_sql": true,
+    "helper_sigkill_and_abort_preserve_supervisor_and_companion_sql": true,
+    "committed_postgresql_marker_retained": true,
+    "helper_frozen_operation_limit_ms": 125000,
+    "helper_frozen_operation_stopped_and_replaced": true,
+    "native_in_flight_cancellation": false,
+    "supervisor_sigterm_closes_helper_and_allows_replacement": true,
+    "helper_start_attempt_limit_verified": 4,
+    "helper_automatic_restart_limit_verified": 3,
+    "helper_unavailable_after_restart_exhaustion": true,
+    "preferred_candidate": "packaged managed helper; production topology acceptance remains pending"
+  },
+  "unverified": [
+    "Forced SIGKILL of the real PostgreSQL supervisor (standalone controller SIGKILL is a separate passed check)",
+    "Actual bounded kernel OOM and resource-governance behavior",
+    "Positive bounded ENOSPC, dirty index and production durable-recovery behavior",
+    "Source-table indexing, transactional outbox, backfill, committed-change tickets and source revalidation",
+    "Full analyzer/quality, complete public API/input coverage, RLS/tenant safety",
+    "Index upgrade/rollback, broader CPU/platform and release support"
+  ],
+  "performance_benchmark": false,
+  "p0_exit_passed": false,
+  "release_supported": false
+}

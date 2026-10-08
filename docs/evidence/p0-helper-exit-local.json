@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_helper_exit_local_evidence",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "rust": "1.96.0"
+  },
+  "isolated_source": {
+    "base_commit": "1f9d8bb9de82f07a6d9440d8461d86505abf21c2",
+    "changed_source_inputs": [
+      {
+        "path": "crates/pg_qdrant-helper/README.md",
+        "sha256": "bc47799c7f9f9d1b06e34c92c6a1d64cb5f47e8f4684c79b81d9b95432a1ef04"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/tests/probe.py",
+        "sha256": "fc3929e844cf7a804f0bb8b324d3244e0ea9ae1074b83291238f8d77305c07e6"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/tests/supervisor_child.rs",
+        "sha256": "2e3bc074a1d05849a161e8923320fb2813e22d358069744d92eb3f98c354cd54"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper.rs",
+        "sha256": "0a85df0caa960647249650258f68a656567f8d38c71c4521afb27f96e26e2f89"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper_child.rs",
+        "sha256": "ec051fa5efdd319debcb2b1dc74add0390dc0cf9e30a4eef08c0cca23ac41c9f"
+      },
+      {
+        "path": "crates/pg_qdrant/src/lib.rs",
+        "sha256": "2b01c4b39f907d54cfc1f413939e02bf11cc69dbe18889f2a0c738488e43071c"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_p0.py",
+        "sha256": "8cfacf16e67dd765692839d8c568e1360d67c7665faf57ae073d156c91331856"
+      }
+    ],
+    "scope": "Isolated helper-source changes over the recorded base. The integrated main-tree engine and new PostgreSQL supervisor-SIGKILL scenario have separate evidence."
+  },
+  "postgres_compile_checks": [
+    {
+      "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17,p0-managed-helper",
+      "exit_code": 0,
+      "elapsed_seconds": 46.9
+    },
+    {
+      "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17,p0-managed-helper,p0-fault-injection",
+      "exit_code": 0,
+      "elapsed_seconds": 0.95
+    }
+  ],
+  "postgres_compile_scope": {
+    "environment": "PostgreSQL 17 development headers, libclang and native include paths; two Cargo jobs. Dockerfile.p0 supplies the reproducible container environment.",
+    "helper_child_sha256_at_check": "08103b24f5e1347344bbe8990360bde9c7588e8498da5f31c74cc18d6da7c71d",
+    "final_helper_child_sha256": "ec051fa5efdd319debcb2b1dc74add0390dc0cf9e30a4eef08c0cca23ac41c9f",
+    "post_check_change": "A comment was qualified after those compile checks; executable Rust code was unchanged. The final module was compiled and exercised by the real-child target.",
+    "raw_build_log": null,
+    "link_install_or_sql_runtime_claim": false
+  },
+  "actual_child_tests": {
+    "command": "cargo test --locked -p pg-qdrant-helper --test supervisor_child",
+    "exit_code": 0,
+    "tests_passed": 2,
+    "tests_failed": 0,
+    "tests_ignored": 0,
+    "checks": [
+      "already_exited_child_is_reaped_without_cleanup_signal",
+      "explicit_kill_records_result_and_preserves_first_reason"
+    ],
+    "source_inputs": [
+      {
+        "path": "Cargo.lock",
+        "sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/Cargo.toml",
+        "sha256": "674a1166a52c7664bb4a523f4141e6381c62a2d4b8ac60ebf204bee7eb777ff9"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/tests/supervisor_child.rs",
+        "sha256": "2e3bc074a1d05849a161e8923320fb2813e22d358069744d92eb3f98c354cd54"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper_child.rs",
+        "sha256": "ec051fa5efdd319debcb2b1dc74add0390dc0cf9e30a4eef08c0cca23ac41c9f"
+      }
+    ],
+    "production_module_included_directly": true,
+    "scope": "Actual owned OS child exit/kill bookkeeping. A successful kill request is not proof that it caused a racing eventual exit."
+  },
+  "standalone_reruns": {
+    "normal": {
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_operation_refused_without_private_feature",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed",
+          "exit_seconds": 0.0032805079990794184
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        }
+      ],
+      "process_observation_gate": {
+        "status": "failed",
+        "reason": "live_helper_identity_unavailable",
+        "advertised_live_pid_visible": false
+      },
+      "error": "live helper identity is not observable in this proc namespace",
+      "controller_sigkill_sent": false
+    },
+    "private_faults": {
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "failed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_native_panic_preserves_helper",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed",
+          "exit_seconds": 0.007390562999717076
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        }
+      ],
+      "process_observation_gate": {
+        "status": "failed",
+        "reason": "live_helper_identity_unavailable",
+        "advertised_live_pid_visible": false
+      },
+      "error": "live helper identity is not observable in this proc namespace",
+      "controller_sigkill_sent": false
+    }
+  },
+  "qualification": {
+    "full_standalone_suite_passed": false,
+    "local_controller_death_cleanup_verified": false,
+    "direct_stdin_eof_observed_separately": true,
+    "historical_local_record": "p0-helper-local.json",
+    "next_gate": "The disposable CI container must establish the live helper PID/start identity before controller SIGKILL and rerun the complete PostgreSQL profiles."
+  },
+  "unverified": [
+    "Current integrated PostgreSQL runtime",
+    "Forced PostgreSQL supervisor SIGKILL and ownership recovery",
+    "Kernel OOM",
+    "Durable product indexing and complete P0 exit"
+  ],
+  "p0_exit_passed": false,
+  "release_supported": false
+}

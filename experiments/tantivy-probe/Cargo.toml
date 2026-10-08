@@ -1,0 +1,23 @@
+[workspace]
+resolver = "3"
+
+[package]
+name = "pg-qdrant-tantivy-feasibility"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.96"
+license = "AGPL-3.0-only"
+publish = false
+
+[dependencies]
+tantivy = { version = "=0.26.2", default-features = false, features = ["mmap", "lz4-compression"] }
+levenshtein_automata = "=0.2.1"
+tantivy-fst = "=0.5.0"
+serde_json = "=1.0.151"
+tempfile = "=3.27.0"
+
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0

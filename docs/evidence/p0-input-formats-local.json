@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_input_formats_local_evidence",
+  "base_revision": "77f9ecca11ede76e42ba197e294b177ea865d830",
+  "source_identity": "Development changes after the base revision; current source hashes below.",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "rust": "1.96.0",
+    "pgrx": "0.19.3",
+    "cargo_pgrx": "0.19.3",
+    "postgres_headers": "17.11"
+  },
+  "source_inputs": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+    },
+    {
+      "path": "crates/pg_qdrant/Cargo.toml",
+      "sha256": "6ab793bb104fe7b9913d0691fb6b4cb7ffc085acfc9910039186adcf9fe9e72f"
+    },
+    {
+      "path": "crates/pg_qdrant/src/lib.rs",
+      "sha256": "f6ee73ad539568ac5b319300b8fbca57d09bfd91236344c18bb4bbb57fcb5214"
+    },
+    {
+      "path": "crates/pg_qdrant/src/formats.rs",
+      "sha256": "db230bbc34ec2e6069cbba43c210269f48685cfe86febb3e4d80845d640761b3"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/verify_p0.py",
+      "sha256": "4d8c2d3850f80fce8586cc53370ed40af91a66903d7949542508d97f529eebd7"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/verify_formats.py",
+      "sha256": "60dd04ab77837b751daca0ec88adc85c193a007640a84d3499f36c412fbb2b0d"
+    }
+  ],
+  "current_commands": [
+    {
+      "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17",
+      "exit_code": 0,
+      "scope": "Corrected bounded internal float-bit report and candidate array/serialization implementation. Compile check only.",
+      "transcript_sha256": "94f27296e7365e350b904d20c408bc8f012d297d5330a16922c5f14afdccbac5"
+    }
+  ],
+  "earlier_linked_iteration": {
+    "source_inputs": [
+      {
+        "path": "crates/pg_qdrant/src/formats.rs",
+        "sha256": "afab59d8b170dad5ebeb8af9483cd0c63f2fe6644a76f771003b563dbeea98b5"
+      },
+      {
+        "path": "crates/pg_qdrant/src/lib.rs",
+        "sha256": "f6ee73ad539568ac5b319300b8fbca57d09bfd91236344c18bb4bbb57fcb5214"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_formats.py",
+        "sha256": "50ffdfff8418adec50359073ed72a510a849e1d7b4061e4276c87133d11a5e8b"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_p0.py",
+        "sha256": "4d8c2d3850f80fce8586cc53370ed40af91a66903d7949542508d97f529eebd7"
+      },
+      {
+        "path": "docs/p0-input-formats.md",
+        "sha256": "82cd085ff4a6df5d0e86dee753e9934022a3b85613b821430b6531da68816192"
+      }
+    ],
+    "commands": [
+      {
+        "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17",
+        "exit_code": 0,
+        "elapsed_seconds": 37.4
+      },
+      {
+        "command": "cargo pgrx schema --manifest-path crates/pg_qdrant/Cargo.toml --pg-config \"$PGRX_PG_CONFIG_PATH\" --no-default-features --features pg17 --cargo=--locked --out \"$PG_QDRANT_SCHEMA_OUT\"",
+        "exit_code": 0,
+        "elapsed_seconds": 77,
+        "entities": 10,
+        "schemas": 2,
+        "functions": 7,
+        "normal_linked": true
+      },
+      {
+        "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17,p0-managed-helper,p0-fault-injection",
+        "exit_code": 0,
+        "elapsed_seconds": 30.04
+      }
+    ],
+    "scope": "These three commands passed before the signed-zero diagnostic correction. They do not establish current SQL runtime.",
+    "sql_entities": {
+      "schemas": 2,
+      "functions": 7,
+      "final_privilege_block": true
+    },
+    "signature": "(real[], bigint[], real[], real[]) -> jsonb",
+    "volatility": "VOLATILE",
+    "parallel": "UNSAFE",
+    "strict": false,
+    "security_definer": false
+  },
+  "correction": {
+    "reason": "PostgreSQL JSONB numeric normalizes negative zero. Preserve float32 bit evidence as integer values before JSONB conversion; do not assert the returned numeric sign.",
+    "scope": "At most eight dense scalar bit values accompany a complete internal bitwise comparison; no public vector contract is frozen."
+  },
+  "sql_assertion_groups": {
+    "implemented": 3,
+    "executed": 0,
+    "scope": [
+      "Valid/boundary/prepared inputs",
+      "Negative cases and resource budgets",
+      "ACL plus runtime superuser guard including all-null inputs"
+    ]
+  },
+  "sql_runtime_verified": false,
+  "source_row_recheck_implemented": false,
+  "model_contract_verified": false,
+  "public_sql_api_frozen": false,
+  "p0_exit_passed": false,
+  "release_supported": false
+}

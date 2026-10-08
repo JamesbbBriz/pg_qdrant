@@ -1,0 +1,25 @@
+[package]
+name = "pg-qdrant-helper"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.96"
+license = "AGPL-3.0-only"
+description = "Managed native-engine process comparison for pg_qdrant P0"
+publish = false
+
+[[bin]]
+name = "pg_qdrant_p0_helper"
+path = "src/main.rs"
+
+[features]
+default = []
+p0-fault-injection = ["pg-qdrant-edge-probe/p0-fault-injection"]
+
+[dependencies]
+pg-qdrant-protocol = { path = "../pg_qdrant-protocol" }
+pg-qdrant-edge-probe = { path = "../edge-probe" }
+serde_json = "=1.0.151"
+libc = "=0.2.189"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

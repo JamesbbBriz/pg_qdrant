@@ -1,0 +1,5358 @@
+{
+  "schema_version": 1,
+  "kind": "p0_ci8_core_sql_fault_and_named_test_evidence",
+  "observed_on": "2026-10-08",
+  "source": {
+    "head_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+    "checkout_merge_commit": "716cb2871d325dfd629a40177c9cfee613af4cfc",
+    "tree": "8b1d6d863be52229f8b15b49ad0b58b96b28608f",
+    "checkout_tree_equals_head_tree": true,
+    "merge_metadata_url": "https://api.github.com/repos/JamesbbBriz/pg_qdrant/git/commits/716cb2871d325dfd629a40177c9cfee613af4cfc",
+    "metadata_sha256": "6bb10ab54bd78336c88ef03a42dee52dc6115bf9b24fde989259610a2e534c92",
+    "source_hash_method": "SHA-256 of git show <head_commit>:<path>; current working-tree files are not substituted.",
+    "source_inputs": [
+      {
+        "path": ".github/workflows/p0.yml",
+        "sha256": "96e5cd6363cbfe18cfd253967ceada2a38c9def1bd8dd6d9b52eb536b2584e26"
+      },
+      {
+        "path": "Cargo.lock",
+        "sha256": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d"
+      },
+      {
+        "path": "Cargo.toml",
+        "sha256": "41147677b739b22d21c724a7d0fee34989cf35cb7e8d4c9ac4d7a52f363b305c"
+      },
+      {
+        "path": "Dockerfile.p0",
+        "sha256": "2dfb0633d342d77a4a3b7d092e54f9ec695bcfc492af0c5df995cf45b159d076"
+      },
+      {
+        "path": "Dockerfile.p0-lexical",
+        "sha256": "46c4e0fe5eb2e38124e365adb78ed3d9934a2016a0a0a47afe4e1902d59cb3f1"
+      },
+      {
+        "path": "crates/edge-probe/Cargo.toml",
+        "sha256": "99118fc920d732fb569bc002276fcce78f06115505356b4b9591afaebdb0a066"
+      },
+      {
+        "path": "crates/edge-probe/README.md",
+        "sha256": "5f43718d99b70c45a6c9f8154215080d7dd70eca65d70f2de14807d8538f13e4"
+      },
+      {
+        "path": "crates/edge-probe/src/api_inventory.rs",
+        "sha256": "d58e698089206cfa282b2154e4e1a5abe71191b84191074f930db076ce7e9a38"
+      },
+      {
+        "path": "crates/edge-probe/src/cpu.rs",
+        "sha256": "f82a975694f83448fe17921552842dc39341cf422c0a47b9d942a573bcb90b0b"
+      },
+      {
+        "path": "crates/edge-probe/src/fault_probes.rs",
+        "sha256": "b9226f9d214066b29e034f945003b950262fad7805ea8c64f472177672df0b94"
+      },
+      {
+        "path": "crates/edge-probe/src/lib.rs",
+        "sha256": "d53ea193c6f68aff75e744c5addd7533ff0c4853a447cec64d035b3dad95988d"
+      },
+      {
+        "path": "crates/edge-probe/src/main.rs",
+        "sha256": "8343bd2d58ade61e21ac9b5b3e9164ecbef40aa83e475b32bbb35454cd653693"
+      },
+      {
+        "path": "crates/edge-probe/src/oom_probe.rs",
+        "sha256": "836726ff37758912c67dbef0e24ba45485dd2ce11456fd03e94c6f7fe24ff8d6"
+      },
+      {
+        "path": "crates/edge-probe/tests/advanced.rs",
+        "sha256": "01ad2a183c1402b88b0443648148516c5ab69bade52978f2a73d5bbced2111e8"
+      },
+      {
+        "path": "crates/edge-probe/tests/dirty_rebuild.rs",
+        "sha256": "a44c0063df53e463371eedc3b32cf04073343e6be2344e19f50d651f5320db31"
+      },
+      {
+        "path": "crates/edge-probe/tests/faults.rs",
+        "sha256": "f3900b6ab3bb8033fcde3a8da3d318b41e51427c9007477669b7d91e12a690d7"
+      },
+      {
+        "path": "crates/edge-probe/tests/invalid_inputs.rs",
+        "sha256": "1d77614bab4f996e287e073c2b45a8b77c8d672a93e27504ee18f728d847da97"
+      },
+      {
+        "path": "crates/edge-probe/tests/lexical.rs",
+        "sha256": "3a335a696f844bb24c129bce885c0c9b092daee4157af259d9d070a4ac7010d8"
+      },
+      {
+        "path": "crates/edge-probe/tests/lifecycle.rs",
+        "sha256": "22cf73f77660882aa85d813c5988fcb5d6323bbc9664898bc0b05897d7f5f0a2"
+      },
+      {
+        "path": "crates/edge-probe/tests/persistence.rs",
+        "sha256": "22788f4420c1f6ae106e176e68956286b82f298e1f494e2eb1a7bb598cb7ba23"
+      },
+      {
+        "path": "crates/edge-probe/tests/public_lifecycle.rs",
+        "sha256": "87cb722c29c75c9e9fdbe64a315738c099ae92e2f1768ba45ff1866a5bbe71a1"
+      },
+      {
+        "path": "crates/edge-probe/tests/schema.rs",
+        "sha256": "839f5a58bb7d55a646219c228ee9dbf434466e5bac7932f81bbf09770e58ef64"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/Cargo.toml",
+        "sha256": "08fced4f33410d377152dffe1632f851923d5405bd708f964e3c39babf36fd58"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/README.md",
+        "sha256": "bc47799c7f9f9d1b06e34c92c6a1d64cb5f47e8f4684c79b81d9b95432a1ef04"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/src/main.rs",
+        "sha256": "b797a20c7e049166e794b734d560fabb94408a35c689c813a86c67ccabbaacad"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/tests/probe.py",
+        "sha256": "57a1f95eb4268cbd210f586ccec7a2b1ea7d46c040c86b6b2810c5c5d92c8907"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/tests/supervisor_child.rs",
+        "sha256": "2e3bc074a1d05849a161e8923320fb2813e22d358069744d92eb3f98c354cd54"
+      },
+      {
+        "path": "crates/pg_qdrant-protocol/Cargo.toml",
+        "sha256": "330d0a8e798579f34cd4b2074db9b18de1032dc2c50002bbc6418f151a9ad317"
+      },
+      {
+        "path": "crates/pg_qdrant-protocol/src/lib.rs",
+        "sha256": "c33ed27c20d85740815579e0d538552d54967939823009aa1d31e1d4ad452f0e"
+      },
+      {
+        "path": "crates/pg_qdrant/Cargo.toml",
+        "sha256": "1eff4b263088d20e8dd4224c00dca6364eb45b73c9e86dc0395f4e28b5b268ff"
+      },
+      {
+        "path": "crates/pg_qdrant/README.md",
+        "sha256": "da77d2cf17d9286bac39b9092716d9b06fbde3ac62c9235de327bb46b36ae086"
+      },
+      {
+        "path": "crates/pg_qdrant/pg_qdrant.control",
+        "sha256": "9cdf35094b23a4b4eb8690337fa099e58bf79069c329e5ea66118f571c3595eb"
+      },
+      {
+        "path": "crates/pg_qdrant/src/formats.rs",
+        "sha256": "db230bbc34ec2e6069cbba43c210269f48685cfe86febb3e4d80845d640761b3"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper.rs",
+        "sha256": "9fdce7a421d44319ab06541783de02e63e2414d79c38c710da099811fc351c78"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper_child.rs",
+        "sha256": "ec051fa5efdd319debcb2b1dc74add0390dc0cf9e30a4eef08c0cca23ac41c9f"
+      },
+      {
+        "path": "crates/pg_qdrant/src/identity.rs",
+        "sha256": "0d862451a4f5219c6d75f807de42abc6493660d9233193e214e60be1db35483b"
+      },
+      {
+        "path": "crates/pg_qdrant/src/ipc.rs",
+        "sha256": "ebb1491f4b1d2677d5eb1018580fd84d96cc84a8396cd985b1dca8e91c315d4e"
+      },
+      {
+        "path": "crates/pg_qdrant/src/lib.rs",
+        "sha256": "bd42295b42dd15ad4ffa443f95a63d1573fd133d32239403f5ee00fd320d0d98"
+      },
+      {
+        "path": "crates/pg_qdrant/src/recheck.rs",
+        "sha256": "087b63cb95a371b08a043a8554a3f80255dbfbc16de66c37e1266b7f7721efcf"
+      },
+      {
+        "path": "crates/pg_qdrant/src/worker.rs",
+        "sha256": "f6f7656d3ef2ed53708f830f061aa63292962fd5a8a701a870372acb65944733"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/run-faults.sh",
+        "sha256": "a92309e293e0924476a5a1fa5ce39ebe4235842cea78512d9f37aaa00c2aff0a"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/run-oom.sh",
+        "sha256": "803eb48b42d03149a9ce4616691fa577ee5fbf95db69af132958f7384f0560b7"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/run-p0.sh",
+        "sha256": "76f308ce2968de8dfc14fefe7ba84db4ecb7d052b49bc6a1dc3959f0f5702622"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_formats.py",
+        "sha256": "60dd04ab77837b751daca0ec88adc85c193a007640a84d3499f36c412fbb2b0d"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_oom.py",
+        "sha256": "9f5832965a2b41ac33454d0aeb0e344c7ac526f62a5c5e9e74be442ba4cdbee0"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_p0.py",
+        "sha256": "e9256ac2d814dbeba8a93aaeb2ebbb9b008f418a665cfd71d7ab9f1c14600035"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_source.py",
+        "sha256": "e1408f30ec215a88cfcaaa608c3dc53b00b39221973e9af77000fc56a56b649f"
+      },
+      {
+        "path": "docs/acceptance.md",
+        "sha256": "c1d52ad760d0d30d649c8894c9f55f468a40559f6ffcdec93d3f3e8c7c68d381"
+      },
+      {
+        "path": "docs/adr/0003-edge-durability-and-recovery.md",
+        "sha256": "6fd774b3483beec01bc4fc72d47f0076a5b08b52ece28bfd4ebe74b631f90771"
+      },
+      {
+        "path": "docs/adr/0004-p0-go-no-go.md",
+        "sha256": "49e2619be83da80cb94b0590eeb08a7057542c5233ed151472f22807a14ded7b"
+      },
+      {
+        "path": "docs/capabilities.md",
+        "sha256": "2e65204632e5a5151586804bae2a8757db8e43f439c9523d68058638eea265b1"
+      },
+      {
+        "path": "docs/dependencies.md",
+        "sha256": "7d561c32bb77f3e5f5e83f1c487bae91747989990b080da5f336ba5282770124"
+      },
+      {
+        "path": "docs/dependency-baseline.json",
+        "sha256": "221fcc7af183b45b188b6b358e28d45853dff92ca1323d33e508534d8bfde484"
+      },
+      {
+        "path": "docs/dependency-graph.json",
+        "sha256": "5b8977ad2d3787cf86c6608b2496aeb1285dcf61351fbc9682ffb55094268ff7"
+      },
+      {
+        "path": "docs/dependency-profiles.json",
+        "sha256": "09c25fe558be8f539a56185f2509322cc9b06a35e7f0ac59c78d047b54f1f9f7"
+      },
+      {
+        "path": "docs/p0-edge-methods.md",
+        "sha256": "b532ef0a836045314794ce6fa0e4c52e3f2710a368c73ab316beff2c3faeae22"
+      },
+      {
+        "path": "docs/p0-native-build.md",
+        "sha256": "c72dafae821d2e54cbec68c633d5a511c8763c91400f457d212ca855ef9c9e99"
+      },
+      {
+        "path": "docs/p0-native-inventory.md",
+        "sha256": "d6010f67fd441af9c50fda7ec1b8538453450ea87246b6827201081056414129"
+      },
+      {
+        "path": "experiments/tantivy-probe/Cargo.lock",
+        "sha256": "682510ef1ea440b46198830c47b0d6e13b5a2c18ae63c9263f9e4ab592421e50"
+      },
+      {
+        "path": "experiments/tantivy-probe/Cargo.toml",
+        "sha256": "9a63fa7e06b53dcf7fdcc64b523429dfda23b8e8cb8232099328f9c35800e333"
+      },
+      {
+        "path": "experiments/tantivy-probe/README.md",
+        "sha256": "412a184e60993f62bbab800062bee3783d4ca0b2b1b5920f153ba3451a2cc19e"
+      },
+      {
+        "path": "experiments/tantivy-probe/dependency-inventory.json",
+        "sha256": "66a70e496e32b73a73c3ead95d532348f3a4a68e150ef2ff0be9918e093cf179"
+      },
+      {
+        "path": "experiments/tantivy-probe/inventory.py",
+        "sha256": "711206da61f1cb7c5112f588b35172cdaa2f2594d253ecd4e5b5a1be26b8f8d6"
+      },
+      {
+        "path": "experiments/tantivy-probe/src/main.rs",
+        "sha256": "7a5b02ff84f712beb04745e5ecf1da08a51cd544a59ec2d9e459401e0e463182"
+      },
+      {
+        "path": "rust-toolchain.toml",
+        "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+      },
+      {
+        "path": "scripts/check_contracts.py",
+        "sha256": "8750ce6b5bb8faa8421b1e37a4225a1047185ccfec9a43dbeed1c42c0f62b65b"
+      },
+      {
+        "path": "scripts/check_native_cpu.py",
+        "sha256": "ccf0b29803a565d2fb627408d445aa204073f2bc52547b10a0aa52061f04fe88"
+      },
+      {
+        "path": "scripts/dependency_report.py",
+        "sha256": "f3b6d281fbe0300f14a37e14b174e8a657211c0459d99c8a8cab12d3673725b7"
+      },
+      {
+        "path": "scripts/native_build_report.py",
+        "sha256": "3e70240218ae31173adaebf13351b18e0821571207b8ed5a7a03a923fef4e9f2"
+      },
+      {
+        "path": "scripts/run_disk_probe.py",
+        "sha256": "d41eafc41a09392a011c755e4c606acb3d868f6af62d13782eff20545ddeeffa"
+      },
+      {
+        "path": "scripts/run_oom_container.py",
+        "sha256": "3da87c464b963d72e335e9ee841bb24f1670e70ebc9371d3cfe9d2f8a6cd097c"
+      },
+      {
+        "path": "scripts/tests/test_disk_probe_runner.py",
+        "sha256": "ca59ee2ac807c1627f56bf85bc85d4293754ab5fe4599bd76861c19eae0d8156"
+      },
+      {
+        "path": "scripts/tests/test_native_build_report.py",
+        "sha256": "c1d6eb7323028cbeb5a85d88fe0ffb064da377058e771c30790b09a5244550cd"
+      },
+      {
+        "path": "scripts/tests/test_oom_container.py",
+        "sha256": "df4ce41c1a7c3a360adac1bf31f1dfd49c5ea5b1c03cd3fd63e06405a785356f"
+      },
+      {
+        "path": "scripts/tests/test_verify_native.py",
+        "sha256": "f98ed025a829fe3bcc066c0c09201f99c8dbd38333793dedd44515b44607972f"
+      },
+      {
+        "path": "scripts/verify_native.py",
+        "sha256": "763d3b60e2c719c431f86068654446925674786cf14ac7b198fd69b78e7e3ca6"
+      }
+    ]
+  },
+  "ci": {
+    "run_id": 37743504259,
+    "job_id": 113199465881,
+    "run_attempt": 1,
+    "event": "pull_request",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259",
+    "job_url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37743504259/job/113199465881",
+    "job_log_sha256": "e243ef198530020d635e812eaae1a0dbe6202b6510110c04fbdd43fc1da06287",
+    "decoded_single_line_records": 104,
+    "failed_steps": [],
+    "skipped_steps": [],
+    "artifact": {
+      "id": 11534954414,
+      "name": "p0-evidence-716cb2871d325dfd629a40177c9cfee613af4cfc",
+      "size_in_bytes": 605977,
+      "url": "https://api.github.com/repos/JamesbbBriz/pg_qdrant/actions/artifacts/11534954414",
+      "digest": "sha256:ec10a029e1f15f2fd46aaa8814d9624e1184546476f7c3558db604808c549772"
+    },
+    "artifact_verification": {
+      "directory_members_sha256": {
+        "enospc/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "enospc/edge-enospc.json": "ac201a65d7f44d70a8683c3149318013fcf88aa7567b8ec53cb6e7b5a7c26675",
+        "enospc/native-build-report.json": "df0690cf03663c04b047896a42d55d0ab45ddc93bec80fa207fba3da811f3b1b",
+        "enospc/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "enospc/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "enospc/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "enospc/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791",
+        "enospc-full-text/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "enospc-full-text/edge-full-text-128-capacity-refusal.json": "d37eef79921a0ede17bca9c39bea6640dc678669338b1bff374104ab95819954",
+        "enospc-full-text/edge-full-text-clean.json": "f1ef6b8d2d6bd752b22135177bb2acbb808702d96f29198404b4d6dc4d9f4426",
+        "enospc-full-text/edge-full-text-enospc.json": "6c5f5ac4d3c73afcf1b453541a4b2a5c153f9c03dcd285f3d0b9904c37f90669",
+        "enospc-full-text/native-build-report.json": "df0690cf03663c04b047896a42d55d0ab45ddc93bec80fa207fba3da811f3b1b",
+        "enospc-full-text/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "enospc-full-text/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "enospc-full-text/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "enospc-full-text/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791",
+        "faults/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "faults/initdb.log": "5c5829cd32654f60d98e64faa0c7b5c52bdfa24f1eb7a868fec8f804cd392717",
+        "faults/native-build-report.json": "6bc4f1e567775e3283725b82b65dc2ec4c4522c3d0a6626d671c126cf98aecde",
+        "faults/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "faults/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "faults/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "faults/p0-fault-results.json": "318e0b983f5dc056395dc576b11fc31a34a64f03d539d5614f83ce86e34cc61d",
+        "faults/postgresql.log": "6ff1cc3c86b7ef3e56730d0b9baceaa693a54d03c06d3481e5cfb4be24faf70c",
+        "faults/sql-engine-probe.json": "1c9d5f41054bef8a98684cd5305dd43196fcb0a4d46cb8017b61b8a2643f5a85",
+        "faults/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "faults/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791",
+        "helper/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "helper/helper-fault-pipes.json": "afa5bf0d6f78d9a73a943fbfa186124c371815a9263f329d337615db947d06b3",
+        "helper/initdb.log": "5749abfe8c2cd3ff7a786f38c94552d8f946fa482ab2907fb83515751935bbdb",
+        "helper/native-build-report.json": "359114081164ac7889ad42f95a03c450f8060f155388751d64528e9dcdc7c555",
+        "helper/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "helper/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "helper/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "helper/p0-fault-results.json": "6e8ee01469dcc3c23e19a54fcbfae597f3f9f916bcb5b7d4d10e19537447825e",
+        "helper/postgresql.log": "c975dd6a8ee4a2e557fe0a9eef565ffa4477f7dbfbc8b9355cba00e646da74ee",
+        "helper/sql-engine-after-supervisor-sigkill.json": "3514bca6a57a596b59be5e9db77f231320279da44274ee27ff4d8437b272723b",
+        "helper/sql-engine-probe.json": "928e5829037078e52d7213f0e2b5f24fa76a502f338251c83b4b8ab11cf2f2de",
+        "helper/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "helper/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791",
+        "helper-normal/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "helper-normal/helper-pipes.json": "677d1d48d3877c0b4be8c0eee4152a383b4ad2a5d500ce5f7d696f6a76ce1c5e",
+        "helper-normal/initdb.log": "a7a422d8cb5adcd8033412c338462e7d8b4b7a6aee092c9f24e8cbc816b07813",
+        "helper-normal/native-build-report.json": "d30634f830ef19d425fb8285c33ef5ee7d413e61567bfc7d1ad81e8966e9a7c9",
+        "helper-normal/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "helper-normal/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "helper-normal/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "helper-normal/p0-sql-results.json": "90849e328481810bd387a435e6f9feca8292a501d4510cee636ed9870f38ea82",
+        "helper-normal/postgresql.log": "701022988db4bbb84553aacf0f2361084c91a1205a331d1bbbc511e5124ab411",
+        "helper-normal/sql-engine-probe.json": "aab4a02350294550f2cdb91de54734c6bdbd841930f2f9cc296aac2af20014db",
+        "helper-normal/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "helper-normal/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791",
+        "normal/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "normal/initdb.log": "e11ee673a1eecbbe9f73448a6c1d9ddc653a49a2d2b4c7d70164283715be7af6",
+        "normal/native-build-report.json": "df0690cf03663c04b047896a42d55d0ab45ddc93bec80fa207fba3da811f3b1b",
+        "normal/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "normal/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "normal/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "normal/p0-sql-results.json": "7223bd77a20a2e8f680f77c17407e113474dafe8cf94c1e98cfac182fb971b23",
+        "normal/postgresql.log": "04f60b3c207101705ccd9baf8e063650f9d401d4c8bc4cde9121e13ea9b53cba",
+        "normal/sql-engine-probe.json": "39ce4cb92e78d6b5ce10a72bca9d3516418fd8caa9a2217d2a8afb99347b4e5e",
+        "normal/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "normal/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791",
+        "oom-direct/container.log": "a0857244b2818b30ede955eed77af2c79b08d91d41450f3885fc35aec98ab99a",
+        "oom-direct/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "oom-direct/initdb.log": "7ca95ac8649c9ccf582bf1ffe797cfd73ecbb8d900437e1597c4356367fcd0bf",
+        "oom-direct/native-build-report.json": "6bc4f1e567775e3283725b82b65dc2ec4c4522c3d0a6626d671c126cf98aecde",
+        "oom-direct/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "oom-direct/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "oom-direct/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "oom-direct/oom-native.jsonl": "ffd2b7af4e24d13716e3e931f0de7aea47cf29f2c3e5dbe6d7b981b5631457e5",
+        "oom-direct/oom-ready.json": "37ed166857ec65b641c4496be718b8dd5572a4a1c24a57dd5f84ef0daf7a0143",
+        "oom-direct/oom-replacement-engine.json": "ee9d2119a535eafb3a1472e2895370423afd746ec64c7360493ac2edd032fec9",
+        "oom-direct/oom-result.json": "4b324fd460a7a0b9f3868bc023db4126a8392f5f037bd5e5fa267180732aa991",
+        "oom-direct/oom-sql.json": "ce7f556da659ad889e53df867c59acf6012f3e770b06a258ecaf162b64e91032",
+        "oom-direct/postgresql.log": "cbf3a12358b76eb1c0e8895a1d0b04780da390eeb3636f35a8a90e5d76b87619",
+        "oom-direct/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "oom-direct/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791",
+        "oom-helper/container.log": "3a967866868db01e0c6ea7ae89833e131f809dea2df9a84d06281e1f2d027a25",
+        "oom-helper/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "oom-helper/initdb.log": "9c5c76fbf33683e9c9a98277b5d125130c7959cfb389366c75c5b41ebf0f0be3",
+        "oom-helper/native-build-report.json": "359114081164ac7889ad42f95a03c450f8060f155388751d64528e9dcdc7c555",
+        "oom-helper/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "oom-helper/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "oom-helper/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "oom-helper/oom-native.jsonl": "ac19d2f443adc55af768cdb555a4ac93bac397df3f01caed8c9ac61926bd1167",
+        "oom-helper/oom-ready.json": "f37ca7bd72f263cde77a3f0529185e1951b1866c79c3bc5f7a195e7e3e8a8924",
+        "oom-helper/oom-replacement-engine.json": "9c5116ab27239070985f48cc26d9d1c9bad41b1fe598a57b6d181b1df4d3c79a",
+        "oom-helper/oom-result.json": "ac2bb8d373e46fb5a5fe4179f78fdb50aeb47fe19d6406138b99ffe57085fd4a",
+        "oom-helper/oom-sql.json": "839f61be826928fe5a544783cf575bf45846635ebe121230e4380d5b135e0f8c",
+        "oom-helper/postgresql.log": "b876eb11e9d8337d104405f44eadc37812cab14d38136ec4802270af0bce26e5",
+        "oom-helper/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "oom-helper/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791",
+        "tantivy/cpu-admission.json": "51b651156a30a1a88122d30dcdf868634677212e2573353093b1f44f59bd4e2f",
+        "tantivy/native-build-report.json": "df0690cf03663c04b047896a42d55d0ab45ddc93bec80fa207fba3da811f3b1b",
+        "tantivy/native-cpu-objects.json": "6b33ecac1a28ab354a439fb1ee8c5cb3d25ba62eea57f49c28967e1353143473",
+        "tantivy/native-inventory-verification.json": "16ed31728b4d6ff1285cbc3d2395c915c8b4daa9fdb55bbcfdae1a67c8b7dce1",
+        "tantivy/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "tantivy/tantivy-probe.json": "d1588a08066a3a6dc730ea4ad7ee1ac513e914bf1b77a2a90d6312c239456ae8",
+        "tantivy/verified-pgdg-archives.json": "6045114e04f2b8525dde5781c7deb31b3b53147b3007521ab1dcf30eda4cb791"
+      },
+      "member_count": 100,
+      "archive_download_independently_verified": true,
+      "extracted_members_verified_against_zip": true,
+      "supplied_verification_manifest_sha256": "40f2bbbffcd59358c7710e6a52db637d9a481b86a01f4ee498fec5024421d75e",
+      "supplied_archive_verification": true,
+      "provenance": "Supplied archive SHA/size checked against GitHub metadata; every extracted member checked against archive. No network fetch by normalizer.",
+      "archive_sha256": "ec10a029e1f15f2fd46aaa8814d9624e1184546476f7c3558db604808c549772",
+      "uncompressed_bytes": 5116310
+    }
+  },
+  "build": {
+    "engine_tests": {
+      "passed": 27,
+      "failed": 0,
+      "ignored": 0,
+      "harnesses": [
+        {
+          "source_relative_to_crate": "src/lib.rs",
+          "binary_basename": "pg_qdrant_edge_probe-8cbd21978e5e2974",
+          "start_job_log_line": 2692,
+          "tests": [
+            {
+              "name": "cpu::tests::hle_is_observed_but_not_required",
+              "status": "ok",
+              "job_log_line": 2695,
+              "source_path": "crates/edge-probe/src/cpu.rs"
+            },
+            {
+              "name": "cpu::tests::missing_or_os_unusable_features_refuse_admission",
+              "status": "ok",
+              "job_log_line": 2696,
+              "source_path": "crates/edge-probe/src/cpu.rs"
+            },
+            {
+              "name": "tests::actual_edge_smoke",
+              "status": "ok",
+              "job_log_line": 2697,
+              "source_path": "crates/edge-probe/src/lib.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 1.17,
+          "end_job_log_line": 2699
+        },
+        {
+          "source_relative_to_crate": "src/main.rs",
+          "binary_basename": "pg_qdrant_edge_probe-c92615be5812ed9d",
+          "start_job_log_line": 2701,
+          "tests": [
+            {
+              "name": "fault_probes::capacity_tests::fixed_full_text_capacity_refuses_every_other_budget",
+              "status": "ok",
+              "job_log_line": 2704,
+              "source_path": "crates/edge-probe/src/fault_probes.rs"
+            },
+            {
+              "name": "fault_probes::capacity_tests::vector_keyword_capacity_retains_its_original_bound",
+              "status": "ok",
+              "job_log_line": 2705,
+              "source_path": "crates/edge-probe/src/fault_probes.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.0,
+          "end_job_log_line": 2707
+        },
+        {
+          "source_relative_to_crate": "tests/advanced.rs",
+          "binary_basename": "advanced-05599273bdec79d7",
+          "start_job_log_line": 2709,
+          "tests": [
+            {
+              "name": "advanced_vector_queries_reject_wrong_dimensions_without_fallback",
+              "status": "ok",
+              "job_log_line": 2712,
+              "source_path": "crates/edge-probe/tests/advanced.rs"
+            },
+            {
+              "name": "q04_recommendation_strategies_have_distinct_exact_scores",
+              "status": "ok",
+              "job_log_line": 2713,
+              "source_path": "crates/edge-probe/tests/advanced.rs"
+            },
+            {
+              "name": "q05_discover_and_context_apply_the_published_pair_semantics",
+              "status": "ok",
+              "job_log_line": 2714,
+              "source_path": "crates/edge-probe/tests/advanced.rs"
+            },
+            {
+              "name": "q06_feedback_changes_the_scores_with_an_explicit_contract",
+              "status": "ok",
+              "job_log_line": 2715,
+              "source_path": "crates/edge-probe/tests/advanced.rs"
+            },
+            {
+              "name": "q07_root_mmr_is_bounded_and_preserves_original_similarity_scores",
+              "status": "ok",
+              "job_log_line": 2716,
+              "source_path": "crates/edge-probe/tests/advanced.rs"
+            },
+            {
+              "name": "q08_formula_uses_prefetched_scores_payload_defaults_and_real_errors",
+              "status": "ok",
+              "job_log_line": 2717,
+              "source_path": "crates/edge-probe/tests/advanced.rs"
+            },
+            {
+              "name": "q10_order_by_and_random_sample_obey_filters_and_candidate_domains",
+              "status": "ok",
+              "job_log_line": 2718,
+              "source_path": "crates/edge-probe/tests/advanced.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.24,
+          "end_job_log_line": 2720
+        },
+        {
+          "source_relative_to_crate": "tests/dirty_rebuild.rs",
+          "binary_basename": "dirty_rebuild-d898972fddcf6848",
+          "start_job_log_line": 2722,
+          "tests": [
+            {
+              "name": "dirty_generation_is_refused_and_rebuilt_from_complete_source",
+              "status": "ok",
+              "job_log_line": 2725,
+              "source_path": "crates/edge-probe/tests/dirty_rebuild.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.98,
+          "end_job_log_line": 2727
+        },
+        {
+          "source_relative_to_crate": "tests/faults.rs",
+          "binary_basename": "faults-993faa8556ce8d2d",
+          "start_job_log_line": 2729,
+          "tests": [
+            {
+              "name": "capacity_refusal_characterization_rejects_missing_or_unsafe_mounts_without_writes",
+              "status": "ok",
+              "job_log_line": 2732,
+              "source_path": "crates/edge-probe/tests/faults.rs"
+            },
+            {
+              "name": "disk_fixture_clean_reopen_without_filling",
+              "status": "ok",
+              "job_log_line": 2733,
+              "source_path": "crates/edge-probe/tests/faults.rs"
+            },
+            {
+              "name": "full_text_fixture_clean_reopen_without_filling",
+              "status": "ok",
+              "job_log_line": 2734,
+              "source_path": "crates/edge-probe/tests/faults.rs"
+            },
+            {
+              "name": "metadata_corruption_and_unsafe_disk_environment_are_rejected",
+              "status": "ok",
+              "job_log_line": 2735,
+              "source_path": "crates/edge-probe/tests/faults.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 5.46,
+          "end_job_log_line": 2737
+        },
+        {
+          "source_relative_to_crate": "tests/invalid_inputs.rs",
+          "binary_basename": "invalid_inputs-c740d8456f9098ef",
+          "start_job_log_line": 2739,
+          "tests": [
+            {
+              "name": "core_input_rejection_and_phrase_prerequisites_are_characterized",
+              "status": "ok",
+              "job_log_line": 2742,
+              "source_path": "crates/edge-probe/tests/invalid_inputs.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.83,
+          "end_job_log_line": 2744
+        },
+        {
+          "source_relative_to_crate": "tests/lexical.rs",
+          "binary_basename": "lexical-eb0194159312f308",
+          "start_job_log_line": 2746,
+          "tests": [
+            {
+              "name": "bm25_and_payload_analysis_remain_independent_until_both_are_configured",
+              "status": "ok",
+              "job_log_line": 2749,
+              "source_path": "crates/edge-probe/tests/lexical.rs"
+            },
+            {
+              "name": "phrase_preserves_array_and_field_boundaries_while_text_and_spans_values",
+              "status": "ok",
+              "job_log_line": 2750,
+              "source_path": "crates/edge-probe/tests/lexical.rs"
+            },
+            {
+              "name": "unicode_scalar_lengths_and_long_token_prefix_truncation_are_explicit",
+              "status": "ok",
+              "job_log_line": 2751,
+              "source_path": "crates/edge-probe/tests/lexical.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.27,
+          "end_job_log_line": 2753
+        },
+        {
+          "source_relative_to_crate": "tests/lifecycle.rs",
+          "binary_basename": "lifecycle-490112910c96b7b9",
+          "start_job_log_line": 2755,
+          "tests": [
+            {
+              "name": "conditional_mutations_and_partial_updates_survive_flush_reopen",
+              "status": "ok",
+              "job_log_line": 2758,
+              "source_path": "crates/edge-probe/tests/lifecycle.rs"
+            },
+            {
+              "name": "selective_reads_scroll_facets_and_matrix_obey_the_fixture_filter",
+              "status": "ok",
+              "job_log_line": 2759,
+              "source_path": "crates/edge-probe/tests/lifecycle.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 1.1,
+          "end_job_log_line": 2761
+        },
+        {
+          "source_relative_to_crate": "tests/persistence.rs",
+          "binary_basename": "persistence-49c0ccdcb99eec79",
+          "start_job_log_line": 2763,
+          "tests": [
+            {
+              "name": "explicit_flush_survives_sigkill_without_drop",
+              "status": "ok",
+              "job_log_line": 2766,
+              "source_path": "crates/edge-probe/tests/persistence.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.91,
+          "end_job_log_line": 2768
+        },
+        {
+          "source_relative_to_crate": "tests/public_lifecycle.rs",
+          "binary_basename": "public_lifecycle-569dea0afe83c467",
+          "start_job_log_line": 2770,
+          "tests": [
+            {
+              "name": "public_lifecycle_runs_only_in_bounded_owned_children",
+              "status": "ok",
+              "job_log_line": 2773,
+              "source_path": "crates/edge-probe/tests/public_lifecycle.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.33,
+          "end_job_log_line": 2775
+        },
+        {
+          "source_relative_to_crate": "tests/schema.rs",
+          "binary_basename": "schema-d077b38c75c97332",
+          "start_job_log_line": 2777,
+          "tests": [
+            {
+              "name": "dynamic_dense_sparse_names_and_filtered_vector_deletion_survive_reopen",
+              "status": "ok",
+              "job_log_line": 2780,
+              "source_path": "crates/edge-probe/tests/schema.rs"
+            },
+            {
+              "name": "payload_index_create_delete_preserves_records_and_filtered_queries_after_reopen",
+              "status": "ok",
+              "job_log_line": 2781,
+              "source_path": "crates/edge-probe/tests/schema.rs"
+            }
+          ],
+          "status": "ok",
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.22,
+          "end_job_log_line": 2783
+        }
+      ],
+      "scope": "Named harness results only. Successful captured child JSON is not visible here and is not imported from local evidence."
+    },
+    "real_child_tests": {
+      "passed": 2,
+      "harnesses": [
+        {
+          "source_relative_to_crate": "tests/supervisor_child.rs",
+          "binary_basename": "supervisor_child-ef59b5804eae0a8b",
+          "start_job_log_line": 2794,
+          "tests": [
+            {
+              "name": "already_exited_child_is_reaped_without_cleanup_signal",
+              "status": "ok",
+              "job_log_line": 2797
+            },
+            {
+              "name": "explicit_kill_records_result_and_preserves_first_reason",
+              "status": "ok",
+              "job_log_line": 2798
+            }
+          ],
+          "status": "ok",
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 0,
+          "elapsed_seconds": 0.01,
+          "end_job_log_line": 2800
+        }
+      ]
+    },
+    "private_oom_negative_guard_tests": {
+      "distinct_tests": 3,
+      "runs": [
+        {
+          "source_relative_to_crate": "src/lib.rs",
+          "binary_basename": "pg_qdrant_edge_probe-c116844577d85629",
+          "start_job_log_line": 3360,
+          "tests": [
+            {
+              "name": "oom_probe::tests::counters_are_keyed_and_malformed_evidence_is_rejected",
+              "status": "ok",
+              "job_log_line": 3363
+            },
+            {
+              "name": "oom_probe::tests::altered_container_limits_fail_before_allocation",
+              "status": "ok",
+              "job_log_line": 3364
+            },
+            {
+              "name": "oom_probe::tests::nonce_refuses_paths_and_ambiguous_values_without_native_execution",
+              "status": "ok",
+              "job_log_line": 3365
+            }
+          ],
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 3,
+          "elapsed_seconds": 0.0,
+          "end_job_log_line": 3367
+        },
+        {
+          "source_relative_to_crate": "src/lib.rs",
+          "binary_basename": "pg_qdrant_edge_probe-c116844577d85629",
+          "start_job_log_line": 3969,
+          "tests": [
+            {
+              "name": "oom_probe::tests::nonce_refuses_paths_and_ambiguous_values_without_native_execution",
+              "status": "ok",
+              "job_log_line": 3972
+            },
+            {
+              "name": "oom_probe::tests::altered_container_limits_fail_before_allocation",
+              "status": "ok",
+              "job_log_line": 3973
+            },
+            {
+              "name": "oom_probe::tests::counters_are_keyed_and_malformed_evidence_is_rejected",
+              "status": "ok",
+              "job_log_line": 3974
+            }
+          ],
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered_out": 3,
+          "elapsed_seconds": 0.0,
+          "end_job_log_line": 3976
+        }
+      ],
+      "scope": "Two private-image runs of the same three pure/negative tests; no positive OOM from these tests."
+    },
+    "python_runner_tests": {
+      "passed": 38,
+      "elapsed_seconds": 3.071,
+      "job_log_line": 141,
+      "status": "passed"
+    },
+    "image_builds": [
+      {
+        "name": "Build exact Rust, Edge, pgrx and PostgreSQL prototype",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build the independent lexical candidate experiment",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build explicitly enabled disposable fault-test image",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build the managed-helper comparison without fault injection",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build the explicit managed-helper fault comparison",
+        "conclusion": "success"
+      }
+    ],
+    "product_contracts": {
+      "status": "passed",
+      "capabilities": 54,
+      "work_items": 70,
+      "scope_completed": false,
+      "compiled_graph_claim": true,
+      "job_log_line": 138
+    }
+  },
+  "sql_profiles": {
+    "direct_private_faults": {
+      "status": "passed",
+      "checks_passed": 22,
+      "source_groups_passed": 7,
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17,
+          "job_log_line": 3572
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed",
+          "worker_pid": 60,
+          "engine_pid": 60,
+          "job_log_line": 3573
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed",
+          "job_log_line": 3574
+        },
+        {
+          "name": "candidate_vector_format_roundtrip",
+          "status": "passed",
+          "wire_bytes": 115,
+          "signed_zero_and_finite_float32_extremes": true,
+          "public_api_frozen": false,
+          "job_log_line": 3575
+        },
+        {
+          "name": "candidate_vector_format_rejections_and_budgets",
+          "status": "passed",
+          "cases": [
+            "null_argument_0",
+            "null_element_0",
+            "empty_0",
+            "null_argument_1",
+            "null_element_1",
+            "empty_1",
+            "null_argument_2",
+            "null_element_2",
+            "empty_2",
+            "null_argument_3",
+            "null_element_3",
+            "empty_3",
+            "dense_lower_bound",
+            "sparse_index_lower_bound",
+            "sparse_weight_lower_bound",
+            "token_row_lower_bound",
+            "token_column_lower_bound",
+            "dense_not_vector",
+            "indices_not_vector",
+            "weights_not_vector",
+            "tokens_not_matrix",
+            "tokens_three_dimensions",
+            "negative_index",
+            "index_u32_overflow",
+            "duplicate_indices",
+            "unsorted_indices",
+            "sparse_length_mismatch",
+            "nonfinite_0_NaN",
+            "nonfinite_2_NaN",
+            "nonfinite_3_NaN",
+            "nonfinite_0_Infinity",
+            "nonfinite_2_Infinity",
+            "nonfinite_3_Infinity",
+            "nonfinite_0_-Infinity",
+            "nonfinite_2_-Infinity",
+            "nonfinite_3_-Infinity",
+            "postgres_ragged_matrix",
+            "dense_budget",
+            "sparse_budget",
+            "token_row_budget",
+            "token_width_budget",
+            "token_total_budget",
+            "wire_byte_budget"
+          ],
+          "recovery_after_errors": true,
+          "limits": {
+            "sparse_nnz": 4096,
+            "token_rows": 128,
+            "wire_bytes": 262144,
+            "token_width": 1024,
+            "token_values": 16384,
+            "dense_dimensions": 4096,
+            "result_json_bytes": 524288,
+            "owned_scalar_bytes": 131072
+          },
+          "job_log_line": 3576
+        },
+        {
+          "name": "candidate_vector_format_acl_and_runtime_superuser",
+          "status": "passed",
+          "called_on_null": true,
+          "job_log_line": 3577
+        },
+        {
+          "name": "tagged_bigint_uuid_text_identity",
+          "status": "passed",
+          "bigint_exact_above_javascript_range": true,
+          "unicode_normalization": false,
+          "stable_point_id_allocated": false,
+          "job_log_line": 3578
+        },
+        {
+          "name": "source_key_version_incarnation_and_quoted_binding",
+          "status": "passed",
+          "returned_source_text": false,
+          "allocated_incarnations": false,
+          "bounded_candidates": 32,
+          "job_log_line": 3579
+        },
+        {
+          "name": "source_recheck_definition_input_and_error_lock_cleanup",
+          "status": "passed",
+          "rls": "explicitly_rejected",
+          "job_log_line": 3580
+        },
+        {
+          "name": "source_recheck_active_statement_and_repeatable_snapshots",
+          "status": "passed",
+          "caller_xid_assigned": true,
+          "read_committed_new_statement_observes_commit": true,
+          "uncommitted_update_invisible": true,
+          "job_log_line": 3581
+        },
+        {
+          "name": "source_recheck_ddl_and_conditional_namespace_guard",
+          "status": "passed",
+          "production_locking_design": false,
+          "native_cancellation_stage": "primary_index_lock_before_SPI",
+          "same_backend_survived": true,
+          "job_log_line": 3582
+        },
+        {
+          "name": "source_recheck_SPI_error_cleanup_and_same_backend_retry",
+          "status": "passed",
+          "native_cancellation_stage": "secondary_index_lock_inside_SPI_planning",
+          "namespace_lock_released_after_error": true,
+          "same_backend_retry_matched": true,
+          "job_log_line": 3583
+        },
+        {
+          "name": "source_identity_recheck_acl_and_runtime_superuser",
+          "status": "passed",
+          "production_source_select_authorization": false,
+          "job_log_line": 3584
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5273856689999548,
+          "job_log_line": 3585
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.013837553000030312,
+          "native_call_cancelled": false,
+          "job_log_line": 3586
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07199546200001805,
+          "job_log_line": 3587
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed",
+          "job_log_line": 3588
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "rejected",
+            "completed",
+            "completed",
+            "completed"
+          ],
+          "queue_limit": 8,
+          "job_log_line": 3589
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16,
+          "job_log_line": 3590
+        },
+        {
+          "name": "caught_engine_thread_panic",
+          "status": "passed",
+          "worker_survived": true,
+          "job_log_line": 3591
+        },
+        {
+          "name": "worker_sigkill_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": true,
+          "committed_postgresql_marker_retained": true,
+          "original_worker_pid": 60,
+          "replacement_worker_pid": 737,
+          "original_engine_pid": 60,
+          "replacement_engine_pid": 737,
+          "job_log_line": 3592
+        },
+        {
+          "name": "worker_abort_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": true,
+          "committed_postgresql_marker_retained": true,
+          "original_worker_pid": 737,
+          "replacement_worker_pid": 761,
+          "original_engine_pid": 737,
+          "replacement_engine_pid": 761,
+          "job_log_line": 3593
+        }
+      ],
+      "report": {
+        "artifact_member": "faults/p0-fault-results.json",
+        "sha256": "318e0b983f5dc056395dc576b11fc31a34a64f03d539d5614f83ce86e34cc61d"
+      },
+      "engine_report": {
+        "artifact_member": "faults/sql-engine-probe.json",
+        "sha256": "1c9d5f41054bef8a98684cd5305dd43196fcb0a4d46cb8017b61b8a2643f5a85"
+      },
+      "engine_checks": [
+        {
+          "name": "payload_index_and_scoped_count",
+          "detail": {
+            "points": 7,
+            "global_document_total": null
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q11",
+            "Q12",
+            "L01",
+            "L02"
+          ]
+        },
+        {
+          "name": "offline_bm25",
+          "detail": {
+            "hits": 3,
+            "encoder": "EdgeBm25",
+            "stemming": "disabled",
+            "stopwords": "empty",
+            "tokenizer": "multilingual",
+            "idf_corpus": "tenant a"
+          },
+          "status": "passed",
+          "capabilities": [
+            "F01",
+            "V02",
+            "Q14"
+          ]
+        },
+        {
+          "name": "named_dense_exact",
+          "detail": {
+            "score": 1.0,
+            "leader": 1,
+            "distance": "dot",
+            "exact_domain": "authorized fixture points"
+          },
+          "status": "passed",
+          "capabilities": [
+            "V01",
+            "Q01"
+          ]
+        },
+        {
+          "name": "supplied_sparse",
+          "detail": {
+            "idf": "disabled",
+            "hits": 2,
+            "model": "synthetic test values",
+            "inference": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F02",
+            "V02"
+          ]
+        },
+        {
+          "name": "weighted_rrf",
+          "detail": {
+            "k": 2,
+            "score": 1.1666667461395264,
+            "leader": 1,
+            "formula": "sum(1 / ((zero_based_position + 1) / weight + k - 1))"
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q02",
+            "Q03"
+          ]
+        },
+        {
+          "name": "dbsf",
+          "detail": {
+            "scope": "prefetch distributions",
+            "score": 1.3295536041259766,
+            "leader": 1,
+            "variance": "sample (n-1)",
+            "golden_scores_checked": 7
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q03"
+          ]
+        },
+        {
+          "name": "dbsf_degenerate_distributions",
+          "detail": {
+            "all_empty": "no hits",
+            "empty_branch": "no contribution",
+            "constant_score": 0.5,
+            "singleton_score": 0.5,
+            "tie_order_asserted": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q03"
+          ]
+        },
+        {
+          "name": "maxsim_nested_prefetch",
+          "detail": {
+            "score": 2.0,
+            "leader": 1,
+            "candidate_budget": 3,
+            "global_exact_top_k": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "V03",
+            "Q01",
+            "Q02"
+          ]
+        },
+        {
+          "name": "text_and_or",
+          "detail": {
+            "or": [
+              1,
+              2,
+              5
+            ],
+            "and": [
+              1,
+              2
+            ]
+          },
+          "status": "passed",
+          "capabilities": [
+            "F06"
+          ]
+        },
+        {
+          "name": "boolean_exclusion",
+          "detail": {
+            "policy": "tenant AND terms AND NOT excluded SKU",
+            "matches": [
+              1
+            ]
+          },
+          "status": "passed",
+          "capabilities": [
+            "F07",
+            "Q12"
+          ]
+        },
+        {
+          "name": "phrase_in_all_retrieval_branches",
+          "detail": {
+            "matches": [
+              1
+            ],
+            "phrase_matching": true
+          },
+          "status": "passed",
+          "capabilities": [
+            "F08",
+            "Q02",
+            "Q03",
+            "Q12"
+          ]
+        },
+        {
+          "name": "distinct_token_and_keyword_prefix",
+          "detail": {
+            "token_prefix": "tran",
+            "keyword_prefix": "PG-",
+            "keyword_case_sensitive": true
+          },
+          "status": "passed",
+          "capabilities": [
+            "F09",
+            "F10",
+            "F11"
+          ]
+        },
+        {
+          "name": "chinese_offline_smoke",
+          "detail": {
+            "required_match": 6,
+            "quality_benchmark": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F01",
+            "F04",
+            "F05"
+          ]
+        },
+        {
+          "name": "authorized_document_groups",
+          "detail": {
+            "documents": 3,
+            "source_hydration": "authorized HasId query",
+            "first_document_chunks": 2
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q09"
+          ]
+        },
+        {
+          "name": "explicit_analyzer_defaults",
+          "detail": {
+            "bm25_default_stems": true,
+            "neutral_policy_stems": false,
+            "full_offset_parity_verified": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F04"
+          ]
+        },
+        {
+          "name": "flush_close_reopen",
+          "detail": {
+            "explicit_flush": true,
+            "wal_replay_claim": false,
+            "abrupt_crash_test": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "L01",
+            "L04"
+          ]
+        }
+      ],
+      "artifact_assertions_equal_job_log": true
+    },
+    "helper_private_faults": {
+      "status": "passed",
+      "checks_passed": 26,
+      "source_groups_passed": 7,
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17,
+          "job_log_line": 4194
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed",
+          "worker_pid": 60,
+          "engine_pid": 62,
+          "job_log_line": 4195
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed",
+          "job_log_line": 4196
+        },
+        {
+          "name": "candidate_vector_format_roundtrip",
+          "status": "passed",
+          "wire_bytes": 115,
+          "signed_zero_and_finite_float32_extremes": true,
+          "public_api_frozen": false,
+          "job_log_line": 4197
+        },
+        {
+          "name": "candidate_vector_format_rejections_and_budgets",
+          "status": "passed",
+          "cases": [
+            "null_argument_0",
+            "null_element_0",
+            "empty_0",
+            "null_argument_1",
+            "null_element_1",
+            "empty_1",
+            "null_argument_2",
+            "null_element_2",
+            "empty_2",
+            "null_argument_3",
+            "null_element_3",
+            "empty_3",
+            "dense_lower_bound",
+            "sparse_index_lower_bound",
+            "sparse_weight_lower_bound",
+            "token_row_lower_bound",
+            "token_column_lower_bound",
+            "dense_not_vector",
+            "indices_not_vector",
+            "weights_not_vector",
+            "tokens_not_matrix",
+            "tokens_three_dimensions",
+            "negative_index",
+            "index_u32_overflow",
+            "duplicate_indices",
+            "unsorted_indices",
+            "sparse_length_mismatch",
+            "nonfinite_0_NaN",
+            "nonfinite_2_NaN",
+            "nonfinite_3_NaN",
+            "nonfinite_0_Infinity",
+            "nonfinite_2_Infinity",
+            "nonfinite_3_Infinity",
+            "nonfinite_0_-Infinity",
+            "nonfinite_2_-Infinity",
+            "nonfinite_3_-Infinity",
+            "postgres_ragged_matrix",
+            "dense_budget",
+            "sparse_budget",
+            "token_row_budget",
+            "token_width_budget",
+            "token_total_budget",
+            "wire_byte_budget"
+          ],
+          "recovery_after_errors": true,
+          "limits": {
+            "sparse_nnz": 4096,
+            "token_rows": 128,
+            "wire_bytes": 262144,
+            "token_width": 1024,
+            "token_values": 16384,
+            "dense_dimensions": 4096,
+            "result_json_bytes": 524288,
+            "owned_scalar_bytes": 131072
+          },
+          "job_log_line": 4198
+        },
+        {
+          "name": "candidate_vector_format_acl_and_runtime_superuser",
+          "status": "passed",
+          "called_on_null": true,
+          "job_log_line": 4199
+        },
+        {
+          "name": "tagged_bigint_uuid_text_identity",
+          "status": "passed",
+          "bigint_exact_above_javascript_range": true,
+          "unicode_normalization": false,
+          "stable_point_id_allocated": false,
+          "job_log_line": 4200
+        },
+        {
+          "name": "source_key_version_incarnation_and_quoted_binding",
+          "status": "passed",
+          "returned_source_text": false,
+          "allocated_incarnations": false,
+          "bounded_candidates": 32,
+          "job_log_line": 4201
+        },
+        {
+          "name": "source_recheck_definition_input_and_error_lock_cleanup",
+          "status": "passed",
+          "rls": "explicitly_rejected",
+          "job_log_line": 4202
+        },
+        {
+          "name": "source_recheck_active_statement_and_repeatable_snapshots",
+          "status": "passed",
+          "caller_xid_assigned": true,
+          "read_committed_new_statement_observes_commit": true,
+          "uncommitted_update_invisible": true,
+          "job_log_line": 4203
+        },
+        {
+          "name": "source_recheck_ddl_and_conditional_namespace_guard",
+          "status": "passed",
+          "production_locking_design": false,
+          "native_cancellation_stage": "primary_index_lock_before_SPI",
+          "same_backend_survived": true,
+          "job_log_line": 4204
+        },
+        {
+          "name": "source_recheck_SPI_error_cleanup_and_same_backend_retry",
+          "status": "passed",
+          "native_cancellation_stage": "secondary_index_lock_inside_SPI_planning",
+          "namespace_lock_released_after_error": true,
+          "same_backend_retry_matched": true,
+          "job_log_line": 4205
+        },
+        {
+          "name": "source_identity_recheck_acl_and_runtime_superuser",
+          "status": "passed",
+          "production_source_select_authorization": false,
+          "job_log_line": 4206
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5251484919999712,
+          "job_log_line": 4207
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.01253864200020871,
+          "native_call_cancelled": false,
+          "job_log_line": 4208
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07066641500000514,
+          "job_log_line": 4209
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed",
+          "job_log_line": 4210
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "rejected",
+            "completed",
+            "completed"
+          ],
+          "queue_limit": 8,
+          "job_log_line": 4211
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16,
+          "job_log_line": 4212
+        },
+        {
+          "name": "caught_engine_thread_panic",
+          "status": "passed",
+          "worker_survived": true,
+          "job_log_line": 4213
+        },
+        {
+          "name": "helper_sigkill_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": false,
+          "committed_postgresql_marker_retained": true,
+          "original_worker_pid": 60,
+          "replacement_worker_pid": 60,
+          "original_engine_pid": 62,
+          "replacement_engine_pid": 729,
+          "job_log_line": 4214
+        },
+        {
+          "name": "helper_abort_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": false,
+          "committed_postgresql_marker_retained": true,
+          "original_worker_pid": 60,
+          "replacement_worker_pid": 60,
+          "original_engine_pid": 729,
+          "replacement_engine_pid": 746,
+          "job_log_line": 4215
+        },
+        {
+          "name": "helper_operation_budget_stops_frozen_engine",
+          "status": "passed",
+          "fault": "SIGSTOP",
+          "configured_limit_ms": 125000,
+          "observed_remaining_seconds": 125.28410783899994,
+          "caller_cancelled": true,
+          "native_cancellation": false,
+          "supervisor_preserved": true,
+          "companion_session_completed": true,
+          "stop_reason": "execution_budget",
+          "stopped_engine_pid": 746,
+          "supervisor_kill_requested": true,
+          "kill_attempts": 1,
+          "first_kill_attempt": {
+            "error": null,
+            "succeeded": true,
+            "raw_os_error": null,
+            "after_spawn_ms": 126767
+          },
+          "replacement_engine_pid": 1905,
+          "job_log_line": 4216
+        },
+        {
+          "name": "helper_supervisor_exit_closes_native_owner",
+          "status": "passed",
+          "old_engine_stopped": true,
+          "replacement_owner_ready": true,
+          "shutdown_signal": "SIGTERM",
+          "job_log_line": 4217
+        },
+        {
+          "name": "helper_supervisor_sigkill_recovers_postgresql_and_native_owner",
+          "status": "passed",
+          "shutdown_signal": "SIGKILL",
+          "postgres_crash_recovery_observed": true,
+          "companion_session_terminated": true,
+          "caller_failed": true,
+          "postmaster_identity_preserved": true,
+          "committed_postgresql_marker_retained": true,
+          "old_engine_stopped_before_replacement": true,
+          "helper_stop_confirmed_after_seconds": 0.020245126999952845,
+          "recovery_seconds": 0.14142799399996875,
+          "same_fence_inode": true,
+          "fence_released_then_reacquired": true,
+          "concurrent_replacement_starts_converged": true,
+          "old_supervisor": {
+            "pid": 1918,
+            "start_ticks": 127445,
+            "state": "S",
+            "parent_pid": 33
+          },
+          "replacement_supervisor": {
+            "pid": 1963,
+            "start_ticks": 127472,
+            "state": "S",
+            "parent_pid": 33
+          },
+          "old_engine": {
+            "pid": 1919,
+            "start_ticks": 127445,
+            "state": "S",
+            "parent_pid": 1918
+          },
+          "replacement_engine": {
+            "pid": 1965,
+            "start_ticks": 127472,
+            "state": "S",
+            "parent_pid": 1963
+          },
+          "replacement_edge_smoke_checks": 16,
+          "native_helper_failure_containment_claim": false,
+          "durable_index_recovery_verified": false,
+          "ownership_scope": "P0 native-owner fence; no persistent product index generation",
+          "job_log_line": 4218
+        },
+        {
+          "name": "helper_restart_budget_exhaustion_is_visible",
+          "status": "passed",
+          "start_attempts": 4,
+          "automatic_restarts": 3,
+          "supervisor_preserved": true,
+          "unavailable_requests_refused": true,
+          "job_log_line": 4219
+        }
+      ],
+      "report": {
+        "artifact_member": "helper/p0-fault-results.json",
+        "sha256": "6e8ee01469dcc3c23e19a54fcbfae597f3f9f916bcb5b7d4d10e19537447825e"
+      },
+      "engine_report": {
+        "artifact_member": "helper/sql-engine-probe.json",
+        "sha256": "928e5829037078e52d7213f0e2b5f24fa76a502f338251c83b4b8ab11cf2f2de"
+      },
+      "engine_checks": [
+        {
+          "name": "payload_index_and_scoped_count",
+          "detail": {
+            "points": 7,
+            "global_document_total": null
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q11",
+            "Q12",
+            "L01",
+            "L02"
+          ]
+        },
+        {
+          "name": "offline_bm25",
+          "detail": {
+            "hits": 3,
+            "encoder": "EdgeBm25",
+            "stemming": "disabled",
+            "stopwords": "empty",
+            "tokenizer": "multilingual",
+            "idf_corpus": "tenant a"
+          },
+          "status": "passed",
+          "capabilities": [
+            "F01",
+            "V02",
+            "Q14"
+          ]
+        },
+        {
+          "name": "named_dense_exact",
+          "detail": {
+            "score": 1.0,
+            "leader": 1,
+            "distance": "dot",
+            "exact_domain": "authorized fixture points"
+          },
+          "status": "passed",
+          "capabilities": [
+            "V01",
+            "Q01"
+          ]
+        },
+        {
+          "name": "supplied_sparse",
+          "detail": {
+            "idf": "disabled",
+            "hits": 2,
+            "model": "synthetic test values",
+            "inference": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F02",
+            "V02"
+          ]
+        },
+        {
+          "name": "weighted_rrf",
+          "detail": {
+            "k": 2,
+            "score": 1.1666667461395264,
+            "leader": 1,
+            "formula": "sum(1 / ((zero_based_position + 1) / weight + k - 1))"
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q02",
+            "Q03"
+          ]
+        },
+        {
+          "name": "dbsf",
+          "detail": {
+            "scope": "prefetch distributions",
+            "score": 1.3295536041259766,
+            "leader": 1,
+            "variance": "sample (n-1)",
+            "golden_scores_checked": 7
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q03"
+          ]
+        },
+        {
+          "name": "dbsf_degenerate_distributions",
+          "detail": {
+            "all_empty": "no hits",
+            "empty_branch": "no contribution",
+            "constant_score": 0.5,
+            "singleton_score": 0.5,
+            "tie_order_asserted": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q03"
+          ]
+        },
+        {
+          "name": "maxsim_nested_prefetch",
+          "detail": {
+            "score": 2.0,
+            "leader": 1,
+            "candidate_budget": 3,
+            "global_exact_top_k": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "V03",
+            "Q01",
+            "Q02"
+          ]
+        },
+        {
+          "name": "text_and_or",
+          "detail": {
+            "or": [
+              1,
+              2,
+              5
+            ],
+            "and": [
+              1,
+              2
+            ]
+          },
+          "status": "passed",
+          "capabilities": [
+            "F06"
+          ]
+        },
+        {
+          "name": "boolean_exclusion",
+          "detail": {
+            "policy": "tenant AND terms AND NOT excluded SKU",
+            "matches": [
+              1
+            ]
+          },
+          "status": "passed",
+          "capabilities": [
+            "F07",
+            "Q12"
+          ]
+        },
+        {
+          "name": "phrase_in_all_retrieval_branches",
+          "detail": {
+            "matches": [
+              1
+            ],
+            "phrase_matching": true
+          },
+          "status": "passed",
+          "capabilities": [
+            "F08",
+            "Q02",
+            "Q03",
+            "Q12"
+          ]
+        },
+        {
+          "name": "distinct_token_and_keyword_prefix",
+          "detail": {
+            "token_prefix": "tran",
+            "keyword_prefix": "PG-",
+            "keyword_case_sensitive": true
+          },
+          "status": "passed",
+          "capabilities": [
+            "F09",
+            "F10",
+            "F11"
+          ]
+        },
+        {
+          "name": "chinese_offline_smoke",
+          "detail": {
+            "required_match": 6,
+            "quality_benchmark": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F01",
+            "F04",
+            "F05"
+          ]
+        },
+        {
+          "name": "authorized_document_groups",
+          "detail": {
+            "documents": 3,
+            "source_hydration": "authorized HasId query",
+            "first_document_chunks": 2
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q09"
+          ]
+        },
+        {
+          "name": "explicit_analyzer_defaults",
+          "detail": {
+            "bm25_default_stems": true,
+            "neutral_policy_stems": false,
+            "full_offset_parity_verified": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F04"
+          ]
+        },
+        {
+          "name": "flush_close_reopen",
+          "detail": {
+            "explicit_flush": true,
+            "wal_replay_claim": false,
+            "abrupt_crash_test": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "L01",
+            "L04"
+          ]
+        }
+      ],
+      "artifact_assertions_equal_job_log": true
+    },
+    "helper_normal": {
+      "status": "passed",
+      "checks_passed": 20,
+      "source_groups_passed": 7,
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17,
+          "job_log_line": 3873
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed",
+          "worker_pid": 59,
+          "engine_pid": 60,
+          "job_log_line": 3874
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed",
+          "job_log_line": 3875
+        },
+        {
+          "name": "candidate_vector_format_roundtrip",
+          "status": "passed",
+          "wire_bytes": 115,
+          "signed_zero_and_finite_float32_extremes": true,
+          "public_api_frozen": false,
+          "job_log_line": 3876
+        },
+        {
+          "name": "candidate_vector_format_rejections_and_budgets",
+          "status": "passed",
+          "cases": [
+            "null_argument_0",
+            "null_element_0",
+            "empty_0",
+            "null_argument_1",
+            "null_element_1",
+            "empty_1",
+            "null_argument_2",
+            "null_element_2",
+            "empty_2",
+            "null_argument_3",
+            "null_element_3",
+            "empty_3",
+            "dense_lower_bound",
+            "sparse_index_lower_bound",
+            "sparse_weight_lower_bound",
+            "token_row_lower_bound",
+            "token_column_lower_bound",
+            "dense_not_vector",
+            "indices_not_vector",
+            "weights_not_vector",
+            "tokens_not_matrix",
+            "tokens_three_dimensions",
+            "negative_index",
+            "index_u32_overflow",
+            "duplicate_indices",
+            "unsorted_indices",
+            "sparse_length_mismatch",
+            "nonfinite_0_NaN",
+            "nonfinite_2_NaN",
+            "nonfinite_3_NaN",
+            "nonfinite_0_Infinity",
+            "nonfinite_2_Infinity",
+            "nonfinite_3_Infinity",
+            "nonfinite_0_-Infinity",
+            "nonfinite_2_-Infinity",
+            "nonfinite_3_-Infinity",
+            "postgres_ragged_matrix",
+            "dense_budget",
+            "sparse_budget",
+            "token_row_budget",
+            "token_width_budget",
+            "token_total_budget",
+            "wire_byte_budget"
+          ],
+          "recovery_after_errors": true,
+          "limits": {
+            "sparse_nnz": 4096,
+            "token_rows": 128,
+            "wire_bytes": 262144,
+            "token_width": 1024,
+            "token_values": 16384,
+            "dense_dimensions": 4096,
+            "result_json_bytes": 524288,
+            "owned_scalar_bytes": 131072
+          },
+          "job_log_line": 3877
+        },
+        {
+          "name": "candidate_vector_format_acl_and_runtime_superuser",
+          "status": "passed",
+          "called_on_null": true,
+          "job_log_line": 3878
+        },
+        {
+          "name": "tagged_bigint_uuid_text_identity",
+          "status": "passed",
+          "bigint_exact_above_javascript_range": true,
+          "unicode_normalization": false,
+          "stable_point_id_allocated": false,
+          "job_log_line": 3879
+        },
+        {
+          "name": "source_key_version_incarnation_and_quoted_binding",
+          "status": "passed",
+          "returned_source_text": false,
+          "allocated_incarnations": false,
+          "bounded_candidates": 32,
+          "job_log_line": 3880
+        },
+        {
+          "name": "source_recheck_definition_input_and_error_lock_cleanup",
+          "status": "passed",
+          "rls": "explicitly_rejected",
+          "job_log_line": 3881
+        },
+        {
+          "name": "source_recheck_active_statement_and_repeatable_snapshots",
+          "status": "passed",
+          "caller_xid_assigned": true,
+          "read_committed_new_statement_observes_commit": true,
+          "uncommitted_update_invisible": true,
+          "job_log_line": 3882
+        },
+        {
+          "name": "source_recheck_ddl_and_conditional_namespace_guard",
+          "status": "passed",
+          "production_locking_design": false,
+          "native_cancellation_stage": "primary_index_lock_before_SPI",
+          "same_backend_survived": true,
+          "job_log_line": 3883
+        },
+        {
+          "name": "source_recheck_SPI_error_cleanup_and_same_backend_retry",
+          "status": "passed",
+          "native_cancellation_stage": "secondary_index_lock_inside_SPI_planning",
+          "namespace_lock_released_after_error": true,
+          "same_backend_retry_matched": true,
+          "job_log_line": 3884
+        },
+        {
+          "name": "source_identity_recheck_acl_and_runtime_superuser",
+          "status": "passed",
+          "production_source_select_authorization": false,
+          "job_log_line": 3885
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5371477420000019,
+          "job_log_line": 3886
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.01424803699990207,
+          "native_call_cancelled": false,
+          "job_log_line": 3887
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07208551999997326,
+          "job_log_line": 3888
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed",
+          "job_log_line": 3889
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "rejected"
+          ],
+          "queue_limit": 8,
+          "job_log_line": 3890
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16,
+          "job_log_line": 3891
+        },
+        {
+          "name": "fault_entrypoint_absent_in_normal_build",
+          "status": "passed",
+          "job_log_line": 3892
+        }
+      ],
+      "report": {
+        "artifact_member": "helper-normal/p0-sql-results.json",
+        "sha256": "90849e328481810bd387a435e6f9feca8292a501d4510cee636ed9870f38ea82"
+      },
+      "engine_report": {
+        "artifact_member": "helper-normal/sql-engine-probe.json",
+        "sha256": "aab4a02350294550f2cdb91de54734c6bdbd841930f2f9cc296aac2af20014db"
+      },
+      "engine_checks": [
+        {
+          "name": "payload_index_and_scoped_count",
+          "detail": {
+            "points": 7,
+            "global_document_total": null
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q11",
+            "Q12",
+            "L01",
+            "L02"
+          ]
+        },
+        {
+          "name": "offline_bm25",
+          "detail": {
+            "hits": 3,
+            "encoder": "EdgeBm25",
+            "stemming": "disabled",
+            "stopwords": "empty",
+            "tokenizer": "multilingual",
+            "idf_corpus": "tenant a"
+          },
+          "status": "passed",
+          "capabilities": [
+            "F01",
+            "V02",
+            "Q14"
+          ]
+        },
+        {
+          "name": "named_dense_exact",
+          "detail": {
+            "score": 1.0,
+            "leader": 1,
+            "distance": "dot",
+            "exact_domain": "authorized fixture points"
+          },
+          "status": "passed",
+          "capabilities": [
+            "V01",
+            "Q01"
+          ]
+        },
+        {
+          "name": "supplied_sparse",
+          "detail": {
+            "idf": "disabled",
+            "hits": 2,
+            "model": "synthetic test values",
+            "inference": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F02",
+            "V02"
+          ]
+        },
+        {
+          "name": "weighted_rrf",
+          "detail": {
+            "k": 2,
+            "score": 1.1666667461395264,
+            "leader": 1,
+            "formula": "sum(1 / ((zero_based_position + 1) / weight + k - 1))"
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q02",
+            "Q03"
+          ]
+        },
+        {
+          "name": "dbsf",
+          "detail": {
+            "scope": "prefetch distributions",
+            "score": 1.3295536041259766,
+            "leader": 1,
+            "variance": "sample (n-1)",
+            "golden_scores_checked": 7
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q03"
+          ]
+        },
+        {
+          "name": "dbsf_degenerate_distributions",
+          "detail": {
+            "all_empty": "no hits",
+            "empty_branch": "no contribution",
+            "constant_score": 0.5,
+            "singleton_score": 0.5,
+            "tie_order_asserted": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q03"
+          ]
+        },
+        {
+          "name": "maxsim_nested_prefetch",
+          "detail": {
+            "score": 2.0,
+            "leader": 1,
+            "candidate_budget": 3,
+            "global_exact_top_k": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "V03",
+            "Q01",
+            "Q02"
+          ]
+        },
+        {
+          "name": "text_and_or",
+          "detail": {
+            "or": [
+              1,
+              2,
+              5
+            ],
+            "and": [
+              1,
+              2
+            ]
+          },
+          "status": "passed",
+          "capabilities": [
+            "F06"
+          ]
+        },
+        {
+          "name": "boolean_exclusion",
+          "detail": {
+            "policy": "tenant AND terms AND NOT excluded SKU",
+            "matches": [
+              1
+            ]
+          },
+          "status": "passed",
+          "capabilities": [
+            "F07",
+            "Q12"
+          ]
+        },
+        {
+          "name": "phrase_in_all_retrieval_branches",
+          "detail": {
+            "matches": [
+              1
+            ],
+            "phrase_matching": true
+          },
+          "status": "passed",
+          "capabilities": [
+            "F08",
+            "Q02",
+            "Q03",
+            "Q12"
+          ]
+        },
+        {
+          "name": "distinct_token_and_keyword_prefix",
+          "detail": {
+            "token_prefix": "tran",
+            "keyword_prefix": "PG-",
+            "keyword_case_sensitive": true
+          },
+          "status": "passed",
+          "capabilities": [
+            "F09",
+            "F10",
+            "F11"
+          ]
+        },
+        {
+          "name": "chinese_offline_smoke",
+          "detail": {
+            "required_match": 6,
+            "quality_benchmark": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F01",
+            "F04",
+            "F05"
+          ]
+        },
+        {
+          "name": "authorized_document_groups",
+          "detail": {
+            "documents": 3,
+            "source_hydration": "authorized HasId query",
+            "first_document_chunks": 2
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q09"
+          ]
+        },
+        {
+          "name": "explicit_analyzer_defaults",
+          "detail": {
+            "bm25_default_stems": true,
+            "neutral_policy_stems": false,
+            "full_offset_parity_verified": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F04"
+          ]
+        },
+        {
+          "name": "flush_close_reopen",
+          "detail": {
+            "explicit_flush": true,
+            "wal_replay_claim": false,
+            "abrupt_crash_test": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "L01",
+            "L04"
+          ]
+        }
+      ],
+      "artifact_assertions_equal_job_log": true
+    },
+    "direct_normal": {
+      "status": "passed",
+      "checks_passed": 20,
+      "source_groups_passed": 7,
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17,
+          "job_log_line": 3273
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed",
+          "worker_pid": 58,
+          "engine_pid": 58,
+          "job_log_line": 3274
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed",
+          "job_log_line": 3275
+        },
+        {
+          "name": "candidate_vector_format_roundtrip",
+          "status": "passed",
+          "wire_bytes": 115,
+          "signed_zero_and_finite_float32_extremes": true,
+          "public_api_frozen": false,
+          "job_log_line": 3276
+        },
+        {
+          "name": "candidate_vector_format_rejections_and_budgets",
+          "status": "passed",
+          "cases": [
+            "null_argument_0",
+            "null_element_0",
+            "empty_0",
+            "null_argument_1",
+            "null_element_1",
+            "empty_1",
+            "null_argument_2",
+            "null_element_2",
+            "empty_2",
+            "null_argument_3",
+            "null_element_3",
+            "empty_3",
+            "dense_lower_bound",
+            "sparse_index_lower_bound",
+            "sparse_weight_lower_bound",
+            "token_row_lower_bound",
+            "token_column_lower_bound",
+            "dense_not_vector",
+            "indices_not_vector",
+            "weights_not_vector",
+            "tokens_not_matrix",
+            "tokens_three_dimensions",
+            "negative_index",
+            "index_u32_overflow",
+            "duplicate_indices",
+            "unsorted_indices",
+            "sparse_length_mismatch",
+            "nonfinite_0_NaN",
+            "nonfinite_2_NaN",
+            "nonfinite_3_NaN",
+            "nonfinite_0_Infinity",
+            "nonfinite_2_Infinity",
+            "nonfinite_3_Infinity",
+            "nonfinite_0_-Infinity",
+            "nonfinite_2_-Infinity",
+            "nonfinite_3_-Infinity",
+            "postgres_ragged_matrix",
+            "dense_budget",
+            "sparse_budget",
+            "token_row_budget",
+            "token_width_budget",
+            "token_total_budget",
+            "wire_byte_budget"
+          ],
+          "recovery_after_errors": true,
+          "limits": {
+            "sparse_nnz": 4096,
+            "token_rows": 128,
+            "wire_bytes": 262144,
+            "token_width": 1024,
+            "token_values": 16384,
+            "dense_dimensions": 4096,
+            "result_json_bytes": 524288,
+            "owned_scalar_bytes": 131072
+          },
+          "job_log_line": 3277
+        },
+        {
+          "name": "candidate_vector_format_acl_and_runtime_superuser",
+          "status": "passed",
+          "called_on_null": true,
+          "job_log_line": 3278
+        },
+        {
+          "name": "tagged_bigint_uuid_text_identity",
+          "status": "passed",
+          "bigint_exact_above_javascript_range": true,
+          "unicode_normalization": false,
+          "stable_point_id_allocated": false,
+          "job_log_line": 3279
+        },
+        {
+          "name": "source_key_version_incarnation_and_quoted_binding",
+          "status": "passed",
+          "returned_source_text": false,
+          "allocated_incarnations": false,
+          "bounded_candidates": 32,
+          "job_log_line": 3280
+        },
+        {
+          "name": "source_recheck_definition_input_and_error_lock_cleanup",
+          "status": "passed",
+          "rls": "explicitly_rejected",
+          "job_log_line": 3281
+        },
+        {
+          "name": "source_recheck_active_statement_and_repeatable_snapshots",
+          "status": "passed",
+          "caller_xid_assigned": true,
+          "read_committed_new_statement_observes_commit": true,
+          "uncommitted_update_invisible": true,
+          "job_log_line": 3282
+        },
+        {
+          "name": "source_recheck_ddl_and_conditional_namespace_guard",
+          "status": "passed",
+          "production_locking_design": false,
+          "native_cancellation_stage": "primary_index_lock_before_SPI",
+          "same_backend_survived": true,
+          "job_log_line": 3283
+        },
+        {
+          "name": "source_recheck_SPI_error_cleanup_and_same_backend_retry",
+          "status": "passed",
+          "native_cancellation_stage": "secondary_index_lock_inside_SPI_planning",
+          "namespace_lock_released_after_error": true,
+          "same_backend_retry_matched": true,
+          "job_log_line": 3284
+        },
+        {
+          "name": "source_identity_recheck_acl_and_runtime_superuser",
+          "status": "passed",
+          "production_source_select_authorization": false,
+          "job_log_line": 3285
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5277136909999172,
+          "job_log_line": 3286
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.013943740000058824,
+          "native_call_cancelled": false,
+          "job_log_line": 3287
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07165895800005728,
+          "job_log_line": 3288
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed",
+          "job_log_line": 3289
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "rejected"
+          ],
+          "queue_limit": 8,
+          "job_log_line": 3290
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16,
+          "job_log_line": 3291
+        },
+        {
+          "name": "fault_entrypoint_absent_in_normal_build",
+          "status": "passed",
+          "job_log_line": 3292
+        }
+      ],
+      "report": {
+        "artifact_member": "normal/p0-sql-results.json",
+        "sha256": "7223bd77a20a2e8f680f77c17407e113474dafe8cf94c1e98cfac182fb971b23"
+      },
+      "engine_report": {
+        "artifact_member": "normal/sql-engine-probe.json",
+        "sha256": "39ce4cb92e78d6b5ce10a72bca9d3516418fd8caa9a2217d2a8afb99347b4e5e"
+      },
+      "engine_checks": [
+        {
+          "name": "payload_index_and_scoped_count",
+          "detail": {
+            "points": 7,
+            "global_document_total": null
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q11",
+            "Q12",
+            "L01",
+            "L02"
+          ]
+        },
+        {
+          "name": "offline_bm25",
+          "detail": {
+            "hits": 3,
+            "encoder": "EdgeBm25",
+            "stemming": "disabled",
+            "stopwords": "empty",
+            "tokenizer": "multilingual",
+            "idf_corpus": "tenant a"
+          },
+          "status": "passed",
+          "capabilities": [
+            "F01",
+            "V02",
+            "Q14"
+          ]
+        },
+        {
+          "name": "named_dense_exact",
+          "detail": {
+            "score": 1.0,
+            "leader": 1,
+            "distance": "dot",
+            "exact_domain": "authorized fixture points"
+          },
+          "status": "passed",
+          "capabilities": [
+            "V01",
+            "Q01"
+          ]
+        },
+        {
+          "name": "supplied_sparse",
+          "detail": {
+            "idf": "disabled",
+            "hits": 2,
+            "model": "synthetic test values",
+            "inference": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F02",
+            "V02"
+          ]
+        },
+        {
+          "name": "weighted_rrf",
+          "detail": {
+            "k": 2,
+            "score": 1.1666667461395264,
+            "leader": 1,
+            "formula": "sum(1 / ((zero_based_position + 1) / weight + k - 1))"
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q02",
+            "Q03"
+          ]
+        },
+        {
+          "name": "dbsf",
+          "detail": {
+            "scope": "prefetch distributions",
+            "score": 1.3295536041259766,
+            "leader": 1,
+            "variance": "sample (n-1)",
+            "golden_scores_checked": 7
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q03"
+          ]
+        },
+        {
+          "name": "dbsf_degenerate_distributions",
+          "detail": {
+            "all_empty": "no hits",
+            "empty_branch": "no contribution",
+            "constant_score": 0.5,
+            "singleton_score": 0.5,
+            "tie_order_asserted": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q03"
+          ]
+        },
+        {
+          "name": "maxsim_nested_prefetch",
+          "detail": {
+            "score": 2.0,
+            "leader": 1,
+            "candidate_budget": 3,
+            "global_exact_top_k": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "V03",
+            "Q01",
+            "Q02"
+          ]
+        },
+        {
+          "name": "text_and_or",
+          "detail": {
+            "or": [
+              1,
+              2,
+              5
+            ],
+            "and": [
+              1,
+              2
+            ]
+          },
+          "status": "passed",
+          "capabilities": [
+            "F06"
+          ]
+        },
+        {
+          "name": "boolean_exclusion",
+          "detail": {
+            "policy": "tenant AND terms AND NOT excluded SKU",
+            "matches": [
+              1
+            ]
+          },
+          "status": "passed",
+          "capabilities": [
+            "F07",
+            "Q12"
+          ]
+        },
+        {
+          "name": "phrase_in_all_retrieval_branches",
+          "detail": {
+            "matches": [
+              1
+            ],
+            "phrase_matching": true
+          },
+          "status": "passed",
+          "capabilities": [
+            "F08",
+            "Q02",
+            "Q03",
+            "Q12"
+          ]
+        },
+        {
+          "name": "distinct_token_and_keyword_prefix",
+          "detail": {
+            "token_prefix": "tran",
+            "keyword_prefix": "PG-",
+            "keyword_case_sensitive": true
+          },
+          "status": "passed",
+          "capabilities": [
+            "F09",
+            "F10",
+            "F11"
+          ]
+        },
+        {
+          "name": "chinese_offline_smoke",
+          "detail": {
+            "required_match": 6,
+            "quality_benchmark": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F01",
+            "F04",
+            "F05"
+          ]
+        },
+        {
+          "name": "authorized_document_groups",
+          "detail": {
+            "documents": 3,
+            "source_hydration": "authorized HasId query",
+            "first_document_chunks": 2
+          },
+          "status": "passed",
+          "capabilities": [
+            "Q09"
+          ]
+        },
+        {
+          "name": "explicit_analyzer_defaults",
+          "detail": {
+            "bm25_default_stems": true,
+            "neutral_policy_stems": false,
+            "full_offset_parity_verified": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "F04"
+          ]
+        },
+        {
+          "name": "flush_close_reopen",
+          "detail": {
+            "explicit_flush": true,
+            "wal_replay_claim": false,
+            "abrupt_crash_test": false
+          },
+          "status": "passed",
+          "capabilities": [
+            "L01",
+            "L04"
+          ]
+        }
+      ],
+      "artifact_assertions_equal_job_log": true
+    }
+  },
+  "helper_protocol_profiles": {
+    "private_faults": {
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_native_panic_preserves_helper",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed",
+          "exit_seconds": 0.00728036800001064
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed",
+          "observed_live_identity": {
+            "pid": 21,
+            "start_ticks": 111087,
+            "state": "S",
+            "parent_pid": 20,
+            "uid": 10001
+          }
+        },
+        {
+          "name": "private_native_abort_terminates_only_child",
+          "status": "passed"
+        }
+      ],
+      "checks_passed": 8,
+      "report": {
+        "artifact_member": "helper/helper-fault-pipes.json",
+        "sha256": "afa5bf0d6f78d9a73a943fbfa186124c371815a9263f329d337615db947d06b3"
+      },
+      "job_log_lines": [
+        4186
+      ]
+    },
+    "normal": {
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_operation_refused_without_private_feature",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed",
+          "exit_seconds": 0.0073081609999690045
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed",
+          "observed_live_identity": {
+            "pid": 21,
+            "start_ticks": 97527,
+            "state": "S",
+            "parent_pid": 20,
+            "uid": 10001
+          }
+        }
+      ],
+      "checks_passed": 7,
+      "report": {
+        "artifact_member": "helper-normal/helper-pipes.json",
+        "sha256": "677d1d48d3877c0b4be8c0eee4152a383b4ad2a5d500ce5f7d696f6a76ce1c5e"
+      },
+      "job_log_lines": [
+        3865
+      ]
+    }
+  },
+  "disk_profiles": {
+    "vector_keyword_enospc_32_mib": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_enospc_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "environment": {
+        "filesystem": "tmpfs",
+        "capacity_bytes": 33554432,
+        "no_mount_aliases_in_current_namespace": true,
+        "mode": "0700",
+        "pgdata_disjoint": true
+      },
+      "profile": "vector_keyword",
+      "fixture": {
+        "points": 8,
+        "named_representations": [
+          "dense",
+          "bm25",
+          "learned",
+          "tokens"
+        ],
+        "wal_segment_capacity_bytes": 65536,
+        "payload_on_disk": true,
+        "dense_and_token_on_disk": true,
+        "keyword_indexes": [
+          "tenant",
+          "document",
+          "sku"
+        ],
+        "text_indexes": [],
+        "storage_scope": "cold payload/vectors and mutable keyword indexes; no text indexes",
+        "excluded_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes"
+      },
+      "observations": [
+        {
+          "stage": "fixture_query_passed",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534047,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 204,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 33288192,
+            "available_bytes": 33288192
+          }
+        },
+        {
+          "stage": "filled",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534047,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 204,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 0,
+            "available_bytes": 0
+          }
+        },
+        {
+          "stage": "filler_removed",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534047,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 204,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 33288192,
+            "available_bytes": 33288192
+          }
+        },
+        {
+          "stage": "recovery_flushed",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534157,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 204,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 33288192,
+            "available_bytes": 33288192
+          }
+        },
+        {
+          "stage": "recovery_before_reopen",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534157,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 33288192,
+            "available_bytes": 33288192
+          }
+        },
+        {
+          "stage": "recovery_after_reopen",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534157,
+            "allocated_bytes": 15970304,
+            "mapping_rss_kib": 15632,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 17584128,
+            "available_bytes": 17584128
+          }
+        }
+      ],
+      "fill": {
+        "bytes_written": 33288192,
+        "errno": 28,
+        "filler_removed": true
+      },
+      "engine_failure": {
+        "operation": "set_hnsw_config",
+        "error": "Service runtime error: Failed to save structure on disk with error: No space left on device (os error 28)",
+        "persisted_config_unchanged": true,
+        "in_memory_config_changed": false
+      },
+      "recovery": {
+        "config_retry": "passed",
+        "explicit_flush": "passed",
+        "reopen": "passed",
+        "records": 8,
+        "all_representation_records_equal": true,
+        "keyword_tenant_and_maxsim_queries": "passed",
+        "phrase_query": "not_tested",
+        "token_prefix_query": "not_tested"
+      },
+      "scope": "configuration atomic save with vector/keyword fixture only; mutable text-index recovery, WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail_truncated": false,
+        "stages": [
+          "guard",
+          "fixture_create",
+          "fixture_indexes",
+          "fixture_upsert",
+          "fixture_flush",
+          "fixture_ready",
+          "fixture_query",
+          "fill",
+          "config_save",
+          "config_result",
+          "filler_release",
+          "recovery",
+          "recovery_reopen",
+          "completed"
+        ],
+        "stages_truncated": false,
+        "last_stage": "completed",
+        "observation_errors": []
+      },
+      "requested_experiment": {
+        "kind": "edge_enospc_probe",
+        "profile": "vector_keyword",
+        "clean_control": false,
+        "capacity_refusal_characterization": false
+      },
+      "post_exit_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 33554432,
+          "free_bytes": 33554432,
+          "available_bytes": 33554432
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "job_log_lines": [
+        3216
+      ],
+      "report": {
+        "artifact_member": "enospc/edge-enospc.json",
+        "sha256": "ac201a65d7f44d70a8683c3149318013fcf88aa7567b8ec53cb6e7b5a7c26675"
+      }
+    },
+    "full_text_refusal_128_mib": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_full_text_128_capacity_refusal_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "profile": "full_text",
+      "observed_capacity_bytes": 134217728,
+      "required_capacity_bytes": 402653184,
+      "expected_refusal": "full-text tmpfs capacity must be exactly 384 MiB",
+      "entry_refusals": {
+        "enospc": {
+          "schema_version": 1,
+          "engine_version": "0.8.0",
+          "kind": "edge_enospc_probe",
+          "status": "not_run",
+          "sql_integration_verified": false,
+          "release_supported": false,
+          "oom_verified": false,
+          "power_loss_verified": false,
+          "profile": "full_text",
+          "disk_writes_attempted": false,
+          "reason_code": "unsafe_environment",
+          "reason": "full-text tmpfs capacity must be exactly 384 MiB"
+        },
+        "enospc_exit_code": 2,
+        "clean_error": "full-text tmpfs capacity must be exactly 384 MiB"
+      },
+      "observations": [
+        {
+          "stage": "capacity_refusal_before",
+          "storage": {
+            "files": 0,
+            "logical_bytes": 0,
+            "allocated_bytes": 0,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 134217728,
+            "free_bytes": 134217728,
+            "available_bytes": 134217728
+          }
+        },
+        {
+          "stage": "capacity_refusal_after",
+          "storage": {
+            "files": 0,
+            "logical_bytes": 0,
+            "allocated_bytes": 0,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 134217728,
+            "free_bytes": 134217728,
+            "available_bytes": 134217728
+          }
+        }
+      ],
+      "disk_writes_attempted": false,
+      "engine_open_attempted": false,
+      "filler_created": false,
+      "enospc_verified": false,
+      "recovery_verified": false,
+      "scope": "exact 128 MiB capacity refusal by both full-text entry paths; no engine execution, ENOSPC or recovery claim",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail_truncated": false,
+        "stages": [
+          "capacity_refusal_guard",
+          "guard",
+          "capacity_refusal_completed"
+        ],
+        "stages_truncated": false,
+        "last_stage": "capacity_refusal_completed",
+        "observation_errors": []
+      },
+      "requested_experiment": {
+        "kind": "edge_full_text_128_capacity_refusal_probe",
+        "profile": "full_text",
+        "clean_control": false,
+        "capacity_refusal_characterization": true
+      },
+      "post_exit_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 134217728,
+          "free_bytes": 134217728,
+          "available_bytes": 134217728
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "pre_execution_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 134217728,
+          "free_bytes": 134217728,
+          "available_bytes": 134217728
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "job_log_lines": [
+        3253
+      ],
+      "report": {
+        "artifact_member": "enospc-full-text/edge-full-text-128-capacity-refusal.json",
+        "sha256": "d37eef79921a0ede17bca9c39bea6640dc678669338b1bff374104ab95819954"
+      }
+    },
+    "full_text_clean_384_mib": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_disk_fixture_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "profile": "full_text",
+      "fixture": {
+        "points": 8,
+        "named_representations": [
+          "dense",
+          "bm25",
+          "learned",
+          "tokens"
+        ],
+        "wal_segment_capacity_bytes": 65536,
+        "keyword_indexes": [
+          "tenant",
+          "document",
+          "sku"
+        ],
+        "text_indexes": [
+          "body",
+          "body_prefix"
+        ],
+        "storage_scope": "unchanged bounded full fixture with mutable phrase and token-prefix indexes"
+      },
+      "recovery": {
+        "explicit_flush": "passed",
+        "reopen": "passed",
+        "records": 8,
+        "all_representation_records_equal": true,
+        "keyword_tenant_and_maxsim_queries": "passed",
+        "phrase_query": "passed",
+        "token_prefix_query": "passed"
+      },
+      "storage_observations": {
+        "created_and_flushed": {
+          "files": 85,
+          "logical_bytes": 289807352,
+          "allocated_bytes": 34963456,
+          "mapping_rss_kib": 34080,
+          "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+        },
+        "reopened": {
+          "files": 85,
+          "logical_bytes": 289807352,
+          "allocated_bytes": 220508160,
+          "mapping_rss_kib": 215492,
+          "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+        }
+      },
+      "observations": [
+        {
+          "stage": "clean_fixture_flushed",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "clean_before_reopen",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "clean_after_reopen",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 220508160,
+            "mapping_rss_kib": 215356,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 182145024,
+            "available_bytes": 182145024
+          }
+        }
+      ],
+      "provisioned_tmpfs": true,
+      "enospc_verified": false,
+      "filler_created": false,
+      "scope": "clean fixture reopen and storage observations only; no disk filling or recovery from ENOSPC",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail_truncated": false,
+        "stages": [
+          "clean_fixture_create",
+          "recovery_reopen"
+        ],
+        "stages_truncated": false,
+        "last_stage": "recovery_reopen",
+        "observation_errors": []
+      },
+      "requested_experiment": {
+        "kind": "edge_disk_fixture_probe",
+        "profile": "full_text",
+        "clean_control": true,
+        "capacity_refusal_characterization": false
+      },
+      "post_exit_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 402653184,
+          "free_bytes": 402653184,
+          "available_bytes": 402653184
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "job_log_lines": [
+        3243
+      ],
+      "report": {
+        "artifact_member": "enospc-full-text/edge-full-text-clean.json",
+        "sha256": "f1ef6b8d2d6bd752b22135177bb2acbb808702d96f29198404b4d6dc4d9f4426"
+      }
+    },
+    "full_text_enospc_384_mib": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_enospc_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "environment": {
+        "filesystem": "tmpfs",
+        "capacity_bytes": 402653184,
+        "no_mount_aliases_in_current_namespace": true,
+        "mode": "0700",
+        "pgdata_disjoint": true
+      },
+      "profile": "full_text",
+      "fixture": {
+        "points": 8,
+        "named_representations": [
+          "dense",
+          "bm25",
+          "learned",
+          "tokens"
+        ],
+        "wal_segment_capacity_bytes": 65536,
+        "keyword_indexes": [
+          "tenant",
+          "document",
+          "sku"
+        ],
+        "text_indexes": [
+          "body",
+          "body_prefix"
+        ],
+        "storage_scope": "unchanged bounded full fixture with mutable phrase and token-prefix indexes"
+      },
+      "observations": [
+        {
+          "stage": "fixture_query_passed",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "filled",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 0,
+            "available_bytes": 0
+          }
+        },
+        {
+          "stage": "filler_removed",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "recovery_flushed",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807462,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "recovery_before_reopen",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807462,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "recovery_after_reopen",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807462,
+            "allocated_bytes": 220508160,
+            "mapping_rss_kib": 215356,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 182145024,
+            "available_bytes": 182145024
+          }
+        }
+      ],
+      "fill": {
+        "bytes_written": 367689728,
+        "errno": 28,
+        "filler_removed": true
+      },
+      "engine_failure": {
+        "operation": "set_hnsw_config",
+        "error": "Service runtime error: Failed to save structure on disk with error: No space left on device (os error 28)",
+        "persisted_config_unchanged": true,
+        "in_memory_config_changed": false
+      },
+      "recovery": {
+        "config_retry": "passed",
+        "explicit_flush": "passed",
+        "reopen": "passed",
+        "records": 8,
+        "all_representation_records_equal": true,
+        "keyword_tenant_and_maxsim_queries": "passed",
+        "phrase_query": "passed",
+        "token_prefix_query": "passed"
+      },
+      "scope": "configuration atomic save and recovery with an already-flushed full mutable text/vector fixture; WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail_truncated": false,
+        "stages": [
+          "guard",
+          "full_text_fixture",
+          "fixture_query",
+          "fill",
+          "config_save",
+          "config_result",
+          "filler_release",
+          "recovery",
+          "recovery_reopen",
+          "completed"
+        ],
+        "stages_truncated": false,
+        "last_stage": "completed",
+        "observation_errors": []
+      },
+      "requested_experiment": {
+        "kind": "edge_enospc_probe",
+        "profile": "full_text",
+        "clean_control": false,
+        "capacity_refusal_characterization": false
+      },
+      "post_exit_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 402653184,
+          "free_bytes": 402653184,
+          "available_bytes": 402653184
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "job_log_lines": [
+        3233
+      ],
+      "report": {
+        "artifact_member": "enospc-full-text/edge-full-text-enospc.json",
+        "sha256": "6c5f5ac4d3c73afcf1b453541a4b2a5c153f9c03dcd285f3d0b9904c37f90669"
+      }
+    }
+  },
+  "kernel_oom_profiles": {
+    "direct_worker": {
+      "schema_version": 1,
+      "kind": "p0_kernel_oom",
+      "profile": "direct_worker",
+      "nonce": "93edcc6dee49b70ba1a3d2edbfb449ca",
+      "status": "passed",
+      "stage": "collect_and_attribute",
+      "external_termination_requested": false,
+      "kernel_oom_observed": true,
+      "victim_attribution": "kernel_record",
+      "target_isolation_gate_passed": false,
+      "strict_target_attribution_passed": true,
+      "production_memory_isolation_verified": false,
+      "host_mem_available_before_bytes": 15345836032,
+      "container": {
+        "image_id": "sha256:6e3f6381e98e606c1a28eace86dc919ce662cc523172f7ef8b816dc49ff0f9c9",
+        "container_id": "238ed60a446bb30e29712d4b980a147c09f71e191de36eca460eb3f789af646e",
+        "user": "10001:10001",
+        "memory_limit_bytes": 805306368,
+        "memory_swap_total_bytes": 805306368,
+        "pids_limit": 128,
+        "nano_cpus": 2000000000,
+        "network": "none",
+        "pid_mode": "",
+        "ipc_mode": "private",
+        "cgroup_namespace": "private",
+        "cap_drop": [
+          "ALL"
+        ],
+        "no_new_privileges": true,
+        "host_mounts": false
+      },
+      "target_mapping": {
+        "host_pid": 46006,
+        "container_pid": 79,
+        "start_ticks": 127856,
+        "host_cgroup": "/system.slice/docker-238ed60a446bb30e29712d4b980a147c09f71e191de36eca460eb3f789af646e.scope"
+      },
+      "container_exit": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": true,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-10-08T07:48:00.548615964Z",
+        "FinishedAt": "2026-10-08T07:48:05.582249714Z"
+      },
+      "artifact_copy_returncode": 0,
+      "kernel_journal_returncode": 0,
+      "kernel_victim_records": [
+        {
+          "timestamp_us": "1791445684206391",
+          "message": "oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=docker-238ed60a446bb30e29712d4b980a147c09f71e191de36eca460eb3f789af646e.scope,mems_allowed=0,oom_memcg=/system.slice/docker-238ed60a446bb30e29712d4b980a147c09f71e191de36eca460eb3f789af646e.scope,task_memcg=/system.slice/docker-238ed60a446bb30e29712d4b980a147c09f71e191de36eca460eb3f789af646e.scope,task=postgres,pid=46006,uid=10001"
+        },
+        {
+          "timestamp_us": "1791445684206407",
+          "message": "Memory cgroup out of memory: Killed process 46006 (postgres) total-vm:1142492kB, anon-rss:743564kB, file-rss:32848kB, shmem-rss:2576kB, UID:10001 pgtables:1772kB oom_score_adj:1000"
+        }
+      ],
+      "unflushed_edge_recovery_verified": false,
+      "postgres_edge_atomicity_verified": false,
+      "elapsed_seconds": 5.271206378936768,
+      "job_log_lines": [
+        4234
+      ],
+      "inner_postgresql_observation": {
+        "schema_version": 1,
+        "kind": "p0_kernel_oom_sql",
+        "status": "observed",
+        "profile": "direct_worker",
+        "nonce": "93edcc6dee49b70ba1a3d2edbfb449ca",
+        "stage": "complete",
+        "kernel_oom_observed": true,
+        "victim_attribution": "correlated_only",
+        "target_isolation_gate_passed": false,
+        "production_memory_isolation_verified": false,
+        "unflushed_edge_recovery_verified": false,
+        "postgres_edge_atomicity_verified": false,
+        "caller_client_kill_requested": false,
+        "companion_client_kill_requested": false,
+        "identities": {
+          "schema_version": 1,
+          "nonce": "93edcc6dee49b70ba1a3d2edbfb449ca",
+          "profile": "direct_worker",
+          "target": {
+            "pid": 79,
+            "start_ticks": 127856,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 48,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532318]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "supervisor": {
+            "pid": 79,
+            "start_ticks": 127856,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 48,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532318]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "controller": {
+            "pid": 56,
+            "start_ticks": 127846,
+            "uid": 10001,
+            "state": "R",
+            "parent_pid": 1,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532318]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "postmaster": {
+            "pid": 48,
+            "start_ticks": 127835,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 1,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532318]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "companion": {
+            "pid": 83,
+            "start_ticks": 127859,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 48,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532318]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "namespaces": {
+            "pid_namespace": "pid:[4026532318]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "cgroup": {
+            "device": 30,
+            "inode": 11171,
+            "mount_id": "419"
+          },
+          "data_dir": "<owned-disposable-postgresql-data-directory>",
+          "postgresql_marker_verified": true
+        },
+        "build": {
+          "stage": "P0_feasibility",
+          "engine": {
+            "name": "qdrant-edge",
+            "version": "0.8.0"
+          },
+          "features": {
+            "pg17": true,
+            "cshim": true,
+            "p0_managed_helper": false,
+            "p0_fault_injection": true
+          },
+          "pgrx_version": "0.19.3",
+          "cpu_admission": {
+            "kind": "p0_cpu_admission",
+            "admitted": true,
+            "baseline": "edge-0.8.0-native-haswell-conservative-v1",
+            "architecture": "x86_64",
+            "hle_required": false,
+            "schema_version": 1,
+            "missing_features": [],
+            "required_features": [
+              "avx",
+              "avx2",
+              "fma",
+              "f16c",
+              "bmi1",
+              "bmi2",
+              "lzcnt",
+              "movbe",
+              "popcnt",
+              "sse3",
+              "ssse3",
+              "sse4.1",
+              "sse4.2",
+              "cmpxchg16b",
+              "pclmulqdq",
+              "rdrand",
+              "xsave",
+              "xsaveopt",
+              "lahf_sahf",
+              "fsgsbase"
+            ],
+            "native_build_flags": [
+              "-march=haswell",
+              "-O3",
+              "-mpopcnt"
+            ],
+            "optional_observations": {
+              "hle": false
+            },
+            "equivalent_to_x86_64_v3": false,
+            "detected_usable_features": {
+              "avx": true,
+              "fma": true,
+              "avx2": true,
+              "bmi1": true,
+              "bmi2": true,
+              "f16c": true,
+              "sse3": true,
+              "lzcnt": true,
+              "movbe": true,
+              "ssse3": true,
+              "xsave": true,
+              "popcnt": true,
+              "rdrand": true,
+              "sse4.1": true,
+              "sse4.2": true,
+              "fsgsbase": true,
+              "xsaveopt": true,
+              "lahf_sahf": true,
+              "pclmulqdq": true,
+              "cmpxchg16b": true
+            },
+            "release_platform_supported": false,
+            "cpuid_hardware_only_features": [
+              "lahf_sahf",
+              "fsgsbase"
+            ],
+            "avx_detection_includes_os_state": true
+          },
+          "postgres_major": 17,
+          "schema_version": 1,
+          "extension_version": "0.0.1",
+          "prototype_process": "dynamic_postgresql_worker_with_engine_thread",
+          "product_indexing_api": false,
+          "native_engine_cancellation": false,
+          "release_supported_capabilities": []
+        },
+        "counters_before": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "memory_samples": [
+          {
+            "after_ms": 0,
+            "memory_current": 92688384
+          },
+          {
+            "after_ms": 50,
+            "memory_current": 92688384
+          },
+          {
+            "after_ms": 100,
+            "memory_current": 98557952
+          },
+          {
+            "after_ms": 151,
+            "memory_current": 92823552
+          },
+          {
+            "after_ms": 201,
+            "memory_current": 95711232
+          },
+          {
+            "after_ms": 251,
+            "memory_current": 102084608
+          },
+          {
+            "after_ms": 302,
+            "memory_current": 118599680
+          },
+          {
+            "after_ms": 352,
+            "memory_current": 135114752
+          },
+          {
+            "after_ms": 402,
+            "memory_current": 151363584
+          },
+          {
+            "after_ms": 453,
+            "memory_current": 166830080
+          },
+          {
+            "after_ms": 503,
+            "memory_current": 183345152
+          },
+          {
+            "after_ms": 554,
+            "memory_current": 199598080
+          },
+          {
+            "after_ms": 604,
+            "memory_current": 216113152
+          },
+          {
+            "after_ms": 654,
+            "memory_current": 232103936
+          },
+          {
+            "after_ms": 705,
+            "memory_current": 248614912
+          },
+          {
+            "after_ms": 755,
+            "memory_current": 265129984
+          },
+          {
+            "after_ms": 806,
+            "memory_current": 281382912
+          },
+          {
+            "after_ms": 856,
+            "memory_current": 297369600
+          },
+          {
+            "after_ms": 906,
+            "memory_current": 313884672
+          },
+          {
+            "after_ms": 957,
+            "memory_current": 330399744
+          },
+          {
+            "after_ms": 1007,
+            "memory_current": 346914816
+          },
+          {
+            "after_ms": 1058,
+            "memory_current": 363163648
+          },
+          {
+            "after_ms": 1108,
+            "memory_current": 379678720
+          },
+          {
+            "after_ms": 1158,
+            "memory_current": 396193792
+          },
+          {
+            "after_ms": 1209,
+            "memory_current": 412971008
+          },
+          {
+            "after_ms": 1259,
+            "memory_current": 429744128
+          },
+          {
+            "after_ms": 1310,
+            "memory_current": 445734912
+          },
+          {
+            "after_ms": 1360,
+            "memory_current": 462249984
+          },
+          {
+            "after_ms": 1411,
+            "memory_current": 478765056
+          },
+          {
+            "after_ms": 1461,
+            "memory_current": 495542272
+          },
+          {
+            "after_ms": 1512,
+            "memory_current": 511795200
+          },
+          {
+            "after_ms": 1562,
+            "memory_current": 528310272
+          },
+          {
+            "after_ms": 1613,
+            "memory_current": 544825344
+          },
+          {
+            "after_ms": 1663,
+            "memory_current": 561602560
+          },
+          {
+            "after_ms": 1714,
+            "memory_current": 577855488
+          },
+          {
+            "after_ms": 1764,
+            "memory_current": 594370560
+          },
+          {
+            "after_ms": 1815,
+            "memory_current": 610885632
+          },
+          {
+            "after_ms": 1865,
+            "memory_current": 627662848
+          },
+          {
+            "after_ms": 1916,
+            "memory_current": 643915776
+          },
+          {
+            "after_ms": 1966,
+            "memory_current": 660430848
+          },
+          {
+            "after_ms": 2017,
+            "memory_current": 676945920
+          },
+          {
+            "after_ms": 2068,
+            "memory_current": 693723136
+          },
+          {
+            "after_ms": 2118,
+            "memory_current": 709713920
+          },
+          {
+            "after_ms": 2169,
+            "memory_current": 726491136
+          },
+          {
+            "after_ms": 2219,
+            "memory_current": 743006208
+          },
+          {
+            "after_ms": 2270,
+            "memory_current": 759521280
+          },
+          {
+            "after_ms": 2320,
+            "memory_current": 776298496
+          },
+          {
+            "after_ms": 2371,
+            "memory_current": 792289280
+          },
+          {
+            "after_ms": 2421,
+            "memory_current": 805306368
+          },
+          {
+            "after_ms": 2472,
+            "memory_current": 805203968
+          },
+          {
+            "after_ms": 2522,
+            "memory_current": 805273600
+          },
+          {
+            "after_ms": 2573,
+            "memory_current": 545431552
+          },
+          {
+            "after_ms": 2623,
+            "memory_current": 26050560
+          }
+        ],
+        "counters_after": {
+          "low": 0,
+          "high": 0,
+          "max": 204,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "counter_delta": {
+          "low": 0,
+          "high": 0,
+          "max": 204,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "native_records": [
+          {
+            "event": "armed",
+            "nonce": "93edcc6dee49b70ba1a3d2edbfb449ca",
+            "profile": "direct_worker",
+            "target": {
+              "pid": 79,
+              "start_ticks": 127856,
+              "uid": 10001,
+              "state": "S",
+              "parent_pid": 48,
+              "cgroup": "0::/",
+              "pid_namespace": "pid:[4026532318]",
+              "ipc_namespace": "ipc:[4026532316]",
+              "cgroup_namespace": "cgroup:[4026532319]"
+            },
+            "cgroup": {
+              "device": 30,
+              "inode": 11171,
+              "mount_id": "419",
+              "settings": {
+                "cgroup.subtree_control": "",
+                "cgroup.type": "domain",
+                "cpu.max": "200000 100000",
+                "memory.high": "max",
+                "memory.max": "805306368",
+                "memory.oom.group": "0",
+                "memory.swap.current": "0",
+                "memory.swap.max": "0",
+                "pids.max": "128"
+              },
+              "events": {
+                "high": 0,
+                "low": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_group_kill": 0,
+                "oom_kill": 0
+              },
+              "memory_current": 92688384
+            },
+            "page_size": 4096,
+            "oom_score_adj_before": 0,
+            "oom_score_adj_during": 1000,
+            "allocation_started": false,
+            "requested_bytes_cap": 805306368,
+            "loop_deadline_ms": 10000
+          },
+          {
+            "event": "allocation_started",
+            "touched_bytes": 0,
+            "companion_identity_verified": {
+              "pid": 83,
+              "start_ticks": 127859,
+              "uid": 10001,
+              "state": "S",
+              "parent_pid": 48,
+              "cgroup": "0::/",
+              "pid_namespace": "pid:[4026532318]",
+              "ipc_namespace": "ipc:[4026532316]",
+              "cgroup_namespace": "cgroup:[4026532319]"
+            },
+            "participants_verified_at_barrier": true
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 16777216
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 33554432
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 50331648
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 67108864
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 83886080
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 100663296
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 117440512
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 134217728
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 150994944
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 167772160
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 184549376
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 201326592
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 218103808
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 234881024
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 251658240
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 268435456
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 285212672
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 301989888
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 318767104
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 335544320
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 352321536
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 369098752
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 385875968
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 402653184
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 419430400
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 436207616
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 452984832
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 469762048
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 486539264
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 503316480
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 520093696
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 536870912
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 553648128
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 570425344
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 587202560
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 603979776
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 620756992
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 637534208
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 654311424
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 671088640
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 687865856
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 704643072
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 721420288
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 738197504
+          }
+        ],
+        "companion_overlapped_allocation": true,
+        "companion_overlap_evidence": "observed_PgSleep_then_exact_live_identity_at_native_boundary_within_25s_of_30s_sleep",
+        "faulting_sql": {
+          "returncode": 2,
+          "stdout": "",
+          "stderr": "WARNING:  terminating connection because of crash of another server process\nDETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.\nHINT:  In a moment you should be able to reconnect to the database and repeat your command.\nserver closed the connection unexpectedly\n\tThis probably means the server terminated abnormally\n\tbefore or while processing the request.\nconnection to server was lost\n"
+        },
+        "replacement": {
+          "stage": "P0_feasibility",
+          "active": null,
+          "rejected": 0,
+          "completed": 0,
+          "engine_pid": 117,
+          "worker_pid": 117,
+          "queue_depth": 0,
+          "queue_limit": 8,
+          "database_oid": 5,
+          "engine_ready": true,
+          "worker_reused": false,
+          "process_profile": "direct_worker",
+          "connection_limit": 16,
+          "engine_concurrency": 1,
+          "request_bytes_limit": 16384,
+          "response_bytes_limit": 1048576,
+          "expired_or_disconnected": 0
+        },
+        "target_exit": {
+          "engine_pid": 79,
+          "signal": 9,
+          "supervisor_kill_requested": false,
+          "kill_attempts": 0,
+          "source": "exact_postgresql_child_exit_log"
+        },
+        "companion_result": {
+          "returncode": 2,
+          "stdout": "",
+          "stderr": "WARNING:  terminating connection because of crash of another server process\nDETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.\nHINT:  In a moment you should be able to reconnect to the database and repeat your command.\nserver closed the connection unexpectedly\n\tThis probably means the server terminated abnormally\n\tbefore or while processing the request.\nconnection to server was lost\n"
+        },
+        "companion_survived": false,
+        "supervisor_preserved": false,
+        "postmaster_preserved": true,
+        "committed_marker_retained": true,
+        "recovery_ms": 2731,
+        "counters_after_replacement_smoke": {
+          "low": 0,
+          "high": 0,
+          "max": 204,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "replacement_edge_smoke_passed": true
+      },
+      "reports": [
+        {
+          "artifact_member": "oom-direct/oom-result.json",
+          "sha256": "4b324fd460a7a0b9f3868bc023db4126a8392f5f037bd5e5fa267180732aa991"
+        },
+        {
+          "artifact_member": "oom-direct/oom-sql.json",
+          "sha256": "ce7f556da659ad889e53df867c59acf6012f3e770b06a258ecaf162b64e91032"
+        },
+        {
+          "artifact_member": "oom-direct/oom-ready.json",
+          "sha256": "37ed166857ec65b641c4496be718b8dd5572a4a1c24a57dd5f84ef0daf7a0143"
+        },
+        {
+          "artifact_member": "oom-direct/oom-native.jsonl",
+          "sha256": "ffd2b7af4e24d13716e3e931f0de7aea47cf29f2c3e5dbe6d7b981b5631457e5"
+        },
+        {
+          "artifact_member": "oom-direct/oom-replacement-engine.json",
+          "sha256": "ee9d2119a535eafb3a1472e2895370423afd746ec64c7360493ac2edd032fec9"
+        },
+        {
+          "artifact_member": "oom-direct/postgresql.log",
+          "sha256": "cbf3a12358b76eb1c0e8895a1d0b04780da390eeb3636f35a8a90e5d76b87619"
+        }
+      ],
+      "independent_kernel_record_review": {
+        "exact_cgroup_and_host_pid_match": true,
+        "counter_deltas_recomputed": true,
+        "postgresql_crash_lines": [
+          "2026-10-08 07:48:04.251 UTC [48] LOG:  background worker \"pg_qdrant P0 owner\" (PID 79) was terminated by signal 9: Killed",
+          "2026-10-08 07:48:04.254 UTC [48] LOG:  all server processes terminated; reinitializing"
+        ],
+        "inner_attribution_preserved": "correlated_only",
+        "recovery_ms_scope": "Controller duration includes companion collection, including its existing 30-second PgSleep; not a restart latency benchmark."
+      }
+    },
+    "managed_helper": {
+      "schema_version": 1,
+      "kind": "p0_kernel_oom",
+      "profile": "managed_helper",
+      "nonce": "773517f16160def4bc1ffe3a52bef3ef",
+      "status": "passed",
+      "stage": "collect_and_attribute",
+      "external_termination_requested": false,
+      "kernel_oom_observed": true,
+      "victim_attribution": "kernel_record",
+      "target_isolation_gate_passed": true,
+      "strict_target_attribution_passed": true,
+      "production_memory_isolation_verified": false,
+      "host_mem_available_before_bytes": 15196504064,
+      "container": {
+        "image_id": "sha256:47b2d6e722e2e2803fad4ece4cbc50e0fdeb7cd719c8c9994e96e9cc9cd0184e",
+        "container_id": "c1b8b000450509c0e9864d78603400cdb104c53129e0cabc1c464c66814e4589",
+        "user": "10001:10001",
+        "memory_limit_bytes": 805306368,
+        "memory_swap_total_bytes": 805306368,
+        "pids_limit": 128,
+        "nano_cpus": 2000000000,
+        "network": "none",
+        "pid_mode": "",
+        "ipc_mode": "private",
+        "cgroup_namespace": "private",
+        "cap_drop": [
+          "ALL"
+        ],
+        "no_new_privileges": true,
+        "host_mounts": false
+      },
+      "target_mapping": {
+        "host_pid": 46610,
+        "container_pid": 81,
+        "start_ticks": 128388,
+        "host_cgroup": "/system.slice/docker-c1b8b000450509c0e9864d78603400cdb104c53129e0cabc1c464c66814e4589.scope"
+      },
+      "container_exit": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": true,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-10-08T07:48:05.875586378Z",
+        "FinishedAt": "2026-10-08T07:48:38.138772525Z"
+      },
+      "artifact_copy_returncode": 0,
+      "kernel_journal_returncode": 0,
+      "kernel_victim_records": [
+        {
+          "timestamp_us": "1791445689424282",
+          "message": "oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=docker-c1b8b000450509c0e9864d78603400cdb104c53129e0cabc1c464c66814e4589.scope,mems_allowed=0,oom_memcg=/system.slice/docker-c1b8b000450509c0e9864d78603400cdb104c53129e0cabc1c464c66814e4589.scope,task_memcg=/system.slice/docker-c1b8b000450509c0e9864d78603400cdb104c53129e0cabc1c464c66814e4589.scope,task=pg_qdrant_p0_he,pid=46610,uid=10001"
+        },
+        {
+          "timestamp_us": "1791445689424299",
+          "message": "Memory cgroup out of memory: Killed process 46610 (pg_qdrant_p0_he) total-vm:871596kB, anon-rss:735360kB, file-rss:15996kB, shmem-rss:0kB, UID:10001 pgtables:1588kB oom_score_adj:1000"
+        }
+      ],
+      "unflushed_edge_recovery_verified": false,
+      "postgres_edge_atomicity_verified": false,
+      "elapsed_seconds": 32.8617627620697,
+      "job_log_lines": [
+        4239
+      ],
+      "inner_postgresql_observation": {
+        "schema_version": 1,
+        "kind": "p0_kernel_oom_sql",
+        "status": "observed",
+        "profile": "managed_helper",
+        "nonce": "773517f16160def4bc1ffe3a52bef3ef",
+        "stage": "complete",
+        "kernel_oom_observed": true,
+        "victim_attribution": "correlated_only",
+        "target_isolation_gate_passed": false,
+        "production_memory_isolation_verified": false,
+        "unflushed_edge_recovery_verified": false,
+        "postgres_edge_atomicity_verified": false,
+        "caller_client_kill_requested": false,
+        "companion_client_kill_requested": false,
+        "identities": {
+          "schema_version": 1,
+          "nonce": "773517f16160def4bc1ffe3a52bef3ef",
+          "profile": "managed_helper",
+          "target": {
+            "pid": 81,
+            "start_ticks": 128388,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 80,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532317]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "supervisor": {
+            "pid": 80,
+            "start_ticks": 128387,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 49,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532317]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "controller": {
+            "pid": 63,
+            "start_ticks": 128377,
+            "uid": 10001,
+            "state": "R",
+            "parent_pid": 1,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532317]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "postmaster": {
+            "pid": 49,
+            "start_ticks": 128367,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 1,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532317]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "companion": {
+            "pid": 85,
+            "start_ticks": 128390,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 49,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532317]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "namespaces": {
+            "pid_namespace": "pid:[4026532317]",
+            "ipc_namespace": "ipc:[4026532316]",
+            "cgroup_namespace": "cgroup:[4026532319]"
+          },
+          "cgroup": {
+            "device": 30,
+            "inode": 11257,
+            "mount_id": "419"
+          },
+          "data_dir": "<owned-disposable-postgresql-data-directory>",
+          "postgresql_marker_verified": true
+        },
+        "build": {
+          "stage": "P0_feasibility",
+          "engine": {
+            "name": "qdrant-edge",
+            "version": "0.8.0"
+          },
+          "features": {
+            "pg17": true,
+            "cshim": true,
+            "p0_managed_helper": true,
+            "p0_fault_injection": true
+          },
+          "pgrx_version": "0.19.3",
+          "cpu_admission": {
+            "kind": "p0_cpu_admission",
+            "admitted": true,
+            "baseline": "edge-0.8.0-native-haswell-conservative-v1",
+            "architecture": "x86_64",
+            "hle_required": false,
+            "schema_version": 1,
+            "missing_features": [],
+            "required_features": [
+              "avx",
+              "avx2",
+              "fma",
+              "f16c",
+              "bmi1",
+              "bmi2",
+              "lzcnt",
+              "movbe",
+              "popcnt",
+              "sse3",
+              "ssse3",
+              "sse4.1",
+              "sse4.2",
+              "cmpxchg16b",
+              "pclmulqdq",
+              "rdrand",
+              "xsave",
+              "xsaveopt",
+              "lahf_sahf",
+              "fsgsbase"
+            ],
+            "native_build_flags": [
+              "-march=haswell",
+              "-O3",
+              "-mpopcnt"
+            ],
+            "optional_observations": {
+              "hle": false
+            },
+            "equivalent_to_x86_64_v3": false,
+            "detected_usable_features": {
+              "avx": true,
+              "fma": true,
+              "avx2": true,
+              "bmi1": true,
+              "bmi2": true,
+              "f16c": true,
+              "sse3": true,
+              "lzcnt": true,
+              "movbe": true,
+              "ssse3": true,
+              "xsave": true,
+              "popcnt": true,
+              "rdrand": true,
+              "sse4.1": true,
+              "sse4.2": true,
+              "fsgsbase": true,
+              "xsaveopt": true,
+              "lahf_sahf": true,
+              "pclmulqdq": true,
+              "cmpxchg16b": true
+            },
+            "release_platform_supported": false,
+            "cpuid_hardware_only_features": [
+              "lahf_sahf",
+              "fsgsbase"
+            ],
+            "avx_detection_includes_os_state": true
+          },
+          "postgres_major": 17,
+          "schema_version": 1,
+          "extension_version": "0.0.1",
+          "prototype_process": "postgresql_supervisor_with_exec_helper",
+          "product_indexing_api": false,
+          "native_engine_cancellation": false,
+          "release_supported_capabilities": []
+        },
+        "counters_before": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "memory_samples": [
+          {
+            "after_ms": 0,
+            "memory_current": 96436224
+          },
+          {
+            "after_ms": 50,
+            "memory_current": 96432128
+          },
+          {
+            "after_ms": 100,
+            "memory_current": 96464896
+          },
+          {
+            "after_ms": 151,
+            "memory_current": 96727040
+          },
+          {
+            "after_ms": 201,
+            "memory_current": 108187648
+          },
+          {
+            "after_ms": 251,
+            "memory_current": 124440576
+          },
+          {
+            "after_ms": 302,
+            "memory_current": 140693504
+          },
+          {
+            "after_ms": 352,
+            "memory_current": 156844032
+          },
+          {
+            "after_ms": 403,
+            "memory_current": 172572672
+          },
+          {
+            "after_ms": 453,
+            "memory_current": 189087744
+          },
+          {
+            "after_ms": 503,
+            "memory_current": 205602816
+          },
+          {
+            "after_ms": 554,
+            "memory_current": 222117888
+          },
+          {
+            "after_ms": 604,
+            "memory_current": 237846528
+          },
+          {
+            "after_ms": 654,
+            "memory_current": 254357504
+          },
+          {
+            "after_ms": 705,
+            "memory_current": 271134720
+          },
+          {
+            "after_ms": 755,
+            "memory_current": 287649792
+          },
+          {
+            "after_ms": 806,
+            "memory_current": 303636480
+          },
+          {
+            "after_ms": 856,
+            "memory_current": 320409600
+          },
+          {
+            "after_ms": 906,
+            "memory_current": 336924672
+          },
+          {
+            "after_ms": 957,
+            "memory_current": 353701888
+          },
+          {
+            "after_ms": 1007,
+            "memory_current": 369950720
+          },
+          {
+            "after_ms": 1058,
+            "memory_current": 386465792
+          },
+          {
+            "after_ms": 1108,
+            "memory_current": 402980864
+          },
+          {
+            "after_ms": 1158,
+            "memory_current": 419758080
+          },
+          {
+            "after_ms": 1209,
+            "memory_current": 436269056
+          },
+          {
+            "after_ms": 1259,
+            "memory_current": 452521984
+          },
+          {
+            "after_ms": 1310,
+            "memory_current": 469037056
+          },
+          {
+            "after_ms": 1360,
+            "memory_current": 485814272
+          },
+          {
+            "after_ms": 1411,
+            "memory_current": 502329344
+          },
+          {
+            "after_ms": 1461,
+            "memory_current": 518316032
+          },
+          {
+            "after_ms": 1512,
+            "memory_current": 535093248
+          },
+          {
+            "after_ms": 1562,
+            "memory_current": 551870464
+          },
+          {
+            "after_ms": 1613,
+            "memory_current": 568381440
+          },
+          {
+            "after_ms": 1664,
+            "memory_current": 584368128
+          },
+          {
+            "after_ms": 1714,
+            "memory_current": 601145344
+          },
+          {
+            "after_ms": 1765,
+            "memory_current": 617660416
+          },
+          {
+            "after_ms": 1815,
+            "memory_current": 634437632
+          },
+          {
+            "after_ms": 1866,
+            "memory_current": 650686464
+          },
+          {
+            "after_ms": 1916,
+            "memory_current": 667201536
+          },
+          {
+            "after_ms": 1967,
+            "memory_current": 683712512
+          },
+          {
+            "after_ms": 2017,
+            "memory_current": 700227584
+          },
+          {
+            "after_ms": 2068,
+            "memory_current": 716476416
+          },
+          {
+            "after_ms": 2118,
+            "memory_current": 732991488
+          },
+          {
+            "after_ms": 2169,
+            "memory_current": 749506560
+          },
+          {
+            "after_ms": 2219,
+            "memory_current": 766021632
+          },
+          {
+            "after_ms": 2270,
+            "memory_current": 782794752
+          },
+          {
+            "after_ms": 2320,
+            "memory_current": 799047680
+          },
+          {
+            "after_ms": 2371,
+            "memory_current": 805306368
+          },
+          {
+            "after_ms": 2422,
+            "memory_current": 805302272
+          },
+          {
+            "after_ms": 2472,
+            "memory_current": 805289984
+          },
+          {
+            "after_ms": 2523,
+            "memory_current": 192233472
+          },
+          {
+            "after_ms": 2573,
+            "memory_current": 41324544
+          }
+        ],
+        "counters_after": {
+          "low": 0,
+          "high": 0,
+          "max": 203,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "counter_delta": {
+          "low": 0,
+          "high": 0,
+          "max": 203,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "native_records": [
+          {
+            "event": "armed",
+            "nonce": "773517f16160def4bc1ffe3a52bef3ef",
+            "profile": "managed_helper",
+            "target": {
+              "pid": 81,
+              "start_ticks": 128388,
+              "uid": 10001,
+              "state": "S",
+              "parent_pid": 80,
+              "cgroup": "0::/",
+              "pid_namespace": "pid:[4026532317]",
+              "ipc_namespace": "ipc:[4026532316]",
+              "cgroup_namespace": "cgroup:[4026532319]"
+            },
+            "cgroup": {
+              "device": 30,
+              "inode": 11257,
+              "mount_id": "419",
+              "settings": {
+                "cgroup.subtree_control": "",
+                "cgroup.type": "domain",
+                "cpu.max": "200000 100000",
+                "memory.high": "max",
+                "memory.max": "805306368",
+                "memory.oom.group": "0",
+                "memory.swap.current": "0",
+                "memory.swap.max": "0",
+                "pids.max": "128"
+              },
+              "events": {
+                "high": 0,
+                "low": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_group_kill": 0,
+                "oom_kill": 0
+              },
+              "memory_current": 96440320
+            },
+            "page_size": 4096,
+            "oom_score_adj_before": 0,
+            "oom_score_adj_during": 1000,
+            "allocation_started": false,
+            "requested_bytes_cap": 805306368,
+            "loop_deadline_ms": 10000
+          },
+          {
+            "event": "allocation_started",
+            "touched_bytes": 0,
+            "companion_identity_verified": {
+              "pid": 85,
+              "start_ticks": 128390,
+              "uid": 10001,
+              "state": "S",
+              "parent_pid": 49,
+              "cgroup": "0::/",
+              "pid_namespace": "pid:[4026532317]",
+              "ipc_namespace": "ipc:[4026532316]",
+              "cgroup_namespace": "cgroup:[4026532319]"
+            },
+            "participants_verified_at_barrier": true
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 16777216
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 33554432
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 50331648
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 67108864
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 83886080
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 100663296
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 117440512
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 134217728
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 150994944
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 167772160
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 184549376
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 201326592
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 218103808
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 234881024
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 251658240
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 268435456
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 285212672
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 301989888
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 318767104
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 335544320
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 352321536
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 369098752
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 385875968
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 402653184
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 419430400
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 436207616
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 452984832
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 469762048
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 486539264
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 503316480
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 520093696
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 536870912
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 553648128
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 570425344
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 587202560
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 603979776
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 620756992
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 637534208
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 654311424
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 671088640
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 687865856
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 704643072
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 721420288
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 738197504
+          }
+        ],
+        "companion_overlapped_allocation": true,
+        "companion_overlap_evidence": "observed_PgSleep_then_exact_live_identity_at_native_boundary_within_25s_of_30s_sleep",
+        "faulting_sql": {
+          "returncode": 1,
+          "stdout": "",
+          "stderr": "ERROR:  managed helper disconnected\nDETAIL:  The PostgreSQL supervisor remains available; inspect its helper restart status.\n"
+        },
+        "replacement": {
+          "stage": "P0_feasibility",
+          "active": null,
+          "rejected": 0,
+          "completed": 1,
+          "engine_pid": 110,
+          "worker_pid": 80,
+          "queue_depth": 0,
+          "queue_limit": 8,
+          "database_oid": 5,
+          "engine_ready": true,
+          "worker_reused": true,
+          "process_profile": "managed_helper",
+          "connection_limit": 16,
+          "helper_last_exit": {
+            "signal": 9,
+            "exit_code": null,
+            "engine_pid": 81,
+            "stop_reason": "unexpected_exit",
+            "kill_attempts": 0,
+            "last_kill_attempt": null,
+            "first_kill_attempt": null,
+            "supervisor_kill_requested": false
+          },
+          "helper_last_error": null,
+          "engine_concurrency": 1,
+          "request_bytes_limit": 16384,
+          "helper_restart_limit": 3,
+          "response_bytes_limit": 1048576,
+          "helper_start_attempts": 2,
+          "expired_or_disconnected": 0,
+          "helper_restart_exhausted": false,
+          "helper_operation_limit_ms": 125000
+        },
+        "target_exit": {
+          "signal": 9,
+          "exit_code": null,
+          "engine_pid": 81,
+          "stop_reason": "unexpected_exit",
+          "kill_attempts": 0,
+          "last_kill_attempt": null,
+          "first_kill_attempt": null,
+          "supervisor_kill_requested": false
+        },
+        "companion_result": {
+          "returncode": 0,
+          "stdout": "\n",
+          "stderr": ""
+        },
+        "companion_survived": true,
+        "supervisor_preserved": true,
+        "postmaster_preserved": true,
+        "committed_marker_retained": true,
+        "recovery_ms": 29993,
+        "counters_after_replacement_smoke": {
+          "low": 0,
+          "high": 0,
+          "max": 203,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "replacement_edge_smoke_passed": true
+      },
+      "reports": [
+        {
+          "artifact_member": "oom-helper/oom-result.json",
+          "sha256": "ac2bb8d373e46fb5a5fe4179f78fdb50aeb47fe19d6406138b99ffe57085fd4a"
+        },
+        {
+          "artifact_member": "oom-helper/oom-sql.json",
+          "sha256": "839f61be826928fe5a544783cf575bf45846635ebe121230e4380d5b135e0f8c"
+        },
+        {
+          "artifact_member": "oom-helper/oom-ready.json",
+          "sha256": "f37ca7bd72f263cde77a3f0529185e1951b1866c79c3bc5f7a195e7e3e8a8924"
+        },
+        {
+          "artifact_member": "oom-helper/oom-native.jsonl",
+          "sha256": "ac19d2f443adc55af768cdb555a4ac93bac397df3f01caed8c9ac61926bd1167"
+        },
+        {
+          "artifact_member": "oom-helper/oom-replacement-engine.json",
+          "sha256": "9c5116ab27239070985f48cc26d9d1c9bad41b1fe598a57b6d181b1df4d3c79a"
+        },
+        {
+          "artifact_member": "oom-helper/postgresql.log",
+          "sha256": "b876eb11e9d8337d104405f44eadc37812cab14d38136ec4802270af0bce26e5"
+        }
+      ],
+      "independent_kernel_record_review": {
+        "exact_cgroup_and_host_pid_match": true,
+        "counter_deltas_recomputed": true,
+        "postgresql_crash_lines": [],
+        "inner_attribution_preserved": "correlated_only",
+        "recovery_ms_scope": "Controller duration includes companion collection, including its existing 30-second PgSleep; not a restart latency benchmark."
+      }
+    }
+  },
+  "native_cpu_and_lexical_evidence": {
+    "status": "separate_review_required",
+    "scope": "This normalizer does not replace the independent native-library/CPU/Tantivy record extraction. Its five successful build steps are not a license, CPU portability or lexical adoption conclusion."
+  },
+  "interpretation": {
+    "counts": "Normal engine 27, child 2, Python 38, and three distinct private guard tests repeated twice are separate test scopes. SQL 20/22/20/26 and pipes 7/8 include repeated common cases; no count measures completed capabilities.",
+    "captured_children": "Named dirty-rebuild, negative-input and public-lifecycle harness passes are bound to this source. Their successful captured JSON is not copied from local runs or inferred from an absent CI artifact.",
+    "source_diagnostics": "Seven bounded superuser-only source groups include inside-SPI cancellation and same-backend retry. This is not production SELECT/RLS authorization or source synchronization.",
+    "disk": "The 32 MiB vector/keyword config-save fault and 384 MiB full-text config-save fault are separate from the no-filler 384 MiB control. The 128 MiB case verifies refusal without writes, not reopen/recovery. Historical 128 MiB SIGBUS failures remain valid evidence.",
+    "oom": "Kernel cgroup/victim records are cross-checked with supplied inner observations. Direct-worker collateral loss and helper containment are experimental outcomes under selected oom_score_adj; not production memory isolation.",
+    "durability": "Flushed fixtures and controller-policy dirty refusal do not establish unflushed WAL replay, power-loss durability, a production generation switch or PostgreSQL/Edge atomicity."
+  },
+  "normalization": {
+    "log_lines": "One-based lines in the complete hashed job log.",
+    "selection": "Named Cargo harness/test records and semantic artifact profiles; no global JSON indices or fixed line ranges.",
+    "removed": "Duplicate disk stderr/stdout and observations; incidental mount device/inode. One random owned PostgreSQL data-directory path replaced by a placeholder. Exact kernel attribution identities retained.",
+    "script_sha256": "e44a6625ea8f5836307ac75c1b98f226c375653c4e3e55947154908fc2052624",
+    "network_or_fault_execution": false
+  },
+  "gates": {
+    "all_54_capabilities_completed": false,
+    "p0_exit_passed": false,
+    "release_supported": false,
+    "production_authorization_verified": false,
+    "production_memory_isolation_verified": false,
+    "dirty_index_production_recovery_verified": false,
+    "unflushed_wal_replay_verified": false,
+    "postgresql_edge_atomicity_verified": false,
+    "power_loss_verified": false,
+    "native_cpu_gate_decided_here": false,
+    "lexical_backend_adopted": false
+  },
+  "reproduction": {
+    "source_revision": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
+    "workflow_url": "https://github.com/JamesbbBriz/pg_qdrant/blob/57c58fcee51efb0067f04b03ffb44e300f76ce72/.github/workflows/p0.yml",
+    "normal_engine": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
+    "real_child": "cargo test --locked -p pg-qdrant-helper --test supervisor_child",
+    "private_guards": "cargo test --locked -p pg-qdrant-edge-probe --features p0-fault-injection --lib oom_probe::tests",
+    "python": "python3 -m unittest discover -s scripts/tests -p 'test_*.py'",
+    "positive_faults": "Use only the exact dedicated disposable containers, guarded mounts and resource limits in the tested workflow."
+  }
+}

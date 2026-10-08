@@ -1,6 +1,8 @@
 # Product and implementation design
 
-Status: proposed design. The repository has no installable extension or implemented SQL API yet. Capability, runtime, platform, and recovery contracts require feasibility testing before release.
+Status: proposed product design, with a verified P0 diagnostic implementation at the recorded Linux/PostgreSQL 17 revision. There is no installable product release, source-table indexing pipeline, or implemented public search/model API. Private, superuser-only feasibility diagnostics have recorded engine and PostgreSQL runtime evidence; they do not establish supported product capabilities. The [P0 report](p0-report.md) identifies tested revisions and remaining product gates.
+
+The optional M0/M1/M2 model milestones, Qdrant-shaped query adapter, and model-management SQL in this document are design requirements, not implemented capabilities. They remain separate from offline BM25 and BYOV core installation requirements. The [54-capability contract](capabilities.md), [stage acceptance](acceptance.md), and [work ledger](work-items.json) retain the existing retrieval and lifecycle scope; this model roadmap does not replace those gates.
 
 See the [project overview](../README.md) for the intended developer experience. This document describes the detailed capability scope, SQL sketches, architecture, consistency rules, and delivery milestones.
 
@@ -42,13 +44,13 @@ Typo tolerance, synonyms, query syntax, proximity, highlighting, and autocomplet
 
 ## Dependencies and upstream upgrades
 
-The design depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. The initial exact-version candidates are Edge `0.8.0` and pgrx/cargo-pgrx `0.19.3`; the combined build has not been validated.
+The implementation depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. Edge `0.8.0`, pgrx/cargo-pgrx `0.19.3`, and Rust `1.96.0` have a locked dependency graph and recorded combined Linux/PostgreSQL 17.11 build and diagnostic runtime evidence. The [version baseline](dependency-baseline.json) and [P0 report](p0-report.md) distinguish the verified current P0 build, retained historical results, and unsupported product/release claims.
 
 Optional model serving uses Rust adapters for [FastEmbed](https://github.com/Anush008/fastembed-rs) and [ONNX Runtime](https://onnxruntime.ai/). These are not required for local BM25 or BYOV retrieval. Their exact versions, native libraries, execution providers, and combined dependency graph must be pinned and validated before a model-enabled package is supported. Model weights and tokenizers have their own licenses and version contracts.
 
 Use released public APIs through an engine adapter. Track tokenizer configuration, model contracts, SQL API versions, and on-disk generations separately from dependency versions. An upstream update must pass capability, quality, authorization, lifecycle, and migration checks before it becomes a supported release.
 
-See the [dependency and upgrade policy](dependencies.md), the [version baseline](dependency-baseline.json), and the [capability coverage contract](capabilities.md). These describe planned dependencies and release gates; there is no compiled dependency graph, Cargo.lock, active update bot, or upgrade CI yet.
+See the [dependency and upgrade policy](dependencies.md), the [version baseline](dependency-baseline.json), and the [capability coverage contract](capabilities.md). The repository now contains Cargo.lock, resolved dependency/features/license inventories, P0 build/runtime CI, and grouped dependency-update configuration. Configuration alone does not prove a bot run or upstream upgrade compatibility. Full capability regressions, index migration, rollback, and distribution review remain release gates.
 
 ## Search plans
 
@@ -92,7 +94,7 @@ Initial configuration uses ordinary SQL, structured options, model references, a
 
 ## Proposed SQL experience
 
-**API sketch, not an executable quickstart.** Function names, settings, and return types remain subject to feasibility testing. Installing extension binaries will be required before `CREATE EXTENSION`; preload and restart requirements are not yet established.
+**API sketch, not an executable quickstart.** Product function names, settings, and return types remain subject to feasibility testing. Installing extension binaries is required before `CREATE EXTENSION`. The current diagnostic prototype has its own documented preload/restart requirements; these do not freeze the eventual product installation contract. See the [prototype instructions](../crates/pg_qdrant/README.md).
 
 ```sql
 CREATE EXTENSION pg_qdrant;
@@ -197,13 +199,13 @@ flowchart TD
     L --> E
 ```
 
-The first process-layout candidate gives each database a managed owner worker. Each index generation has one shard owner; SQL sessions do not independently open the same shard directory.
+The logical owner boundary gives each database a managed owner worker. P0 exercised both direct engine ownership and an engine helper managed by that worker; the same-package helper is the selected route for further integration, as recorded in the [process-boundary ADR](adr/0001-embedded-engine-boundary.md) and [P0 decision](adr/0004-p0-go-no-go.md). Each index generation must have one shard owner; SQL sessions must not independently open the same shard directory. The production catalog, transactional outbox, generation ownership, and optional model runtime shown above remain implementation work.
 
 Engine threads receive owned data and must not use PostgreSQL pointers, memory contexts, or SPI. PostgreSQL-facing work remains on the appropriate process thread. This boundary follows [pgrx's documented threading constraints](https://github.com/pgcentralfoundation/pgrx#caveats--known-issues).
 
 Queues, candidate counts, token matrices, response sizes, engine threads, memory, and execution time need explicit limits. An engine runtime, if required, must be initialized in its owning child process rather than inherited from postmaster initialization.
 
-Worker crash behavior and threaded-engine integration are feasibility gates. A PostgreSQL background worker is not an unconditional fault-isolation guarantee. A packaged Rust helper process remains an alternative if experiments require a stronger process boundary; the intended installation experience remains one managed package.
+Worker crash behavior and threaded-engine integration remain explicit acceptance criteria. Recorded P0 faults killed companion PostgreSQL sessions with the direct worker; the managed engine helper preserved the supervisor and companion sessions in the exercised fault scenarios. This supports the helper choice without establishing unconditional isolation or production resource quotas. The [P0 report](p0-report.md) retains the exact fault, memory, and recovery boundaries. The intended installation experience remains one managed package, with optional model inference validated separately.
 
 Applications are intended to keep using standard PostgreSQL drivers from Rust, Go, Python, JavaScript, or other languages. No language-specific Qdrant client is required for the SQL interface. A pgvector type adapter may be added later; pgvector is not a required engine dependency in the proposed design.
 
@@ -234,7 +236,7 @@ Managed PostgreSQL support is evaluated per provider. Compute/storage separation
 
 ## Roadmap
 
-All milestones below are planned.
+The table defines intended milestone exits. P0 has scoped implementation and recorded evidence, but its full exit remains open. P1–P5 product milestones and optional M0/M1/M2 model milestones are not completed or release-supported. Use the [acceptance checklist](acceptance.md) and [P0 report](p0-report.md) for current status; the table is not a claim that any product API or model adapter exists.
 
 | Milestone | Exit condition |
 | --- | --- |
@@ -250,7 +252,7 @@ All milestones below are planned.
 
 Core search is the first usable milestone. The model track is optional and follows a working retrieval path; it does not make inference or training a prerequisite for basic search. A release supports only the capabilities whose gates have passed.
 
-The initial platform candidate is Linux x86_64 with PostgreSQL 17. The Rust, pgrx, and Edge version combination has not been validated. Other PostgreSQL majors, operating systems, and managed PostgreSQL services are not supported claims at this stage.
+The initial platform candidate is Linux x86_64 with PostgreSQL 17. The pinned Rust/pgrx/Edge combination has recorded diagnostic build/runtime evidence; the explicit native-package and CPU baseline and later source changes require their own current verification. This is not a production platform support declaration. Other PostgreSQL majors, operating systems, and managed PostgreSQL services are not supported claims at this stage. See the [build guide](build.md).
 
 Future benchmark reports should separate retrieval quality from engine efficiency and report model inputs, hardware, candidate budgets, latency, memory, indexing, updates, and recovery. There are no performance claims yet.
 

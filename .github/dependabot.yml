@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      embedded-engine:
+        patterns:
+          - qdrant-edge
+          - charabia
+          - qdrant-rust-stemmers
+      postgres-boundary:
+        patterns:
+          - pgrx
+          - pgrx-*
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1

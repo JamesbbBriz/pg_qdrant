@@ -1,0 +1,204 @@
+"""Exercise wrapper decisions with real, owned child processes; no disk filling."""
+from __future__ import annotations
+
+import copy
+import importlib.util
+import json
+from pathlib import Path
+import signal
+import sys
+import unittest
+
+
+SPEC = importlib.util.spec_from_file_location(
+    "run_disk_probe", Path(__file__).resolve().parents[1] / "run_disk_probe.py")
+assert SPEC and SPEC.loader
+RUNNER = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(RUNNER)
+
+
+class DiskProbeRunnerTest(unittest.TestCase):
+    def run_child(self, source: str, timeout: float = 2) -> dict:
+        return RUNNER.run_probe([sys.executable, "-c", source], timeout=timeout)
+
+    def test_real_success_and_stage_evidence(self) -> None:
+        report = self.run_child(
+            "import sys; "
+            "print('pg_qdrant_p0_stage=completed', file=sys.stderr, flush=True); "
+            "print('{\"kind\":\"edge_enospc_probe\",\"status\":\"passed\"}')")
+        self.assertEqual(report["status"], "passed")
+        self.assertEqual(report["execution"]["returncode"], 0)
+        self.assertEqual(report["execution"]["last_stage"], "completed")
+
+    def test_body_cannot_hide_nonzero_process_exit(self) -> None:
+        report = self.run_child(
+            "print('{\"kind\":\"edge_enospc_probe\",\"status\":\"passed\"}', flush=True); "
+            "raise SystemExit(17)")
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["native_report_status"], "passed")
+        self.assertEqual(report["execution"]["exit_code"], 17)
+
+    def test_selected_fixture_profile_must_match_the_native_report(self) -> None:
+        source = "print('{\"kind\":\"edge_enospc_probe\",\"status\":\"passed\",\"profile\":\"vector_keyword\"}')"
+        command = [sys.executable, "-c", source]
+        matched = RUNNER.run_probe(command, required_profile="vector_keyword")
+        self.assertEqual(matched["status"], "passed")
+        wrong = RUNNER.run_probe(command, required_profile="full_text")
+        self.assertEqual(wrong["status"], "failed")
+        self.assertEqual(wrong["native_report_status"], "passed")
+
+    def test_native_signal_without_json_retains_failure_phase(self) -> None:
+        report = self.run_child(
+            "import os, signal, sys; "
+            "print('pg_qdrant_p0_stage=fixture_create', file=sys.stderr, flush=True); "
+            "os.kill(os.getpid(), signal.SIGTERM)")
+        self.assertEqual(report["status"], "failed")
+        self.assertIsNone(report["native_report_status"])
+        self.assertEqual(report["execution"]["returncode"], -signal.SIGTERM)
+        self.assertEqual(report["execution"]["signal_name"], "SIGTERM")
+        self.assertEqual(report["execution"]["last_stage"], "fixture_create")
+
+    def test_observation_survives_native_signal_without_claiming_recovery(self) -> None:
+        report = self.run_child(
+            "import os, signal, sys; "
+            "print('pg_qdrant_p0_observation={\"stage\":\"before_reopen\",\"free_bytes\":4096}', file=sys.stderr, flush=True); "
+            "os.kill(os.getpid(), signal.SIGTERM)")
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["execution"]["observations"], [{"stage": "before_reopen", "free_bytes": 4096}])
+        self.assertEqual(report["execution"]["observation_errors"], [])
+
+    def test_clean_control_does_not_substitute_for_enospc(self) -> None:
+        command = [sys.executable, "-c", "print('{\"kind\":\"edge_disk_fixture_probe\",\"status\":\"passed\",\"profile\":\"full_text\"}')"]
+        self.assertEqual(RUNNER.run_probe(command, required_profile="full_text")["status"], "failed")
+        self.assertEqual(RUNNER.run_probe(command, required_profile="full_text",
+                                        required_kind="edge_disk_fixture_probe")["status"], "passed")
+
+    def test_not_run_and_wrong_experiment_are_not_passes(self) -> None:
+        for body in [
+            '{"kind":"edge_enospc_probe","status":"not_run"}',
+            '{"kind":"edge_corruption_probe","status":"passed"}',
+        ]:
+            with self.subTest(body=body):
+                self.assertEqual(self.run_child(f"print({body!r})")["status"], "failed")
+        body = ('{"kind":"edge_enospc_probe","status":"not_run",'
+                '"reason":"explicit guard rejection","reason_code":"unsafe_environment"}')
+        guard = self.run_child(f"print({body!r}, flush=True); raise SystemExit(2)")
+        self.assertEqual(guard["status"], "failed")
+        self.assertEqual(guard["native_report_reason"], "explicit guard rejection")
+        self.assertEqual(guard["reason_code"], "unsafe_environment")
+
+    def test_timeout_preserves_output_without_guessing_exit_signal(self) -> None:
+        report = self.run_child(
+            "import sys, time; "
+            "print('pg_qdrant_p0_stage=fill', file=sys.stderr, flush=True); "
+            "time.sleep(10)", timeout=0.2)
+        self.assertEqual(report["status"], "failed")
+        self.assertTrue(report["execution"]["timed_out"])
+        self.assertIsNone(report["execution"]["returncode"])
+        self.assertIsNone(report["execution"]["signal_name"])
+        self.assertEqual(report["execution"]["last_stage"], "fill")
+
+    def test_timeout_parses_observations_before_truncating_display_tail(self) -> None:
+        report = self.run_child(
+            "import sys, time; "
+            "print('pg_qdrant_p0_stage=before_reopen', file=sys.stderr, flush=True); "
+            "print('pg_qdrant_p0_observation={\"stage\":\"before_reopen\",\"free_bytes\":4096}', file=sys.stderr, flush=True); "
+            "print('x'*9000, file=sys.stderr, flush=True); time.sleep(10)", timeout=0.2)
+        self.assertEqual(report["status"], "failed")
+        self.assertTrue(report["execution"]["timed_out"])
+        self.assertTrue(report["execution"]["stderr_tail_truncated"])
+        self.assertEqual(report["execution"]["last_stage"], "before_reopen")
+        self.assertEqual(report["execution"]["observations"], [{"stage": "before_reopen", "free_bytes": 4096}])
+
+
+class FullTextCapacityRefusalTest(unittest.TestCase):
+    def fixture(self):
+        refusal = RUNNER.FULL_TEXT_CAPACITY_REFUSAL
+        body = {"kind": RUNNER.CAPACITY_REFUSAL_KIND, "status": "passed", "profile": "full_text",
+                "observed_capacity_bytes": RUNNER.REFUSED_FULL_TEXT_BYTES,
+                "required_capacity_bytes": RUNNER.FULL_TEXT_BYTES, "expected_refusal": refusal,
+                "disk_writes_attempted": False, "engine_open_attempted": False, "filler_created": False,
+                "enospc_verified": False, "recovery_verified": False,
+                "entry_refusals": {"enospc_exit_code": 2, "clean_error": refusal,
+                    "enospc": {"kind": "edge_enospc_probe", "profile": "full_text", "status": "not_run",
+                               "reason_code": "unsafe_environment", "reason": refusal,
+                               "disk_writes_attempted": False}}}
+        empty = {"status": "observed", "filesystem": {"type": "tmpfs",
+                 "capacity_bytes": RUNNER.REFUSED_FULL_TEXT_BYTES,
+                 "free_bytes": RUNNER.REFUSED_FULL_TEXT_BYTES, "available_bytes": RUNNER.REFUSED_FULL_TEXT_BYTES},
+                 "mount_identity": {"device": 17, "inode": 1},
+                 "storage": {"files": 0, "directories": 0, "logical_bytes": 0, "allocated_bytes": 0}}
+        return body, empty
+
+    def child(self, body, extra=""):
+        stages = "capacity_refusal_guard guard capacity_refusal_completed".split()
+        code = ("import sys; "
+                + "; ".join(f"print({(RUNNER.STAGE_PREFIX+stage)!r}, file=sys.stderr, flush=True)" for stage in stages)
+                + f"; print({json.dumps(body)!r}, flush=True); " + extra)
+        return RUNNER.run_probe([sys.executable, "-c", code], timeout=2,
+                                required_profile="full_text", required_kind=RUNNER.CAPACITY_REFUSAL_KIND)
+
+    def test_exact_refusal_requires_both_entry_paths_and_zero_write_evidence(self):
+        body, empty = self.fixture()
+        parsed = self.child(body)
+        self.assertEqual(RUNNER.validate_capacity_refusal(parsed, empty, empty)["status"], "passed")
+        for path, value in [
+            (["expected_refusal"], "arbitrary rejection"), (["required_capacity_bytes"], 128*1024*1024),
+            (["entry_refusals", "clean_error"], "unrelated error"),
+            (["entry_refusals", "enospc", "reason_code"], "missing_mount"),
+            (["entry_refusals", "enospc", "status"], "passed"),
+            (["entry_refusals", "enospc_exit_code"], 0),
+            (["disk_writes_attempted"], True), (["engine_open_attempted"], True),
+            (["enospc_verified"], True), (["recovery_verified"], True),
+            (["entry_refusals"], None), (["entry_refusals", "enospc"], []),
+        ]:
+            with self.subTest(path=path):
+                changed = copy.deepcopy(body)
+                parent = changed
+                for key in path[:-1]: parent = parent[key]
+                parent[path[-1]] = value
+                report = self.child(changed)
+                self.assertEqual(RUNNER.validate_capacity_refusal(report, empty, empty)["status"], "failed")
+        for path, value in [(["status"], "observation_failed"), (["storage", "files"], 1),
+                            (["storage", "directories"], 1), (["storage", "allocated_bytes"], 4096),
+                            (["mount_identity", "inode"], 2), (["filesystem", "free_bytes"], 0)]:
+            changed = copy.deepcopy(empty)
+            parent = changed
+            for key in path[:-1]: parent = parent[key]
+            parent[path[-1]] = value
+            report = self.child(body)
+            self.assertEqual(RUNNER.validate_capacity_refusal(report, empty, changed)["status"], "failed")
+
+    def test_capacity_characterization_never_accepts_crash_nonzero_or_not_run(self):
+        body, empty = self.fixture()
+        for extra in ["raise SystemExit(2)", "import os, signal; os.kill(os.getpid(), signal.SIGBUS)"]:
+            with self.subTest(extra=extra):
+                # Disable core dumps before the synthetic child signal. No Edge
+                # process, mapped fixture, tmpfs allocation or filling is used.
+                extra = "import resource; resource.setrlimit(resource.RLIMIT_CORE, (0,0)); " + extra
+                parsed = self.child(body, extra)
+                self.assertEqual(RUNNER.validate_capacity_refusal(parsed, empty, empty)["status"], "failed")
+        body["status"] = "not_run"
+        self.assertEqual(RUNNER.validate_capacity_refusal(self.child(body), empty, empty)["status"], "failed")
+        body["status"] = "failed"
+        self.assertEqual(RUNNER.validate_capacity_refusal(self.child(body), empty, empty)["status"], "failed")
+
+    def test_capacity_characterization_cannot_substitute_for_native_success(self):
+        body, _ = self.fixture()
+        command = [sys.executable, "-c", f"print({json.dumps(body)!r})"]
+        for kind in ["edge_enospc_probe", "edge_disk_fixture_probe"]:
+            self.assertEqual(RUNNER.run_probe(command, required_profile="full_text", required_kind=kind)["status"], "failed")
+
+    def test_readonly_observer_keeps_profile_specific_fixed_bounds(self):
+        for profile, allowed, refused in [
+            ("vector_keyword", [1, 32*1024*1024, 64*1024*1024], [0, 64*1024*1024+1, RUNNER.FULL_TEXT_BYTES]),
+            ("full_text", [128*1024*1024, RUNNER.FULL_TEXT_BYTES], [0, RUNNER.FULL_TEXT_BYTES+1]),
+            ("full_text_128_capacity_refusal", [RUNNER.REFUSED_FULL_TEXT_BYTES], [0, 64*1024*1024, RUNNER.FULL_TEXT_BYTES]),
+        ]:
+            for capacity in allowed: self.assertTrue(RUNNER.observation_capacity_allowed(profile, capacity))
+            for capacity in refused: self.assertFalse(RUNNER.observation_capacity_allowed(profile, capacity))
+        self.assertFalse(RUNNER.observation_capacity_allowed("unknown", 1))
+
+
+if __name__ == "__main__":
+    unittest.main()

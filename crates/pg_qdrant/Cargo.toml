@@ -1,0 +1,30 @@
+[package]
+name = "pg_qdrant"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.96"
+license = "AGPL-3.0-only"
+description = "PostgreSQL integration feasibility probes for embedded Qdrant Edge"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["pg17"]
+pg17 = ["pgrx/pg17"]
+# Private disposable-cluster experiments. Never enabled in a release build.
+p0-fault-injection = ["pg-qdrant-edge-probe/p0-fault-injection"]
+# Separate P0 comparison. The direct PostgreSQL-worker experiment stays default.
+p0-managed-helper = []
+
+[dependencies]
+pgrx = { version = "=0.19.3", default-features = false, features = ["cshim"] }
+pg-qdrant-edge-probe = { path = "../edge-probe" }
+pg-qdrant-protocol = { path = "../pg_qdrant-protocol" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+libc = "=0.2.189"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

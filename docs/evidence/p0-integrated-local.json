@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "kind": "p0_integrated_local_validation",
+  "observed_on": "2026-10-08",
+  "base_revision": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+  "source_scope": "Recorded integration snapshot after identity/recheck, private OOM and fixed full-text capacity changes. File hashes identify inputs; current commit is not asserted to contain these pending changes.",
+  "environment": {
+    "platform": "Linux x86_64",
+    "rust": "1.96.0",
+    "pgrx": "0.19.3",
+    "postgresql_headers": "17.11",
+    "cargo_build_jobs": 2,
+    "incremental_build_cache_used": true,
+    "timings_are_not_benchmarks": true
+  },
+  "reproduction": {
+    "directory": "repository root at the recorded input snapshot",
+    "native_setup": "docs/build.md",
+    "PGRX_PG_CONFIG_PATH": "matching PostgreSQL17.11 pg_config",
+    "LIBCLANG_PATH": "installed libclang directory",
+    "CFLAGS_and_BINDGEN_EXTRA_CLANG_ARGS": "matching system and PostgreSQL native include paths; no machine-specific path is a project contract"
+  },
+  "source_inputs": [
+    {
+      "path": ".github/workflows/p0.yml",
+      "sha256": "6d415ac1007235448bbd2f4e59360e9dc4954163bef1331dd55b0f80d16c6b14"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+    },
+    {
+      "path": "Dockerfile.p0",
+      "sha256": "2f919e77bfa3eb5e96e20dff452f83900bcdd56be8d3b362e670c4bc38f982a7"
+    },
+    {
+      "path": "crates/edge-probe/Cargo.toml",
+      "sha256": "99118fc920d732fb569bc002276fcce78f06115505356b4b9591afaebdb0a066"
+    },
+    {
+      "path": "crates/edge-probe/src/api_inventory.rs",
+      "sha256": "4a269bb84608a28a6ee054b9ca68c1f7c24c6420621c43c165c1958a302a1fad"
+    },
+    {
+      "path": "crates/edge-probe/src/fault_probes.rs",
+      "sha256": "b9226f9d214066b29e034f945003b950262fad7805ea8c64f472177672df0b94"
+    },
+    {
+      "path": "crates/edge-probe/src/lib.rs",
+      "sha256": "69225e0f83f661a35c4b55faf139f1eb7fdc2deff0e532b7af12e6db211571cf"
+    },
+    {
+      "path": "crates/edge-probe/src/main.rs",
+      "sha256": "7ddb09d79f8abd0aeb0d0ceda3047489702932cb3e1bfc0c11c347a3e1844a7c"
+    },
+    {
+      "path": "crates/edge-probe/src/oom_probe.rs",
+      "sha256": "836726ff37758912c67dbef0e24ba45485dd2ce11456fd03e94c6f7fe24ff8d6"
+    },
+    {
+      "path": "crates/edge-probe/tests/advanced.rs",
+      "sha256": "9026d7f7d4b836b6d0433c5585229d261b902769e5c19ff2758a232dce50f093"
+    },
+    {
+      "path": "crates/edge-probe/tests/faults.rs",
+      "sha256": "f3900b6ab3bb8033fcde3a8da3d318b41e51427c9007477669b7d91e12a690d7"
+    },
+    {
+      "path": "crates/edge-probe/tests/lexical.rs",
+      "sha256": "79341c5a15a01f6457a173b98f81941b162a9ee2de8dcdc0484d754d7d8e3225"
+    },
+    {
+      "path": "crates/edge-probe/tests/lifecycle.rs",
+      "sha256": "22cf73f77660882aa85d813c5988fcb5d6323bbc9664898bc0b05897d7f5f0a2"
+    },
+    {
+      "path": "crates/edge-probe/tests/persistence.rs",
+      "sha256": "006e71319eb123f9f35290d692b0d387d84c63e1efe069b5b3f4fa212988fc15"
+    },
+    {
+      "path": "crates/edge-probe/tests/public_lifecycle.rs",
+      "sha256": "a859c4182a201ca69f3202339f33b8878c4c69a42e6e7d64d95048931bf29412"
+    },
+    {
+      "path": "crates/edge-probe/tests/schema.rs",
+      "sha256": "65e1fc5c0b0c82ef433daae020e5ed5c1754205a8e5555c67c86a6e5f0c71c21"
+    },
+    {
+      "path": "crates/pg_qdrant/Cargo.toml",
+      "sha256": "5f717b6eaa3fd711bb65780aef4e391713d8c6e37ea64f98144fb47ef480e5eb"
+    },
+    {
+      "path": "crates/pg_qdrant/pg_qdrant.control",
+      "sha256": "9cdf35094b23a4b4eb8690337fa099e58bf79069c329e5ea66118f571c3595eb"
+    },
+    {
+      "path": "crates/pg_qdrant/src/formats.rs",
+      "sha256": "db230bbc34ec2e6069cbba43c210269f48685cfe86febb3e4d80845d640761b3"
+    },
+    {
+      "path": "crates/pg_qdrant/src/helper.rs",
+      "sha256": "9fdce7a421d44319ab06541783de02e63e2414d79c38c710da099811fc351c78"
+    },
+    {
+      "path": "crates/pg_qdrant/src/helper_child.rs",
+      "sha256": "ec051fa5efdd319debcb2b1dc74add0390dc0cf9e30a4eef08c0cca23ac41c9f"
+    },
+    {
+      "path": "crates/pg_qdrant/src/identity.rs",
+      "sha256": "0d862451a4f5219c6d75f807de42abc6493660d9233193e214e60be1db35483b"
+    },
+    {
+      "path": "crates/pg_qdrant/src/ipc.rs",
+      "sha256": "ebb1491f4b1d2677d5eb1018580fd84d96cc84a8396cd985b1dca8e91c315d4e"
+    },
+    {
+      "path": "crates/pg_qdrant/src/lib.rs",
+      "sha256": "0d1bfa059aa24129906eeebce8af35aac1d1c77acd149b1aa58948acd9d2089a"
+    },
+    {
+      "path": "crates/pg_qdrant/src/recheck.rs",
+      "sha256": "bcd64c70bcae18a8f75204c359c6d927324e7a7b3636dbc4c09d88ee49154259"
+    },
+    {
+      "path": "crates/pg_qdrant/src/worker.rs",
+      "sha256": "f6f7656d3ef2ed53708f830f061aa63292962fd5a8a701a870372acb65944733"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/run-faults.sh",
+      "sha256": "a92309e293e0924476a5a1fa5ce39ebe4235842cea78512d9f37aaa00c2aff0a"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/run-oom.sh",
+      "sha256": "803eb48b42d03149a9ce4616691fa577ee5fbf95db69af132958f7384f0560b7"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/run-p0.sh",
+      "sha256": "76f308ce2968de8dfc14fefe7ba84db4ecb7d052b49bc6a1dc3959f0f5702622"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/verify_formats.py",
+      "sha256": "60dd04ab77837b751daca0ec88adc85c193a007640a84d3499f36c412fbb2b0d"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/verify_oom.py",
+      "sha256": "9f5832965a2b41ac33454d0aeb0e344c7ac526f62a5c5e9e74be442ba4cdbee0"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/verify_p0.py",
+      "sha256": "e9256ac2d814dbeba8a93aaeb2ebbb9b008f418a665cfd71d7ab9f1c14600035"
+    },
+    {
+      "path": "crates/pg_qdrant/tests/verify_source.py",
+      "sha256": "1152af82be2a9e7153fecf39a31f0e77ae82f90c099fd3606790d7ab167c39f8"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/Cargo.toml",
+      "sha256": "c1cca09fe0b0d590b93942ce03b29814da88071b6ec9151e7ac89a95d4be020c"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/src/main.rs",
+      "sha256": "606c5b05728bcf8f8a19b6202f63a910bdcb83e31dbf0d2de882140f6ebe866d"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/tests/probe.py",
+      "sha256": "57a1f95eb4268cbd210f586ccec7a2b1ea7d46c040c86b6b2810c5c5d92c8907"
+    },
+    {
+      "path": "crates/pg_qdrant-helper/tests/supervisor_child.rs",
+      "sha256": "2e3bc074a1d05849a161e8923320fb2813e22d358069744d92eb3f98c354cd54"
+    },
+    {
+      "path": "crates/pg_qdrant-protocol/Cargo.toml",
+      "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
+    },
+    {
+      "path": "crates/pg_qdrant-protocol/src/lib.rs",
+      "sha256": "c33ed27c20d85740815579e0d538552d54967939823009aa1d31e1d4ad452f0e"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+    },
+    {
+      "path": "scripts/check_contracts.py",
+      "sha256": "1cc5b420c10314a0e94a2f78a97b07a2bb86385022dd169334246dc3948981e8"
+    },
+    {
+      "path": "scripts/dependency_report.py",
+      "sha256": "f3b6d281fbe0300f14a37e14b174e8a657211c0459d99c8a8cab12d3673725b7"
+    },
+    {
+      "path": "scripts/run_disk_probe.py",
+      "sha256": "d41eafc41a09392a011c755e4c606acb3d868f6af62d13782eff20545ddeeffa"
+    },
+    {
+      "path": "scripts/run_oom_container.py",
+      "sha256": "3da87c464b963d72e335e9ee841bb24f1670e70ebc9371d3cfe9d2f8a6cd097c"
+    },
+    {
+      "path": "scripts/tests/test_disk_probe_runner.py",
+      "sha256": "ca59ee2ac807c1627f56bf85bc85d4293754ab5fe4599bd76861c19eae0d8156"
+    },
+    {
+      "path": "scripts/tests/test_oom_container.py",
+      "sha256": "df4ce41c1a7c3a360adac1bf31f1dfd49c5ea5b1c03cd3fd63e06405a785356f"
+    }
+  ],
+  "commands": [
+    {
+      "name": "engine-normal",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "pg-qdrant-edge-probe",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 34.27,
+      "log_sha256": "ff07d905b545e383d317356e873799c99497b6ae7e4963ebe7c57d2df62b26e0",
+      "tests_passed": 23,
+      "tests_failed": 0,
+      "tests_ignored": 0,
+      "test_names": [
+        "tests::actual_edge_smoke",
+        "fault_probes::capacity_tests::fixed_full_text_capacity_refuses_every_other_budget",
+        "fault_probes::capacity_tests::vector_keyword_capacity_retains_its_original_bound",
+        "advanced_vector_queries_reject_wrong_dimensions_without_fallback",
+        "q04_recommendation_strategies_have_distinct_exact_scores",
+        "q05_discover_and_context_apply_the_published_pair_semantics",
+        "q06_feedback_changes_the_scores_with_an_explicit_contract",
+        "q07_root_mmr_is_bounded_and_preserves_original_similarity_scores",
+        "q08_formula_uses_prefetched_scores_payload_defaults_and_real_errors",
+        "q10_order_by_and_random_sample_obey_filters_and_candidate_domains",
+        "capacity_refusal_characterization_rejects_missing_or_unsafe_mounts_without_writes",
+        "disk_fixture_clean_reopen_without_filling",
+        "full_text_fixture_clean_reopen_without_filling",
+        "metadata_corruption_and_unsafe_disk_environment_are_rejected",
+        "bm25_and_payload_analysis_remain_independent_until_both_are_configured",
+        "phrase_preserves_array_and_field_boundaries_while_text_and_spans_values",
+        "unicode_scalar_lengths_and_long_token_prefix_truncation_are_explicit",
+        "conditional_mutations_and_partial_updates_survive_flush_reopen",
+        "selective_reads_scroll_facets_and_matrix_obey_the_fixture_filter",
+        "explicit_flush_survives_sigkill_without_drop",
+        "public_lifecycle_runs_only_in_bounded_owned_children",
+        "dynamic_dense_sparse_names_and_filtered_vector_deletion_survive_reopen",
+        "payload_index_create_delete_preserves_records_and_filtered_queries_after_reopen"
+      ]
+    },
+    {
+      "name": "oom-negative-final",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "pg-qdrant-edge-probe",
+        "--features",
+        "p0-fault-injection",
+        "--lib",
+        "oom_probe::tests"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.406,
+      "log_sha256": "7589c20953ee457b9182efcdfbcea187ad554380031f90ed7de78a769dee3b99",
+      "tests_passed": 3,
+      "tests_failed": 0,
+      "tests_ignored": 0,
+      "test_names": [
+        "oom_probe::tests::nonce_refuses_paths_and_ambiguous_values_without_native_execution",
+        "oom_probe::tests::altered_container_limits_fail_before_allocation",
+        "oom_probe::tests::counters_are_keyed_and_malformed_evidence_is_rejected"
+      ]
+    },
+    {
+      "name": "direct-normal-final",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.651,
+      "log_sha256": "122a792e0ad32ef66e3500c9b2a00ce1bd34fdc265a47517fc1b97ad0b42e465"
+    },
+    {
+      "name": "direct-private-final",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17,p0-fault-injection"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.351,
+      "log_sha256": "28a6f3d37cf90a7b4882c1d9c37f8cc06abe21655dbc9dda5f38f0ad52d73a54"
+    },
+    {
+      "name": "helper-normal-final",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17,p0-managed-helper"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.517,
+      "log_sha256": "c3182c9668ad7d180c125e490dc452adcee0e8cd60ab10d8b6157f8522ddcb20"
+    },
+    {
+      "name": "helper-private-final",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17,p0-managed-helper,p0-fault-injection"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.375,
+      "log_sha256": "28a6f3d37cf90a7b4882c1d9c37f8cc06abe21655dbc9dda5f38f0ad52d73a54"
+    },
+    {
+      "name": "helper-binary-normal",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg-qdrant-helper"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.374,
+      "log_sha256": "d4c090d52b0e54dc3722c69752a368e40e14f2f5007c98f5ba0106df0b7c9a3c"
+    },
+    {
+      "name": "helper-binary-private",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg-qdrant-helper",
+        "--features",
+        "p0-fault-injection"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.087,
+      "log_sha256": "a4c0ada91f59465d5bd49be137c6698a425bfafeb063a06daf143b5b83bfba09"
+    }
+  ],
+  "python": {
+    "command": "python3 -m unittest discover -s scripts/tests -p 'test_*.py'",
+    "passed": 21,
+    "failed": 0,
+    "errors": 0,
+    "log_sha256": "6aa0ef45391a44ede558dea923776869a13c2b3d00cd7f6459f2d563cf60d191",
+    "scope": "Owned synthetic child processes and parser/guard tests; no positive Edge disk filling or OOM"
+  },
+  "scope_limits": {
+    "postgresql_checks_only": true,
+    "new_postgresql_sql_executed": false,
+    "new_link_or_install_verified": false,
+    "source_recheck_sql_groups_authored": 6,
+    "source_recheck_sql_groups_executed": 0,
+    "positive_oom_executed": false,
+    "dedicated_128_capacity_refusal_executed": false,
+    "full_text_384_tmpfs_executed": false,
+    "dirty_index_recovery_verified": false,
+    "new_source_capture_or_search_implemented": false,
+    "p0_exit_passed": false,
+    "release_supported": false
+  },
+  "earlier_linked_source_evidence": "p0-source-recheck-local.json",
+  "last_complete_recorded_sql_evidence": "p0-capacity-and-sql-ci.json"
+}

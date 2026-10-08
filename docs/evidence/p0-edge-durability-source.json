@@ -1,0 +1,385 @@
+{
+  "schema_version": 1,
+  "kind": "p0_edge_durability_source_audit",
+  "observed_on": "2026-10-08",
+  "project_base_revision": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
+  "crate": {
+    "name": "qdrant-edge",
+    "version": "0.8.0",
+    "registry_archive_sha256": "0b8072302c87506a34bffec9bc16dbdcd36df8ab1321406b6e141530348c7e54",
+    "registry": "crates.io",
+    "source_api_scope": "Published crate and public exports; implementation source read without importing private/internal APIs"
+  },
+  "capability_ids": [
+    "L01",
+    "L02",
+    "L03",
+    "L04",
+    "L05",
+    "L06",
+    "L07",
+    "L10",
+    "L11",
+    "L12"
+  ],
+  "evidence_level": "source/API-reviewed",
+  "sources": [
+    {
+      "id": "crate_root",
+      "path": "src/lib.rs",
+      "sha256": "d47a1116a8195647f6b8d48c736c48adba9aef75202d8ce9a14ed557b6f6733a",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/lib.rs"
+    },
+    {
+      "id": "exports",
+      "path": "src/edge/reexports.rs",
+      "sha256": "e55d3ec968fcfbc6092c121e82d33ea982f82ed198b5c47254874ac125fcb755",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/reexports.rs",
+      "verified_excerpt": {
+        "line": 88,
+        "text": "pub use crate::wal::WalOptions;"
+      }
+    },
+    {
+      "id": "update",
+      "path": "src/edge/edge_shard/update.rs",
+      "sha256": "a3811395984f3c2fcc52b67da0def1c679d975b63ab3e7f1393de5820b2bbf85",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/update.rs",
+      "verified_excerpt": {
+        "line": 31,
+        "text": "let operation_id = wal.write(&record).map_err(service_error)?;"
+      }
+    },
+    {
+      "id": "edge_lifecycle",
+      "path": "src/edge/edge_shard/mod.rs",
+      "sha256": "e3dd9b41b20ced8b5565432fb28241bd6a97a8b49f9ce8d6f5e5d3851f3e0191",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/mod.rs",
+      "verified_excerpt": {
+        "line": 260,
+        "text": "self.segments.read().flush_all(FlushMode::Sync, true)?;"
+      }
+    },
+    {
+      "id": "serde_wal",
+      "path": "src/shard/wal.rs",
+      "sha256": "67e87b69ee9ae5a5df7163167ca6f23d627df73519325db29adc8ed00ed30e57",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/shard/wal.rs",
+      "verified_excerpt": {
+        "line": 219,
+        "text": "pub fn ack(&mut self, until_index: u64) -> Result<()> {"
+      }
+    },
+    {
+      "id": "wal",
+      "path": "src/wal/mod.rs",
+      "sha256": "d47bc47286b14c6ebf7b26f0306e1c266810b16215211ca0f2706af2e544194b",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/wal/mod.rs",
+      "verified_excerpt": {
+        "line": 310,
+        "text": "pub fn flush_open_segment(&mut self) -> Result<()> {"
+      }
+    },
+    {
+      "id": "wal_segment",
+      "path": "src/wal/segment.rs",
+      "sha256": "25f644d8e35e0bdf126e4e0b7920d410791b2c57251570da2183117c1d801ab2",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/wal/segment.rs",
+      "verified_excerpt": {
+        "line": 373,
+        "text": "self.index.push((offset + HEADER_LEN, entry.len()));"
+      }
+    },
+    {
+      "id": "segment_flush",
+      "path": "src/shard/segment_holder/flush.rs",
+      "sha256": "2d3c4ef28730244bbd28bde4403276f6f7067eaf56f7a6daf7015acd1a685a8c",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/shard/segment_holder/flush.rs",
+      "verified_excerpt": {
+        "line": 32,
+        "text": "pub fn flush_all(&self, mode: FlushMode, force: bool) -> OperationResult<SeqNumberType> {"
+      }
+    },
+    {
+      "id": "segment_persistence",
+      "path": "src/segment/segment/entry.rs",
+      "sha256": "2236709e3c4e74eb83762149217e8fe355ed6898375874b305e1b900cac06d24",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/segment/entry.rs",
+      "verified_excerpt": {
+        "line": 532,
+        "text": "id_tracker_versions_flusher()"
+      }
+    },
+    {
+      "id": "segment_repair",
+      "path": "src/segment/segment/segment_ops.rs",
+      "sha256": "1a9b93d87088ef0ae8f97cf94b24a49517e98c1cff7b2c2acab5d3d25b4ee6c1",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/segment/segment_ops.rs",
+      "verified_excerpt": {
+        "line": 778,
+        "text": "pub fn check_consistency_and_repair(&mut self) -> OperationResult<()> {"
+      }
+    },
+    {
+      "id": "segment_load",
+      "path": "src/segment/segment_constructor/segment_constructor_base/segment.rs",
+      "sha256": "e4f807f251d7309d62db447b5ff9bc9f3b32f6464ebb0543753176f268579525",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/segment_constructor/segment_constructor_base/segment.rs",
+      "verified_excerpt": {
+        "line": 154,
+        "text": "let segment_state = Segment::load_state(path)?;"
+      }
+    },
+    {
+      "id": "snapshots",
+      "path": "src/edge/edge_shard/snapshots.rs",
+      "sha256": "3e182f53cd126e9fb8b2e50f77ccc634418f27a28c26acefbc2354307d5d5b87",
+      "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/snapshots.rs",
+      "verified_excerpt": {
+        "line": 63,
+        "text": "EdgeShard::load(shard_path, None)"
+      }
+    }
+  ],
+  "inspection": {
+    "entry_points": [
+      "EdgeShard::update",
+      "EdgeShard::flush",
+      "EdgeShard::load",
+      "EdgeShard::drop",
+      "EdgeShard::recover_partial_snapshot",
+      "WalOptions"
+    ],
+    "edge_rust_file_count": 74,
+    "edge_rust_inventory_sha256": "aaa25b4b131bd17cb956934867e54252d8290275480c3f197b6f25a4bc469ba6",
+    "inventory_algorithm": "SHA-256 of lexicographically sorted lines: package-relative path, TAB, file SHA-256, LF; include src/edge/**/*.rs",
+    "negative_findings_scope": "Fixed published package only; complete Edge entry-point call paths plus public export inspection. No inference about Qdrant Server or another release."
+  },
+  "findings": [
+    {
+      "id": "update_not_durable_ack",
+      "status": "source_verified",
+      "claim": "EdgeShard::update appends a record, applies an operation and returns unit without an explicit flush or public durable cursor; an apply error can follow the append.",
+      "sources": [
+        "update"
+      ],
+      "line_ranges": {
+        "update": [
+          14,
+          89
+        ]
+      }
+    },
+    {
+      "id": "append_not_durable_flush",
+      "status": "source_verified",
+      "claim": "WAL append writes mapped record bytes; segment append does not guarantee durability before flush. Rollover can flush internally.",
+      "sources": [
+        "serde_wal",
+        "wal",
+        "wal_segment"
+      ],
+      "line_ranges": {
+        "serde_wal": [
+          107,
+          112
+        ],
+        "wal": [
+          267,
+          318
+        ],
+        "wal_segment": [
+          331,
+          376
+        ]
+      }
+    },
+    {
+      "id": "explicit_flush_boundary",
+      "status": "source_verified",
+      "claim": "Public flush invokes WAL flush then synchronous forced segment flush, discarding the returned persisted sequence. Drop also attempts flush.",
+      "sources": [
+        "edge_lifecycle",
+        "serde_wal",
+        "segment_flush"
+      ],
+      "line_ranges": {
+        "edge_lifecycle": [
+          243,
+          272
+        ],
+        "serde_wal": [
+          260,
+          267
+        ],
+        "segment_flush": [
+          24,
+          143
+        ]
+      }
+    },
+    {
+      "id": "load_has_no_logical_replay",
+      "status": "source_verified",
+      "claim": "The inspected Edge load path opens WAL and segments but does not iterate and apply WAL operation records. Log structure recovery is distinct from logical application.",
+      "sources": [
+        "edge_lifecycle",
+        "serde_wal",
+        "wal",
+        "wal_segment"
+      ],
+      "line_ranges": {
+        "edge_lifecycle": [
+          110,
+          168
+        ],
+        "serde_wal": [
+          77,
+          105
+        ],
+        "wal": [
+          123,
+          263
+        ],
+        "wal_segment": [
+          238,
+          303
+        ]
+      }
+    },
+    {
+      "id": "load_can_mutate",
+      "status": "source_verified",
+      "claim": "Edge load persists resolved configuration and checks/repairs loaded segments; repair can delete mappingless points and flush changes. Preserve dirty artifacts before diagnostic load.",
+      "sources": [
+        "edge_lifecycle",
+        "segment_repair",
+        "segment_load"
+      ],
+      "line_ranges": {
+        "edge_lifecycle": [
+          110,
+          459
+        ],
+        "segment_repair": [
+          778,
+          807
+        ],
+        "segment_load": [
+          109,
+          172
+        ]
+      }
+    },
+    {
+      "id": "versions_are_separate",
+      "status": "source_verified",
+      "claim": "Segment load uses persisted state and format compatibility handling; point/segment versions are flushed after mappings, vectors and payloads. These are not PostgreSQL revision/incarnation contracts.",
+      "sources": [
+        "segment_load",
+        "segment_persistence"
+      ],
+      "line_ranges": {
+        "segment_load": [
+          109,
+          172
+        ],
+        "segment_persistence": [
+          402,
+          570
+        ]
+      }
+    },
+    {
+      "id": "no_public_replay_cursor_or_reclamation",
+      "status": "source_verified",
+      "claim": "The reviewed public exports and EdgeShard methods provide no logical WAL replay, durable operation cursor, WAL acknowledgment or reclamation API. WalOptions exposes sizing/precreation/retention only.",
+      "sources": [
+        "crate_root",
+        "exports",
+        "edge_lifecycle",
+        "wal",
+        "serde_wal"
+      ],
+      "line_ranges": {
+        "exports": [
+          74,
+          94
+        ],
+        "wal": [
+          24,
+          46
+        ],
+        "serde_wal": [
+          213,
+          243
+        ]
+      }
+    },
+    {
+      "id": "wal_growth_gate",
+      "status": "source_verified",
+      "claim": "No Edge path invokes SerdeWal::ack or WAL prefix truncation. retain_closed applies to truncation; segment sizing/retention is not an automatic total disk cap.",
+      "sources": [
+        "edge_lifecycle",
+        "update",
+        "serde_wal",
+        "wal"
+      ],
+      "line_ranges": {
+        "serde_wal": [
+          213,
+          243
+        ],
+        "wal": [
+          403,
+          444
+        ]
+      }
+    },
+    {
+      "id": "snapshot_not_replay_alternative",
+      "status": "source_verified",
+      "claim": "Partial snapshot recovery moves/deletes target content then calls the same EdgeShard::load; it does not add a logical WAL replay step.",
+      "sources": [
+        "snapshots"
+      ],
+      "line_ranges": {
+        "snapshots": [
+          19,
+          64
+        ]
+      }
+    }
+  ],
+  "proposed_integration": {
+    "status": "unimplemented",
+    "ack_boundary": "One serialized owner applies an exact committed PostgreSQL event set, explicitly flushes successfully, then commits ACKs for those events and generation in PostgreSQL.",
+    "event_id_watermark_allowed": false,
+    "dirty_generation_ready_after_load_allowed": false,
+    "preserve_unclean_artifacts": true,
+    "recovery_candidates": [
+      "Fresh generation from PostgreSQL source/configuration/stable identity metadata/retained compatible BYOV plus catch-up",
+      "Proven clean checkpoint plus complete retained PostgreSQL history restored/replayed into a new validated generation"
+    ],
+    "limits": "Outbox replay requires deterministic version-arbitrated operations and a validated base; pending events alone cannot repair arbitrary partial state or reconstruct all older acknowledged data."
+  },
+  "open_gates": [
+    "L04 public persistence/replay/load/reclamation contract",
+    "L05 durable source capture, exact-set ACK and idempotent replay",
+    "Dirty marker/flush/ACK crash ordering",
+    "Unclean generation readiness, reconstruction and rollback",
+    "Total WAL growth and supported reclamation",
+    "Supported platform storage durability including power loss if promised",
+    "Independent backup/PITR/replication/failover contracts",
+    "P0 go/no-go and full 54-capability acceptance"
+  ],
+  "new_runtime_experiment_executed": false,
+  "unflushed_replay_verified": false,
+  "power_loss_verified": false,
+  "postgresql_edge_atomicity_verified": false,
+  "integration_implemented": false,
+  "p0_exit_passed": false,
+  "release_supported": false,
+  "adr": "../adr/0003-edge-durability-and-recovery.md"
+}

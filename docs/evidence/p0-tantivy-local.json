@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "kind": "p0_isolated_tantivy_local_evidence",
+  "observed_on": "2026-10-08",
+  "base_revision": "88885db08d17c074af097ddca14bc85d6978980c",
+  "source_scope": "Isolated experiment additions, identified by input hashes; not a core extension dependency or combined Edge/PG build.",
+  "environment": {
+    "platform": "Linux x86_64",
+    "rust": "1.96.0",
+    "profile": "dev, debug info disabled",
+    "build_jobs": 2,
+    "package_selection": 109,
+    "performance_benchmark": false
+  },
+  "inputs": {
+    "experiments/tantivy-probe/Cargo.toml": "b13931cab314ef9563542f71ac6baf1ee4013587ed1cf70cb9d8c467f43c461f",
+    "experiments/tantivy-probe/Cargo.lock": "682510ef1ea440b46198830c47b0d6e13b5a2c18ae63c9263f9e4ab592421e50",
+    "experiments/tantivy-probe/src/main.rs": "7a5b02ff84f712beb04745e5ecf1da08a51cd544a59ec2d9e459401e0e463182",
+    "experiments/tantivy-probe/inventory.py": "711206da61f1cb7c5112f588b35172cdaa2f2594d253ecd4e5b5a1be26b8f8d6",
+    "experiments/tantivy-probe/dependency-inventory.json": "11c9a781c6aed45aedfffec48721629ddc4dac40a3ec6372d2c4095f4ad581dc"
+  },
+  "fixed_source_inputs": {
+    "tantivy-0.26.2/Cargo.toml": "2d2add9e851b9b6279c85c19fd56e51013bf7e822e2d3fac132290d777d3a488",
+    "tantivy-0.26.2/src/query/fuzzy_query.rs": "a37e737893b9ee483c927e2e7db6b540c5e127d2cc463327379c899223a4d03c",
+    "tantivy-0.26.2/src/query/automaton_weight.rs": "bf00a85712e0bcc1bd219df0f5e9b780dd4583e1b0d4d776600cc8ab925bc522",
+    "tantivy-0.26.2/src/query/phrase_query/phrase_query.rs": "74fb5880b381da11a238f934879466dff81345d5b765b3b58bf8b51e318935c8",
+    "tantivy-0.26.2/src/postings/postings_writer.rs": "cc2d1e706d8513739bb96eb166709b2fb624ee42aac4a6bf3e4aa044620712c3",
+    "tantivy-0.26.2/src/snippet/mod.rs": "7b2bda5b56fa47489f99253138fef66be62f71297f797ac4195aed70a97fdd94",
+    "levenshtein_automata-0.2.1/src/lib.rs": "8339ed9f2db4fe94675658373a61213c7b70afe8a70a58192242149aca509f4c",
+    "levenshtein_automata-0.2.1/src/dfa.rs": "539822f35de1cfbc4c1ebdd965c7dc322f5f64074678bde8a56c0344a5cc71b9",
+    "tantivy-fst-0.5.0/src/lib.rs": "e6180ba2708fcaa1279695b87ea91d997936a55bb20cd65f3c291da7cc38aaf9"
+  },
+  "commands": {
+    "build": "cargo build --locked --manifest-path experiments/tantivy-probe/Cargo.toml",
+    "run": "timeout 45s cargo run --locked --manifest-path experiments/tantivy-probe/Cargo.toml",
+    "inventory": "python3 experiments/tantivy-probe/inventory.py --check"
+  },
+  "build": {
+    "exit_code": 0,
+    "elapsed_reported_seconds": 2.89,
+    "warm_dependency_cache": true,
+    "log_sha256": "22b737ba612454489f45ab7449a055b51e46e0e73c1f790a9850e71165339455"
+  },
+  "execution": {
+    "returncode": 0,
+    "elapsed_seconds": 0.32357749699804117,
+    "stdout_bytes": 2461,
+    "stderr_bytes": 0
+  },
+  "stdout_sha256": "d1588a08066a3a6dc730ea4ad7ee1ac513e914bf1b77a2a90d6312c239456ae8",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "execution_envelope": {
+    "process_timeout_seconds": 45,
+    "process_cpu_limit_seconds": 30,
+    "core_dumps_disabled": true,
+    "note": "Actual run invoked the built executable under a Python subprocess deadline; the documented timeout command is its ordinary reproduction path."
+  },
+  "report": {
+    "cases": [
+      {
+        "case": "fuzzy_and_identifier",
+        "distance_3": "rejected_at_query_execution",
+        "edit_distances": [
+          0,
+          1,
+          2
+        ],
+        "keyword_equality_case_sensitive": true,
+        "passed": true,
+        "production_identifier_policy": false,
+        "transposition_costs_distinguished": true,
+        "whole_token_and_prefix_distinguished": true
+      },
+      {
+        "authorization_security_proven": false,
+        "case": "fuzzy_budget_boundary",
+        "distinct_matching_fixture_terms": 40,
+        "enumeration_work_measured": false,
+        "matched_documents": 40,
+        "native_expansion_cap": null,
+        "native_fuzzy_score": 1.0,
+        "passed": true,
+        "production_fuzzy_budget_satisfied": false,
+        "public_dictionary_bridge": {
+          "diary_expansions": [
+            "dairy",
+            "diary"
+          ],
+          "match_set_equivalence": true,
+          "maximum_returned_terms": 32,
+          "overflow": "error_without_partial_results",
+          "ranking_equivalence": false
+        },
+        "tenant_a_matches": 20,
+        "top_docs_limit": 1
+      },
+      {
+        "case": "phrase_and_parser",
+        "explicit_conjunction": "AND",
+        "multi_value_phrase_not_matched_at_slop_0": true,
+        "parser_default": "OR",
+        "passed": true,
+        "production_array_boundary_satisfied": false,
+        "project_query_grammar_implemented": false,
+        "slop_0_ids": [
+          1,
+          4
+        ],
+        "slop_1_crosses_repeated_field_values": true,
+        "slop_1_ids": [
+          1,
+          2,
+          4,
+          9
+        ],
+        "slop_2_admits_reversal": true,
+        "slop_2_ids": [
+          1,
+          2,
+          3,
+          4,
+          9
+        ],
+        "tenant_filtered_phrase_ids": [
+          1
+        ],
+        "unknown_field_and_malformed_quote": "rejected"
+      },
+      {
+        "case": "source_snippet_boundaries",
+        "chinese_segmentation_parity": false,
+        "fragment_utf8_byte_range": [
+          33,
+          41
+        ],
+        "fuzzy_highlights": [],
+        "fuzzy_match_ids": [
+          5,
+          6
+        ],
+        "fuzzy_visited_terms": 0,
+        "literal_fragment": "ＣＡＦÉ café café <tag> & recovery",
+        "literal_html_escaped": true,
+        "original_array_element_identity": null,
+        "passed": true,
+        "production_fuzzy_highlighting": false,
+        "repeated_values_joined": "transaction recovery",
+        "source_offset_mapping_for_general_fragments": false
+      },
+      {
+        "case": "replacement_and_reader_boundary",
+        "commit_does_not_reload_manual_reader": true,
+        "crash_recovery_verified": false,
+        "old_searcher_pins_previous_view": true,
+        "passed": true,
+        "postgres_or_dual_engine_transaction": false,
+        "repeated_delete_add_live_source_ids": 1,
+        "writer_rollback_retains_committed_replacement": true
+      }
+    ],
+    "combined_edge_pg_build_verified": false,
+    "core_dependency_adopted": false,
+    "default_features": false,
+    "f13_f20_completed": false,
+    "features": [
+      "mmap",
+      "lz4-compression"
+    ],
+    "fixture_kind": "small_synthetic_semantic_controls",
+    "held_out_relevance_evaluation": false,
+    "kind": "isolated_tantivy_public_api_probe",
+    "production_authorization": false,
+    "schema_version": 1,
+    "status": "passed",
+    "tantivy_version": "0.26.2",
+    "writer_memory_budget_bytes": 15000000,
+    "writer_threads": 1
+  },
+  "retained_failed_expectation": {
+    "iteration": "initial local fixture expectation, not a product acceptance pass",
+    "exit_code": 101,
+    "stderr_sha256": "7c35c8e5be0c9df506cf62e6d8b42c5fda58df24d4e62b881f88f999e3f59de8",
+    "finding": "Slop one matched repeated-value source ID9 as well as IDs1,2,4; the initial expectation excluded9.",
+    "fixed_source_explanation": "Tantivy0.26.2 postings_writer.rs defines POSITION_GAP=1.",
+    "decision": "Characterize the native behavior while keeping production_array_boundary_satisfied=false; do not lower the product boundary requirement.",
+    "initial_source_revision_not_independently_hashed": true
+  },
+  "scope_limits": {
+    "core_dependency_adopted": false,
+    "pg_search_comparison_run": false,
+    "full_analysis_parity": false,
+    "hard_fuzzy_enumeration_bound": false,
+    "production_permissions": false,
+    "dual_engine_lifecycle": false,
+    "held_out_relevance_quality": false,
+    "all_f13_f20_completed": false,
+    "p0_exit_passed": false,
+    "release_supported": false
+  }
+}

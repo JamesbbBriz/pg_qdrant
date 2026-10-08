@@ -1,0 +1,537 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_engine_evidence",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "rust": "1.96.0"
+  },
+  "source_inputs": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+    },
+    {
+      "path": "crates/edge-probe/Cargo.toml",
+      "sha256": "cf6109fc8f380c82b97f26985249d5b4430e9cd5483a7a6e426404cf95a9bbc2"
+    },
+    {
+      "path": "crates/edge-probe/src/api_inventory.rs",
+      "sha256": "4a269bb84608a28a6ee054b9ca68c1f7c24c6420621c43c165c1958a302a1fad"
+    },
+    {
+      "path": "crates/edge-probe/src/lib.rs",
+      "sha256": "7d67856d3c1bfd88ed031f0eea86cef6e6042197d13efcd9da9a21c7afd70d35"
+    },
+    {
+      "path": "crates/edge-probe/src/main.rs",
+      "sha256": "fe2a94ee4d0efa97cc783dce9467261e8b3623898d8a4c1aee17dd858818e971"
+    },
+    {
+      "path": "crates/edge-probe/src/fault_probes.rs",
+      "sha256": "299ce4c5dfb0b0fe96f77717ef64918b7ae1b256c5114f9461f3c7b39c065df3"
+    },
+    {
+      "path": "crates/edge-probe/tests/persistence.rs",
+      "sha256": "006e71319eb123f9f35290d692b0d387d84c63e1efe069b5b3f4fa212988fc15"
+    },
+    {
+      "path": "crates/edge-probe/tests/faults.rs",
+      "sha256": "e079caab0fd906243744302518dcd5c2b3cf14da56ef8671d2fc5715ee738ed2"
+    },
+    {
+      "path": "crates/edge-probe/tests/advanced.rs",
+      "sha256": "9026d7f7d4b836b6d0433c5585229d261b902769e5c19ff2758a232dce50f093"
+    },
+    {
+      "path": "crates/edge-probe/tests/lifecycle.rs",
+      "sha256": "22cf73f77660882aa85d813c5988fcb5d6323bbc9664898bc0b05897d7f5f0a2"
+    },
+    {
+      "path": "crates/edge-probe/tests/schema.rs",
+      "sha256": "65e1fc5c0b0c82ef433daae020e5ed5c1754205a8e5555c67c86a6e5f0c71c21"
+    }
+  ],
+  "commands": [
+    {
+      "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
+      "exit_code": 0,
+      "tests_passed": 15,
+      "tests_failed": 0,
+      "tests_ignored": 0,
+      "scope": [
+        "actual_edge_smoke",
+        "advanced_vector_queries_reject_wrong_dimensions_without_fallback",
+        "q04_recommendation_strategies_have_distinct_exact_scores",
+        "q05_discover_and_context_apply_the_published_pair_semantics",
+        "q06_feedback_changes_the_scores_with_an_explicit_contract",
+        "q07_root_mmr_is_bounded_and_preserves_original_similarity_scores",
+        "q08_formula_uses_prefetched_scores_payload_defaults_and_real_errors",
+        "q10_order_by_and_random_sample_obey_filters_and_candidate_domains",
+        "disk_fixture_clean_reopen_without_filling",
+        "metadata_corruption_and_unsafe_disk_environment_are_rejected",
+        "conditional_mutations_and_partial_updates_survive_flush_reopen",
+        "selective_reads_scroll_facets_and_matrix_obey_the_fixture_filter",
+        "explicit_flush_survives_sigkill_without_drop",
+        "dynamic_dense_sparse_names_and_filtered_vector_deletion_survive_reopen",
+        "payload_index_create_delete_preserves_records_and_filtered_queries_after_reopen"
+      ]
+    },
+    {
+      "command": "target/debug/pg-qdrant-edge-probe",
+      "exit_code": 0,
+      "scope": [
+        "16 synthetic engine check groups"
+      ]
+    },
+    {
+      "command": "target/debug/pg-qdrant-edge-probe --corruption-probe",
+      "exit_code": 0,
+      "scope": [
+        "malformed owned metadata rejection and intact-copy recovery"
+      ]
+    },
+    {
+      "command": "target/debug/pg-qdrant-edge-probe --disk-fixture-probe",
+      "exit_code": 0,
+      "scope": [
+        "safe clean reopen of the disk-specific vector/keyword fixture; no disk filling"
+      ]
+    }
+  ],
+  "smoke_report": {
+    "schema_version": 1,
+    "engine": "qdrant-edge",
+    "engine_version": "0.8.0",
+    "kind": "synthetic_engine_smoke",
+    "status": "passed",
+    "elapsed_ms": 2226,
+    "fixture_points": 8,
+    "search_threads": 2,
+    "checks": [
+      {
+        "name": "payload_index_and_scoped_count",
+        "capabilities": [
+          "Q11",
+          "Q12",
+          "L01",
+          "L02"
+        ],
+        "status": "passed",
+        "detail": {
+          "points": 7,
+          "global_document_total": null
+        }
+      },
+      {
+        "name": "offline_bm25",
+        "capabilities": [
+          "F01",
+          "V02",
+          "Q14"
+        ],
+        "status": "passed",
+        "detail": {
+          "hits": 3,
+          "idf_corpus": "tenant a",
+          "encoder": "EdgeBm25",
+          "tokenizer": "multilingual",
+          "stemming": "disabled",
+          "stopwords": "empty"
+        }
+      },
+      {
+        "name": "named_dense_exact",
+        "capabilities": [
+          "V01",
+          "Q01"
+        ],
+        "status": "passed",
+        "detail": {
+          "leader": 1,
+          "score": 1.0,
+          "distance": "dot",
+          "exact_domain": "authorized fixture points"
+        }
+      },
+      {
+        "name": "supplied_sparse",
+        "capabilities": [
+          "F02",
+          "V02"
+        ],
+        "status": "passed",
+        "detail": {
+          "hits": 2,
+          "model": "synthetic test values",
+          "inference": false,
+          "idf": "disabled"
+        }
+      },
+      {
+        "name": "weighted_rrf",
+        "capabilities": [
+          "Q02",
+          "Q03"
+        ],
+        "status": "passed",
+        "detail": {
+          "leader": 1,
+          "score": 1.1666667461395264,
+          "formula": "sum(1 / ((zero_based_position + 1) / weight + k - 1))",
+          "k": 2
+        }
+      },
+      {
+        "name": "dbsf",
+        "capabilities": [
+          "Q03"
+        ],
+        "status": "passed",
+        "detail": {
+          "leader": 1,
+          "score": 1.3295536041259766,
+          "scope": "prefetch distributions",
+          "golden_scores_checked": 7,
+          "variance": "sample (n-1)"
+        }
+      },
+      {
+        "name": "dbsf_degenerate_distributions",
+        "capabilities": [
+          "Q03"
+        ],
+        "status": "passed",
+        "detail": {
+          "singleton_score": 0.5,
+          "constant_score": 0.5,
+          "empty_branch": "no contribution",
+          "all_empty": "no hits",
+          "tie_order_asserted": false
+        }
+      },
+      {
+        "name": "maxsim_nested_prefetch",
+        "capabilities": [
+          "V03",
+          "Q01",
+          "Q02"
+        ],
+        "status": "passed",
+        "detail": {
+          "leader": 1,
+          "score": 2.0,
+          "candidate_budget": 3,
+          "global_exact_top_k": false
+        }
+      },
+      {
+        "name": "text_and_or",
+        "capabilities": [
+          "F06"
+        ],
+        "status": "passed",
+        "detail": {
+          "and": [
+            1,
+            2
+          ],
+          "or": [
+            1,
+            2,
+            5
+          ]
+        }
+      },
+      {
+        "name": "boolean_exclusion",
+        "capabilities": [
+          "F07",
+          "Q12"
+        ],
+        "status": "passed",
+        "detail": {
+          "matches": [
+            1
+          ],
+          "policy": "tenant AND terms AND NOT excluded SKU"
+        }
+      },
+      {
+        "name": "phrase_in_all_retrieval_branches",
+        "capabilities": [
+          "F08",
+          "Q02",
+          "Q03",
+          "Q12"
+        ],
+        "status": "passed",
+        "detail": {
+          "matches": [
+            1
+          ],
+          "phrase_matching": true
+        }
+      },
+      {
+        "name": "distinct_token_and_keyword_prefix",
+        "capabilities": [
+          "F09",
+          "F10",
+          "F11"
+        ],
+        "status": "passed",
+        "detail": {
+          "token_prefix": "tran",
+          "keyword_prefix": "PG-",
+          "keyword_case_sensitive": true
+        }
+      },
+      {
+        "name": "chinese_offline_smoke",
+        "capabilities": [
+          "F01",
+          "F04",
+          "F05"
+        ],
+        "status": "passed",
+        "detail": {
+          "required_match": 6,
+          "quality_benchmark": false
+        }
+      },
+      {
+        "name": "authorized_document_groups",
+        "capabilities": [
+          "Q09"
+        ],
+        "status": "passed",
+        "detail": {
+          "documents": 3,
+          "first_document_chunks": 2,
+          "source_hydration": "authorized HasId query"
+        }
+      },
+      {
+        "name": "explicit_analyzer_defaults",
+        "capabilities": [
+          "F04"
+        ],
+        "status": "passed",
+        "detail": {
+          "bm25_default_stems": true,
+          "neutral_policy_stems": false,
+          "full_offset_parity_verified": false
+        }
+      },
+      {
+        "name": "flush_close_reopen",
+        "capabilities": [
+          "L01",
+          "L04"
+        ],
+        "status": "passed",
+        "detail": {
+          "explicit_flush": true,
+          "abrupt_crash_test": false,
+          "wal_replay_claim": false
+        }
+      }
+    ],
+    "sql_integration_verified": false,
+    "release_supported": false,
+    "unverified": [
+      "P0 crash/kill/OOM/disk-full isolation",
+      "complete analyzer/offset parity",
+      "real multilingual relevance evaluation",
+      "F13-F20 product experience",
+      "quantization/MRL/visual/explore",
+      "PostgreSQL transactions and permissions",
+      "old-version migrations and rollback",
+      "hard in-flight cancellation"
+    ]
+  },
+  "supplemental_persistence_test": {
+    "explicit_flush": true,
+    "child_termination": "SIGKILL",
+    "clean_drop_before_termination": false,
+    "reopened_checks": [
+      "point count",
+      "payload revision",
+      "four named representations",
+      "authorized contiguous phrase",
+      "learned sparse scores",
+      "MaxSim scores",
+      "offline BM25"
+    ],
+    "unflushed_wal_replay_verified": false,
+    "power_loss_verified": false,
+    "postgres_atomicity_verified": false
+  },
+  "quality_benchmark": false,
+  "postgres_integration_verified": false,
+  "p0_exit_passed": false,
+  "release_supported": false,
+  "supplemental_corruption_test": {
+    "schema_version": 1,
+    "engine_version": "0.8.0",
+    "kind": "edge_corruption_probe",
+    "status": "passed",
+    "sql_integration_verified": false,
+    "release_supported": false,
+    "oom_verified": false,
+    "power_loss_verified": false,
+    "cases": [
+      {
+        "target": "edge_config.json",
+        "load": "error",
+        "ready": false,
+        "error": "Service runtime error: IO Error: Failed to deserialize <owned-probe>/edge_config.json: EOF while parsing a value at line 1 column 27"
+      },
+      {
+        "target": "segments/<owned-segment>/segment.json",
+        "load": "error",
+        "ready": false,
+        "error": "Service runtime error: failed to load segment <owned-probe>/segments/8f36d80e-6014-45fc-b237-9a23a3cf2a67: Service runtime error: Failed to read segment state <owned-probe>/segments/8f36d80e-6014-45fc-b237-9a23a3cf2a67 error: Failed to deserialize <owned-probe>/segments/8f36d80e-6014-45fc-b237-9a23a3cf2a67/segment.json: EOF while parsing a value at line 1 column 27"
+      }
+    ],
+    "recovery": {
+      "source": "separate explicitly flushed image",
+      "records": 8,
+      "all_representation_records_equal": true,
+      "phrase_and_maxsim_queries": "passed",
+      "original_unchanged": true
+    },
+    "scope": "malformed JSON metadata only; no arbitrary bit-rot detection or in-place repair claim"
+  },
+  "positive_enospc_verified": false,
+  "postgresql_diagnostic_evidence": "p0-regression-ci.json",
+  "supplemental_disk_fixture_test": {
+    "schema_version": 1,
+    "engine_version": "0.8.0",
+    "kind": "edge_disk_fixture_probe",
+    "status": "passed",
+    "sql_integration_verified": false,
+    "release_supported": false,
+    "oom_verified": false,
+    "power_loss_verified": false,
+    "fixture": {
+      "points": 8,
+      "named_representations": [
+        "dense",
+        "bm25",
+        "learned",
+        "tokens"
+      ],
+      "wal_segment_capacity_bytes": 65536,
+      "payload_on_disk": true,
+      "dense_and_token_on_disk": true,
+      "keyword_indexes": [
+        "tenant",
+        "document",
+        "sku"
+      ],
+      "text_indexes": [],
+      "storage_scope": "cold payload/vectors and mutable keyword indexes; no text indexes",
+      "excluded_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes"
+    },
+    "recovery": {
+      "explicit_flush": "passed",
+      "reopen": "passed",
+      "records": 8,
+      "all_representation_records_equal": true,
+      "keyword_tenant_and_maxsim_queries": "passed",
+      "phrase_query": "not_tested"
+    },
+    "storage_observations": {
+      "created_and_flushed": {
+        "files": 67,
+        "logical_bytes": 220534047,
+        "allocated_bytes": 258048,
+        "mapping_rss_kib": 204,
+        "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+      },
+      "reopened": {
+        "files": 67,
+        "logical_bytes": 220534047,
+        "allocated_bytes": 258048,
+        "mapping_rss_kib": 16024,
+        "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+      }
+    },
+    "enospc_verified": false,
+    "filler_created": false,
+    "scope": "clean disk-specific fixture reopen only; full mutable text indexes are excluded"
+  },
+  "enospc_with_mutable_text_indexes_verified": false,
+  "historical_enospc_failure_evidence": [
+    "p0-helper-ci.json",
+    "p0-disk-ci.json"
+  ],
+  "local_regression_scope": "All 15 engine tests passed after integrating the public API, advanced query, mutation/schema and full-text guard changes. The two disk profiles were refused on ordinary host storage and without the dedicated environment. Full-text ENOSPC remains pending the separate bounded container experiment.",
+  "supplemental_advanced_tests": {
+    "tests_passed": 7,
+    "fixture_points": 6,
+    "search_threads": 2,
+    "maximum_candidates": 8,
+    "capabilities": [
+      "Q04",
+      "Q05",
+      "Q06",
+      "Q07",
+      "Q08",
+      "Q10",
+      "Q12"
+    ],
+    "scope": [
+      "Exact analytical scores for recommendation, discovery/context and feedback on supplied synthetic dot-product vectors",
+      "Root MMR selection, original similarity scores and bounded prefetched candidate domains",
+      "Formula candidate scope, score/payload defaults and typed input errors",
+      "Integer ordering and authorized sample membership; no random-distribution claim",
+      "Wrong-dimension rejection in advanced vector inputs"
+    ],
+    "observed_contracts": {
+      "root_mmr_returns_vectors_despite_false_projection": true,
+      "sql_adapter_must_strip_unrequested_vectors": true,
+      "leaf_prefetch_mmr_lowering": "source-reviewed only; no runtime assertion"
+    },
+    "sql_integration_verified": false,
+    "quality_benchmark": false
+  },
+  "supplemental_lifecycle_and_schema_tests": {
+    "tests_passed": 4,
+    "capabilities": [
+      "L01",
+      "L02",
+      "L04",
+      "Q10",
+      "Q11",
+      "Q12",
+      "V01",
+      "V02"
+    ],
+    "scope": [
+      "Conditional upsert modes, payload mutation, vector mutation and idempotent point deletion",
+      "Mid-update and final explicit flush/reopen with exact record comparisons",
+      "Retrieve projection, bounded scroll completion, point count, point-based document-field facets over the fixture filter, and exact matrix scores",
+      "Payload-index creation over existing records, deletion and reopen",
+      "Named dense/sparse schema creation, same-config replay, conflicting schema rejection, filtered vector deletion and global schema deletion"
+    ],
+    "permission_scope": "Explicit fixture predicates only; no PostgreSQL authorization claim",
+    "unflushed_wal_replay_verified": false,
+    "cross_version_migration_verified": false
+  },
+  "positive_enospc_verification_scope": "No disk-filling experiment ran locally. The separate historical CI run in p0-regression-ci.json verified only the narrow vector/keyword configuration-save fixture.",
+  "verified_source_commit": "77f9ecca11ede76e42ba197e294b177ea865d830",
+  "record_scope": "Historical 15-test local checkpoint and earlier standalone reports; later source changes are recorded separately.",
+  "superseding_local_evidence": "p0-engine-extended.json"
+}
