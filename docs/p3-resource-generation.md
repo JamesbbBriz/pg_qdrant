@@ -39,6 +39,27 @@ and prevents cutover without claiming to interrupt a running native call.
 Management task IDs are distinct from change-ticket IDs. Task operations
 require the index owner; starting a build additionally requires source SELECT.
 
+Cancelling a committed build queues cleanup of its owned shadow without changing
+the serving generation. A failed build keeps its original error and outcome;
+cleanup has separate `abandoned_cleanup_state`, `abandoned_storage_cleanup`,
+`abandoned_pending_epochs` and `abandoned_cleanup_error` fields. The helper
+finishes any active native call before retiring its references. Exact flush and
+retirement receipts are required; a logical cancellation alone cannot report
+physical cleanup.
+
+```sql
+SELECT qdrant.cancel_task('returned-build-task-uuid');
+SELECT qdrant.await_task('returned-build-task-uuid', 60000, true);
+```
+
+The three-argument wait additionally waits for cleanup of a cancelled/failed
+shadow or a successful build's superseded generation. A cancelled result stays
+`state=cancelled`, `succeeded=false`, even when cleanup completes. Cleanup failure
+returns its separate failure status; a timeout sets both `timed_out` and
+`cleanup_timed_out`. Owner/snapshot/uncommitted-task rules still apply. Archived
+build cleanup belongs to its returned drop task. A build cancelled in its
+creation transaction never allocates native storage.
+
 ## Transactional index removal
 
 `qdrant.drop_index(name)` returns a distinct drop task. Source triggers and the
@@ -84,14 +105,23 @@ directory removal and refusal to reopen or mutate a retired epoch.
 owner admission, forged receipts, same-name replacement, archived task outcomes,
 40 native create/drop cycles, unrelated directory preservation and actual helper
 SIGKILL with explicit failed cleanup and usable fresh registration.
+`verify_abandoned.py` exercises 40 actually flushed shadow builds followed by
+cancellation and physical retirement while the serving generation stays bound,
+plus rollback, stopped-helper timeout, forged receipts, owner/snapshot rejection,
+unstarted cancellation and archived cleanup outcomes. A fault-build-only error
+after actual native point mutations and before flush produces no event receipts;
+the same owner retires that failed shadow while preserving the original failure.
+A fresh build then switches successfully and cleans superseded serving storage.
+This injected error is separate from the actual SIGKILL and storage/OOM tests.
 
 Rebuilding currently requires a trusted, capture-enabled source with completed
 backfill and a ready serving generation. It does not repair disabled capture,
 rescan changed schemas, change model/analyzer contracts or migrate disk formats.
-Failed/cancelled shadow directories remain retained while the index exists;
-index removal queues known owned epochs. Uncertain old epochs are retained.
+Same-owner failed/cancelled shadows now retire while the index remains registered.
+Index removal transfers remaining owned epochs into its cleanup task. Uncertain
+old epochs are retained and cannot be reported as cleaned.
 The helper's 32-open-shard limit and 256-retirement-receipt limit remain bounded
-capacity constraints; disk/RSS admission and failed-build cleanup remain open.
+capacity constraints; disk/RSS admission and old-owner orphan reclamation remain open.
 
 The protocol resource validators and narrower SQL limits do not establish full
 native memory/thread/optimization budgets. Backup/PITR/replication, format

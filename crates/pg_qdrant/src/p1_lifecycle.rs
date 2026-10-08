@@ -25,6 +25,11 @@ pgrx::extension_sql_file!(
     requires = ["p1_native_generations"]
 );
 pgrx::extension_sql_file!(
+    "../sql/abandoned.sql",
+    name = "p1_abandoned_generations",
+    requires = ["p1_native_retirements"]
+);
+pgrx::extension_sql_file!(
     "../sql/management.sql",
     name = "p1_management",
     requires = ["p1_transaction_capture"]

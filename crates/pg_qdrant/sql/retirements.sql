@@ -68,7 +68,7 @@ BEGIN
  WHERE h.index_id=i.index_id AND j.retired_state IS DISTINCT FROM 'cleaned' ON CONFLICT DO NOTHING;
  INSERT INTO qdrant_internal.drop_epochs(drop_task,native_task,generation,storage_epoch,consumer_id,engine_instance)
  SELECT t,j.task_id,j.generation,j.storage_epoch,j.consumer_id,j.engine_instance FROM qdrant_internal.generation_reservations j
- WHERE j.index_id=i.index_id AND j.engine_instance IS NOT NULL
+ WHERE j.index_id=i.index_id AND j.engine_instance IS NOT NULL AND j.abandoned_state<>'cleaned'
    AND NOT EXISTS(SELECT 1 FROM qdrant_internal.generation_reservations later WHERE later.index_id=i.index_id
      AND later.retired_generation=j.generation AND later.retired_epoch=j.storage_epoch)
  ON CONFLICT DO NOTHING;
@@ -77,7 +77,7 @@ BEGIN
  FROM qdrant_internal.generation_reservations WHERE index_id=i.index_id AND retired_state<>'cleaned'
    AND retired_engine_instance IS NOT NULL ON CONFLICT DO NOTHING;
  INSERT INTO qdrant_internal.task_archive(task_id,owner_oid,status)
- SELECT j.task_id,i.owner_oid,qdrant_internal.rebuild_task_status(j.task_id)||jsonb_build_object(
+ SELECT j.task_id,i.owner_oid,qdrant.task_status(j.task_id)||jsonb_build_object(
    'state',CASE WHEN j.state IN ('succeeded','failed','cancelled') THEN j.state ELSE 'cancelled' END,
    'completed',true,'error',CASE WHEN j.state IN ('succeeded','failed','cancelled') THEN j.last_error ELSE 'index_dropped' END,
    'drop_task',t,'logical_index_removed',true) FROM qdrant_internal.generation_reservations j WHERE j.index_id=i.index_id;

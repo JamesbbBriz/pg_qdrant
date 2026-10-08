@@ -93,7 +93,7 @@ LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; changed bigint;
 BEGIN
  SELECT idx.* INTO STRICT i FROM qdrant_internal.index_catalog idx JOIN qdrant_internal.generation_reservations j
-   ON j.index_id=idx.index_id WHERE j.task_id=p_task FOR NO KEY UPDATE OF idx NOWAIT;
+   ON j.index_id=idx.index_id WHERE j.task_id=p_task FOR KEY SHARE OF idx NOWAIT;
  PERFORM qdrant_internal.require_index(i.index_name,true);
  UPDATE qdrant_internal.generation_reservations SET state='cancelled',updated_at=clock_timestamp()
  WHERE task_id=p_task AND state IN ('building','catching_up','dirty');
