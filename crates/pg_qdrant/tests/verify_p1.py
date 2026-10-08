@@ -368,7 +368,10 @@ if faults:
 for fixture in ['p3_reservations.sql','p4_advanced.sql']:
     fixture_result=subprocess.run(PSQL+['-f','/src/crates/pg_qdrant/tests/'+fixture],text=True,capture_output=True,timeout=20)
     assert fixture_result.returncode==0,(fixture,fixture_result.stderr)
-checks += ['retained P3 reservations and P4 shape validators (no native execution claim)']
+checks += ['transactional P3 task admission/cancellation and retained P4 shape validators']
+
+import verify_generations
+verify_generations.run(sql,ready,spawn,finish,wait_session,ticket_from,native_hits,verify_model_replay,checks,faults,crash_matrix)
 
 # Restart the actual fsync-enabled PostgreSQL cluster with committed ACKs and
 # a committed pending event. Historical ACKs cannot authorize a new helper.

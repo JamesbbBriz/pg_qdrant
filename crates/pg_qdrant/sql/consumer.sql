@@ -6,7 +6,7 @@ LANGUAGE sql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
    storage_epoch=gen_random_uuid(),consumer_id=gen_random_uuid(),engine_instance=excluded.engine_instance,state='building',last_error=NULL
 $$;
 
-CREATE FUNCTION qdrant_internal.next_batch(p_instance text) RETURNS jsonb
+CREATE FUNCTION qdrant_internal.next_source_batch(p_instance text) RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; c qdrant_internal.consumer_state%ROWTYPE; events jsonb;
 BEGIN
@@ -49,7 +49,7 @@ BEGIN
  ) v;
  UPDATE qdrant_internal.consumer_state SET state='dirty',updated_at=clock_timestamp()
  WHERE index_name=i.index_name;
- RETURN jsonb_build_object('source_contract_version',3,'index_id',i.index_id,'generation',i.generation,
+ RETURN jsonb_build_object('source_contract_version',4,'index_id',i.index_id,'generation',i.generation,
    'representations',coalesce((SELECT jsonb_object_agg(name,contract) FROM qdrant_internal.representation_catalog WHERE index_name=i.index_name),'{}'::jsonb),
    'storage_epoch',c.storage_epoch,'consumer_id',c.consumer_id,'events',events);
 END $$;
@@ -58,6 +58,14 @@ CREATE FUNCTION qdrant_internal.ack_batch(p_batch jsonb) RETURNS void
 LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; c qdrant_internal.consumer_state%ROWTYPE;
 BEGIN
+ IF coalesce((p_batch->>'retire')::boolean,false) THEN
+   PERFORM qdrant_internal.ack_retirement_batch(p_batch);
+   RETURN;
+ END IF;
+ IF p_batch->>'task_id' IS NOT NULL THEN
+   PERFORM qdrant_internal.ack_generation_batch(p_batch);
+   RETURN;
+ END IF;
  SELECT * INTO i FROM qdrant_internal.index_catalog WHERE index_id=(p_batch->>'index_id')::bigint FOR NO KEY UPDATE SKIP LOCKED;
  IF NOT FOUND THEN RETURN; END IF;
  SELECT * INTO STRICT c FROM qdrant_internal.consumer_state WHERE index_name=i.index_name FOR UPDATE;

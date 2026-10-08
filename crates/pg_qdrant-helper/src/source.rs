@@ -24,6 +24,7 @@ pub struct SourceOwner {
     root: PathBuf,
     shards: HashMap<String, SourceShard>,
     encoder: EdgeBm25,
+    retired: HashMap<String, (String, Option<String>)>,
 }
 
 fn error(e: impl std::fmt::Display) -> ProbeError {
@@ -56,6 +57,7 @@ impl SourceOwner {
             root,
             shards: HashMap::new(),
             encoder: EdgeBm25::new(config).map_err(error)?,
+            retired: HashMap::new(),
         })
     }
 
@@ -72,6 +74,55 @@ impl SourceOwner {
             })
         {
             return Err(ProbeError::invalid("source batch exceeds bounds"));
+        }
+        if batch.retire {
+            if !batch.events.is_empty()
+                || !batch.representations.is_empty()
+                || batch.task_id.is_none()
+            {
+                return Err(ProbeError::invalid("retirement contains mutation data"));
+            }
+            if let Some(receipt) = self.retired.get(&key) {
+                if receipt != &(batch.consumer_id.clone(), batch.task_id.clone()) {
+                    return Err(error("retirement receipt identity mismatch"));
+                }
+                return Ok(
+                    json!({"source_contract_version":SOURCE_CONTRACT_VERSION,"generation":batch.generation,
+                    "storage_epoch":batch.storage_epoch,"consumer_id":batch.consumer_id,"task_id":batch.task_id,
+                    "event_ids":[],"flushed":true,"retired":true}),
+                );
+            }
+            if self.retired.len() >= 256 {
+                return Err(error("retirement receipt cache is full; restart required"));
+            }
+            let owned = self
+                .shards
+                .get(&key)
+                .ok_or_else(|| error("retired generation is not owned"))?;
+            owned.shard.flush().map_err(error)?;
+            let path = self.root.join(&key);
+            let metadata = std::fs::symlink_metadata(&path).map_err(error)?;
+            if metadata.file_type().is_symlink()
+                || !metadata.is_dir()
+                || path.canonicalize().map_err(error)?.parent()
+                    != Some(self.root.canonicalize().map_err(error)?.as_path())
+            {
+                return Err(error("retirement path is outside the owned storage root"));
+            }
+            // A single native owner serializes this after all admitted native
+            // queries. PostgreSQL switches only after source binding pins end.
+            drop(self.shards.remove(&key));
+            std::fs::remove_dir_all(&path).map_err(error)?;
+            self.retired
+                .insert(key, (batch.consumer_id.clone(), batch.task_id.clone()));
+            return Ok(
+                json!({"source_contract_version":SOURCE_CONTRACT_VERSION,"generation":batch.generation,
+                "storage_epoch":batch.storage_epoch,"consumer_id":batch.consumer_id,"task_id":batch.task_id,
+                "event_ids":[],"flushed":true,"retired":true}),
+            );
+        }
+        if self.retired.contains_key(&key) {
+            return Err(error("retired storage epoch cannot receive mutations"));
         }
         let mut dense_config = HashMap::new();
         for (name, contract) in &batch.representations {
@@ -151,7 +202,12 @@ impl SourceOwner {
         }
         let shard = &self.shards[&key].shard;
         #[cfg(feature = "p0-fault-injection")]
-        fault(&self.root, "before_apply");
+        fault(
+            &self.root,
+            "before_apply",
+            batch.index_id,
+            batch.task_id.is_some(),
+        );
         for event in &batch.events {
             let operation = if let Some(body) = &event.body {
                 // Replace the complete owned vector set. A partial named-vector
@@ -164,7 +220,12 @@ impl SourceOwner {
                     ))
                     .map_err(error)?;
                 #[cfg(feature = "p0-fault-injection")]
-                fault(&self.root, "after_point_delete");
+                fault(
+                    &self.root,
+                    "after_point_delete",
+                    batch.index_id,
+                    batch.task_id.is_some(),
+                );
                 let mut vectors = vec![(
                     "bm25".to_owned(),
                     Vector::from(self.encoder.embed_document(body)),
@@ -192,14 +253,24 @@ impl SourceOwner {
                 .map_err(error)?;
         }
         #[cfg(feature = "p0-fault-injection")]
-        fault(&self.root, "before_flush");
+        fault(
+            &self.root,
+            "before_flush",
+            batch.index_id,
+            batch.task_id.is_some(),
+        );
         shard.flush().map_err(error)?;
         #[cfg(feature = "p0-fault-injection")]
-        fault(&self.root, "after_flush");
+        fault(
+            &self.root,
+            "after_flush",
+            batch.index_id,
+            batch.task_id.is_some(),
+        );
         Ok(
             json!({"source_contract_version":SOURCE_CONTRACT_VERSION,"generation":batch.generation,"storage_epoch":batch.storage_epoch,
-            "consumer_id":batch.consumer_id,"event_ids":batch.events.iter().map(|e|e.event_id).collect::<Vec<_>>(),
-            "flushed":true}),
+            "consumer_id":batch.consumer_id,"task_id":batch.task_id,"event_ids":batch.events.iter().map(|e|e.event_id).collect::<Vec<_>>(),
+            "flushed":true,"retired":false}),
         )
     }
 
@@ -321,10 +392,89 @@ fn validate_dense(vector: &[f32], contract: &DenseContract) -> Result<(), ProbeE
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pg_qdrant_protocol::SourceEvent;
+
+    #[test]
+    fn retirement_receipt_replays_without_reopening_or_mutating_the_epoch() {
+        let root = std::env::temp_dir().join(format!(
+            "pgq-retirement-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let mut owner = SourceOwner::new(root.clone()).unwrap();
+        let generation = "00000000-0000-0000-0000-000000000001".to_owned();
+        let epoch = "00000000-0000-0000-0000-000000000002".to_owned();
+        let batch = SourceBatch {
+            source_contract_version: SOURCE_CONTRACT_VERSION,
+            index_id: 1,
+            generation: generation.clone(),
+            storage_epoch: epoch.clone(),
+            consumer_id: epoch.clone(),
+            task_id: None,
+            retire: false,
+            representations: BTreeMap::new(),
+            events: vec![SourceEvent {
+                event_id: 1,
+                point_id: 1,
+                revision: 1,
+                incarnation: generation.clone(),
+                fingerprint: Some("fixture".into()),
+                key: json!({"type":"bigint","value":"1"}),
+                body: Some("retired searchable point".into()),
+                vectors: BTreeMap::new(),
+            }],
+        };
+        owner.apply(batch.clone()).unwrap();
+        let path = root.join(identity(1, &generation, &epoch).unwrap());
+        assert!(path.is_dir());
+        let retirement = SourceBatch {
+            events: vec![],
+            retire: true,
+            task_id: Some(generation.clone()),
+            ..batch.clone()
+        };
+        for _ in 0..2 {
+            assert_eq!(owner.apply(retirement.clone()).unwrap()["retired"], true);
+            assert!(!path.exists());
+        }
+        for wrong in [
+            SourceBatch {
+                consumer_id: generation.clone(),
+                ..retirement.clone()
+            },
+            SourceBatch {
+                task_id: Some(epoch.clone()),
+                ..retirement.clone()
+            },
+        ] {
+            assert!(owner.apply(wrong).is_err());
+            assert!(!path.exists());
+        }
+        assert!(owner.apply(batch).is_err());
+        assert!(
+            owner
+                .search(1, &generation, &epoch, "retired", 10, None, None)
+                .is_err()
+        );
+        drop(owner);
+        std::fs::remove_dir(&root).unwrap();
+    }
+}
+
 #[cfg(feature = "p0-fault-injection")]
-fn fault(root: &std::path::Path, cut: &str) {
+fn fault(root: &std::path::Path, cut: &str, index: u64, shadow: bool) {
     let marker = root.with_extension("fault");
-    if std::fs::read_to_string(&marker).ok().as_deref() == Some(cut) {
+    let armed = std::fs::read_to_string(&marker).ok();
+    if armed.as_deref() == Some(cut)
+        || (shadow && armed.as_deref() == Some(format!("shadow:{index}:{cut}").as_str()))
+    {
         let _ = std::fs::remove_file(marker);
         std::process::abort();
     }

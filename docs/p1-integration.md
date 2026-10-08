@@ -110,3 +110,8 @@ and source search. Failed directories are retained. This is a bounded process
 recovery test; public recovery tasks and comprehensive capacity management remain
 open. The guarded kernel OOM fixture additionally checks pending delete/key-reuse
 events across helper replacement; kernel victim attribution remains required.
+
+Same-contract asynchronous rebuild tasks now construct, catch up and switch a
+separate native generation; see [generation lifecycle](p3-resource-generation.md)
+for precise receipts, long-transaction fencing, cleanup and remaining limits.
+This does not repair invalidated source capture or migrate model/analyzer contracts.

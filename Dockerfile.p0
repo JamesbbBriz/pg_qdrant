@@ -64,6 +64,7 @@ RUN cargo fmt --all -- --check \
     && cargo run --locked -p pg-qdrant-edge-probe -- --cpu-check >/tmp/cpu-admission.json \
     && cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1 \
     && cargo test --locked -p pg-qdrant-helper --test supervisor_child \
+    && cargo test --locked -p pg-qdrant-helper --bin pg_qdrant_p0_helper \
     && cargo run --locked -p pg-qdrant-edge-probe >/tmp/edge-probe.json
 
 # Fault injection and the helper comparison are explicit P0-only image choices.
