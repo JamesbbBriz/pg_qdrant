@@ -127,6 +127,21 @@ def run(sql, ready, ticket_from, checks):
                                     "FROM qdrant_internal.index_catalog i JOIN qdrant_internal.consumer_state c USING(index_name) "
                                     "WHERE i.index_name='token_docs'),5000)"))
             assert [h['payload']['source_key']['value'] for h in native] == ['2'], (mode, fusion, native)
+            paged = json.loads(sql("SELECT qdrant.search_page('token_docs','alpha','"+mode+"',1,'"+
+                                   json.dumps(queries)+"','"+json.dumps(options)+"')"))
+            assert [h['source_key'] for h in paged['hits']] == ['2'], (mode, fusion, paged)
+            assert paged['captured_count'] == 1 and paged['next_cursor'] is None
+            assert paged['global_match_count'] is None and not paged['global_coverage_verified']
+            sql("DELETE FROM qdrant_internal.search_snapshots WHERE snapshot_id='"+paged['snapshot']+"'")
+        paged = json.loads(sql("SELECT qdrant.search_page('token_docs','alpha','maxsim',2,'"+json.dumps(vectors())+"')"))
+        assert [h['source_key'] for h in paged['hits']] == ['3', '2']
+        assert '22023' in sql("SELECT qdrant.search_page('token_docs','alpha','maxsim',2,'"+
+                              json.dumps(vectors(vector=[[0, 1]]))+"','{}','"+json.dumps(paged['next_cursor'])+"')", ok=False)
+        second_page = json.loads(sql("SELECT qdrant.search_page('token_docs','alpha','maxsim',2,'"+
+                                     json.dumps(vectors())+"','{}','"+json.dumps(paged['next_cursor'])+"')"))
+        assert [h['source_key'] for h in second_page['hits']] == ['1', '4']
+        assert not second_page['native_query_executed']
+        sql("DELETE FROM qdrant_internal.search_snapshots WHERE snapshot_id='"+paged['snapshot']+"'")
 
     goldens()
     for wrong in [[], [[1]], [[1, 0]]*5, [[1e100, 0]], [[1e30, 0]]]:
@@ -149,6 +164,7 @@ def run(sql, ready, ticket_from, checks):
     assert explain['maxsim_contract']['scalar_work_limit'] == 20000000
     checks += ['native token MaxSim matches independent per-token dot-product goldens',
                'native phrase filter precedes cap-one text/dense/sparse/fusion/nested MaxSim truncation and source JOIN',
+               'bounded pages preserve every native recall/rerank plan and reject altered valid model queries',
                'precision respects bounded lexical/hybrid candidate domain and excludes higher-scoring outsiders',
                'token shape/model/permission and real native scalar-work budget fail closed']
 

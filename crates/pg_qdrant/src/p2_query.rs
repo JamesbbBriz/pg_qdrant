@@ -309,11 +309,18 @@ BEGIN
     END IF;
     -- Permissions and conservative DDL invalidation are checked again before
     -- any native payload can become a caller-visible source result.
-    PERFORM qdrant.explain_search(index_name,q,mode,top_k,query_vectors,options);
+    plan:=qdrant.explain_search(index_name,q,mode,top_k,query_vectors,options);
+    IF NOT coalesce((plan->>'search_executable')::boolean,false) THEN
+      RAISE EXCEPTION 'Index readiness changed during search' USING ERRCODE='55000';
+    END IF;
     RETURN QUERY EXECUTE format(
       'SELECT t.%I::text,row_number() OVER(ORDER BY v.ordinality)::integer,(v.hit->>''score'')::double precision,
        t.%I::text,left(t.%I,240),jsonb_build_object(''generation'',$2,''storage_epoch'',$3,''plan'',$6,
-       ''matching'',$7,''statistics_scope'',''bounded_candidates'',''release_supported'',false)
+       ''matching'',$7,''point_id'',v.hit->''id'',
+       ''incarnation'',v.hit #>> ''{payload,incarnation}'',
+       ''revision'',v.hit #>> ''{payload,revision}'',
+       ''source_fingerprint'',v.hit #>> ''{payload,fingerprint}'',
+       ''statistics_scope'',''bounded_candidates'',''release_supported'',false)
        FROM jsonb_array_elements($1) WITH ORDINALITY v(hit,ordinality)
        JOIN ONLY %s t ON t.%I=(v.hit #>> ''{payload,source_key,value}'')::%s
        JOIN qdrant_internal.source_state s ON s.index_name=$4 AND s.point_id=(v.hit->>''id'')::bigint

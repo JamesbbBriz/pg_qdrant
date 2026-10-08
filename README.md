@@ -67,6 +67,8 @@ See [declared dense models](docs/dense-representations.md),
 [candidate-stage lexical matching](docs/lexical-matching.md) for implemented
 development contracts. Broader native JSON and model workflows remain in the
 [proposed API](docs/design.md#proposed-sql-experience).
+See [bounded search pages](docs/search-pages.md) for immutable candidate pages
+with current source/version and permission rechecks.
 
 See the [P1 integration status](docs/p1-integration.md) and historical
 [CI hold](docs/ci-temporary-hold.md). The integration branch restores automatic
