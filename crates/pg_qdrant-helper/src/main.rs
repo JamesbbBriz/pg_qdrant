@@ -118,6 +118,7 @@ fn run() -> Result<(), ProbeError> {
                 q,
                 top_k,
                 representation_query,
+                rerank_query,
                 fusion,
             } => source_owner.search(
                 index_id,
@@ -126,6 +127,7 @@ fn run() -> Result<(), ProbeError> {
                 &q,
                 top_k,
                 representation_query,
+                rerank_query,
                 fusion,
             ),
             op => execute(op),

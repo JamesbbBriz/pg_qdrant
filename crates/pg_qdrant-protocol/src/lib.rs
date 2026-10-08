@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 5;
+pub const SOURCE_CONTRACT_VERSION: u32 = 6;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -48,6 +48,10 @@ pub struct RepresentationContract {
     pub idf_policy: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub idf_revision: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_tokens: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub comparator: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -57,11 +61,39 @@ pub struct SparseValues {
     pub values: Vec<f32>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum RepresentationVector {
     Dense(Vec<f32>),
     Sparse(SparseValues),
+    Tokens(Vec<Vec<f32>>),
+}
+
+impl<'de> Deserialize<'de> for RepresentationVector {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = Value::deserialize(deserializer)?;
+        // Struct deserialization also accepts sequences. With an untagged enum,
+        // a two-row integer matrix could become SparseValues(indices, values).
+        // Choose the representation by JSON shape before decoding its values.
+        if value.is_object() {
+            return serde_json::from_value(value)
+                .map(Self::Sparse)
+                .map_err(serde::de::Error::custom);
+        }
+        if let Some(array) = value.as_array() {
+            if array.first().is_some_and(Value::is_array) {
+                return serde_json::from_value(value)
+                    .map(Self::Tokens)
+                    .map_err(serde::de::Error::custom);
+            }
+            return serde_json::from_value(value)
+                .map(Self::Dense)
+                .map_err(serde::de::Error::custom);
+        }
+        Err(serde::de::Error::custom(
+            "vector must be an array, matrix or sparse object",
+        ))
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -124,6 +156,8 @@ pub enum Operation {
         top_k: usize,
         #[serde(default)]
         representation_query: Option<RepresentationQuery>,
+        #[serde(default)]
+        rerank_query: Option<RepresentationQuery>,
         #[serde(default)]
         fusion: Option<SourceFusion>,
     },
@@ -236,6 +270,29 @@ pub fn encode_helper_response(
 #[cfg(test)]
 mod search_contract_tests {
     use super::*;
+
+    #[test]
+    fn token_matrix_and_reranking_preserve_distinct_shapes() {
+        let matrix = json!([[1, 0], [0, 1]]);
+        assert!(
+            matches!(serde_json::from_value::<RepresentationVector>(matrix.clone()).unwrap(),
+            RepresentationVector::Tokens(v) if v.len()==2 && v[0].len()==2)
+        );
+        let value = json!({"operation":"source_search","index_id":1,"generation":"g",
+            "storage_epoch":"e","q":"word","top_k":2,"rerank_query":{
+                "representation":"tokens","model_id":"fixture","model_version":"r1","vector":matrix}});
+        assert!(matches!(
+            serde_json::from_value::<Operation>(value).unwrap(),
+            Operation::SourceSearch {
+                rerank_query: Some(RepresentationQuery {
+                    vector: RepresentationVector::Tokens(_),
+                    ..
+                }),
+                ..
+            }
+        ));
+        assert!(serde_json::from_value::<RepresentationVector>(json!([[1, 0], "wrong"])).is_err());
+    }
 
     #[test]
     fn old_text_request_remains_text_and_named_fusion_is_typed() {

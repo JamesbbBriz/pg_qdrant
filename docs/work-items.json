@@ -3413,6 +3413,17 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "observed_on": "2026-10-09",
+          "level": "SQL-integration-verified",
+          "status": "passed",
+          "scope": "Installed declared token BYOV and native exact MaxSim match independent score goldens. Bounded BM25/dense/sparse RRF/DBSF prefetch reranking excludes higher-scoring outsiders; actual native work-budget and score-overflow admission fail closed. Source edits, rollback, key reuse, generation switch, native cuts and PostgreSQL restart retain correct scores. Full relevance, migration and release acceptance remain open.",
+          "source": "crates/pg_qdrant/tests/verify_tokens.py",
+          "command": "bash crates/pg_qdrant/tests/run-p1.sh",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",

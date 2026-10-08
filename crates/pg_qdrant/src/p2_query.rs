@@ -38,6 +38,13 @@ DECLARE
     matched_triggers integer;
     representation_query jsonb;
     representation_kind text;
+    rerank_query jsonb;
+    named_input record;
+    input_kind text;
+    token_queries integer:=0;
+    recall_queries integer:=0;
+    token_contract jsonb;
+    maxsim_work bigint;
     fusion text;
     effective_plan text;
 BEGIN
@@ -50,7 +57,7 @@ BEGIN
         RAISE EXCEPTION 'top_k outside permitted 1..100 range'
           USING ERRCODE = '22023';
     END IF;
-    IF mode IS NULL OR mode NOT IN ('text','semantic','sparse','hybrid') THEN
+    IF mode IS NULL OR mode NOT IN ('text','semantic','sparse','hybrid','maxsim','precision') THEN
         RAISE EXCEPTION 'Unknown search mode'
           USING ERRCODE = '22023';
     END IF;
@@ -69,10 +76,10 @@ BEGIN
         RAISE EXCEPTION 'Text search takes no model vector'
           USING ERRCODE = '0A000';
     END IF;
-    IF options ? 'fusion' AND (mode<>'hybrid' OR jsonb_typeof(options->'fusion')<>'string') THEN
+    IF options ? 'fusion' AND (mode NOT IN ('hybrid','precision') OR jsonb_typeof(options->'fusion')<>'string') THEN
         RAISE EXCEPTION 'fusion is a string option for hybrid search only' USING ERRCODE='22023';
     END IF;
-    IF mode='hybrid' THEN
+    IF mode IN ('hybrid','precision') THEN
         fusion:=coalesce(options->>'fusion','rrf');
         IF fusion NOT IN ('rrf','dbsf') THEN RAISE EXCEPTION 'fusion must be rrf or dbsf' USING ERRCODE='22023'; END IF;
         effective_plan:='hybrid_bm25_dense_'||fusion;
@@ -153,20 +160,66 @@ BEGIN
         RAISE EXCEPTION 'Capture triggers or lifecycle are not safe'
           USING ERRCODE = '55000';
     END IF;
-    IF mode IN ('semantic','sparse','hybrid') THEN
+    IF mode='precision' THEN
+        FOR named_input IN SELECT * FROM jsonb_each(query_vectors) LOOP
+            SELECT contract->>'kind' INTO input_kind FROM qdrant_internal.representation_catalog
+              WHERE representation_catalog.index_name=explain_search.index_name AND name=named_input.key;
+            IF input_kind='token_vectors' THEN
+                token_queries:=token_queries+1;
+                rerank_query:=qdrant_internal.admit_representation(index_name,jsonb_build_object(named_input.key,named_input.value));
+            ELSIF input_kind IN ('dense','learned_sparse') THEN
+                recall_queries:=recall_queries+1;
+                representation_query:=qdrant_internal.admit_representation(index_name,jsonb_build_object(named_input.key,named_input.value));
+                representation_kind:=input_kind;
+            ELSE RAISE EXCEPTION 'Unknown precision representation' USING ERRCODE='22023';
+            END IF;
+        END LOOP;
+        IF token_queries<>1 OR recall_queries>1 THEN
+            RAISE EXCEPTION 'Precision requires one token slot and at most one recall slot' USING ERRCODE='22023';
+        END IF;
+        IF recall_queries=0 THEN
+            IF options ? 'fusion' THEN RAISE EXCEPTION 'Fusion needs a recall-vector branch' USING ERRCODE='22023'; END IF;
+            fusion:=NULL; effective_plan:='precision_bm25_maxsim';
+        ELSE effective_plan:='precision_bm25_'||representation_kind||'_'||fusion||'_maxsim';
+        END IF;
+    ELSIF mode IN ('semantic','sparse','hybrid','maxsim') THEN
         representation_query:=qdrant_internal.admit_representation(index_name,query_vectors);
         SELECT contract->>'kind' INTO representation_kind FROM qdrant_internal.representation_catalog
           WHERE representation_catalog.index_name=explain_search.index_name AND name=representation_query->>'representation';
-        IF (mode='semantic' AND representation_kind<>'dense') OR (mode='sparse' AND representation_kind<>'learned_sparse') THEN
+        IF (mode='semantic' AND representation_kind<>'dense') OR (mode='sparse' AND representation_kind<>'learned_sparse')
+           OR (mode='maxsim' AND representation_kind<>'token_vectors')
+           OR (mode='hybrid' AND representation_kind NOT IN ('dense','learned_sparse')) THEN
             RAISE EXCEPTION 'Search mode does not match representation kind' USING ERRCODE='22023';
         END IF;
         IF mode='hybrid' THEN effective_plan:='hybrid_bm25_'||representation_kind||'_'||fusion; END IF;
+    END IF;
+    IF mode IN ('maxsim','precision') THEN
+        SELECT contract INTO token_contract FROM qdrant_internal.representation_catalog
+          WHERE representation_catalog.index_name=explain_search.index_name
+            AND name=coalesce(rerank_query,representation_query)->>'representation';
+        IF mode='precision' THEN
+            maxsim_work:=jsonb_array_length(rerank_query->'vector')::bigint
+              *(token_contract->>'max_tokens')::bigint*(token_contract->>'dimensions')::bigint*candidate_limit;
+            IF maxsim_work>20000000 THEN
+                RAISE EXCEPTION 'MaxSim scalar-work budget exceeds 20000000' USING ERRCODE='22023';
+            END IF;
+        END IF;
     END IF;
     RETURN jsonb_build_object(
        'index_name',index_name,'source_oid',selected.source_oid,
        'source_key_type',selected.key_type,
        'requested_mode',mode,'effective_plan',effective_plan,'representation_query',representation_query,'representation_kind',representation_kind,'fusion',fusion,
-       'fusion_contract',CASE WHEN mode='hybrid' THEN jsonb_build_object('engine','qdrant-edge 0.8.0',
+       'rerank_query',rerank_query,
+       'maxsim_contract',CASE WHEN mode IN ('maxsim','precision') THEN jsonb_build_object(
+         'scope',CASE WHEN mode='precision' THEN 'exact within bounded native prefetch candidates' ELSE 'exact over live named token vectors' END,
+         'token_width',(SELECT contract->'dimensions' FROM qdrant_internal.representation_catalog
+             WHERE representation_catalog.index_name=explain_search.index_name
+               AND name=coalesce(rerank_query,representation_query)->>'representation'),
+         'candidate_limit',CASE WHEN mode='precision' THEN candidate_limit END,
+         'scalar_work_limit',20000000,'scalar_work_upper_bound',maxsim_work,
+         'candidate_budget_basis',CASE WHEN mode='precision' THEN 'native prefetch cap' ELSE 'native owned live point count checked at execution' END,
+         'comparator','sum of per-query-token maximum dot product') END,
+       'fusion_contract',CASE WHEN fusion IS NOT NULL THEN jsonb_build_object('engine','qdrant-edge 0.8.0',
          'branches',jsonb_build_array('bm25',representation_query->>'representation'),'candidate_limit_per_branch',candidate_limit,
          'rrf_k',CASE WHEN fusion='rrf' THEN 2 END,'rrf_weights','equal',
          'idf_scope','live vectors in owned generation','normalization_scope','bounded prefetch distributions') END,
@@ -214,6 +267,7 @@ BEGIN
     hits:=qdrant_internal.p1_search(jsonb_build_object('operation','source_search','index_id',i.index_id,
       'generation',i.generation,'storage_epoch',c.storage_epoch,'q',q,
       'representation_query',plan->'representation_query',
+      'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',
       'top_k',(plan->>'candidate_limit')::integer),(plan->>'timeout_ms')::integer);
     IF NOT EXISTS(SELECT 1 FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name

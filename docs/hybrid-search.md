@@ -9,6 +9,10 @@ Missing, stale or incompatible vectors cause an error. No implicit fallback is
 performed. This is partial Q02/Q03 integration; the balanced preset and general
 multi-stage planner remain pending.
 
+[Token-vector precision](token-representations.md) can rerank these native fused
+candidates with MaxSim. Fusion selects a bounded domain; its scores are not added
+to the outer token score.
+
 For an index configured with the `dense` representation in the dense example:
 
 ```sql
