@@ -1,11 +1,11 @@
 //! Embedded Edge mutation owner. No SQL values select a filesystem path.
 use pg_qdrant_protocol::{
-    DenseContract, DenseQuery, ProbeError, SOURCE_CONTRACT_VERSION, SourceBatch,
+    DenseContract, DenseQuery, ProbeError, SOURCE_CONTRACT_VERSION, SourceBatch, SourceFusion,
 };
 use qdrant_edge::bm25_embed::{EdgeBm25, EdgeBm25Config};
 use qdrant_edge::{
-    Distance, EdgeConfig, EdgeShard, EdgeSparseVectorParams, EdgeVectorParams, Modifier,
-    NamedQuery, PointId, PointInsertOperations, PointOperations, PointStruct, QueryEnum,
+    Distance, EdgeConfig, EdgeShard, EdgeSparseVectorParams, EdgeVectorParams, Fusion, Modifier,
+    NamedQuery, PointId, PointInsertOperations, PointOperations, PointStruct, Prefetch, QueryEnum,
     QueryRequest, ScoringQuery, SearchParams, UpdateOperation, Vector, VectorInternal, Vectors,
     WithPayloadInterface,
 };
@@ -211,6 +211,7 @@ impl SourceOwner {
         q: &str,
         top_k: usize,
         dense_query: Option<DenseQuery>,
+        fusion: Option<SourceFusion>,
     ) -> Result<Value, ProbeError> {
         if q.is_empty() || q.len() > 8192 || !(1..=1000).contains(&top_k) {
             return Err(ProbeError::invalid("search outside bounds"));
@@ -221,6 +222,11 @@ impl SourceOwner {
             .get(&key)
             .ok_or_else(|| error("generation not owned by this helper"))?;
         let shard = &owned.shard;
+        if fusion.is_some() && dense_query.is_none() {
+            return Err(ProbeError::invalid(
+                "hybrid fusion requires a named dense query",
+            ));
+        }
         let mut request = QueryRequest::new(top_k);
         let (using, query) = if let Some(dense) = dense_query {
             let contract = owned
@@ -241,10 +247,38 @@ impl SourceOwner {
                 VectorInternal::Sparse(self.encoder.embed_query(q)),
             )
         };
-        request.query = Some(ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
+        let scoring = ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
             using: Some(using),
             query,
-        })));
+        }));
+        if let Some(fusion) = fusion {
+            let bm25 = ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
+                using: Some("bm25".to_owned()),
+                query: VectorInternal::Sparse(self.encoder.embed_query(q)),
+            }));
+            request.prefetches = [bm25, scoring]
+                .into_iter()
+                .map(|query| {
+                    let mut stage = Prefetch::new(top_k);
+                    stage.query = Some(query);
+                    stage.params = Some(SearchParams {
+                        exact: true,
+                        indexed_only: false,
+                        ..Default::default()
+                    });
+                    stage
+                })
+                .collect();
+            request.query = Some(ScoringQuery::Fusion(match fusion {
+                SourceFusion::Rrf => Fusion::Rrf {
+                    k: 2,
+                    weights: None,
+                },
+                SourceFusion::Dbsf => Fusion::Dbsf,
+            }));
+        } else {
+            request.query = Some(scoring);
+        }
         request.params = Some(SearchParams {
             exact: true,
             indexed_only: false,

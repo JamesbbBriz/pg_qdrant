@@ -123,6 +123,24 @@ class OomEvidenceTests(unittest.TestCase):
         self.assertFalse(result["target_isolation_gate_passed"])
         self.assertFalse(result["production_memory_isolation_verified"])
 
+    def test_collateral_first_log_still_requires_exact_kernel_victim(self):
+        direct = observation()
+        direct.update(profile='direct_worker', companion_survived=False, supervisor_preserved=False,
+            postgresql_crash_log={'caller_logged': True, 'reinitializing': True})
+        direct['target_exit'].update(signal=None, source='requires_exact_kernel_victim_record')
+        self.assertEqual(MODULE.classify(direct, kernel_victim_verified=True,
+            manual_termination=False)['status'], 'passed')
+        self.assertFalse(MODULE.classify(direct, kernel_victim_verified=False,
+            manual_termination=False)['strict_target_attribution_passed'])
+        for field in ['caller_logged', 'reinitializing']:
+            wrong = copy.deepcopy(direct)
+            wrong['postgresql_crash_log'][field] = False
+            self.assertFalse(MODULE.classify(wrong, kernel_victim_verified=True,
+                manual_termination=False)['strict_target_attribution_passed'])
+        direct['profile'] = 'managed_helper'
+        self.assertFalse(MODULE.classify(direct, kernel_victim_verified=True,
+            manual_termination=False)['strict_target_attribution_passed'])
+
 
 if __name__ == "__main__":
     unittest.main()

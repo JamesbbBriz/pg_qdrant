@@ -1,4 +1,4 @@
-//! Bounded owner-domain text and declared dense search.
+//! Bounded owner-domain text, declared dense and native hybrid search.
 
 pgrx::extension_sql!(
     r###"
@@ -31,12 +31,14 @@ DECLARE
     relation_info record;
     text_field text;
     request_plan text;
-    allowed_options text[] := ARRAY['plan','candidate_limit','timeout_ms','fallback'];
+    allowed_options text[] := ARRAY['plan','candidate_limit','timeout_ms','fallback','fusion'];
     option_key text;
     candidate_limit integer;
     timeout_ms integer;
     matched_triggers integer;
     dense_query jsonb;
+    fusion text;
+    effective_plan text;
 BEGIN
     IF index_name IS NULL OR q IS NULL
        OR octet_length(q) NOT BETWEEN 1 AND 8192 OR btrim(q) = '' THEN
@@ -62,10 +64,18 @@ BEGIN
               USING ERRCODE = '22023';
         END IF;
     END LOOP;
-    IF mode = 'hybrid' OR (mode='text' AND query_vectors <> '{}'::jsonb) THEN
-        RAISE EXCEPTION 'Hybrid fusion is not yet implemented; text takes no model vector'
+    IF mode='text' AND query_vectors <> '{}'::jsonb THEN
+        RAISE EXCEPTION 'Text search takes no model vector'
           USING ERRCODE = '0A000';
     END IF;
+    IF options ? 'fusion' AND (mode<>'hybrid' OR jsonb_typeof(options->'fusion')<>'string') THEN
+        RAISE EXCEPTION 'fusion is a string option for hybrid search only' USING ERRCODE='22023';
+    END IF;
+    IF mode='hybrid' THEN
+        fusion:=coalesce(options->>'fusion','rrf');
+        IF fusion NOT IN ('rrf','dbsf') THEN RAISE EXCEPTION 'fusion must be rrf or dbsf' USING ERRCODE='22023'; END IF;
+        effective_plan:='hybrid_bm25_dense_'||fusion;
+    ELSE effective_plan:=mode; END IF;
     request_plan := coalesce(options ->> 'plan',mode);
     IF request_plan <> mode OR
        coalesce(options ->> 'fallback','error') <> 'error' THEN
@@ -142,11 +152,15 @@ BEGIN
         RAISE EXCEPTION 'Capture triggers or lifecycle are not safe'
           USING ERRCODE = '55000';
     END IF;
-    IF mode='semantic' THEN dense_query:=qdrant_internal.admit_dense(index_name,query_vectors); END IF;
+    IF mode IN ('semantic','hybrid') THEN dense_query:=qdrant_internal.admit_dense(index_name,query_vectors); END IF;
     RETURN jsonb_build_object(
        'index_name',index_name,'source_oid',selected.source_oid,
        'source_key_type',selected.key_type,
-       'requested_mode',mode,'effective_plan',mode,'dense_query',dense_query,
+       'requested_mode',mode,'effective_plan',effective_plan,'dense_query',dense_query,'fusion',fusion,
+       'fusion_contract',CASE WHEN mode='hybrid' THEN jsonb_build_object('engine','qdrant-edge 0.8.0',
+         'branches',jsonb_build_array('bm25',dense_query->>'representation'),'candidate_limit_per_branch',candidate_limit,
+         'rrf_k',CASE WHEN fusion='rrf' THEN 2 END,'rrf_weights','equal',
+         'idf_scope','owned index generation','normalization_scope','bounded prefetch distributions') END,
        'text_fields',selected.settings #> '{text,fields}',
        'top_k',top_k,'candidate_limit',candidate_limit,
        'timeout_ms',timeout_ms,
@@ -191,6 +205,7 @@ BEGIN
     hits:=qdrant_internal.p1_search(jsonb_build_object('operation','source_search','index_id',i.index_id,
       'generation',i.generation,'storage_epoch',c.storage_epoch,'q',q,
       'dense_query',plan->'dense_query',
+      'fusion',plan->'fusion',
       'top_k',(plan->>'candidate_limit')::integer),(plan->>'timeout_ms')::integer);
     IF NOT EXISTS(SELECT 1 FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name
         AND cs.storage_epoch=c.storage_epoch AND cs.consumer_id=c.consumer_id AND cs.state='ready') THEN

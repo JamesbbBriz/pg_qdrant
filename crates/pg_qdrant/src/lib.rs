@@ -106,12 +106,15 @@ mod qdrant {
             for number in 1..=count {
                 let bm25_sql = cfg!(feature = "p0-managed-helper") && prefix == "F" && number == 1;
                 let dense_sql = cfg!(feature = "p0-managed-helper") && prefix == "V" && number == 1;
+                let fusion_sql = cfg!(feature = "p0-managed-helper")
+                    && prefix == "Q"
+                    && [2, 3].contains(&number);
                 ids.push(json!({
                     "id": format!("{prefix}{number:02}"),
-                    "product_status": if bm25_sql || dense_sql {"partial_sql_integration"} else {"planned"},
+                    "product_status": if bm25_sql || dense_sql || fusion_sql {"partial_sql_integration"} else {"planned"},
                     "release_supported": false,
-                    "sql_product_interface": bm25_sql || dense_sql,
-                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else if dense_sql {Some("fixed-generation named dense BYOV; owner domain; full live-row readiness; migrations open")} else {None}
+                    "sql_product_interface": bm25_sql || dense_sql || fusion_sql,
+                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else if dense_sql {Some("fixed-generation named dense BYOV; owner domain; full live-row readiness; migrations open")} else if fusion_sql {Some("two bounded BM25/dense prefetch branches; native RRF k=2 or DBSF; owner domain; general planner open")} else {None}
                 }));
             }
         }

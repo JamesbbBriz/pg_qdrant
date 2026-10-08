@@ -17,7 +17,14 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 2;
+pub const SOURCE_CONTRACT_VERSION: u32 = 3;
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceFusion {
+    Rrf,
+    Dbsf,
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -93,6 +100,8 @@ pub enum Operation {
         top_k: usize,
         #[serde(default)]
         dense_query: Option<DenseQuery>,
+        #[serde(default)]
+        fusion: Option<SourceFusion>,
     },
 }
 
@@ -198,4 +207,48 @@ pub fn encode_helper_response(
     }
     bytes.push(b'\n');
     bytes
+}
+
+#[cfg(test)]
+mod search_contract_tests {
+    use super::*;
+
+    #[test]
+    fn old_text_request_remains_text_and_named_fusion_is_typed() {
+        let mut value = json!({"operation":"source_search","index_id":1,
+            "generation":"g","storage_epoch":"e","q":"word","top_k":10});
+        let operation: Operation = serde_json::from_value(value.clone()).unwrap();
+        assert!(matches!(
+            operation,
+            Operation::SourceSearch {
+                dense_query: None,
+                fusion: None,
+                ..
+            }
+        ));
+        value["fusion"] = json!("rrf");
+        let operation: Operation = serde_json::from_value(value.clone()).unwrap();
+        assert!(matches!(
+            operation,
+            Operation::SourceSearch {
+                fusion: Some(SourceFusion::Rrf),
+                ..
+            }
+        ));
+        value["fusion"] = json!("dbsf");
+        assert!(matches!(
+            serde_json::from_value::<Operation>(value).unwrap(),
+            Operation::SourceSearch {
+                fusion: Some(SourceFusion::Dbsf),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn unknown_fusion_cannot_be_silently_ignored() {
+        let value = json!({"operation":"source_search","index_id":1,
+            "generation":"g","storage_epoch":"e","q":"word","top_k":10,"fusion":"sum"});
+        assert!(serde_json::from_value::<Operation>(value).is_err());
+    }
 }

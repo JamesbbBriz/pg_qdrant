@@ -4449,9 +4449,13 @@
           ]
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q02",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "evidence": "docs/hybrid-search.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_models.py",
+          "artifact": "p1-product-results.json",
+          "verified_scope": "Installed owner-domain BM25/dense two-stage exact prefetch with native RRF/DBSF, bounded branch budgets and real replay queries. General nested plans, filters, tenant domains, quality and migrations remain pending; hosted evidence must identify the tested revision."
         },
         "release": {
           "status": "pending",
@@ -4603,9 +4607,13 @@
           ]
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q03",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "evidence": "docs/hybrid-search.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_models.py",
+          "artifact": "p1-product-results.json",
+          "verified_scope": "Actual native RRF k=2 equal weights and DBSF scores checked against independent single-branch goldens, including singleton, empty and disjoint lexical distributions. Weighted/general fusion, quality and migrations remain pending; hosted evidence must identify the tested revision."
         },
         "release": {
           "status": "pending",

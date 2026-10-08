@@ -173,7 +173,7 @@ def observe():
     DIRECTORY.mkdir(mode=0o700)
     write_owned(DIRECTORY / "arm.json", marker)
     REPORT.update(stage="native_guard", identities=marker, build=build, counters_before=counters())
-    caller = spawn("SELECT qdrant_internal.p0_fault('oom',30000)", "caller")
+    caller = spawn("SET application_name='pgq_p0_oom_caller'; SELECT qdrant_internal.p0_fault('oom',30000)", "caller")
 
     def armed():
         records = native_lines()
@@ -188,6 +188,8 @@ def observe():
         return None
 
     armed_record = wait_for(armed)
+    caller_pid = int(scalar("SELECT pid FROM pg_stat_activity WHERE application_name='pgq_p0_oom_caller' AND state='active'"))
+    REPORT['caller_backend'] = identity(caller_pid)
     assert armed_record["allocation_started"] is False
     assert armed_record["target"] == target and armed_record["requested_bytes_cap"] == 805306368
     assert companion.poll() is None and same(companion_identity, identity(companion_pid))
@@ -277,10 +279,18 @@ def observe():
     else:
         assert replacement["worker_pid"] != supervisor["pid"]
         log = bounded_text(ARTIFACTS / "postgresql.log", limit=256*1024)
-        assert re.search(rf"\(PID {target['pid']}\).*terminated by signal 9", log)
+        target_logged = bool(re.search(rf"\(PID {target['pid']}\).*terminated by signal 9", log))
+        caller_logged = bool(re.search(rf"\(PID {caller_pid}\).*terminated by signal 9", log))
+        # SIGCHLD ordering can report the faulting SQL backend first after
+        # worker death. Exact native victim attribution still belongs to the
+        # outer kernel PID/start-ticks/cgroup gate, never this collateral log.
+        assert target_logged or caller_logged
         assert "reinitializing" in log
-        REPORT["target_exit"] = {"engine_pid": target["pid"], "signal": 9,
-            "supervisor_kill_requested": False, "kill_attempts": 0, "source": "exact_postgresql_child_exit_log"}
+        REPORT["postgresql_crash_log"] = {'target_logged': target_logged, 'caller_logged': caller_logged,
+            'caller_pid': caller_pid, 'reinitializing': True}
+        REPORT["target_exit"] = {"engine_pid": target["pid"], "signal": 9 if target_logged else None,
+            "supervisor_kill_requested": False, "kill_attempts": 0,
+            "source": "exact_postgresql_child_exit_log" if target_logged else "requires_exact_kernel_victim_record"}
     companion_out, companion_err = companion.communicate(timeout=35)
     REPORT["companion_result"] = {"returncode": companion.returncode,
         "stdout": companion_out[-4096:], "stderr": companion_err[-8192:]}

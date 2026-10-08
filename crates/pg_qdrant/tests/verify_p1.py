@@ -64,7 +64,7 @@ assert pathlib.Path(sql('SHOW data_directory')).resolve()==disposable
 sql('CREATE EXTENSION pg_qdrant')
 capabilities=json.loads(sql('SELECT qdrant.capabilities()'))
 assert capabilities['index_catalog_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','V01']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','V01','Q02','Q03']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)')
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
@@ -316,6 +316,29 @@ checks += ['replacement owner rotates catalog rows skipped during management']
 
 import verify_models
 verify_model_replay=verify_models.run(sql,ready,ticket_from,checks)
+# PostgreSQL cancellation must not release an executing fused native query's owner.
+ready('model_docs')
+hybrid_vector=json.dumps({'dense':{'model_id':'fixture-model','model_version':'r1','vector':[1,0]}})
+pid=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
+os.kill(pid,signal.SIGSTOP)
+try:
+    waiting=spawn("SELECT * FROM qdrant.search('model_docs','whale','hybrid',10,'"+hybrid_vector+"')",'pgq_hybrid_cancel')
+    end=time.monotonic()+10
+    while time.monotonic()<end:
+        owner=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+        if (owner.get('active') or {}).get('operation')=='source_search': break
+        time.sleep(.02)
+    assert (owner.get('active') or {}).get('operation')=='source_search',owner
+    assert sql("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE application_name='pgq_hybrid_cancel'")=='t'
+    out,err=waiting.communicate(timeout=10)
+    assert waiting.returncode!=0 and '57014' in err,(out,err)
+    retained=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+    assert retained['engine_pid']==pid and retained['active']['operation']=='source_search',retained
+finally:
+    os.kill(pid,signal.SIGCONT)
+verify_model_replay()
+assert json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']==pid
+checks += ['cancelled native hybrid query retains sole owner until actual completion']
 faults=sql('SELECT (qdrant.build_info()->\'features\'->>\'p0_fault_injection\')::boolean')=='t'
 if faults:
     data=pathlib.Path(os.environ['PG_QDRANT_DISPOSABLE_DATA'])

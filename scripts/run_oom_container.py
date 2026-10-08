@@ -178,8 +178,14 @@ def classify(sql, *, kernel_victim_verified, manual_termination):
     target = sql.get("identities", {}).get("target", {})
     expected_target = (isinstance(target.get("pid"), int) and target["pid"] > 1
         and exit_record.get("engine_pid") == target["pid"])
+    exact_signal = exit_record.get("signal") == 9 or (
+        profile == 'direct_worker' and kernel_victim_verified
+        and exit_record.get('signal') is None
+        and exit_record.get('source') == 'requires_exact_kernel_victim_record'
+        and sql.get('postgresql_crash_log', {}).get('caller_logged') is True
+        and sql.get('postgresql_crash_log', {}).get('reinitializing') is True)
     observations = (sql.get("status") == "observed" and kernel_event and one_kill and postgres_outcome and expected_target
-                    and exit_record.get("signal") == 9 and uninterrupted
+                    and exact_signal and uninterrupted
                     and sql.get("replacement_edge_smoke_passed") is True)
     attribution = "kernel_record" if observations and kernel_victim_verified else (
         "correlated_only" if observations else "none")

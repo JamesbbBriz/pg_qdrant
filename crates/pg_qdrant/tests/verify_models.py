@@ -1,5 +1,6 @@
 """Named dense BYOV through source DML, real Edge writes and source rechecks."""
 import json
+import math
 
 
 def run(sql, ready, ticket_from, checks):
@@ -50,6 +51,41 @@ def run(sql, ready, ticket_from, checks):
     assert sql("SELECT count(*) FROM qdrant_internal.outbox WHERE index_name='model_docs' AND projection::text LIKE '%private unrelated value%'")=='0'
     checks += ['declared dense contracts, failed registration rollback, encoding inputs and real Edge semantic SQL']
 
+    def hybrid_goldens(q='blue'):
+        branches=[]
+        for mode, vectors in [('text','{}'),('semantic',query)]:
+            branches.append(json.loads(sql("SELECT coalesce(jsonb_agg(jsonb_build_object('key',source_key,'score',score) ORDER BY rank),'[]') FROM qdrant.search('model_docs','"+q+"','"+mode+"',10,'"+vectors+"')")))
+        for fusion in ['rrf','dbsf']:
+            expected={}
+            for branch in branches:
+                values=[hit['score'] for hit in branch]
+                mean=sum(values)/len(values) if values else 0
+                variance=sum((v-mean)**2 for v in values)/(len(values)-1) if len(values)>1 else 0
+                for rank,hit in enumerate(branch):
+                    normalized=1/(rank+2) if fusion=='rrf' else (
+                        .5+(hit['score']-mean)/(6*math.sqrt(variance)) if variance else .5)
+                    expected[hit['key']]=expected.get(hit['key'],0)+normalized
+            results=json.loads(sql("SELECT coalesce(jsonb_agg(jsonb_build_object('key',source_key,'score',score,'plan',provenance->>'plan') ORDER BY rank),'[]') FROM qdrant.search('model_docs','"+q+"','hybrid',10,'"+query+"','{\"fusion\":\""+fusion+"\"}')"))
+            assert {hit['key'] for hit in results}==set(expected),(results,expected)
+            for hit in results:
+                assert abs(hit['score']-expected[hit['key']])<.00001,(fusion,hit,expected)
+                assert hit['plan']=='hybrid_bm25_dense_'+fusion
+            assert [hit['score'] for hit in results]==sorted([hit['score'] for hit in results],reverse=True)
+        plan=json.loads(sql("SELECT qdrant.explain_search('model_docs','"+q+"','hybrid',10,'"+query+"')"))
+        assert plan['fusion']=='rrf' and plan['fusion_contract']['rrf_k']==2
+        assert plan['fusion_contract']['branches']==['bm25','dense'] and plan['fusion_contract']['candidate_limit_per_branch']==50
+
+    for q in ['blue','orange','nolexicalmatch']:
+        hybrid_goldens(q)
+    bounded=json.loads(sql("SELECT jsonb_agg(jsonb_build_object('key',source_key,'score',score)) FROM qdrant.search('model_docs','blue','hybrid',1,'"+query+"','{\"candidate_limit\":1}')"))
+    assert len(bounded)==1 and bounded[0]['key']=='1' and abs(bounded[0]['score']-1)<.00001,bounded
+    assert '22023' in sql("SELECT * FROM qdrant.search('model_docs','blue','hybrid',10,'"+query+"','{\"fusion\":\"sum\"}')",ok=False)
+    assert '22023' in sql("SELECT * FROM qdrant.search('model_docs','blue','text',10,'{}','{\"fusion\":\"rrf\"}')",ok=False)
+    assert '22023' in sql("SELECT * FROM qdrant.search('model_docs','blue','hybrid')",ok=False)
+    assert '42501' in sql("SET ROLE pgq_writer; SELECT * FROM qdrant.search('model_docs','blue','hybrid',10,'"+query+"')",ok=False)
+    checks += ['native two-branch RRF/DBSF match independent score goldens, disjoint and empty lexical candidates',
+               'hybrid provenance, bounded branches, invalid fusion and unauthorized admission']
+
     # A text-only update retains source model columns but removes their vector.
     old = next(r for r in requests if r['key']['value']=='1')
     ticket = ticket_from(sql("BEGIN; UPDATE model_docs SET body='purple whale' WHERE id=1; SELECT qdrant.track_changes('model_docs'); COMMIT"))
@@ -65,6 +101,7 @@ def run(sql, ready, ticket_from, checks):
     assert json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',10000)"))['durable']
     assert sql("SELECT count(*) FROM qdrant_internal.representation_state WHERE index_name='model_docs' AND name='second' AND state='ready'")=='1'
     assert '55000' in sql("SELECT * FROM qdrant.search('model_docs','model','semantic',10,'"+query+"')",ok=False)
+    assert '55000' in sql("SELECT * FROM qdrant.search('model_docs','model','hybrid',10,'"+query+"')",ok=False)
     # Inspect actual native candidates; SQL admission cannot hide a retained slot.
     native = "SELECT qdrant_internal.p1_search((SELECT jsonb_build_object('operation','source_search','index_id',i.index_id,'generation',i.generation,'storage_epoch',c.storage_epoch,'q','model','top_k',10,'dense_query',jsonb_build_object('representation','dense','model_id','fixture-model','model_version','r1','vector','[1,0]'::jsonb)) FROM qdrant_internal.index_catalog i JOIN qdrant_internal.consumer_state c USING(index_name) WHERE i.index_name='model_docs'),10000)"
     candidates=json.loads(sql(native))
@@ -129,4 +166,5 @@ def run(sql, ready, ticket_from, checks):
     def replayed():
         ready('model_docs')
         assert semantic()=='["1", "2"]'
+        hybrid_goldens('whale')
     return replayed
