@@ -110,12 +110,14 @@ finally:
 # Preserve failed storage; a replacement owner rebuilds from committed facts.
 # Exhausted restart budgets require explicit supervisor recovery. SIGTERM
 # stops this disposable database's worker without crashing PostgreSQL.
-if failed['owner_status']['helper_restart_exhausted']:
-    worker_pid = failed['owner_status']['worker_pid']
-    os.kill(worker_pid, signal.SIGTERM)
-    wait_for(lambda: sql('SELECT count(*) FROM pg_stat_activity WHERE pid=' + str(worker_pid)) == '0')
-else:
-    os.kill(failed['owner_status']['engine_pid'], signal.SIGKILL)
+# The snapshot's helper can already have died from SIGBUS. Restart the
+# surviving supervisor instead of signalling a stale/reused helper PID.
+worker_pid = failed['owner_status']['worker_pid']
+assert worker_pid == before['owner_status']['worker_pid']
+assert sql("SELECT count(*) FROM pg_stat_activity WHERE pid=" + str(worker_pid)
+           + " AND backend_type='pg_qdrant P0 owner'") == '1'
+os.kill(worker_pid, signal.SIGTERM)
+wait_for(lambda: sql('SELECT count(*) FROM pg_stat_activity WHERE pid=' + str(worker_pid)) == '0')
 durable = json.loads(sql("SELECT qdrant.await_changes('" + ticket + "',60000)"))
 after = status()
 assert durable['durable'] and durable['pending_events'] == 0, durable
