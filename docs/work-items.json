@@ -8065,6 +8065,16 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_helper_address_space_limit",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_p1.py",
+          "scope": "Helper-only Linux soft/hard RLIMIT_AS at most 8 GiB, observed kernel/handshake identity, tighter inherited cap preservation and unsupported startup-budget refusal. A private actual oversized mmap returns ENOMEM without touching physical pages; the same helper continues native search and PostgreSQL supervisor limits remain separate. Complete installed capture/search/generation/recovery regression passes under the cap. This is virtual address space including mmap, not RSS, cgroup isolation, native allocation-failure recovery or complete resource governance.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
