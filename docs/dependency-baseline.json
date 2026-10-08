@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "status": "candidate_not_build_verified",
+  "reviewed_on": "2026-10-08",
+  "platform_candidate": {
+    "os": "linux",
+    "architecture": "x86_64",
+    "postgres_major": 17
+  },
+  "required_direct_dependencies": [
+    {
+      "name": "qdrant-edge",
+      "cargo_requirement": "=0.8.0",
+      "role": "retrieval_engine_and_local_bm25",
+      "source": "crates.io",
+      "package_sha256": "0b8072302c87506a34bffec9bc16dbdcd36df8ab1321406b6e141530348c7e54",
+      "public_api": "https://docs.rs/qdrant-edge/0.8.0/qdrant_edge/",
+      "registry_record": "https://crates.io/api/v1/crates/qdrant-edge/0.8.0"
+    },
+    {
+      "name": "pgrx",
+      "cargo_requirement": "=0.19.3",
+      "role": "postgres_extension_boundary",
+      "source": "crates.io",
+      "postgres_feature_candidate": "pg17",
+      "declared_rust_minimum": "1.96",
+      "registry_record": "https://crates.io/api/v1/crates/pgrx/0.19.3"
+    }
+  ],
+  "build_tool_candidates": [
+    {
+      "name": "cargo-pgrx",
+      "version": "0.19.3",
+      "must_match": "pgrx",
+      "registry_record": "https://crates.io/api/v1/crates/cargo-pgrx/0.19.3"
+    }
+  ],
+  "rust_toolchain": {
+    "exact_version": null,
+    "minimum_from_pgrx": "1.96",
+    "freeze_gate": "P0 Linux build and full dependency resolution"
+  },
+  "observed_upstream_dependency": {
+    "name": "charabia",
+    "requirement_in_edge_0_8_0": "0.9.9",
+    "resolved_version": null,
+    "default_features": false,
+    "features": [
+      "greek",
+      "hebrew",
+      "thai",
+      "chinese-segmentation",
+      "chinese-normalization"
+    ],
+    "relationship": "owned_by_qdrant_edge_not_an_independent_core_pin"
+  },
+  "optional_lexical_candidate": {
+    "name": "tantivy",
+    "cargo_requirement_candidate": "=0.26.2",
+    "adopted": false,
+    "decision_gate": "FTS gap evaluation and lifecycle/fusion ADR",
+    "registry_record": "https://crates.io/api/v1/crates/tantivy/0.26.2"
+  },
+  "mandatory_inference_dependencies": [],
+  "mandatory_network_qdrant_client_dependencies": [],
+  "cargo_lock_present": false,
+  "compiled_dependency_graph_verified": false,
+  "automatic_dependency_updates_active": false
+}

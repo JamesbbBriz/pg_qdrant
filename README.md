@@ -29,7 +29,9 @@ The engine candidate is [Qdrant Edge](https://qdrant.tech/documentation/edge/edg
 
 | Capability | Intended use |
 | --- | --- |
-| Local BM25 full-text search | Keyword retrieval without external inference |
+| Local BM25 ranking | Keyword relevance scoring without external inference |
+| Text matching and analysis | AND/OR, phrases, tokenization, normalization, and configured word prefixes |
+| Exact and identifier-prefix matching | Keyword payload indexes for IDs, paths, URLs, or SKUs |
 | Dense vectors | Semantic retrieval |
 | Learned sparse vectors | Model-weighted lexical retrieval, separate from BM25 |
 | Named vectors | Multiple representations of the same source row |
@@ -49,7 +51,21 @@ BM25 and learned sparse vectors have different encoding and scoring contracts. B
 
 Semantic and visual representations are **bring your own vectors**. The application supplies model outputs; the extension validates dimensions, model identity, and content version. Full-text search uses local BM25 encoding. [Qdrant Edge provides an offline BM25 embedder](https://qdrant.tech/documentation/edge/edge-bm25/).
 
-Text-search quality will be evaluated on Chinese and English content, identifiers, phrases, prefixes, and spelling errors. Upstream text primitives alone do not establish typo tolerance, autocomplete quality, or a complete search experience.
+### Full-text search is more than BM25
+
+BM25 is the default local ranking algorithm, not the entire text-search surface. The planned lexical layer combines ranking, matching, analysis, and presentation. Learned lexical representations such as SPLADE and miniCOIL use separately declared model contracts and supplied vectors; they are not additional offline inference engines bundled with the extension.
+
+Qdrant's payload text index and BM25 sparse index are independent. Configuring a payload text index does not change BM25 tokenization. The extension must compile a versioned analyzer policy into both configurations and reject incompatible combinations. Phrase matching needs a phrase-enabled text index; whole-value keyword prefixes and token prefixes are different features. [Text-filter semantics](https://qdrant.tech/documentation/search/text-search/text-filtering/), [Edge matching API](https://docs.rs/qdrant-edge/0.8.0/qdrant_edge/enum.Match.html).
+
+Typo tolerance, synonyms, query syntax, proximity, highlighting, and autocomplete ranking have explicit coverage requirements rather than implicit claims of native support. Text-search quality will be evaluated on Chinese and English content, identifiers, phrases, prefixes, and spelling errors. The [capability coverage contract](docs/capabilities.md) records upstream primitives, extension responsibilities, lexical gaps, and acceptance conditions.
+
+## Dependencies and upstream upgrades
+
+The design depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. The initial exact-version candidates are Edge `0.8.0` and pgrx/cargo-pgrx `0.19.3`; the combined build has not been validated.
+
+Use released public APIs through an engine adapter. Track tokenizer configuration, model contracts, SQL API versions, and on-disk generations separately from dependency versions. An upstream update must pass capability, quality, authorization, lifecycle, and migration checks before it becomes a supported release.
+
+See the [dependency and upgrade policy](docs/dependencies.md), the [version baseline](docs/dependency-baseline.json), and the [capability coverage contract](docs/capabilities.md). These describe planned dependencies and release gates; there is no compiled dependency graph, Cargo.lock, active update bot, or upgrade CI yet.
 
 ## Search plans
 
@@ -57,7 +73,7 @@ The proposed API separates search mode (`text`, `hybrid`, `semantic`), interacti
 
 | Plan | Intended pipeline |
 | --- | --- |
-| `text` | Local BM25 |
+| `text` | Local BM25 ranking with configured text/phrase/identifier constraints |
 | `balanced` | BM25 + dense + configured learned sparse, with explicit fusion |
 | `precision` | Candidate retrieval followed by compatible MaxSim reranking |
 | `fast` | Suitable quantization or short representations, with configured rescoring |
