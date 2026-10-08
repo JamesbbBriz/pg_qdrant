@@ -7319,10 +7319,20 @@
       "evidence": [
         {
           "level": "SQL-integration-verified",
+          "kind": "installed_owned_abandoned_generation_retirement",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_abandoned.py",
+          "scope": "Same-owner cancelled/failed shadow cleanup retains the serving generation and original logical outcome. Forty actually flushed cancellations, rollback, stopped-helper cleanup timeout, owner/snapshot/exact receipt admission, partial native apply followed by an injected nonfatal error with no event receipts, successful fresh retry and archived cleanup outcomes pass. Unknown old-owner storage remains preserved; complete resource governance, reconfiguration and full lifecycle acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
+          "level": "SQL-integration-verified",
           "kind": "installed_committed_native_retirement",
           "status": "passed",
           "source": "crates/pg_qdrant/tests/verify_retirements.py",
-          "scope": "Transactional logical drop followed by exact native epoch flush/close/cleanup receipts; rollback, same-name new identity, owner-protected historical tasks, 40 lifecycle cycles and actual helper SIGKILL fail-closed storage preservation. Unknown old-owner epochs are retained; pending shadow cleanup while an index exists, general resource governance and full lifecycle acceptance remain open.",
+          "scope": "Transactional logical drop followed by exact native epoch flush/close/cleanup receipts; rollback, same-name new identity, owner-protected historical tasks, 40 lifecycle cycles and actual helper SIGKILL fail-closed storage preservation. Unknown old-owner epochs are retained; general resource governance and full lifecycle acceptance remain open.",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": true,
           "release_supported": false

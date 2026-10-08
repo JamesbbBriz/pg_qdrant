@@ -308,6 +308,14 @@ impl SourceOwner {
                 .map_err(error)?;
         }
         #[cfg(feature = "p0-fault-injection")]
+        if batch.task_id.is_some()
+            && take_fault_marker(&self.root, "shadow_apply_error", batch.index_id, true)
+        {
+            return Err(error(
+                "injected shadow error after native apply before flush",
+            ));
+        }
+        #[cfg(feature = "p0-fault-injection")]
         fault(
             &self.root,
             "before_flush",
@@ -693,12 +701,20 @@ mod tests {
 
 #[cfg(feature = "p0-fault-injection")]
 fn fault(root: &std::path::Path, cut: &str, index: u64, shadow: bool) {
+    if take_fault_marker(root, cut, index, shadow) {
+        std::process::abort();
+    }
+}
+
+#[cfg(feature = "p0-fault-injection")]
+fn take_fault_marker(root: &std::path::Path, cut: &str, index: u64, shadow: bool) -> bool {
     let marker = root.with_extension("fault");
     let armed = std::fs::read_to_string(&marker).ok();
     if armed.as_deref() == Some(cut)
         || (shadow && armed.as_deref() == Some(format!("shadow:{index}:{cut}").as_str()))
     {
         let _ = std::fs::remove_file(marker);
-        std::process::abort();
+        return true;
     }
+    false
 }

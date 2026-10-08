@@ -401,6 +401,9 @@ crash_matrix.append({'cut':'postgres_immediate_stop','before':before,'after':aft
     'ticket_durable':result,'final_source_keys':json.loads(hits('postgresrestart'))})
 checks += ['PostgreSQL immediate-stop WAL recovery and new-owner exact replay']
 
+import verify_abandoned
+verify_abandoned.run(sql,ready,spawn,wait_session,checks,faults,crash_matrix)
+
 import verify_retirements
 verify_retirements.run(sql,ready,checks,faults,crash_matrix)
 
