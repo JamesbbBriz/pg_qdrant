@@ -42,6 +42,20 @@ jobs:
           if docker inspect pg-qdrant-p0-disk-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-disk-run:/src/artifacts/. artifacts/enospc/
           fi
+      - name: Test full-text ENOSPC recovery on a dedicated 128 MiB tmpfs
+        run: |
+          docker create --name pg-qdrant-p0-full-text-disk-run --memory=5g --cpus=2 --network=none \
+            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+            --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+            pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text
+          docker start --attach pg-qdrant-p0-full-text-disk-run
+      - name: Collect full-text disk-failure evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/enospc-full-text
+          if docker inspect pg-qdrant-p0-full-text-disk-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-full-text-disk-run:/src/artifacts/. artifacts/enospc-full-text/
+          fi
       - name: Run PostgreSQL integration probes as a non-root user
         run: |
           docker create --name pg-qdrant-p0-run --memory=5g --cpus=2 --network=none pg-qdrant-p0

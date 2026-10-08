@@ -15,6 +15,7 @@ The standalone process test creates only owned temporary files and can run
 without a PostgreSQL cluster:
 
 ```bash
+cargo test --locked -p pg-qdrant-helper --test supervisor_child
 cargo build --locked -p pg-qdrant-helper
 python3 crates/pg_qdrant-helper/tests/probe.py \
   target/debug/pg_qdrant_p0_helper --out artifacts/helper-pipes.json
@@ -23,6 +24,23 @@ cargo build --locked -p pg-qdrant-helper --features p0-fault-injection
 python3 crates/pg_qdrant-helper/tests/probe.py \
   target/debug/pg_qdrant_p0_helper --faults --out artifacts/helper-fault-pipes.json
 ```
+
+The `supervisor_child` target includes the PostgreSQL worker's private
+`helper_child.rs` module directly. Its two bounded real-child fixtures check
+that an already-finished child is reaped without a cleanup signal and that an
+explicit kill retains its actual result and first reason. This avoids a second
+implementation of the bookkeeping or a PostgreSQL dependency in this test.
+A successful kill call records a termination request, not proof that this
+request caused the final exit; natural completion can race any check-and-signal
+sequence. The SQL fault suite separately checks the actual supervisor and its
+unchanged 125-second process-stop limit.
+
+The standalone controller-SIGKILL check requires a visible, live helper identity
+in `/proc`, including its parent, owner and start ticks, before sending the
+signal. If that precondition fails in the executing environment, the cleanup
+gate fails and the suite is not reported as passed. Missing process entries
+alone cannot establish parent-death cleanup; direct stdin-EOF checks remain
+separate evidence.
 
 The shared PostgreSQL suite in `../pg_qdrant/tests` tests the actual supervised
 profile after installing matching helper and extension binaries. Set

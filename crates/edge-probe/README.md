@@ -36,14 +36,24 @@ On 2026-10-08, with Rust 1.96.0 on Linux x86_64 and the repository lockfile:
 
 | Command | Observed result |
 | --- | --- |
-| `cargo test --locked -p pg-qdrant-edge-probe` | Actual engine smoke, explicit-flush/SIGKILL recovery, owned metadata corruption, unsafe disk-environment refusal and a clean disk-fixture reopen passed; 4 tests, 0 failed or ignored. |
+| Original `cargo test --locked -p pg-qdrant-edge-probe` baseline | Engine smoke, explicit-flush/SIGKILL recovery, owned metadata corruption, unsafe disk-environment refusal and a clean disk-fixture reopen passed; 4 tests, 0 failed or ignored, before the additional suites below. |
+| `cargo test --locked -p pg-qdrant-edge-probe --test advanced -- --nocapture --test-threads=1` | 7 passed, 0 failed or ignored: exact recommendation/discover/context/feedback scores, root MMR, Formula, OrderBy/Sample and wrong-dimension errors. |
+| `cargo test --locked -p pg-qdrant-edge-probe --test lifecycle -- --test-threads=1` | 2 passed, 0 failed or ignored: conditional and partial mutations with flush/reopen; selective reads, filtered scroll/facets and exact matrix scores. |
+| `cargo test --locked -p pg-qdrant-edge-probe --test schema -- --test-threads=1` | 2 passed, 0 failed or ignored: payload-index create/delete and named dense/sparse vector create/delete, including replay, rejected configuration changes and persisted queries. |
+| Current integrated `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | All 15 engine tests passed, with 0 failed or ignored, after the three additional test files and expanded API inventory were combined. This is local engine evidence; the new full-text ENOSPC profile and full PostgreSQL regression require their own runs. |
+| `cargo check --locked -p pg-qdrant-edge-probe` after nested inventory expansion | Public nested enum mappings and typed scalar/product/binary, ACORN/search and LoadProfile inputs compiled without errors or warnings. Constructors do not execute an engine operation. |
 | `target/debug/pg-qdrant-edge-probe` after the locked test build | All 16 synthetic check groups passed; engine version `0.8.0`. |
 | `target/debug/pg-qdrant-edge-probe --corruption-probe` | Both malformed copied-metadata loads returned errors; intact-copy recovery, original preservation, representation equality and phrase/MaxSim queries passed. |
 | `target/debug/pg-qdrant-edge-probe --disk-fixture-probe` | Clean reopen of the disk-specific eight-row/four-representation fixture passed, including keyword/tenant filtering and exact MaxSim; no filler or ENOSPC injection. |
 | `target/debug/pg-qdrant-edge-probe --disk-full-probe` without `PG_QDRANT_ENOSPC_DIR` | `status: "not_run"`, no disk writes attempted; a dedicated tmpfs is required for positive ENOSPC evidence. |
+| Dedicated 32 MiB tmpfs configuration-save experiment | ENOSPC, unchanged persisted configuration, observed unchanged in-memory configuration, retry, flush, reopen and the vector/keyword fixture checks passed. See the [separate CI record](../../docs/evidence/p0-regression-ci.json); that overall workflow failed later in the private-helper process observer. |
 
-These commands compiled and linked the engine harness, including exhaustive
-surface sentinels. They do not prove that the PostgreSQL extension links,
+The original four tests and eleven additional focused cases comprise 15 tests;
+the 16-group executable smoke report is a different count. The focused runs
+above were recorded independently, followed by the actual integrated run.
+CI acceptance is still recorded against its own code version and commands.
+These commands compiled and linked the engine harness and its enumerated
+type sentinels. They do not prove that the PostgreSQL extension links,
 installs, or survives engine failure. A dependency or source change requires
 running the commands again; this record is not a blanket compatibility claim.
 
@@ -64,6 +74,7 @@ with the 16-group normal smoke report.
 cargo run --locked -p pg-qdrant-edge-probe -- --corruption-probe
 cargo run --locked -p pg-qdrant-edge-probe -- --disk-fixture-probe
 cargo run --locked -p pg-qdrant-edge-probe -- --disk-full-probe
+cargo run --locked -p pg-qdrant-edge-probe -- --full-text-disk-full-probe
 ```
 
 The corruption probe builds the same eight source identities and four named
@@ -89,8 +100,10 @@ it checks all of these conditions:
 - An initially empty mount, owned by the effective UID with permissions `0700`.
 - Kernel mountinfo identifies that path as the root of a dedicated writable
   tmpfs, with no other mount aliases for its device in the current namespace.
-- `/usr/bin/stat` confirms tmpfs and reports total capacity no greater than
-  64 MiB. Missing/unparseable filesystem information refuses the experiment.
+- `/usr/bin/stat` confirms tmpfs and reports total capacity within the selected
+  profile's fixed cap. The default vector/keyword profile retains its 64 MiB
+  cap; the explicit full-text profile has a separate 128 MiB cap.
+  Missing/unparseable filesystem information refuses the experiment.
 - No PostgreSQL data marker in the path's ancestors; any configured `PGDATA`
   or `PG_QDRANT_PGDATA` must resolve, be disjoint, and use a different device.
 
@@ -105,7 +118,8 @@ the public `on_disk_payload: true` and per-vector `on_disk: true` settings plus
 the 64 KiB WAL configuration. Its two mutable text indexes are explicitly
 excluded. A passing disk report therefore verifies keyword/tenant filtering
 and exact MaxSim recovery, and reports `phrase_query: "not_tested"`. The full
-phrase/ENOSPC/reopen combination remains an open gate; the separate corruption
+phrase/ENOSPC/reopen combination remains an open gate until the separate
+full-text profile passes; the corruption
 and explicit-flush/SIGKILL tests retain their complete phrase assertions.
 
 `--disk-fixture-probe` creates this fixture in an ordinary owned temporary
@@ -121,14 +135,25 @@ mapping RSS was 204 KiB before close and 16,024 KiB after reopen. Rerunning
 this mode reproduces the measurement procedure; resident pages can vary by
 kernel and access history, so these values are observations, not test goldens.
 
-For a locally built `Dockerfile.p0` image, the intended isolated invocation is:
+For a locally built `Dockerfile.p0` image, the isolated narrow invocation is:
 
 ```sh
-docker run --rm --user 10001:10001 --memory=5g --cpus=2 \
+docker run --rm --user 10001:10001 --memory=5g --cpus=2 --network=none \
   --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \
   --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
   pg-qdrant-p0 /src/target/debug/pg-qdrant-edge-probe --disk-full-probe
 ```
+
+The opt-in `--full-text-disk-full-probe` uses the original eight-row fixture,
+including its mutable phrase and token-prefix indexes. CI provisions it in a
+separate container with a dedicated 128 MiB tmpfs and invokes
+`python3 scripts/run_disk_probe.py --profile full-text`. It does not change the
+32 MiB narrow run or its 64 MiB guard. Its report must identify
+`profile: "full_text"`, preserve every retrieved representation, and pass both
+phrase and token-prefix queries after recovery. Its positive fault path is
+pending; source inspection and unsafe-environment refusal do not establish a pass.
+The wrapper rejects a wrong-profile or `not_run` report even with exit code 0,
+and writes full-text evidence separately as `edge-full-text-enospc.json`.
 
 After preparing and flushing the bounded fixture, the probe writes an owned
 filler until the OS returns ENOSPC (errno 28), with a hard total-byte limit no
@@ -166,8 +191,10 @@ restoring the count to eight. Writable reopen still observed
 83,364 KiB. The [load path](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/mod.rs)
 ensures an appendable segment, and its [segment constructor](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/shard/segment_holder/mod.rs)
 copies the payload-index schema into that segment. Optimization therefore did
-not remove the eager mutable-text reopen requirement. No private initializer,
-patched dependency, or larger fault mount is used to evade it.
+not remove the eager mutable-text reopen requirement. The narrow fixture
+continues to exclude those indexes. The separate 128 MiB full-text experiment
+keeps the original indexes and records a different storage budget; it cannot
+retroactively establish the failed 32 MiB full-fixture combination.
 
 The first CI attempt with the full fixture on a 32 MiB tmpfs failed before
 usable child diagnostics were captured; its terminating signal is unknown.
@@ -177,9 +204,9 @@ the exact cause of that historical process termination.
 This is a configuration-save failure/retry experiment. WAL growth, dirty vector
 ingestion, PostgreSQL outbox ACK semantics, power-loss durability, cgroup OOM and
 whole-instance isolation remain separate gates. A 32 MiB tmpfs is a storage
-limit, not an engine RSS limit or evidence of OOM handling. The positive ENOSPC
-path of the revised, narrower fixture still requires the dedicated mount and
-remains unverified until a report with `status: "passed"` is captured there.
+limit, not an engine RSS limit or evidence of OOM handling. The revised narrow
+fixture has a recorded positive ENOSPC result on its dedicated mount. Full-text
+ENOSPC remains unverified until its own profile returns `status: "passed"`.
 
 ## Checks and limits
 
@@ -194,6 +221,13 @@ remains unverified until a report with `status: "passed"` is captured there.
 | Token and keyword prefixes | Separate indexes; case-sensitive whole-value identifiers | F09, F10, F11 |
 | Document grouping | Three distinct groups and traceable authorized fixture rows | Q09 |
 | Scoped counts | Exact authorized point counts, with no global document claim | Q11, Q12 |
+| Recommendation, discovery and feedback | Two recommendation strategies; context/target scoring; relative feedback and equal-score boundary | Q04, Q05, Q06 |
+| Root MMR | Exact dense Dot fixture, lambda and candidate-budget changes, original similarity score return values | Q07 |
+| Formula | Declared score/payload arithmetic, explicit defaults, candidate-domain limits and typed failures | Q08 |
+| Ordered and sampled reads | Integer order/start boundary, filtered random sets, prefetch domains and missing range-index error | Q10 |
+| Selective reads and matrix | Payload/vector projections, bounded filtered scroll, point facets, seven-sample/six-neighbor matrix Dot goldens | Q10, Q11 |
+| Conditional and partial mutations | InsertOnly/UpdateOnly/Upsert, payload/vector updates/deletes, repeated point deletion and explicit flush/reopen | L02 |
+| Dynamic schema | Payload-index lifecycle; dense/sparse name creation/deletion, identical-config replay, conflicting-config rejection and retained base vectors | V01, V02, Q12, Q14, L02 |
 | Explicit flush and reopen | Clean close and SIGKILL after explicit flush, with actual persisted-query checks | L01, L04 |
 
 Passing these checks advances only their narrow engine-runtime evidence.
@@ -201,6 +235,50 @@ The synthetic tenant payload is not a PostgreSQL identity or RLS proof.
 No recall, NDCG, speed, concurrent SQL, crash safety, or release support
 claim follows from this runner. All stages still require broader acceptance
 in `docs/capabilities.md`.
+
+### Additional runtime boundaries
+
+`tests/advanced.rs` uses six two-dimensional Dot vectors, five in the selected
+tenant and one deliberately dominant excluded point. Every submitted query and
+leaf prefetch includes the fixed tenant filter; candidate/result budgets are at
+most eight and shard search threads are limited to two. It checks actual scores,
+including `RecommendBestScore`'s signed transform, `RecommendSumScores` with two
+positive examples, Discover's target/context combination and Context's normalized
+penalty. The feedback fixture's declared coefficients produce `2*x-y`; equal
+feedback values form no preference pair. These are synthetic scoring checks,
+not learned-model quality results or authorization of example IDs supplied by users.
+
+Root MMR with lambda `0.25` selects `[1,5,4,3,2]` in that fixture, while returning
+the original Dot scores `[1,-1,0,0.4,0.8]`. Runtime also confirms that Edge 0.8.0
+returns MMR's named vector even when `with_vector` was false. This is a recorded
+upstream projection behavior, not the intended SQL contract: the result adapter
+must remove unrequested vectors. Source inspection shows a leaf MMR prefetch is
+lowered to nearest search without an MMR selection stage; the new runtime tests
+exercise root MMR only and do not validate that leaf placement.
+
+Formula reranks only its prefetched candidates. The fixture declares an explicit
+`Dot + 0.25*priority` policy and tests payload defaults, absent inputs and
+nonfinite arithmetic errors. It does not establish a general calibration of
+business values and vector scores, or validate all Formula expression families.
+Random-sample tests assert filtered set membership, uniqueness and size, not
+distribution quality. Wrong nested vector dimensions are rejected for the five
+advanced vector-query variants and MMR; missing vector names for these advanced
+variants remain a separate case.
+
+`tests/lifecycle.rs` checks selected payload/vector projections over fixed known
+IDs, filtered scroll pagination, and six document-key facets whose counts sum
+to seven points. It never labels those point counts as global document counts.
+Its matrix requests sample all seven selected fixture points and check each of
+their six neighbor scores against direct Dot products, excluding self and the
+private tenant. Conditional writes and partial mutations test engine state and
+explicit flush/reopen, not PostgreSQL revision/incarnation or outbox semantics.
+
+`tests/schema.rs` uses three source rows. It builds/drops a keyword index over
+existing payloads, dynamically adds dense and sparse names, verifies unchanged
+base data, rejects conflicting dimensions/IDF modifiers, filters vector deletion,
+and checks disappearance of deleted names after reopen. This is same-version
+schema evidence; model replacement, analyzer migration, generation switching,
+cross-version reopen and rollback remain separate gates.
 
 ## Exact source basis
 
@@ -219,6 +297,7 @@ Source findings refer to this archive, not Qdrant Server documentation.
 | [Query variants](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/shard/query/mod.rs) | Vector, Fusion, OrderBy, Formula, Sample, MMR. Recommendation, discovery/context and feedback are public vector-query variants. |
 | [Weighted RRF](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/common/reciprocal_rank_fusion.rs) | For zero-based position `p`, contribution is `1 / ((p + 1) / weight + k - 1)`; upstream default `k=2`. This is not multiplication of ordinary RRF scores by weights. Equal-score order is not promised. |
 | [DBSF](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/common/score_fusion.rs) | For nonconstant inputs, contribution is `0.5 + (score - mean) / (6 * sample_standard_deviation)` with variance denominator `n - 1`, then contributions are summed. Singleton and constant distributions contribute `0.5` per point; empty branches add no points. Inputs are candidate distributions, not corpus statistics. |
+| [Query planning](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/shard/query/planned_query.rs) and [rescoring](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/read_view/ops/query.rs) | Root MMR's vector is merged into the final projection; the extra vector was observed at runtime despite a false request projection. Leaf MMR becomes a nearest source in the planner; that placement is source-reviewed only. Formula requires prefetches. |
 | [Shard lifecycle](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/mod.rs) | `new`, `load`, `flush`, settings and clean `Drop` are public. `load` inspected here loads segments/configuration; it does not invoke automatic WAL replay in this code path. |
 | [Updates](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/update.rs) | `update` writes the Edge WAL and applies operations. Success alone is not the extension's durable ACK contract. |
 | [Optimization](https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/optimize.rs) | `optimize` blocks until no plans remain and uses an internally created stop flag. No external cancellation argument. |
@@ -256,6 +335,18 @@ concrete arguments. Typed constructor expressions likewise do not establish
 engine execution or accepted input semantics. Raw storage operations and native
 callback filters are explicitly outside the proposed SQL surface.
 
+The nested inventory adds 16 enum matches covering 43 variants: update mode,
+payload/vector projections and selectors, ranges, order/start/result values,
+decay, sample, product/scalar quantization choices, facet values, update-only
+point actions and segment manifest states. Typed inputs construct scalar,
+product and binary quantization configurations through public conversions,
+quantization/ACORN search parameters, and search/scroll/retrieve LoadProfiles
+plus their merge. Those construction functions are compile-only probes.
+They do not create a quantized index, trigger ACORN, open a follower, or measure
+memory placement. `Memory` and Turbo's nested config/bit types remain outside
+the publicly nameable mappings; their outer containers do not prove those
+variants or combinations.
+
 ### Remaining public API coverage
 
 The following fixed-version gaps remain in addition to the runtime limits above.
@@ -263,21 +354,23 @@ Source paths are relative to the published
 [`qdrant-edge 0.8.0` archive](https://docs.rs/crate/qdrant-edge/0.8.0/source/).
 Owners refer to the existing [work ledger](../../docs/work-items.json); the
 complete [54-capability contract](../../docs/capabilities.md) remains unchanged.
-References and constructors in this table are not full capability compilation,
-runtime, PostgreSQL integration, or release evidence.
+The table distinguishes selected runtime cases from compile-only references
+and constructors. None constitutes complete capability acceptance,
+PostgreSQL integration, or release evidence.
 
 | IDs | Public surface and source path | Current probe evidence | Owner and next gate |
 | --- | --- | --- | --- |
 | Q01 | `SearchRequest`, `EdgeShard::search` / `EdgeShardRead::search`; `src/edge/requests/search.rs`, `src/edge/read_view/shard_read.rs` | Neither referenced nor called. Upstream documents this alternate entry point as deprecated in favor of `query`, which the runner uses. | `engine/query`: record an explicit deprecated-entry exclusion, or add a concrete call if retaining it. |
-| Q04–Q08, Q10 | Recommendation, discover/context, feedback, MMR, Formula and Sample; `src/shard/query/{mod,query_enum,formula}.rs` | `construct_advanced_queries()` contains typed inputs but is never called by the runner/tests and never submits an engine query. | `planner/explore`, `engine/diversity`, `planner/formula`, `engine/read`: construct compatible fixture inputs, call `query`, and verify scoring, authorization and invalid inputs. |
-| F07, Q12 | `RangeInterface`, geo/range/value-count/null field conditions, `Filter::min_should`; `src/segment/types.rs` | Outer `Condition` variants are matched. Concrete fixture predicates cover selected text/keyword/ID filters; the other field forms and nested range enum are not covered. | `planner/filters`, `engine/filters`: exhaustive nested mappings, actual filtered calls and numeric/datetime/geo/cardinality boundaries. |
-| Q10, Q12, L09 | `WithPayloadInterface::{Fields,Selector}`, `PayloadSelector::{Include,Exclude}`, `WithVector::Selector`; `src/segment/types.rs` | Actual retrieval uses Boolean projection; the selector variants lack exhaustive mappings and calls. | `engine/read`, `engine/filters`: selective-return calls, result-shape assertions and authorization tests for omitted/returned fields. |
-| Q08, Q10 | `OrderByInterface`, `Direction`, `StartFrom`, `OrderValue`, `DecayKind`, `Sample`; `src/segment/data_types/order_by.rs`, `src/segment/index/query_optimization/rescore_formula/parsed_formula.rs`, `src/shard/query/mod.rs` | Outer OrderBy/Decay arms do not cover nested variants. `Sample::Random` is constructed, without an exhaustive Sample match or runtime query. | `engine/read`, `planner/formula`: nested mappings, concrete ordering/decay/sample inputs and result/budget assertions. |
-| V04, V05, Q13 | `CompressionRatio`, `ScalarType`, quantization configs, `QuantizationSearchParams`, `AcornSearchParams`; `src/segment/types.rs`, `src/edge/config/vectors.rs` | Quantization families and datatypes have sentinels. No quantized fixture or ACORN request is constructed/executed; nondefault precision/rescore combinations remain unverified. | `engine/quantization`, `engine/storage`, `engine/indexing`: real configurations and queries, rejected combinations, optimization/reopen and rescore goldens. |
-| L02 | `UpdateMode::{Upsert,InsertOnly,UpdateOnly}` and partial vector/payload/delete/schema operations; `src/shard/operations/{point_ops,vector_ops,payload_ops,vector_name_ops}.rs` | UpdateMode is not mapped. Ordinary checked-in fixture updates exercise point upsert and payload-index creation; other operation variants are sentinels. | `engine/source`: typed conditional-mode and mutation calls, idempotency and persisted result assertions. |
-| L04, V05, L10 | Read-only `open`, `refresh`, `refresh_with`, request `load_profile()` and `LoadProfile::{for_search,for_scroll,for_retrieve,merge}`; `src/edge/read_only/{lifecycle,refresh}.rs`, `src/segment/data_types/load_profile.rs` | Only `open_mmap` is referenced; `Option<LoadProfile> = None` is a type-name check. No follower or profile is exercised. | `lifecycle/recovery`, `engine/storage`: public manifest/setup decision, concrete follower calls, flush/refresh visibility and memory-placement tests. |
-| L02, L04 | `UpdateOnlyEdgeShard::{open,preview_batch,apply_batch,segment_configs}`, `UpdateBatchPlan::build`, `PointAction`; `src/edge/update_only/{mod,lifecycle,apply,preview}.rs`, `src/edge/update_only/batch/plan.rs` | Only `open_mmap` is referenced. Batch construction, action variants and execution are absent. | `engine/source`, `lifecycle/recovery`: explicit adoption/exclusion decision; if retained, existing-shard calls, negative bootstrap/operation probes and a separate persistence contract. |
-| Q10, Q11, L04 | `scroll`, `facet`, `search_matrix`, `info`, snapshot inspection/unpack/recovery; `src/edge/read_view/shard_read.rs`, `src/edge/edge_shard/snapshots.rs` | Method-item references only. This does not extend the existing retrieve/count/group runtime evidence to these operations. | `engine/read`, `results/statistics`, `lifecycle/recovery`: concrete requests, authorized bounded results and disposable-target restore/rollback tests. |
+| Q04–Q08, Q10 | Recommendation, discover/context, feedback, MMR, Formula and Sample; `src/shard/query/{mod,query_enum,formula}.rs` | Seven `advanced.rs` cases submit actual requests and check the bounded dense fixture and failures described above. `construct_advanced_queries()` remains a separate compile-only constructor. | `planner/explore`, `engine/diversity`, `planner/formula`, `engine/read`: model/input contracts, sparse/multivector/quantized combinations, empty inputs, selected-vector authorization and query budgets. Root-MMR extra-vector handling requires a project result policy. |
+| F07, Q12 | `RangeInterface`, geo/range/value-count/null field conditions, `Filter::min_should`; `src/segment/types.rs` | `Condition` and `RangeInterface` have exhaustive matches. Actual predicates cover selected text/keyword/ID filters; the other field forms remain untested. | `planner/filters`, `engine/filters`: actual filtered calls and numeric/datetime/geo/cardinality boundaries, then composition with every scoring branch. |
+| Q10, Q12, L09 | `WithPayloadInterface::{Fields,Selector}`, `PayloadSelector::{Include,Exclude}`, `WithVector::Selector`; `src/segment/types.rs` | Nested variants are mapped. `lifecycle.rs` calls each projection form and checks selected shapes over fixed known IDs; those IDs are not derived from PostgreSQL authorization. | `engine/read`, `engine/filters`: enforce projections after all engine paths, establish trusted ID resolution and test unauthorized field/vector requests. |
+| Q08, Q10 | `OrderByInterface`, `Direction`, `StartFrom`, `OrderValue`, `DecayKind`, `Sample`; `src/segment/data_types/order_by.rs`, `src/segment/index/query_optimization/rescore_formula/parsed_formula.rs`, `src/shard/query/mod.rs` | Nested enums are exhaustive. Integer OrderBy/start values and Sample execute; decay families, floating/datetime ordering and their edge cases do not. | `engine/read`, `planner/formula`: concrete decay/date/geo policies, nonfinite/range validation, stable pagination and precision boundaries. |
+| V04, V05, Q13 | `CompressionRatio`, `ScalarType`, quantization configs, `QuantizationSearchParams`, `AcornSearchParams`; `src/segment/types.rs`, `src/edge/config/vectors.rs` | Named nested enums are matched; scalar/product/binary and approximate/ACORN search inputs have typed constructors. No quantized fixture is built and no ACORN execution is observed. | `engine/quantization`, `engine/storage`, `engine/indexing`: actual indexed queries, rejected combinations, CPU/resource checks, optimization/reopen and storage-precision/rescore goldens. |
+| L02, Q12, Q14 | `UpdateMode` and partial vector/payload/delete/schema operations; `src/shard/operations/{point_ops,vector_ops,payload_ops,vector_name_ops}.rs` | UpdateMode is mapped and all three conditional modes run. `lifecycle.rs` and `schema.rs` check selected mutations, payload-index/vector-name lifecycle, identical-config replay, conflicts and explicit flush/reopen. Sync/raw operations and concurrent combinations remain outside those cases. | `engine/source`: remaining public-operation cases, transaction/incarnation/fingerprint integration, concurrent updates/DDL and durable ACK semantics. |
+| L04, V05, L10 | Read-only `open`, `refresh`, `refresh_with`, request `load_profile()` and LoadProfile constructors/merge; `src/edge/read_only/{lifecycle,refresh}.rs`, `src/segment/data_types/load_profile.rs` | `open_mmap` is a method reference. Public profiles and merge are typed compile-only constructions; no follower is opened and no memory placement is measured. SegmentManifestState is now exhaustively mapped. | `lifecycle/recovery`, `engine/storage`: public manifest/setup decision, actual follower counts/queries and refresh visibility, including skipped/unloadable segments and caller resource limits. |
+| L02, L04 | `UpdateOnlyEdgeShard::{open,preview_batch,apply_batch,segment_configs}`, `UpdateBatchPlan::build`, `PointAction`; `src/edge/update_only/{mod,lifecycle,apply,preview}.rs`, `src/edge/update_only/batch/plan.rs` | `open_mmap` is referenced and PointAction is exhaustively matched. Batch construction, preview and application remain unexecuted. | `engine/source`, `lifecycle/recovery`: existing-shard preview/apply/replay, invalid ordering and unsupported operations, safe empty-bootstrap observation and a distinct persistence contract. |
+| Q10, Q11 | `scroll`, `facet`, `search_matrix`, `info`; `src/edge/read_view/shard_read.rs` | Two lifecycle cases and two schema cases call these APIs. Matrix Dot scores, selected point counts/facets, bounded scroll and schema metadata are checked. | `engine/read`, `results/statistics`: remaining field/projection/matrix combinations, trusted authorization, sampling quality and declared point/document/statistical scope. |
+| L04 | Snapshot inspection, unpack and partial recovery; `src/edge/edge_shard/snapshots.rs` | Method-item references only; no archive creation, unpack, restore or rollback is exercised. | `lifecycle/recovery`: public-producer decision, concrete manifest checks and bounded disposable-target restore/reopen tests. A copied quiescent shard alone is not snapshot-API evidence. |
 
 Read-only loading requires a manifest: `open_mmap` selects the manifest
 enumerator, while ordinary manifest writing defaults off in
@@ -321,9 +414,14 @@ The [recorded direct-worker PostgreSQL CI](../../docs/evidence/p0-postgresql-ci.
 verified diagnostic concurrency, cancellation and bounded queues. Its native
 abort and SIGKILL experiments terminated companion SQL sessions; this is a
 negative isolation result. Current-source and managed-helper PostgreSQL results
-need separate evidence. OOM, positive bounded ENOSPC, dirty-index/source
-recovery, transaction rollback, authority mapping, generations and cross-version
-migration remain open. The owned metadata-corruption test covers only the
+need separate evidence. The [helper comparison](../../docs/evidence/p0-helper-ci.json)
+records prior positive helper-isolation cases; the
+[subsequent regression](../../docs/evidence/p0-regression-ci.json) records the
+32 MiB ENOSPC pass and a later private-helper process-observer failure. Its
+skipped PostgreSQL fault suite must be rerun after the observer correction.
+Actual OOM, full-text ENOSPC, dirty-index/source recovery, transaction rollback,
+authority mapping, generations and cross-version migration remain open.
+The owned metadata-corruption test covers only the
 malformed copied JSON files and intact recovery source described above.
 The explicit-flush/SIGKILL test establishes only the stated process-reopen
 boundary; it does not establish unflushed WAL recovery or machine power-loss

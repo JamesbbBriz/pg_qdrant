@@ -173,7 +173,7 @@
     "Real 16-group Edge smoke through bounded owned pipes",
     "Unique owner, request replay and oversized frame rejection",
     "Caught panic/private abort behavior and build-feature validation",
-    "EOF and pure-controller SIGKILL stop outstanding native work"
+    "Direct stdin-EOF exit; historical controller-SIGKILL result has the retrospective observation qualification below."
   ],
   "unverified": [
     "Actual PostgreSQL helper-profile runtime and collateral containment",
@@ -250,5 +250,13 @@
     }
   ],
   "recorded_source_commit": "a22d3c73ad838ff606a080345b65d634f5144c39",
-  "source_scope": "Historical local results for the listed hashes; later engine fixture changes require separate regression evidence."
+  "source_scope": "Historical local results for the listed hashes; later engine fixture changes require separate regression evidence.",
+  "retrospective_observation_qualification": {
+    "observed_on": "2026-10-08",
+    "affected_check": "supervisor_sigkill_closes_pipe_and_stops_helper",
+    "independent_local_cleanup_claim_withdrawn": true,
+    "reason": "The historical observer did not first establish that the advertised live helper PID was visible in the observer proc namespace. Later stricter normal/private reruns both failed that prerequisite before sending the controller SIGKILL.",
+    "preservation": "Original source hashes and harness-reported results are retained as historical records. Direct stdin-EOF observations are separate.",
+    "corrected_local_evidence": "p0-helper-exit-local.json"
+  }
 }

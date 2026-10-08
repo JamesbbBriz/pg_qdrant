@@ -7,6 +7,8 @@ use pgrx::prelude::*;
 
 #[cfg(feature = "p0-managed-helper")]
 mod helper;
+#[cfg(feature = "p0-managed-helper")]
+mod helper_child;
 mod ipc;
 mod worker;
 

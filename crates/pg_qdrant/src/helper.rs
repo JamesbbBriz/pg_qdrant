@@ -1,5 +1,6 @@
 //! P0 supervisor: PostgreSQL remains in this process, Edge runs only after exec.
 
+use crate::helper_child::{ManagedChild, ObservedExit};
 use crate::ipc::{self, Operation, ProbeError};
 use pg_qdrant_protocol::{HelperRequest, RESPONSE_BYTES, VERSION};
 use serde_json::{Value, json};
@@ -7,9 +8,8 @@ use std::ffi::CStr;
 use std::io::{self, Read, Write};
 use std::os::fd::AsRawFd;
 use std::os::unix::ffi::OsStringExt;
-use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::process::{ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -25,13 +25,12 @@ pub type Connection = Arc<Mutex<Channel>>;
 pub struct Supervisor {
     executable: PathBuf,
     owner_path: PathBuf,
-    child: Option<Child>,
+    child: Option<ManagedChild>,
     connection: Option<Connection>,
     attempts: u32,
     next_attempt: Instant,
     last_error: Option<String>,
     last_exit: Option<Value>,
-    pending_stop: Option<&'static str>,
 }
 
 impl Supervisor {
@@ -53,12 +52,11 @@ impl Supervisor {
             next_attempt: Instant::now(),
             last_error: None,
             last_exit: None,
-            pending_stop: None,
         })
     }
 
     pub fn status(&self) -> Value {
-        json!({"engine_pid": self.child.as_ref().map(Child::id),
+        json!({"engine_pid": self.child.as_ref().map(ManagedChild::id),
             "engine_ready": self.connection.is_some(),
             "helper_start_attempts": self.attempts,
             "helper_restart_limit": 3,
@@ -73,25 +71,16 @@ impl Supervisor {
     }
 
     pub fn tick(&mut self, active_elapsed: Option<Duration>) {
+        self.reap_finished();
         // This is an explicit P0 process-stop limit, not native cancellation or
         // the future durable-index shutdown contract. Ownership lasts until exit.
-        if active_elapsed.is_some_and(|elapsed| elapsed >= Duration::from_secs(125)) {
+        if self.child.is_some()
+            && active_elapsed.is_some_and(|elapsed| elapsed >= Duration::from_secs(125))
+        {
             self.stop("execution_budget");
-            self.last_error = Some("helper exceeded the 125-second native-operation budget".into());
-        }
-        if let Some(child) = &mut self.child {
-            match child.try_wait() {
-                Ok(Some(status)) => {
-                    self.last_exit = Some(json!({"engine_pid": child.id(),
-                        "exit_code": status.code(), "signal": status.signal(),
-                        "stop_reason": self.pending_stop.take().unwrap_or("unexpected_exit")}));
-                    self.child = None;
-                    self.connection = None;
-                    self.last_error = Some(format!("helper exited: {status}"));
-                    self.backoff();
-                }
-                Err(error) => self.last_error = Some(format!("helper wait failed: {error}")),
-                Ok(None) => {}
+            if self.child.is_some() {
+                self.last_error =
+                    Some("helper exceeded the 125-second native-operation budget".into());
             }
         }
         // Reap the old process and drain its outstanding response before any
@@ -115,13 +104,35 @@ impl Supervisor {
             Instant::now() + Duration::from_millis(100 * u64::from(self.attempts.max(1)));
     }
 
-    fn stop(&mut self, reason: &'static str) {
+    fn observed_exit(&mut self, exit: ObservedExit) {
+        self.last_exit = Some(exit.details);
+        self.child = None;
         self.connection = None;
+        self.last_error = Some(format!("helper exited: {}", exit.status));
+        self.backoff();
+    }
+
+    fn reap_finished(&mut self) {
         if let Some(child) = &mut self.child {
-            // Keep the first supervisor reason, even if EOF is observed later.
-            self.pending_stop.get_or_insert(reason);
-            let _ = child.kill();
+            match child.poll() {
+                Ok(Some(exit)) => self.observed_exit(exit),
+                Ok(None) => {}
+                Err(error) => self.last_error = Some(format!("helper wait failed: {error}")),
+            }
         }
+    }
+
+    fn stop(&mut self, reason: &'static str) {
+        if let Some(child) = &mut self.child {
+            match child.request_stop(reason) {
+                Ok(Some(exit)) => self.observed_exit(exit),
+                Ok(None) => {}
+                Err(error) => {
+                    self.last_error = Some(format!("helper stop observation failed: {error}"))
+                }
+            }
+        }
+        self.connection = None;
     }
 
     fn spawn(&mut self) -> Result<(), ProbeError> {
@@ -138,8 +149,7 @@ impl Supervisor {
         let input = child.stdin.take().expect("piped helper stdin");
         let mut output = child.stdout.take().expect("piped helper stdout");
         // Retain the Child immediately so every error path can stop/reap it.
-        self.pending_stop = None;
-        self.child = Some(child);
+        self.child = Some(ManagedChild::new(child));
         set_nonblocking(&output, true)?;
         let deadline = Instant::now() + Duration::from_secs(2);
         let ready = read_response(&mut output, pid, 0, Some(deadline), ipc::pause_postgres);
@@ -175,16 +185,6 @@ impl Supervisor {
             .is_err_and(|e| matches!(e.code.as_str(), "protocol_error" | "worker_unavailable"))
         {
             self.stop("transport_failure");
-        }
-    }
-}
-
-impl Drop for Supervisor {
-    fn drop(&mut self) {
-        // Graceful Rust exits stop the child. PostgreSQL proc_exit/SIGKILL also
-        // close every stdin writer; the helper EOF watchdog then exits itself.
-        if let Some(child) = &mut self.child {
-            let _ = child.kill();
         }
     }
 }

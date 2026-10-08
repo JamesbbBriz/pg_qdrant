@@ -13,6 +13,9 @@ use qdrant_edge::{
 use serde_json::{Value, json};
 
 const MAX_FAULT_BYTES: u64 = 64 * 1024 * 1024;
+// The fixed full-text loader eagerly populates more than the small fixture's
+// budget. Its separate, explicit profile has a larger, still bounded mount.
+const MAX_FULL_TEXT_FAULT_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_COPY_LOGICAL_BYTES: u64 = 512 * 1024 * 1024;
 const TMPFS_ROOT: &str = "/pgq-p0-faults";
 const TMPFS_ENV: &str = "PG_QDRANT_ENOSPC_DIR";
@@ -142,6 +145,23 @@ fn fixture_observation(shard: &EdgeShard) -> Result<Vec<qdrant_edge::Record>, St
     require(
         phrase.len() == 1 && phrase[0].id == PointId::NumId(1),
         "phrase/source filter changed",
+    )?;
+    let mut prefix = QueryRequest::new(16);
+    prefix.filter = Some(
+        tenant.merge(&Filter::new_must(Condition::Field(
+            FieldCondition::new_match(
+                "body_prefix"
+                    .parse()
+                    .map_err(|()| "fixture token-prefix path")?,
+                Match::new_text("trans"),
+            ),
+        ))),
+    );
+    let prefix = context(shard.query(prefix), "reopened token-prefix query")?;
+    let ids: std::collections::BTreeSet<_> = prefix.iter().map(|point| point.id).collect();
+    require(
+        ids == [PointId::NumId(1), PointId::NumId(2)].into_iter().collect(),
+        "token-prefix/source filter changed",
     )?;
     Ok(records)
 }
@@ -453,7 +473,7 @@ struct TmpfsGuard {
 }
 
 #[cfg(target_os = "linux")]
-fn validate_tmpfs(input: &Path) -> Result<TmpfsGuard, String> {
+fn validate_tmpfs(input: &Path, max_bytes: u64) -> Result<TmpfsGuard, String> {
     use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
     require(
@@ -583,8 +603,8 @@ fn validate_tmpfs(input: &Path) -> Result<TmpfsGuard, String> {
         .checked_mul(blocks)
         .ok_or("tmpfs capacity overflow")?;
     require(
-        capacity_bytes > 0 && capacity_bytes <= MAX_FAULT_BYTES,
-        "tmpfs capacity must be at most 64 MiB",
+        capacity_bytes > 0 && capacity_bytes <= max_bytes,
+        "tmpfs capacity exceeds the selected fixed experiment budget",
     )?;
     Ok(TmpfsGuard {
         root,
@@ -595,7 +615,7 @@ fn validate_tmpfs(input: &Path) -> Result<TmpfsGuard, String> {
 }
 
 #[cfg(target_os = "linux")]
-fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
+fn run_disk_full(guard: &TmpfsGuard, full_text: bool) -> Result<Value, String> {
     use std::io::Write;
     use std::os::unix::fs::MetadataExt;
     let metadata = context(fs::metadata(&guard.root), "recheck dedicated tmpfs")?;
@@ -612,9 +632,15 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
     let outcome = (|| {
         let shard_path = root.path().join("baseline");
         context(fs::create_dir(&shard_path), "create owned tmpfs shard directory")?;
-        let shard = pg_qdrant_edge_probe::disk_persistence_fixture(&shard_path)?;
+        let shard = if full_text {
+            progress("full_text_fixture");
+            pg_qdrant_edge_probe::bounded_persistence_fixture(&shard_path)?
+        } else {
+            pg_qdrant_edge_probe::disk_persistence_fixture(&shard_path)?
+        };
         progress("fixture_query");
-        let expected = records_and_vector_observation(&shard)?;
+        let observe = if full_text { fixture_observation } else { records_and_vector_observation };
+        let expected = observe(&shard)?;
         let config_path = shard_path.join("edge_config.json");
         let before_bytes = context(fs::read(&config_path), "read persisted baseline config")?;
         let before_memory = shard.config().clone();
@@ -673,17 +699,28 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
         progress("recovery_reopen");
         let reopened = context(EdgeShard::load(&shard_path, None), "reopen after ENOSPC recovery")?;
         require(reopened.config().hnsw_config == Some(target_config), "retried config not persisted")?;
-        require(records_and_vector_observation(&reopened)? == expected, "ENOSPC recovery changed flushed source representations")?;
+        require(observe(&reopened)? == expected, "ENOSPC recovery changed flushed source representations")?;
         context(reopened.flush(), "final recovered flush")?;
         drop(reopened);
 
         let mut result = report("edge_enospc_probe", "passed");
         result["environment"] = json!({"filesystem":"tmpfs","capacity_bytes":guard.capacity_bytes,"no_mount_aliases_in_current_namespace":true,"mode":"0700","pgdata_disjoint":true});
-        result["fixture"] = disk_fixture_description();
+        result["profile"] = if full_text { "full_text" } else { "vector_keyword" }.into();
+        result["fixture"] = if full_text {
+            json!({"points":8,"named_representations":["dense","bm25","learned","tokens"],
+                "wal_segment_capacity_bytes":65_536,"keyword_indexes":["tenant","document","sku"],
+                "text_indexes":["body","body_prefix"],
+                "storage_scope":"unchanged bounded full fixture with mutable phrase and token-prefix indexes"})
+        } else { disk_fixture_description() };
         result["fill"] = json!({"bytes_written":bytes_written,"errno":28,"filler_removed":true});
         result["engine_failure"] = json!({"operation":"set_hnsw_config","error":scrub(message, root.path()),"persisted_config_unchanged":true,"in_memory_config_changed":memory_changed});
-        result["recovery"] = json!({"config_retry":"passed","explicit_flush":"passed","reopen":"passed","records":8,"all_representation_records_equal":true,"keyword_tenant_and_maxsim_queries":"passed","phrase_query":"not_tested"});
-        result["scope"] = "configuration atomic save with vector/keyword fixture only; mutable text-index recovery, WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified".into();
+        let text_result = if full_text { "passed" } else { "not_tested" };
+        result["recovery"] = json!({"config_retry":"passed","explicit_flush":"passed","reopen":"passed","records":8,"all_representation_records_equal":true,"keyword_tenant_and_maxsim_queries":"passed","phrase_query":text_result,"token_prefix_query":text_result});
+        result["scope"] = if full_text {
+            "configuration atomic save and recovery with an already-flushed full mutable text/vector fixture; WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified"
+        } else {
+            "configuration atomic save with vector/keyword fixture only; mutable text-index recovery, WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified"
+        }.into();
         Ok(result)
     })().map_err(|error| scrub(error, root.path()));
     context(root.close(), "clean up owned tmpfs experiment")?;
@@ -699,9 +736,15 @@ fn run_disk_full(guard: &TmpfsGuard) -> Result<Value, String> {
     outcome
 }
 
-pub fn disk_full_probe() -> (Value, i32) {
+pub fn disk_full_probe(full_text: bool) -> (Value, i32) {
     progress("guard");
     let mut skipped = report("edge_enospc_probe", "not_run");
+    skipped["profile"] = if full_text {
+        "full_text"
+    } else {
+        "vector_keyword"
+    }
+    .into();
     skipped["disk_writes_attempted"] = false.into();
     let Some(path) = std::env::var_os(TMPFS_ENV) else {
         skipped["reason"] = format!("{TMPFS_ENV} is not set; no disk writes attempted").into();
@@ -715,7 +758,12 @@ pub fn disk_full_probe() -> (Value, i32) {
     }
     #[cfg(target_os = "linux")]
     {
-        let guard = match validate_tmpfs(Path::new(&path)) {
+        let max_bytes = if full_text {
+            MAX_FULL_TEXT_FAULT_BYTES
+        } else {
+            MAX_FAULT_BYTES
+        };
+        let guard = match validate_tmpfs(Path::new(&path), max_bytes) {
             Ok(guard) => guard,
             Err(reason) => {
                 skipped["reason_code"] = "unsafe_environment".into();
@@ -723,9 +771,18 @@ pub fn disk_full_probe() -> (Value, i32) {
                 return (skipped, 2);
             }
         };
-        match run_disk_full(&guard) {
+        match run_disk_full(&guard, full_text) {
             Ok(result) => (result, 0),
-            Err(error) => (failure("edge_enospc_probe", error), 1),
+            Err(error) => {
+                let mut result = failure("edge_enospc_probe", error);
+                result["profile"] = if full_text {
+                    "full_text"
+                } else {
+                    "vector_keyword"
+                }
+                .into();
+                (result, 1)
+            }
         }
     }
 }

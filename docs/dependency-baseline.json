@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "p0_managed_helper_sql_verified_enospc_retry_required",
+  "status": "p0_narrow_enospc_verified_private_helper_regression_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -113,7 +113,8 @@
         "p0-fault-injection"
       ]
     ],
-    "latest_failed_container_evidence": "evidence/p0-disk-ci.json"
+    "latest_failed_container_evidence": "evidence/p0-regression-ci.json",
+    "last_complete_four_profile_runtime_evidence": "evidence/p0-helper-ci.json"
   },
   "build_evidence": [
     {
@@ -220,7 +221,7 @@
       "status": "passed",
       "rust": "1.96.0",
       "evidence": "evidence/p0-helper-local.json",
-      "scope": "7 normal and 8 private-fault standalone pipe/process checks after matching locked builds, including actual Edge execution and pure-controller SIGKILL cleanup. Not PostgreSQL failure-containment evidence."
+      "scope": "7 normal and 8 private-fault standalone pipe/process checks after matching locked builds, including actual Edge execution and pure-controller SIGKILL cleanup. Not PostgreSQL failure-containment evidence. Historical local controller-SIGKILL cleanup cannot independently prove the gate because live PID visibility was not required before the kill. Current guarded local normal/private reruns each pass six checks then fail that precondition before sending SIGKILL; CI2 remains separate observed evidence."
     },
     {
       "kind": "postgres_helper_runtime",
@@ -257,6 +258,37 @@
       "evidence": "evidence/p0-disk-ci.json",
       "verified_source_commit": "cce2b41d1399424e845e135fac9e87df51764d13",
       "scope": "Dedicated 32 MiB tmpfs filled, then the NamedTempFile error wrapper hid raw errno 28. Config save and recovery were not reached; all four PostgreSQL runtime profiles were skipped after the early failed gate. The owned-File correction requires another complete CI run."
+    },
+    {
+      "kind": "edge_enospc_runtime",
+      "command": "python3 scripts/run_disk_probe.py",
+      "status": "passed",
+      "evidence": "evidence/p0-regression-ci.json",
+      "verified_source_commit": "1f9d8bb9de82f07a6d9440d8461d86505abf21c2",
+      "scope": "Dedicated 32 MiB vector/keyword fixture: real ENOSPC configuration-save failure, unchanged persisted bytes, filler cleanup, retry, explicit flush and reopen with eight rows/four representations and keyword/tenant/MaxSim queries. Both mutable text indexes excluded; no full-text, dirty-ingestion, PostgreSQL atomicity or OOM claim."
+    },
+    {
+      "kind": "postgres_runtime_regression",
+      "status": "partially_verified",
+      "evidence": "evidence/p0-regression-ci.json",
+      "verified_source_commit": "1f9d8bb9de82f07a6d9440d8461d86505abf21c2",
+      "scope": "Direct normal/private SQL 10/12, normal-helper SQL 10 and normal helper pipes 7 passed. Overall workflow failed: private helper pipes passed six checks then raised ESRCH during controller-SIGKILL cleanup observation; private native-abort and private-helper SQL were not reached."
+    },
+    {
+      "kind": "engine_runtime",
+      "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
+      "status": "passed",
+      "evidence": "evidence/p0-engine.json",
+      "scope": "Current integrated 15-test local suite: zero failed/ignored. Source hashes are recorded in the engine evidence. Advanced queries, lifecycle and dynamic schemas add engine feasibility coverage; no product completion or current PostgreSQL runtime claim.",
+      "rust": "1.96.0"
+    },
+    {
+      "kind": "helper_child_bookkeeping",
+      "command": "cargo test --locked -p pg-qdrant-helper --test supervisor_child",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-helper-exit-local.json",
+      "scope": "Two actual-child tests using the private production module. Complete local pipe suites fail their live-PID visibility precondition; current SQL runtime requires CI."
     }
   ]
 }

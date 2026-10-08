@@ -1,8 +1,10 @@
-//! Exhaustive compile sentinels for the public pinned upstream surface.
+//! Compile sentinels for explicitly enumerated public Edge 0.8.0 types.
 //!
-//! These deliberately have no wildcard arms. Upstream variants cannot silently
-//! acquire SQL support; an upgrade that adds one requires an explicit mapping.
-//! A matched type/variant is compile evidence, not a runtime or SQL test.
+//! The enum matches deliberately have no wildcard arms: additions to those
+//! enums require a mapping decision. This does not enumerate every public
+//! method, nested implementation type, struct field, or valid combination.
+//! Method references and typed constructors below are compile-only evidence;
+//! they do not prove invocation, persistence, query behavior, or SQL support.
 
 #![allow(dead_code)]
 
@@ -182,6 +184,16 @@ pub fn value_mapping(value: &ValueVariants) -> &'static str {
     }
 }
 
+/// Public facet result kinds; point/document scope and permission checks remain
+/// the statistics planner's responsibility (F19/Q11), not this enum mapping.
+pub fn facet_value_mapping(value: &FacetValue) -> &'static str {
+    match value {
+        FacetValue::Keyword(_) | FacetValue::Int(_) | FacetValue::Uuid(_) | FacetValue::Bool(_) => {
+            "Q11/F19"
+        }
+    }
+}
+
 pub fn any_value_mapping(value: &AnyVariants) -> &'static str {
     match value {
         AnyVariants::Strings(_) | AnyVariants::Integers(_) => "Q12",
@@ -194,6 +206,22 @@ pub fn datatype_mapping(datatype: VectorStorageDatatype) -> &'static str {
         | VectorStorageDatatype::Float16
         | VectorStorageDatatype::Uint8
         | VectorStorageDatatype::Turbo4 => "V05",
+    }
+}
+
+pub fn compression_ratio_mapping(ratio: CompressionRatio) -> &'static str {
+    match ratio {
+        CompressionRatio::X4
+        | CompressionRatio::X8
+        | CompressionRatio::X16
+        | CompressionRatio::X32
+        | CompressionRatio::X64 => "V04; product quantization configuration only",
+    }
+}
+
+pub fn scalar_type_mapping(kind: ScalarType) -> &'static str {
+    match kind {
+        ScalarType::Int8 => "V04; scalar quantization, not V05 uint8 source storage",
     }
 }
 
@@ -286,6 +314,36 @@ pub fn insertion_mapping(operation: &PointInsertOperations) -> &'static str {
     }
 }
 
+pub fn update_mode_mapping(mode: UpdateMode) -> &'static str {
+    match mode {
+        UpdateMode::Upsert | UpdateMode::InsertOnly | UpdateMode::UpdateOnly => "L02",
+    }
+}
+
+/// Update-only batch preview outcomes. This does not make its restricted batch
+/// API equivalent to EdgeShard::update or provide WAL/PG transaction semantics.
+pub fn point_action_mapping(action: &PointAction) -> &'static str {
+    match action {
+        PointAction::Store(_) | PointAction::Delete | PointAction::Skip | PointAction::Missing => {
+            "L02/L04; update-only batch preview"
+        }
+    }
+}
+
+/// Manifest metadata is an engine segment state, not the extension's index
+/// generation state or proof of an atomic reader cutover.
+pub fn segment_manifest_state_mapping(state: &SegmentManifestState) -> &'static str {
+    match state {
+        SegmentManifestState::Active
+        | SegmentManifestState::UnderConstruction
+        | SegmentManifestState::Optimizing {
+            holder: _,
+            lease_until: _,
+        }
+        | SegmentManifestState::Retiring => "L04; manifest/read-only lifecycle audit",
+    }
+}
+
 pub fn vector_operation_mapping(operation: &VectorOperations) -> &'static str {
     match operation {
         VectorOperations::UpdateVectors(_)
@@ -336,6 +394,69 @@ pub fn idf_mapping(params: &IdfParams) -> &'static str {
     }
 }
 
+pub fn range_mapping(range: &RangeInterface) -> &'static str {
+    match range {
+        RangeInterface::Float(_) | RangeInterface::DateTime(_) => "Q12",
+    }
+}
+
+/// A projection is not an authorization filter. SQL-owned result policy must
+/// independently enforce permissions and remove unrequested fields/vectors.
+pub fn payload_projection_mapping(projection: &WithPayloadInterface) -> &'static str {
+    match projection {
+        WithPayloadInterface::Bool(_) | WithPayloadInterface::Fields(_) => "Q10/L08",
+        WithPayloadInterface::Selector(selector) => payload_selector_mapping(selector),
+    }
+}
+
+pub fn payload_selector_mapping(selector: &PayloadSelector) -> &'static str {
+    match selector {
+        PayloadSelector::Include(_) | PayloadSelector::Exclude(_) => "Q10/L08",
+    }
+}
+
+pub fn vector_projection_mapping(projection: &WithVector) -> &'static str {
+    match projection {
+        WithVector::Bool(_) | WithVector::Selector(_) => "Q10/L08",
+    }
+}
+
+pub fn order_by_interface_mapping(order_by: &OrderByInterface) -> &'static str {
+    match order_by {
+        OrderByInterface::Key(_) | OrderByInterface::Struct(_) => "Q10",
+    }
+}
+
+pub fn direction_mapping(direction: Direction) -> &'static str {
+    match direction {
+        Direction::Asc | Direction::Desc => "Q10",
+    }
+}
+
+pub fn start_from_mapping(start: &StartFrom) -> &'static str {
+    match start {
+        StartFrom::Integer(_) | StartFrom::Float(_) | StartFrom::Datetime(_) => "Q10",
+    }
+}
+
+pub fn order_value_mapping(value: &OrderValue) -> &'static str {
+    match value {
+        OrderValue::Int(_) | OrderValue::Float(_) => "Q10",
+    }
+}
+
+pub fn decay_kind_mapping(kind: DecayKind) -> &'static str {
+    match kind {
+        DecayKind::Lin | DecayKind::Gauss | DecayKind::Exp => "Q08",
+    }
+}
+
+pub fn sample_mapping(sample: Sample) -> &'static str {
+    match sample {
+        Sample::Random => "Q10",
+    }
+}
+
 pub fn expression_mapping(expression: &Expression) -> &'static str {
     match expression {
         Expression::Constant(_)
@@ -358,8 +479,71 @@ pub fn expression_mapping(expression: &Expression) -> &'static str {
     }
 }
 
-/// Reference public methods even where runtime scenarios are still pending.
-/// Inferred return types avoid importing unnameable implementation types.
+/// Typed input construction only (V04), with no quantized index built or query
+/// run. Published From implementations avoid naming the unexported wrapper
+/// types. `memory: None` is inferred: the underlying Memory enum is not part of
+/// the root reexports, so its placement variants are not covered here. Turbo's
+/// nested config/bit type is likewise not publicly reexported; only the outer
+/// QuantizationConfig::Turbo match above is covered.
+#[allow(deprecated)] // The published config literals require always_ram.
+pub fn construct_quantization_inputs() -> [QuantizationConfig; 3] {
+    let scalar = ScalarQuantizationConfig {
+        r#type: ScalarType::Int8,
+        quantile: Some(0.99),
+        always_ram: None,
+        memory: None,
+    };
+    let product = ProductQuantizationConfig {
+        compression: CompressionRatio::X4,
+        always_ram: None,
+        memory: None,
+    };
+    let binary = BinaryQuantizationConfig {
+        always_ram: None,
+        memory: None,
+        encoding: Some(BinaryQuantizationEncoding::OneBit),
+        query_encoding: Some(BinaryQuantizationQueryEncoding::Scalar8Bits),
+    };
+    [scalar.into(), product.into(), binary.into()]
+}
+
+/// Typed search options only (V04/Q13). ACORN enablement is conditional on the
+/// real HNSW/filter path; constructing these flags does not prove it ran.
+/// Rescoring uses the retained storage precision, not restored float32 inputs.
+pub fn construct_approximate_search_inputs() -> SearchParams {
+    SearchParams {
+        hnsw_ef: Some(32),
+        exact: false,
+        quantization: Some(QuantizationSearchParams {
+            ignore: false,
+            rescore: Some(true),
+            oversampling: Some(2.0),
+        }),
+        indexed_only: false,
+        acorn: Some(AcornSearchParams {
+            enable: true,
+            max_selectivity: Some(external::ordered_float::OrderedFloat(0.4)),
+        }),
+        idf: None,
+    }
+}
+
+/// Compile-only public LoadProfile constructors and merge (L04/V05). No shard
+/// is opened, no manifest follower is refreshed, and no warm/cold behavior is
+/// measured. Mutable components can ignore this profile in the fixed release.
+pub fn construct_load_profiles(filter: &Filter, order_key: &JsonPath) -> [LoadProfile; 4] {
+    let search = LoadProfile::for_search("dense", Some(filter), false);
+    let scroll = LoadProfile::for_scroll(Some(filter), Some(order_key), true);
+    let retrieve = LoadProfile::for_retrieve();
+    let mut combined = search.clone();
+    combined.merge(scroll.clone());
+    combined.merge(retrieve.clone());
+    [search, scroll, retrieve, combined]
+}
+
+/// Method references only, including paths whose runtime scenarios are pending.
+/// Inferred return types avoid importing unnameable implementation types. A new
+/// method will not cause this list to fail compilation; keep the source audit.
 fn lifecycle_and_read_compile_surface() {
     let _ = EdgeShard::new;
     let _ = EdgeShard::load;
@@ -383,5 +567,4 @@ fn lifecycle_and_read_compile_surface() {
     let _ = EdgeShard::recover_partial_snapshot;
     let _ = ReadOnlyEdgeShard::open_mmap;
     let _ = UpdateOnlyEdgeShard::open_mmap;
-    let _: Option<LoadProfile> = None;
 }

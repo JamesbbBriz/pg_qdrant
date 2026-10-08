@@ -36,6 +36,15 @@ class DiskProbeRunnerTest(unittest.TestCase):
         self.assertEqual(report["native_report_status"], "passed")
         self.assertEqual(report["execution"]["exit_code"], 17)
 
+    def test_selected_fixture_profile_must_match_the_native_report(self) -> None:
+        source = "print('{\"kind\":\"edge_enospc_probe\",\"status\":\"passed\",\"profile\":\"vector_keyword\"}')"
+        command = [sys.executable, "-c", source]
+        matched = RUNNER.run_probe(command, required_profile="vector_keyword")
+        self.assertEqual(matched["status"], "passed")
+        wrong = RUNNER.run_probe(command, required_profile="full_text")
+        self.assertEqual(wrong["status"], "failed")
+        self.assertEqual(wrong["native_report_status"], "passed")
+
     def test_native_signal_without_json_retains_failure_phase(self) -> None:
         report = self.run_child(
             "import os, signal, sys; "

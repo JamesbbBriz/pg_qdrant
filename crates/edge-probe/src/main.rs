@@ -5,6 +5,7 @@ fn main() {
     if let Some(command) = args.next() {
         if command == "--corruption-probe"
             || command == "--disk-full-probe"
+            || command == "--full-text-disk-full-probe"
             || command == "--disk-fixture-probe"
         {
             if args.next().is_some() {
@@ -22,7 +23,7 @@ fn main() {
                     Err(error) => (fault_probes::failure("edge_disk_fixture_probe", error), 1),
                 }
             } else {
-                fault_probes::disk_full_probe()
+                fault_probes::disk_full_probe(command == "--full-text-disk-full-probe")
             };
             println!("{}", serde_json::to_string_pretty(&report).unwrap());
             std::process::exit(exit_code);

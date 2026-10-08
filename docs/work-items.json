@@ -115,6 +115,20 @@
         "source": "docs/evidence/p0-helper-ci.json",
         "code_revision": "a22d3c73ad838ff606a080345b65d634f5144c39",
         "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab"
+      },
+      {
+        "finding": "CI4 passed narrow ENOSPC configuration recovery and three SQL profiles, then failed the private-helper cleanup observer.",
+        "effect": "Keep all workload ranges and product statuses open. Complete current helper regression and full-text ENOSPC before accepting those gates.",
+        "source": "docs/evidence/p0-regression-ci.json",
+        "code_revision": "1f9d8bb9de82f07a6d9440d8461d86505abf21c2",
+        "tree": "1d7e4a6582eabb9d0e32cdb14ff2b22c7a3584e4"
+      },
+      {
+        "finding": "The current integrated local engine suite passes 15 tests. Both strict local standalone helper reruns fail live PID visibility before controller SIGKILL.",
+        "effect": "Add scoped engine coverage and retain current container regression as pending.",
+        "source": "docs/evidence/p0-engine.json",
+        "additional_source": "docs/evidence/p0-helper-exit-local.json",
+        "source_scope": "Exact source hashes are recorded separately; these current local results are not attributed to the historical CI4 commit."
       }
     ]
   },
@@ -10572,7 +10586,7 @@
     "report": "docs/p0-report.md",
     "engine_evidence": "docs/evidence/p0-engine.json",
     "dependency_evidence": "docs/dependency-baseline.json",
-    "source_identity": "Both PostgreSQL CI records fix head/merge/tree identities. The latest four-profile SQL passes and failed disk experiment apply only to a22d3c7 and its recorded tree; later fixes require a new run.",
+    "source_identity": "CI4 narrow ENOSPC and three SQL profiles apply only to 1f9d8bb and its recorded tree. Complete four-profile SQL evidence remains historical CI2; current-source regression is pending.",
     "p0_exit_passed": false,
     "sql_runtime_verified": true,
     "product_completed": false,
@@ -10583,23 +10597,23 @@
     "container_runtime_verified": true,
     "postgres_fault_cdylib_and_schema_verified": true,
     "postgresql_ci_evidence": "docs/evidence/p0-postgresql-ci.json",
-    "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-    "verified_ci_checkout": "6584812ae40f8850c1d43658ccbdfba184e1846d",
-    "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
+    "verified_ci_head": "1f9d8bb9de82f07a6d9440d8461d86505abf21c2",
+    "verified_ci_checkout": "773889cdb1b6a840ae9a35fc9b3bb1dde798ccd5",
+    "verified_ci_tree": "1d7e4a6582eabb9d0e32cdb14ff2b22c7a3584e4",
     "diagnostic_sql_runtime_verified": true,
     "sql_runtime_scope": "Recorded direct-worker and managed-helper P0 diagnostics only; source-table indexing, source permissions and public search remain unimplemented.",
     "direct_worker_production_containment": "failed",
     "managed_helper_comparison": "scoped_sql_and_native_faults_passed; preferred_candidate; production_topology_pending",
     "helper_postgresql_runtime_verified": true,
     "metadata_corruption_runtime_verified": true,
-    "positive_enospc_runtime_verified": false,
+    "positive_enospc_runtime_verified": true,
     "evidence_scope": "Every verification level applies only to its named probe. All product completion and release flags remain false.",
-    "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
+    "helper_initial_standalone_observation": "Historical local 7/8 pass records do not independently prove controller-SIGKILL cleanup without a live PID precondition; CI2 independently passed both suites. Current guarded local runs each pass six then fail live PID visibility before kill.",
     "helper_hard_stop_runtime_verified": true,
-    "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-    "verified_ci_scope": "All four PostgreSQL diagnostic profiles and standalone helper pipe suites; the overall workflow failed at the provisioned disk experiment.",
-    "latest_ci_run": 37720263848,
-    "latest_ci_job": 113126054532,
+    "latest_ci_evidence": "docs/evidence/p0-regression-ci.json",
+    "verified_ci_scope": "Narrow ENOSPC, direct SQL 10/12, normal-helper SQL 10 and normal pipes 7 passed; private pipes passed six then failed cleanup observation; private-helper SQL not reached.",
+    "latest_ci_run": 37725563600,
+    "latest_ci_job": 113142806882,
     "latest_ci_workflow_conclusion": "failed",
     "helper_postgresql_containment": "passed_named_native_failures",
     "helper_hard_stop_limit_ms": 125000,
@@ -10608,8 +10622,8 @@
     "helper_restart_exhaustion_runtime_verified": true,
     "forced_postgresql_supervisor_sigkill_verified": false,
     "kernel_oom_runtime_verified": false,
-    "positive_enospc_experiment_status": "failed",
-    "positive_enospc_child_exit_cause": "unknown",
+    "positive_enospc_experiment_status": "passed_narrow_configuration_save_only",
+    "positive_enospc_child_exit_cause": "exit_0_in_ci4; initial_ci2_missing_report_cause_remains_unknown",
     "preferred_topology_candidate": "managed_helper",
     "ci_history": [
       {
@@ -10627,8 +10641,42 @@
         "tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
         "workflow_conclusion": "failed",
         "scope": "Four SQL profiles and both helper pipe suites passed; the provisioned disk experiment failed with unknown child exit cause."
+      },
+      {
+        "run": 37724223470,
+        "source": "docs/evidence/p0-disk-ci.json",
+        "head": "cce2b41d1399424e845e135fac9e87df51764d13",
+        "tree": "22b98d60a653b3f7521f48a6dda6bff38bb3e32f",
+        "workflow_conclusion": "failed",
+        "scope": "Filler errno-wrapping misclassified genuine ENOSPC; configuration recovery and all SQL profiles not reached."
+      },
+      {
+        "run": 37725563600,
+        "source": "docs/evidence/p0-regression-ci.json",
+        "head": "1f9d8bb9de82f07a6d9440d8461d86505abf21c2",
+        "tree": "1d7e4a6582eabb9d0e32cdb14ff2b22c7a3584e4",
+        "workflow_conclusion": "failed",
+        "scope": "Narrow ENOSPC, direct SQL 10/12, normal-helper SQL 10 and normal pipes 7 passed; private pipes passed six then failed cleanup observation; private-helper SQL not reached."
       }
-    ]
+    ],
+    "positive_enospc_scope": "32 MiB vector/keyword fixture only; mutable text indexes excluded. Full-text ENOSPC remains pending.",
+    "current_engine_tests_passed": 15,
+    "current_engine_tests_failed": 0,
+    "current_engine_tests_ignored": 0,
+    "current_source_postgres_regression_verified": false,
+    "current_forced_pg_supervisor_sigkill_test": "implemented_not_runtime_verified",
+    "helper_child_bookkeeping_tests_passed": 2,
+    "upstream_projection_followup": {
+      "capability_ids": [
+        "Q07",
+        "L09"
+      ],
+      "owner": "results/permissions",
+      "finding": "Edge 0.8.0 root MMR returns its named vector despite WithVector(false).",
+      "source": "crates/edge-probe/tests/advanced.rs",
+      "requirement": "The SQL adapter must enforce result projections and strip all unrequested vectors; never expose upstream results unchanged.",
+      "product_status": "pending"
+    }
   },
   "remaining_p0_estimate_review": {
     "observed_on": "2026-10-08",
@@ -10671,7 +10719,7 @@
           "W-L10"
         ],
         "assumption": "Disposable process and bounded memory/storage environments are available.",
-        "checkpoint_status": "Direct-worker collateral is reproduced; helper native-failure containment, the 125-second stop, SIGTERM/EOF and restart exhaustion pass. Forced PG-supervisor SIGKILL, actual OOM and the failed disk experiment remain open."
+        "checkpoint_status": "Historical CI2 helper fault evidence remains; CI4 narrow ENOSPC passed but private-helper preflight failed before SQL. Current helper regression, forced PG-supervisor SIGKILL, actual OOM and full-text ENOSPC remain open."
       },
       {
         "owner": "lexical/quality",
@@ -10697,7 +10745,7 @@
         "conditional_on": "Measured PostgreSQL worker failure domain is unacceptable.",
         "assumption": "One-package deployment is retained; reuse only lifecycle/protocol portions proven safe.",
         "condition_status": "triggered_by_direct_worker_collateral; required_scoped_helper_comparison_passed; preferred_candidate_with_production_acceptance_open",
-        "checkpoint_status": "Normal/private helper packaging, 7/8 pipe checks and 10/15 SQL checks pass at the recorded tree. Resource isolation, production generations, durability and release packaging remain."
+        "checkpoint_status": "Complete historical normal/private helper SQL is bound to CI2. CI4 normal helper passed while private preflight failed; strict current local PID observation fails before controller kill. Current full runtime regression remains pending."
       }
     ],
     "rule": "These overlap shared work and must not be added to existing capability estimates without allocation. The 5-10 day investigation budget is not a completion criterion.",
@@ -10706,7 +10754,7 @@
   },
   "disk_fixture_correction": {
     "evidence": "docs/evidence/p0-engine.json",
-    "engine_tests_passed": 4,
+    "engine_tests_passed": 15,
     "engine_tests_failed": 0,
     "engine_tests_ignored": 0,
     "preserved_full_phrase_tests": [
@@ -10723,7 +10771,7 @@
       ],
       "text_indexes": [],
       "clean_reopen": "passed",
-      "positive_enospc": "pending_new_ci"
+      "positive_enospc": "passed_narrow_scope_ci4"
     },
     "retained_open_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes",
     "product_scope_completed": false,
@@ -10731,7 +10779,7 @@
       "docs/evidence/p0-helper-ci.json",
       "docs/evidence/p0-disk-ci.json"
     ],
-    "latest_failure": "cce2b41: filler reached real ENOSPC, but NamedTempFile wrapped the raw errno; config save/recovery were not reached and all PostgreSQL runtime profiles were skipped.",
-    "current_correction": "Write through the same owned File to retain raw errno 28; four local engine tests pass; dedicated ENOSPC and complete container regression pending."
+    "latest_failure": "CI4 private-helper pipe cleanup observation raised ESRCH after six checks; private-helper SQL was not reached. Earlier disk failures remain in their separate records.",
+    "current_correction": "Narrow 32 MiB configuration-save ENOSPC recovery passed in CI4. Separate 128 MiB full-text profile and corrected live-PID/ESRCH helper observer require current CI."
   }
 }

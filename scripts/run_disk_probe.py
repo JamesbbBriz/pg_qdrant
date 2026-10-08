@@ -2,6 +2,7 @@
 """Run the explicitly provisioned tmpfs experiment and require a real pass."""
 from __future__ import annotations
 
+import argparse
 import json
 import os
 from pathlib import Path
@@ -19,7 +20,7 @@ def output_tail(value: str | bytes | None) -> str:
     return (value or "")[-OUTPUT_TAIL_LIMIT:]
 
 
-def run_probe(command: list[str], timeout: float = 90) -> dict:
+def run_probe(command: list[str], timeout: float = 90, required_profile: str | None = None) -> dict:
     """Keep process failure evidence even when native code cannot return JSON."""
     returncode = None
     timed_out = False
@@ -75,6 +76,7 @@ def run_probe(command: list[str], timeout: float = 90) -> dict:
     # wrong experiment, or not_run result from the guarded native probe.
     passed = (returncode == 0 and not timed_out
               and report.get("kind") == "edge_enospc_probe"
+              and (required_profile is None or report.get("profile") == required_profile)
               and report.get("status") == "passed")
     if not passed:
         native_status = report.get("status") if parsed_native_report else None
@@ -95,10 +97,17 @@ def run_probe(command: list[str], timeout: float = 90) -> dict:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--profile", choices=["vector-keyword", "full-text"], default="vector-keyword")
+    args = parser.parse_args()
+    full_text = args.profile == "full-text"
     artifacts = Path(os.environ.get("PG_QDRANT_ARTIFACT_DIR", "artifacts"))
     artifacts.mkdir(parents=True, exist_ok=True)
-    report = run_probe(["target/debug/pg-qdrant-edge-probe", "--disk-full-probe"])
-    (artifacts / "edge-enospc.json").write_text(json.dumps(report, indent=2) + "\n")
+    flag = "--full-text-disk-full-probe" if full_text else "--disk-full-probe"
+    profile = "full_text" if full_text else "vector_keyword"
+    report = run_probe(["target/debug/pg-qdrant-edge-probe", flag], required_profile=profile)
+    filename = "edge-full-text-enospc.json" if full_text else "edge-enospc.json"
+    (artifacts / filename).write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))
     if report["status"] != "passed":
         raise SystemExit("The provisioned ENOSPC experiment did not pass.")

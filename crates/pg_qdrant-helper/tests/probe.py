@@ -66,10 +66,19 @@ def record(name, **details):
     report["checks"].append({"name": name, "status": "passed", **details})
 
 
-def stopped(pid):
+def process_identity(pid):
+    proc = Path(f"/proc/{pid}")
+    uid = proc.stat().st_uid
+    fields = (proc / "stat").read_text().rsplit(")", 1)[1].split()
+    return {"pid": pid, "start_ticks": int(fields[19]),
+            "state": fields[0], "parent_pid": int(fields[1]), "uid": uid}
+
+
+def stopped(expected):
     try:
-        return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].strip().split()[0] == "Z"
-    except FileNotFoundError:
+        current = process_identity(expected["pid"])
+        return current["start_ticks"] != expected["start_ticks"] or current["state"] == "Z"
+    except (FileNotFoundError, ProcessLookupError):
         return True
 
 
@@ -141,15 +150,27 @@ time.sleep(30)
         assert ready["result"]["fault_injection"] is args.faults
         child_pid = ready["engine_pid"]
         assert child_pid != controller.pid
-        orphan_helpers.append(child_pid)
+        # A missing proc entry is only death evidence after the same live
+        # identity was visible here. Reject incompatible observation namespaces.
+        try:
+            child_identity = process_identity(child_pid)
+        except (FileNotFoundError, ProcessLookupError) as error:
+            report["process_observation_gate"] = {
+                "status": "failed", "reason": "live_helper_identity_unavailable", "engine_pid": child_pid}
+            raise AssertionError("live helper identity is not observable in this proc namespace") from error
+        assert child_identity["uid"] == os.geteuid(), "observed helper must be an owned process"
+        assert child_identity["state"] != "Z"
+        assert child_identity["parent_pid"] == controller.pid
+        orphan_helpers.append(child_identity)
         time.sleep(0.1)
+        assert controller.poll() is None and not stopped(child_identity)
         controller.kill()
         assert controller.wait(timeout=3) == -signal.SIGKILL
         deadline = time.monotonic() + 3
-        while not stopped(child_pid) and time.monotonic() < deadline:
+        while not stopped(child_identity) and time.monotonic() < deadline:
             time.sleep(0.02)
-        assert stopped(child_pid), "helper outlived the killed controller"
-        record("supervisor_sigkill_closes_pipe_and_stops_helper")
+        assert stopped(child_identity), "helper outlived the killed controller"
+        record("supervisor_sigkill_closes_pipe_and_stops_helper", observed_live_identity=child_identity)
 
         if args.faults:
             aborted = start(owner)
@@ -166,9 +187,12 @@ finally:
         if process.poll() is None:
             process.kill()
         process.wait(timeout=3)
-    for pid in orphan_helpers:
-        if not stopped(pid):
-            os.kill(pid, signal.SIGKILL)
+    for expected in orphan_helpers:
+        if not stopped(expected):
+            try:
+                os.kill(expected["pid"], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))

@@ -257,6 +257,15 @@ def exercise_faults():
         state = jsql("SELECT qdrant_internal.p0_start_worker(5000)")
         if HELPER:
             assert state["worker_pid"] == owner_before and state["engine_pid"] != engine_before
+            last_exit = state["helper_last_exit"]
+            assert last_exit["engine_pid"] == engine_before
+            assert last_exit["signal"] == (signal.SIGKILL if kind == "sigkill" else signal.SIGABRT)
+            if kind == "sigkill":
+                # The idle helper has no in-flight pipe response to clean up.
+                assert last_exit["stop_reason"] == "unexpected_exit"
+                assert last_exit["supervisor_kill_requested"] is False
+                assert last_exit["kill_attempts"] == 0
+                assert last_exit["first_kill_attempt"] is None
         else:
             assert state["worker_pid"] != owner_before
         record(f"{'helper' if HELPER else 'worker'}_{kind}_collateral_recovery", companion_session_terminated=collateral,
@@ -267,6 +276,7 @@ def exercise_faults():
     if HELPER:
         exercise_helper_operation_budget()
         exercise_helper_parent_exit()
+        exercise_helper_supervisor_sigkill()
         exercise_helper_restart_exhaustion()
 
     REPORT["unexecuted_fault_gates"] = [
@@ -293,7 +303,7 @@ def exercise_helper_parent_exit():
             # A zombie has no executing native work; init may reap it later.
             stat = Path(f"/proc/{engine_pid}/stat").read_text()
             return stat.rsplit(")", 1)[1].strip().split()[0] == "Z"
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
             return True
 
     wait_for(stopped, seconds=5)
@@ -346,11 +356,18 @@ def exercise_helper_operation_budget():
         last_exit = replacement["helper_last_exit"]
         assert last_exit["engine_pid"] == engine_pid and last_exit["signal"] == signal.SIGKILL
         assert last_exit["stop_reason"] == "execution_budget"
+        assert last_exit["supervisor_kill_requested"] is True
+        assert last_exit["kill_attempts"] == 1
+        assert last_exit["first_kill_attempt"]["succeeded"] is True
+        assert last_exit["first_kill_attempt"]["raw_os_error"] is None
+        assert last_exit["first_kill_attempt"] == last_exit["last_kill_attempt"]
         finish(observer, timeout=12)
         record("helper_operation_budget_stops_frozen_engine", fault="SIGSTOP", configured_limit_ms=125000,
                observed_remaining_seconds=elapsed, caller_cancelled=True, native_cancellation=False,
                supervisor_preserved=True, companion_session_completed=True,
                stop_reason=last_exit["stop_reason"], stopped_engine_pid=engine_pid,
+               supervisor_kill_requested=last_exit["supervisor_kill_requested"],
+               kill_attempts=last_exit["kill_attempts"], first_kill_attempt=last_exit["first_kill_attempt"],
                replacement_engine_pid=replacement["engine_pid"])
     finally:
         # A failed assertion must not leave our deliberately stopped child alive.
@@ -358,9 +375,168 @@ def exercise_helper_operation_budget():
             stat = Path(f"/proc/{engine_pid}/stat").read_text()
             if stat.rsplit(")", 1)[1].strip().split()[0] != "Z":
                 os.kill(engine_pid, signal.SIGKILL)
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
             pass
         for process in (active, observer):
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=3)
+
+
+
+def exercise_helper_supervisor_sigkill():
+    # This kills a real PG shared-memory worker, so collateral SQL termination
+    # and postmaster crash recovery are expected. Native-helper containment is
+    # exercised separately by helper_sigkill_collateral_recovery above.
+    import fcntl
+    import stat
+
+    assert HELPER and FAULTS and os.geteuid() != 0
+    data = Path(os.environ["PG_QDRANT_DISPOSABLE_DATA"]).resolve()
+    assert Path(scalar("SHOW data_directory")).resolve() == data
+    assert scalar("SHOW restart_after_crash") == "on"
+
+    def identity(pid):
+        proc = Path(f"/proc/{int(pid)}")
+        assert proc.stat().st_uid == os.geteuid(), "fault target must be an owned process"
+        fields = (proc / "stat").read_text().rsplit(")", 1)[1].split()
+        return {"pid": int(pid), "start_ticks": int(fields[19]),
+                "state": fields[0], "parent_pid": int(fields[1])}
+
+    def same_process(before, after):
+        return (before["pid"], before["start_ticks"]) == (after["pid"], after["start_ticks"])
+
+    def stopped(before):
+        try:
+            current = identity(before["pid"])
+            return not same_process(before, current) or current["state"] == "Z"
+        except (FileNotFoundError, ProcessLookupError):
+            return True
+
+    postmaster_pid = int((data / "postmaster.pid").read_text().splitlines()[0])
+    postmaster_before = identity(postmaster_pid)
+    before = idle()
+    assert before["helper_start_attempts"] == 1
+    worker_before = identity(before["worker_pid"])
+    engine_before = identity(before["engine_pid"])
+    assert worker_before["parent_pid"] == postmaster_pid
+    assert engine_before["parent_pid"] == worker_before["pid"]
+    assert scalar(f"SELECT backend_type FROM pg_stat_activity WHERE pid={worker_before['pid']}") == "pg_qdrant P0 owner"
+    assert scalar(f"SELECT count(*) FROM pg_stat_activity WHERE pid={engine_before['pid']}") == "0"
+    fence = data / "pg_qdrant_p0" / f"db-{int(before['database_oid'])}.engine-owner"
+    fence_identity = None
+
+    def check_fence(expected_locked):
+        nonlocal fence_identity
+        fd = os.open(fence, os.O_RDWR | os.O_NOFOLLOW)
+        try:
+            metadata = os.fstat(fd)
+            assert stat.S_ISREG(metadata.st_mode) and metadata.st_uid == os.geteuid()
+            assert stat.S_IMODE(metadata.st_mode) == 0o600
+            current_identity = (metadata.st_dev, metadata.st_ino)
+            if fence_identity is None:
+                fence_identity = current_identity
+            assert current_identity == fence_identity, "replacement changed the ownership-fence inode"
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                locked = True
+            else:
+                locked = False
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            assert locked is expected_locked, "unexpected native ownership-fence state"
+        finally:
+            os.close(fd)
+
+    check_fence(True)
+    log_path = ARTIFACTS / "postgresql.log"
+    log_offset = log_path.stat().st_size
+    processes = []
+    supervisor_kill_sent = False
+    try:
+        observer = spawn("SET application_name='pgq_p0_supervisor_kill_observer'; "
+                         "BEGIN; SELECT pg_sleep(30); COMMIT")
+        processes.append(observer)
+        observer_pid = int(wait_for(lambda: scalar(
+            "SELECT pid FROM pg_stat_activity "
+            "WHERE application_name='pgq_p0_supervisor_kill_observer' "
+            "AND state='active' AND wait_event='PgSleep'")))
+        observer_before = identity(observer_pid)
+        active = spawn("SET application_name='pgq_p0_supervisor_kill_caller'; "
+                       "SELECT qdrant_internal.p0_delay(10000,15000)")
+        processes.append(active)
+        wait_for(lambda: ping()["active"] is not None)
+        assert observer.poll() is None and not stopped(observer_before)
+        assert not stopped(engine_before)
+        assert same_process(worker_before, identity(worker_before["pid"]))
+        check_fence(True)
+
+        started = time.monotonic()
+        os.kill(worker_before["pid"], signal.SIGKILL)
+        supervisor_kill_sent = True
+        # Enforce the child-stop bound from the kill, before waiting on SQL
+        # clients; their separate waits must not extend the orphan deadline.
+        wait_for(lambda: stopped(engine_before), seconds=5)
+        helper_stop_confirmed_seconds = time.monotonic() - started
+        active_out, active_err = active.communicate(timeout=8)
+        assert active.returncode != 0, (active_out, active_err)
+        observer_out, observer_err = observer.communicate(timeout=8)
+        assert observer.returncode != 0, "PG supervisor SIGKILL must terminate the companion SQL session"
+        assert stopped(worker_before) and stopped(observer_before)
+        # No replacement is requested before the old native process is gone.
+        check_fence(False)
+        wait_recovery()
+        assert int((data / "postmaster.pid").read_text().splitlines()[0]) == postmaster_pid
+        assert same_process(postmaster_before, identity(postmaster_pid))
+        assert scalar("SELECT value FROM p0_recovery_marker WHERE id=1") == "committed before worker failure"
+        with log_path.open("rb") as logs:
+            logs.seek(log_offset)
+            after_crash = logs.read(65536).decode("utf-8", errors="replace")
+        assert re.search(rf"\(PID {worker_before['pid']}\).*terminated by signal 9", after_crash), after_crash[-4000:]
+        assert "reinitializing" in after_crash, after_crash[-4000:]
+
+        starts = [spawn("SELECT qdrant_internal.p0_start_worker(5000)") for _ in range(2)]
+        processes.extend(starts)
+        replacements = [json.loads(finish(process)[0]) for process in starts]
+        assert len({(row["worker_pid"], row["engine_pid"]) for row in replacements}) == 1
+        replacement = idle()
+        worker_after = identity(replacement["worker_pid"])
+        engine_after = identity(replacement["engine_pid"])
+        assert not same_process(worker_before, worker_after)
+        assert not same_process(engine_before, engine_after)
+        assert worker_after["parent_pid"] == postmaster_pid
+        assert engine_after["parent_pid"] == worker_after["pid"]
+        assert replacement["helper_start_attempts"] == 1
+        assert stopped(engine_before)
+        check_fence(True)
+        recovery_seconds = time.monotonic() - started
+        engine = jsql("SELECT qdrant_internal.p0_engine_probe(120000)", timeout=135)
+        assert engine["status"] == "passed" and engine["kind"] == "synthetic_engine_smoke"
+        assert engine["engine_version"] == "0.8.0" and engine["checks"]
+        (ARTIFACTS / "sql-engine-after-supervisor-sigkill.json").write_text(json.dumps(engine, indent=2) + "\n")
+        record("helper_supervisor_sigkill_recovers_postgresql_and_native_owner",
+               shutdown_signal="SIGKILL", postgres_crash_recovery_observed=True,
+               companion_session_terminated=True, caller_failed=True,
+               postmaster_identity_preserved=True, committed_postgresql_marker_retained=True,
+               old_engine_stopped_before_replacement=True,
+               helper_stop_confirmed_after_seconds=helper_stop_confirmed_seconds, recovery_seconds=recovery_seconds,
+               same_fence_inode=True, fence_released_then_reacquired=True,
+               concurrent_replacement_starts_converged=True,
+               old_supervisor=worker_before, replacement_supervisor=worker_after,
+               old_engine=engine_before, replacement_engine=engine_after,
+               replacement_edge_smoke_checks=len(engine["checks"]),
+               native_helper_failure_containment_claim=False,
+               durable_index_recovery_verified=False,
+               ownership_scope="P0 native-owner fence; no persistent product index generation")
+    finally:
+        # Only clean up identities created and observed by this disposable test.
+        # A fallback kill after failure is never successful automatic cleanup evidence.
+        if supervisor_kill_sent and not stopped(engine_before):
+            try:
+                os.kill(engine_before["pid"], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        for process in processes:
             if process.poll() is None:
                 process.kill()
             process.wait(timeout=3)

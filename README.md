@@ -107,11 +107,27 @@ The subsequent [disk retry CI](docs/evidence/p0-disk-ci.json), run 37724223470 a
 head `cce2b41`, **failed during filling** because the temporary-file wrapper hid
 the raw OS errno and the probe misclassified genuine ENOSPC. Configuration-save
 and recovery checks were not reached, and **all four PostgreSQL SQL profiles
-were skipped on that head**. The corrected direct-file write passes all four
-local Edge tests; positive disk recovery and current-source SQL regression still
-need a new CI run. This diagnosis does not explain the earlier missing-report
-failure. Forced PostgreSQL-supervisor SIGKILL, actual OOM and the remaining
-product/release gates stay open; the P0 report preserves both failures.
+were skipped on that head**. This diagnosis does not explain the earlier
+missing-report failure; both failures remain recorded.
+
+The [next regression CI](docs/evidence/p0-regression-ci.json), run 37725563600
+at head `1f9d8bb`, passed the narrow 32 MiB ENOSPC configuration-save/recovery
+experiment, direct-worker SQL checks **10/12**, normal-helper SQL checks **10**,
+and normal-helper pipe checks **7**. The workflow still **failed**: the private
+helper pipe suite passed six checks, then its controller-SIGKILL cleanup observer
+raised `ProcessLookupError` while reading `/proc`. The private-helper PostgreSQL
+suite was not reached. This does not supersede the earlier successful private
+SQL evidence or establish a successful current regression.
+
+The current local locked engine suite passes **15 tests**, including advanced
+query scores, mutations, dynamic vector/payload schemas and explicit-flush
+reopen. The [stricter helper harness](docs/evidence/p0-helper-exit-local.json) now requires a live process identity before
+its kill experiment; local normal/private reruns each pass six checks and then
+fail that precondition before sending the kill. Earlier local cleanup observations
+cannot independently prove that gate. The next CI must validate this correction,
+forced PostgreSQL-supervisor SIGKILL and the separate bounded 128 MiB full-text
+ENOSPC profile. Full-text ENOSPC, actual OOM and production/release gates remain
+open; the narrow disk success is not a full storage-recovery contract.
 
 [User journeys](docs/user-journeys.md), [phase acceptance](docs/acceptance.md),
 the [P0 evidence report](docs/p0-report.md), and the [work ledger](docs/work-items.json) retain all 54 formal capabilities and

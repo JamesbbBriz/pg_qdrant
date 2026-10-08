@@ -81,23 +81,34 @@ fn metadata_corruption_and_unsafe_disk_environment_are_rejected() {
     assert_eq!(report["recovery"]["original_unchanged"], true);
 
     let owned_host_directory = tempfile::tempdir().unwrap();
-    for path in [
-        owned_host_directory.path(),
-        std::path::Path::new("/dev/shm"),
+    for (flag, profile) in [
+        ("--disk-full-probe", "vector_keyword"),
+        ("--full-text-disk-full-probe", "full_text"),
     ] {
-        let mut refused = Command::new(executable);
-        refused
-            .arg("--disk-full-probe")
-            .env("PG_QDRANT_ENOSPC_DIR", path);
-        let output = bounded_output(refused);
-        assert_eq!(output.status.code(), Some(2));
+        for path in [
+            owned_host_directory.path(),
+            std::path::Path::new("/dev/shm"),
+        ] {
+            let mut refused = Command::new(executable);
+            refused.arg(flag).env("PG_QDRANT_ENOSPC_DIR", path);
+            let output = bounded_output(refused);
+            assert_eq!(output.status.code(), Some(2));
+            let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(report["status"], "not_run");
+            assert_eq!(report["profile"], profile);
+            #[cfg(target_os = "linux")]
+            {
+                assert_eq!(report["reason_code"], "unsafe_environment");
+                assert_eq!(report["disk_writes_attempted"], false);
+            }
+        }
+        let mut omitted = Command::new(executable);
+        omitted.arg(flag).env_remove("PG_QDRANT_ENOSPC_DIR");
+        let output = bounded_output(omitted);
+        assert!(output.status.success());
         let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(report["status"], "not_run");
-        #[cfg(target_os = "linux")]
-        {
-            assert_eq!(report["reason_code"], "unsafe_environment");
-            assert_eq!(report["disk_writes_attempted"], false);
-        }
+        assert_eq!(report["profile"], profile);
     }
     assert_eq!(
         std::fs::read_dir(owned_host_directory.path())
@@ -105,13 +116,4 @@ fn metadata_corruption_and_unsafe_disk_environment_are_rejected() {
             .count(),
         0
     );
-
-    let mut omitted = Command::new(executable);
-    omitted
-        .arg("--disk-full-probe")
-        .env_remove("PG_QDRANT_ENOSPC_DIR");
-    let output = bounded_output(omitted);
-    assert!(output.status.success());
-    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(report["status"], "not_run");
 }
