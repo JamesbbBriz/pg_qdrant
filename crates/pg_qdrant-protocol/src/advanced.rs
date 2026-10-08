@@ -130,7 +130,8 @@ pub fn validate(raw: Value) -> Result<Admission, String> {
         }
         AdvancedRequest::Formula { expression, limit } => {
             valid_limit(limit)?;
-            validate_formula(&expression, 0, &mut 0)?;
+            let mut visited_nodes = 0;
+            validate_formula(&expression, 0, &mut visited_nodes)?;
             Ok(Admission { family: "formula", candidate_limit: limit,
                 needs_source_authorization: true })
         }
