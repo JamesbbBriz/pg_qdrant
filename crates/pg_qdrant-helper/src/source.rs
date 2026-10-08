@@ -6,9 +6,10 @@ use pg_qdrant_protocol::{
 use qdrant_edge::bm25_embed::{EdgeBm25, EdgeBm25Config};
 use qdrant_edge::{
     Distance, EdgeConfig, EdgeShard, EdgeSparseVectorParams, EdgeVectorParams, Filter, Fusion,
-    IdfCorpusParams, IdfParams, Modifier, NamedQuery, PointId, PointInsertOperations,
-    PointOperations, PointStruct, Prefetch, QueryEnum, QueryRequest, ScoringQuery, SearchParams,
-    UpdateOperation, Vector, VectorInternal, Vectors, WithPayloadInterface,
+    IdfCorpusParams, IdfParams, Modifier, MultiVectorComparator, MultiVectorConfig, NamedQuery,
+    PointId, PointInsertOperations, PointOperations, PointStruct, Prefetch, QueryEnum,
+    QueryRequest, ScoringQuery, SearchParams, UpdateOperation, Vector, VectorInternal, Vectors,
+    WithPayloadInterface,
 };
 use serde_json::{Value, json};
 use std::{
@@ -149,6 +150,8 @@ impl SourceOwner {
             }
             if contract.kind == "learned_sparse" {
                 if contract.dimensions == 0
+                    || contract.max_tokens.is_some()
+                    || contract.comparator.is_some()
                     || contract.dimensions > u32::MAX as usize + 1
                     || contract.distance != "dot"
                     || contract.normalization != "none"
@@ -179,13 +182,23 @@ impl SourceOwner {
                 );
                 continue;
             }
-            if contract.kind != "dense"
+            if !["dense", "token_vectors"].contains(&contract.kind.as_str())
                 || !(1..=4096).contains(&contract.dimensions)
                 || contract.vocabulary.is_some()
                 || contract.idf_policy.is_some()
                 || contract.idf_revision.is_some()
             {
                 return Err(ProbeError::invalid("unsupported dense contract"));
+            }
+            if contract.kind == "token_vectors" {
+                if !contract.max_tokens.is_some_and(|n| (1..=128).contains(&n))
+                    || contract.comparator.as_deref() != Some("maxsim")
+                    || contract.distance != "dot"
+                {
+                    return Err(ProbeError::invalid("unsupported token-vector contract"));
+                }
+            } else if contract.max_tokens.is_some() || contract.comparator.is_some() {
+                return Err(ProbeError::invalid("token options on a dense slot"));
             }
             let distance = match contract.distance.as_str() {
                 "dot" => Distance::Dot,
@@ -194,10 +207,13 @@ impl SourceOwner {
                 "manhattan" => Distance::Manhattan,
                 _ => return Err(ProbeError::invalid("unsupported owned dense distance")),
             };
-            dense_config.insert(
-                name.clone(),
-                EdgeVectorParams::builder(contract.dimensions, distance).build(),
-            );
+            let mut params = EdgeVectorParams::builder(contract.dimensions, distance).build();
+            if contract.kind == "token_vectors" {
+                params.multivector_config = Some(MultiVectorConfig {
+                    comparator: MultiVectorComparator::MaxSim,
+                });
+            }
+            dense_config.insert(name.clone(), params);
         }
         for event in &batch.events {
             for (name, vector) in &event.vectors {
@@ -321,6 +337,7 @@ impl SourceOwner {
         q: &str,
         top_k: usize,
         representation_query: Option<RepresentationQuery>,
+        rerank_query: Option<RepresentationQuery>,
         fusion: Option<SourceFusion>,
     ) -> Result<Value, ProbeError> {
         if q.is_empty() || q.len() > 8192 || !(1..=1000).contains(&top_k) {
@@ -352,6 +369,18 @@ impl SourceOwner {
                 ));
             }
             validate_representation(&dense.vector, contract)?;
+            if let RepresentationVector::Tokens(tokens) = &dense.vector {
+                if fusion.is_some() || rerank_query.is_some() {
+                    return Err(ProbeError::invalid(
+                        "token recall cannot be fused or reranked again",
+                    ));
+                }
+                admit_maxsim(
+                    tokens.len(),
+                    contract,
+                    shard.info().map_err(error)?.points_count,
+                )?;
+            }
             (dense.representation, native_vector(&dense.vector)?.into())
         } else {
             (
@@ -414,6 +443,41 @@ impl SourceOwner {
             }),
             ..Default::default()
         });
+        if let Some(rerank) = rerank_query {
+            let contract = owned
+                .representations
+                .get(&rerank.representation)
+                .ok_or_else(|| ProbeError::invalid("reranking slot is not owned"))?;
+            if contract.kind != "token_vectors"
+                || rerank.model_id != contract.model_id
+                || rerank.model_version != contract.model_version
+            {
+                return Err(ProbeError::invalid(
+                    "reranking requires the declared token model",
+                ));
+            }
+            validate_representation(&rerank.vector, contract)?;
+            let RepresentationVector::Tokens(tokens) = &rerank.vector else {
+                return Err(ProbeError::invalid(
+                    "reranking query must contain token vectors",
+                ));
+            };
+            admit_maxsim(tokens.len(), contract, top_k)?;
+            let mut candidates = Prefetch::new(top_k);
+            candidates.query = request.query.take();
+            candidates.prefetches = std::mem::take(&mut request.prefetches);
+            candidates.params = request.params.take();
+            request.prefetches = vec![candidates];
+            request.query = Some(ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
+                using: Some(rerank.representation),
+                query: native_vector(&rerank.vector)?.into(),
+            })));
+            request.params = Some(SearchParams {
+                exact: true,
+                indexed_only: false,
+                ..Default::default()
+            });
+        }
         // Source text is returned only through the authorized PostgreSQL JOIN.
         // Fetch identity/version metadata without copying every candidate body
         // into the bounded IPC response (one source row can contain 64 KiB).
@@ -434,12 +498,33 @@ impl SourceOwner {
     }
 }
 
+// Bound the dot-product scalar work before entering a native exact MaxSim query.
+// Standalone searches use the owner's live point count, not PostgreSQL's
+// potentially lagging source count. Prefetch reranking uses its candidate cap.
+fn admit_maxsim(
+    query_tokens: usize,
+    contract: &RepresentationContract,
+    candidates: usize,
+) -> Result<(), ProbeError> {
+    let work = query_tokens
+        .checked_mul(contract.max_tokens.unwrap_or(0))
+        .and_then(|n| n.checked_mul(contract.dimensions))
+        .and_then(|n| n.checked_mul(candidates));
+    if work.is_none_or(|n| n > 20_000_000) {
+        return Err(ProbeError::invalid(
+            "MaxSim scalar-work budget exceeds 20000000",
+        ));
+    }
+    Ok(())
+}
+
 fn native_vector(vector: &RepresentationVector) -> Result<Vector, ProbeError> {
     match vector {
         RepresentationVector::Dense(values) => Ok(Vector::new_dense(values.clone())),
         RepresentationVector::Sparse(values) => {
             Vector::new_sparse(values.indices.clone(), values.values.clone()).map_err(error)
         }
+        RepresentationVector::Tokens(values) => Vector::new_multi(values.clone()).map_err(error),
     }
 }
 
@@ -447,6 +532,20 @@ fn validate_representation(
     vector: &RepresentationVector,
     contract: &RepresentationContract,
 ) -> Result<(), ProbeError> {
+    if let RepresentationVector::Tokens(tokens) = vector {
+        if contract.kind != "token_vectors"
+            || tokens.is_empty()
+            || tokens.len() > contract.max_tokens.unwrap_or(0)
+        {
+            return Err(ProbeError::invalid(
+                "token count or representation kind invalid",
+            ));
+        }
+        for token in tokens {
+            validate_dense_values(token, contract)?;
+        }
+        return Ok(());
+    }
     let RepresentationVector::Dense(vector) = vector else {
         let RepresentationVector::Sparse(sparse) = vector else {
             unreachable!()
@@ -472,12 +571,26 @@ fn validate_representation(
             "vector kind differs from model contract",
         ));
     }
+    validate_dense_values(vector, contract)
+}
+
+fn validate_dense_values(
+    vector: &[f32],
+    contract: &RepresentationContract,
+) -> Result<(), ProbeError> {
     if vector.len() != contract.dimensions || vector.iter().any(|value| !value.is_finite()) {
         return Err(ProbeError::invalid(
             "dense vector violates dimensions or finite-value contract",
         ));
     }
     let norm: f64 = vector.iter().map(|value| f64::from(*value).powi(2)).sum();
+    if contract.kind == "token_vectors"
+        && norm > f64::from(f32::MAX) / (2.0 * contract.max_tokens.unwrap_or(0) as f64)
+    {
+        return Err(ProbeError::invalid(
+            "token norm can overflow finite MaxSim scoring",
+        ));
+    }
     if (contract.normalization == "unit" && (norm - 1.0).abs() > 0.0001)
         || (contract.distance == "cosine" && norm == 0.0)
     {
@@ -492,6 +605,20 @@ fn validate_representation(
 mod tests {
     use super::*;
     use pg_qdrant_protocol::SourceEvent;
+
+    #[test]
+    fn maxsim_work_cap_rejects_overflow_and_large_exact_corpora() {
+        let contract: RepresentationContract = serde_json::from_value(json!({
+            "kind":"token_vectors","model_id":"fixture","model_version":"r1","tokenizer":"fixture",
+            "dimensions":512,"distance":"dot","normalization":"none","storage_precision":"float32",
+            "vector_field":"v","fingerprint_field":"f","incarnation_field":"i",
+            "model_id_field":"m","model_version_field":"r","max_tokens":128,"comparator":"maxsim"
+        }))
+        .unwrap();
+        assert!(admit_maxsim(128, &contract, 1).is_ok());
+        assert!(admit_maxsim(128, &contract, 3).is_err());
+        assert!(admit_maxsim(usize::MAX, &contract, usize::MAX).is_err());
+    }
 
     #[test]
     fn retirement_receipt_replays_without_reopening_or_mutating_the_epoch() {
@@ -556,7 +683,7 @@ mod tests {
         assert!(owner.apply(batch).is_err());
         assert!(
             owner
-                .search(1, &generation, &epoch, "retired", 10, None, None)
+                .search(1, &generation, &epoch, "retired", 10, None, None, None)
                 .is_err()
         );
         drop(owner);

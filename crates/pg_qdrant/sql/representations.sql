@@ -49,6 +49,10 @@ BEGIN
  IF p_contract->>'distance'='cosine' AND norm=0 THEN
    RAISE EXCEPTION 'Cosine vectors must be nonzero' USING ERRCODE='22023';
  END IF;
+ IF p_contract->>'kind'='token_vectors'
+    AND norm>3.4028234663852886e38/(2*(p_contract->>'max_tokens')::double precision) THEN
+   RAISE EXCEPTION 'Token norm can overflow finite float32 MaxSim scoring' USING ERRCODE='22023';
+ END IF;
  RETURN to_jsonb(values_real);
 END $$;
 
@@ -88,10 +92,27 @@ BEGIN
  RETURN jsonb_build_object('indices',indices,'values',weights);
 END $$;
 
+CREATE FUNCTION qdrant_internal.validate_tokens(p_vector jsonb,p_contract jsonb) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,pg_temp AS $$
+DECLARE token jsonb; normalized jsonb:='[]';
+BEGIN
+ IF p_vector IS NULL OR jsonb_typeof(p_vector)<>'array' THEN
+   RAISE EXCEPTION 'Token vectors require a numeric matrix' USING ERRCODE='22023';
+ END IF;
+ IF jsonb_array_length(p_vector) NOT BETWEEN 1 AND (p_contract->>'max_tokens')::integer THEN
+   RAISE EXCEPTION 'Token count exceeds the declared 1..max_tokens contract' USING ERRCODE='22023';
+ END IF;
+ FOR token IN SELECT jsonb_array_elements(p_vector) LOOP
+   normalized:=normalized||jsonb_build_array(qdrant_internal.validate_dense(token,p_contract));
+ END LOOP;
+ RETURN normalized;
+END $$;
+
 CREATE FUNCTION qdrant_internal.validate_representation(p_vector jsonb,p_contract jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,pg_temp AS $$
 BEGIN
  IF p_contract->>'kind'='learned_sparse' THEN RETURN qdrant_internal.validate_sparse(p_vector,p_contract); END IF;
+ IF p_contract->>'kind'='token_vectors' THEN RETURN qdrant_internal.validate_tokens(p_vector,p_contract); END IF;
  RETURN qdrant_internal.validate_dense(p_vector,p_contract);
 END $$;
 
@@ -114,6 +135,7 @@ BEGIN
    c:=slot.value;
    allowed:=common_fields;
    IF c->>'kind'='learned_sparse' THEN allowed:=allowed||ARRAY['vocabulary','idf_policy','idf_revision']; END IF;
+   IF c->>'kind'='token_vectors' THEN allowed:=allowed||ARRAY['max_tokens','comparator']; END IF;
    IF slot.key !~ '^[a-z][a-z0-9_]{0,31}$' OR slot.key='bm25'
       OR jsonb_typeof(c)<>'object' THEN
      RAISE EXCEPTION 'Invalid representation name or contract' USING ERRCODE='22023';
@@ -122,7 +144,7 @@ BEGIN
      RAISE EXCEPTION 'A complete model contract is required' USING ERRCODE='22023';
    END IF;
    FOR k IN SELECT jsonb_object_keys(c) LOOP
-     IF NOT k=ANY(allowed) OR (k<>'dimensions' AND (jsonb_typeof(c->k)<>'string'
+     IF NOT k=ANY(allowed) OR (k NOT IN ('dimensions','max_tokens') AND (jsonb_typeof(c->k)<>'string'
           OR octet_length(c->>k) NOT BETWEEN 1 AND 256)) THEN
        RAISE EXCEPTION 'Invalid model contract field: %',k USING ERRCODE='22023';
      END IF;
@@ -139,6 +161,15 @@ BEGIN
         OR c->>'storage_precision'<>'float32' OR c->>'idf_policy' NOT IN ('none','external','engine')
         OR (c->>'idf_policy'='engine' AND c->>'idf_revision'<>'qdrant-edge:0.8.0') THEN
        RAISE EXCEPTION 'Unsupported sparse vocabulary or IDF contract' USING ERRCODE='0A000';
+     END IF;
+   ELSIF c->>'kind'='token_vectors' THEN
+     IF dimensions NOT BETWEEN 1 AND 4096 OR c->>'distance'<>'dot' OR c->>'comparator'<>'maxsim'
+        OR c->>'normalization' NOT IN ('none','unit') OR c->>'storage_precision'<>'float32' THEN
+       RAISE EXCEPTION 'Unsupported token vector contract' USING ERRCODE='0A000';
+     END IF;
+     IF jsonb_typeof(c->'max_tokens')<>'number' OR c->>'max_tokens' !~ '^[0-9]{1,3}$'
+        OR (c->>'max_tokens')::integer NOT BETWEEN 1 AND 128 THEN
+       RAISE EXCEPTION 'max_tokens must be an integer in 1..128' USING ERRCODE='22023';
      END IF;
    ELSIF dimensions NOT BETWEEN 1 AND 4096 OR c->>'kind'<>'dense'
       OR c->>'distance' NOT IN ('dot','cosine','euclid','manhattan')

@@ -106,15 +106,18 @@ mod qdrant {
             for number in 1..=count {
                 let bm25_sql = cfg!(feature = "p0-managed-helper") && prefix == "F" && number == 1;
                 let dense_sql = cfg!(feature = "p0-managed-helper") && prefix == "V" && number == 1;
+                let sparse_sql = cfg!(feature = "p0-managed-helper")
+                    && ((prefix == "F" && number == 2) || (prefix == "V" && number == 2));
+                let token_sql = cfg!(feature = "p0-managed-helper") && prefix == "V" && number == 3;
                 let fusion_sql = cfg!(feature = "p0-managed-helper")
                     && prefix == "Q"
                     && [2, 3].contains(&number);
                 ids.push(json!({
                     "id": format!("{prefix}{number:02}"),
-                    "product_status": if bm25_sql || dense_sql || fusion_sql {"partial_sql_integration"} else {"planned"},
+                    "product_status": if bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql {"partial_sql_integration"} else {"planned"},
                     "release_supported": false,
-                    "sql_product_interface": bm25_sql || dense_sql || fusion_sql,
-                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else if dense_sql {Some("fixed-generation named dense BYOV; owner domain; full live-row readiness; migrations open")} else if fusion_sql {Some("two bounded BM25/dense prefetch branches; native RRF k=2 or DBSF; owner domain; general planner open")} else {None}
+                    "sql_product_interface": bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql,
+                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else if dense_sql {Some("fixed-generation named dense BYOV; owner domain; full live-row readiness; migrations open")} else if sparse_sql {Some("declared learned sparse BYOV; none/external/engine live-corpus IDF; owner domain; scope/model migrations open")} else if token_sql {Some("declared token BYOV; bounded native exact MaxSim and candidate-domain precision; owner domain; full acceptance open")} else if fusion_sql {Some("bounded BM25/dense-or-sparse prefetch; native RRF k=2 or DBSF; optional token rerank; general planner open")} else {None}
                 }));
             }
         }

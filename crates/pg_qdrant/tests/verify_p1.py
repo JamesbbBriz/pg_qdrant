@@ -64,7 +64,7 @@ assert pathlib.Path(sql('SHOW data_directory')).resolve()==disposable
 sql('CREATE EXTENSION pg_qdrant')
 capabilities=json.loads(sql('SELECT qdrant.capabilities()'))
 assert capabilities['index_catalog_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','V01','Q02','Q03']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','V01','V02','V03','Q02','Q03']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)')
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
@@ -318,9 +318,12 @@ import verify_models
 verify_dense_replay=verify_models.run(sql,ready,ticket_from,checks)
 import verify_sparse
 verify_sparse_replay=verify_sparse.run(sql,ready,ticket_from,checks)
+import verify_tokens
+verify_tokens_replay=verify_tokens.run(sql,ready,ticket_from,checks)
 def verify_model_replay():
     verify_dense_replay()
     verify_sparse_replay()
+    verify_tokens_replay()
 # PostgreSQL cancellation must not release an executing fused native query's owner.
 ready('model_docs')
 hybrid_vector=json.dumps({'dense':{'model_id':'fixture-model','model_version':'r1','vector':[1,0]}})
@@ -403,7 +406,7 @@ checks += ['PostgreSQL immediate-stop WAL recovery and new-owner exact replay']
 build_info=json.loads(sql('SELECT qdrant.build_info()'))
 worker=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['worker_pid']
 observer=spawn('SELECT pg_sleep(2)','pgq_extension_drop_observer')
-sql("SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
+sql("SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
 assert sql("SELECT count(*) FROM pg_trigger WHERE tgrelid='model_docs'::regclass AND NOT tgisinternal")=='0'
 finish(observer)
 assert sql('SELECT count(*) FROM docs')=='1'
