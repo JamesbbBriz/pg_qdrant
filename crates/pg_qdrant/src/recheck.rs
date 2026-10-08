@@ -280,6 +280,7 @@ fn source_key_type(source: &PgRelation, key_field: &str) -> pg_sys::Oid {
     // SAFETY: PgRelation owns a valid relcache reference and AccessShareLock.
     let class = unsafe { source.rd_rel.as_ref() }.unwrap();
     if !source.is_table()
+        || class.relam != pg_sys::HEAP_TABLE_AM_OID
         || class.relrowsecurity
         || class.relforcerowsecurity
         || class.relispartition
@@ -287,7 +288,7 @@ fn source_key_type(source: &PgRelation, key_field: &str) -> pg_sys::Oid {
         || class.relpersistence != b'p' as std::ffi::c_char
     {
         unsupported(
-            "Only persistent ordinary local tables without RLS, partitions or inheritance are accepted.",
+            "Only persistent ordinary tables using the built-in heap access method, without RLS, partitions or inheritance, are accepted. Custom table access methods are unverified.",
         );
     }
     let descriptor = source.tuple_desc();

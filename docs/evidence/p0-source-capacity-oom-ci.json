@@ -1,0 +1,3924 @@
+{
+  "schema_version": 1,
+  "kind": "p0_source_capacity_and_kernel_oom_ci_evidence",
+  "observed_on": "2026-10-08",
+  "source": {
+    "head_commit": "88885db08d17c074af097ddca14bc85d6978980c",
+    "checkout_merge_commit": "18282abe660b4a3a59a8222f072c5b1cd069a2ae",
+    "tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+    "checkout_tree_equals_head_tree": true,
+    "identity_verification": "Local head Git tree and source blobs; checkout SHA in complete job log; official run/job/artifact and merge metadata supplied with this record.",
+    "merge_metadata_url": "https://api.github.com/repos/JamesbbBriz/pg_qdrant/git/commits/18282abe660b4a3a59a8222f072c5b1cd069a2ae",
+    "metadata_sha256": "e0f1df88136c71661dbbd4d8ebdc5b491871521eb786eaf12b494895a82bd52c",
+    "source_hash_method": "SHA-256 of git show <head_commit>:<path>; no current working-tree source used.",
+    "source_inputs": [
+      {
+        "path": ".dockerignore",
+        "sha256": "fc15ade5edaec7f0ad09945db98049272d4946e698ce73b9f8259621e451c8ed"
+      },
+      {
+        "path": ".github/workflows/p0.yml",
+        "sha256": "6d415ac1007235448bbd2f4e59360e9dc4954163bef1331dd55b0f80d16c6b14"
+      },
+      {
+        "path": "Cargo.lock",
+        "sha256": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d"
+      },
+      {
+        "path": "Cargo.toml",
+        "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+      },
+      {
+        "path": "Dockerfile.p0",
+        "sha256": "2f919e77bfa3eb5e96e20dff452f83900bcdd56be8d3b362e670c4bc38f982a7"
+      },
+      {
+        "path": "crates/edge-probe/Cargo.toml",
+        "sha256": "99118fc920d732fb569bc002276fcce78f06115505356b4b9591afaebdb0a066"
+      },
+      {
+        "path": "crates/edge-probe/src/api_inventory.rs",
+        "sha256": "4a269bb84608a28a6ee054b9ca68c1f7c24c6420621c43c165c1958a302a1fad"
+      },
+      {
+        "path": "crates/edge-probe/src/fault_probes.rs",
+        "sha256": "b9226f9d214066b29e034f945003b950262fad7805ea8c64f472177672df0b94"
+      },
+      {
+        "path": "crates/edge-probe/src/lib.rs",
+        "sha256": "69225e0f83f661a35c4b55faf139f1eb7fdc2deff0e532b7af12e6db211571cf"
+      },
+      {
+        "path": "crates/edge-probe/src/main.rs",
+        "sha256": "7ddb09d79f8abd0aeb0d0ceda3047489702932cb3e1bfc0c11c347a3e1844a7c"
+      },
+      {
+        "path": "crates/edge-probe/src/oom_probe.rs",
+        "sha256": "836726ff37758912c67dbef0e24ba45485dd2ce11456fd03e94c6f7fe24ff8d6"
+      },
+      {
+        "path": "crates/edge-probe/tests/advanced.rs",
+        "sha256": "9026d7f7d4b836b6d0433c5585229d261b902769e5c19ff2758a232dce50f093"
+      },
+      {
+        "path": "crates/edge-probe/tests/faults.rs",
+        "sha256": "f3900b6ab3bb8033fcde3a8da3d318b41e51427c9007477669b7d91e12a690d7"
+      },
+      {
+        "path": "crates/edge-probe/tests/lexical.rs",
+        "sha256": "79341c5a15a01f6457a173b98f81941b162a9ee2de8dcdc0484d754d7d8e3225"
+      },
+      {
+        "path": "crates/edge-probe/tests/lifecycle.rs",
+        "sha256": "22cf73f77660882aa85d813c5988fcb5d6323bbc9664898bc0b05897d7f5f0a2"
+      },
+      {
+        "path": "crates/edge-probe/tests/persistence.rs",
+        "sha256": "006e71319eb123f9f35290d692b0d387d84c63e1efe069b5b3f4fa212988fc15"
+      },
+      {
+        "path": "crates/edge-probe/tests/public_lifecycle.rs",
+        "sha256": "a859c4182a201ca69f3202339f33b8878c4c69a42e6e7d64d95048931bf29412"
+      },
+      {
+        "path": "crates/edge-probe/tests/schema.rs",
+        "sha256": "65e1fc5c0b0c82ef433daae020e5ed5c1754205a8e5555c67c86a6e5f0c71c21"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/Cargo.toml",
+        "sha256": "c1cca09fe0b0d590b93942ce03b29814da88071b6ec9151e7ac89a95d4be020c"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/src/main.rs",
+        "sha256": "606c5b05728bcf8f8a19b6202f63a910bdcb83e31dbf0d2de882140f6ebe866d"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/tests/probe.py",
+        "sha256": "57a1f95eb4268cbd210f586ccec7a2b1ea7d46c040c86b6b2810c5c5d92c8907"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/tests/supervisor_child.rs",
+        "sha256": "2e3bc074a1d05849a161e8923320fb2813e22d358069744d92eb3f98c354cd54"
+      },
+      {
+        "path": "crates/pg_qdrant-protocol/Cargo.toml",
+        "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
+      },
+      {
+        "path": "crates/pg_qdrant-protocol/src/lib.rs",
+        "sha256": "c33ed27c20d85740815579e0d538552d54967939823009aa1d31e1d4ad452f0e"
+      },
+      {
+        "path": "crates/pg_qdrant/Cargo.toml",
+        "sha256": "5f717b6eaa3fd711bb65780aef4e391713d8c6e37ea64f98144fb47ef480e5eb"
+      },
+      {
+        "path": "crates/pg_qdrant/pg_qdrant.control",
+        "sha256": "9cdf35094b23a4b4eb8690337fa099e58bf79069c329e5ea66118f571c3595eb"
+      },
+      {
+        "path": "crates/pg_qdrant/src/formats.rs",
+        "sha256": "db230bbc34ec2e6069cbba43c210269f48685cfe86febb3e4d80845d640761b3"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper.rs",
+        "sha256": "9fdce7a421d44319ab06541783de02e63e2414d79c38c710da099811fc351c78"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper_child.rs",
+        "sha256": "ec051fa5efdd319debcb2b1dc74add0390dc0cf9e30a4eef08c0cca23ac41c9f"
+      },
+      {
+        "path": "crates/pg_qdrant/src/identity.rs",
+        "sha256": "0d862451a4f5219c6d75f807de42abc6493660d9233193e214e60be1db35483b"
+      },
+      {
+        "path": "crates/pg_qdrant/src/ipc.rs",
+        "sha256": "ebb1491f4b1d2677d5eb1018580fd84d96cc84a8396cd985b1dca8e91c315d4e"
+      },
+      {
+        "path": "crates/pg_qdrant/src/lib.rs",
+        "sha256": "0d1bfa059aa24129906eeebce8af35aac1d1c77acd149b1aa58948acd9d2089a"
+      },
+      {
+        "path": "crates/pg_qdrant/src/recheck.rs",
+        "sha256": "bcd64c70bcae18a8f75204c359c6d927324e7a7b3636dbc4c09d88ee49154259"
+      },
+      {
+        "path": "crates/pg_qdrant/src/worker.rs",
+        "sha256": "f6f7656d3ef2ed53708f830f061aa63292962fd5a8a701a870372acb65944733"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/run-faults.sh",
+        "sha256": "a92309e293e0924476a5a1fa5ce39ebe4235842cea78512d9f37aaa00c2aff0a"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/run-oom.sh",
+        "sha256": "803eb48b42d03149a9ce4616691fa577ee5fbf95db69af132958f7384f0560b7"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/run-p0.sh",
+        "sha256": "76f308ce2968de8dfc14fefe7ba84db4ecb7d052b49bc6a1dc3959f0f5702622"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_formats.py",
+        "sha256": "60dd04ab77837b751daca0ec88adc85c193a007640a84d3499f36c412fbb2b0d"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_oom.py",
+        "sha256": "9f5832965a2b41ac33454d0aeb0e344c7ac526f62a5c5e9e74be442ba4cdbee0"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_p0.py",
+        "sha256": "e9256ac2d814dbeba8a93aaeb2ebbb9b008f418a665cfd71d7ab9f1c14600035"
+      },
+      {
+        "path": "crates/pg_qdrant/tests/verify_source.py",
+        "sha256": "1152af82be2a9e7153fecf39a31f0e77ae82f90c099fd3606790d7ab167c39f8"
+      },
+      {
+        "path": "docs/dependency-graph.json",
+        "sha256": "434b6640820a4880b738e3dde7f07f0afcff962139f297c9713264b05740b354"
+      },
+      {
+        "path": "docs/dependency-profiles.json",
+        "sha256": "fbeb09cd15be49af0957fe38b6063894202d0fdab8a4e20325485d1165ab9508"
+      },
+      {
+        "path": "rust-toolchain.toml",
+        "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+      },
+      {
+        "path": "scripts/check_contracts.py",
+        "sha256": "1cc5b420c10314a0e94a2f78a97b07a2bb86385022dd169334246dc3948981e8"
+      },
+      {
+        "path": "scripts/dependency_report.py",
+        "sha256": "f3b6d281fbe0300f14a37e14b174e8a657211c0459d99c8a8cab12d3673725b7"
+      },
+      {
+        "path": "scripts/run_disk_probe.py",
+        "sha256": "d41eafc41a09392a011c755e4c606acb3d868f6af62d13782eff20545ddeeffa"
+      },
+      {
+        "path": "scripts/run_oom_container.py",
+        "sha256": "3da87c464b963d72e335e9ee841bb24f1670e70ebc9371d3cfe9d2f8a6cd097c"
+      },
+      {
+        "path": "scripts/tests/test_disk_probe_runner.py",
+        "sha256": "ca59ee2ac807c1627f56bf85bc85d4293754ab5fe4599bd76861c19eae0d8156"
+      },
+      {
+        "path": "scripts/tests/test_oom_container.py",
+        "sha256": "df4ce41c1a7c3a360adac1bf31f1dfd49c5ea5b1c03cd3fd63e06405a785356f"
+      }
+    ]
+  },
+  "ci": {
+    "run_id": 37736655218,
+    "job_id": 113177607334,
+    "run_attempt": 1,
+    "event": "pull_request",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37736655218",
+    "job_url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37736655218/job/113177607334",
+    "job_log_sha256": "646040ebd56893151151c6a2d5f31d7c13413f783a9b7c1dc92e435ed96ff86a",
+    "structured_records_verified": 94,
+    "records_source": "Each supplied structured record was decoded again from the complete hashed job log and compared for exact equality. Test names and summaries were checked separately in the same log.",
+    "failed_steps": [],
+    "skipped_steps": [],
+    "artifact": {
+      "id": 11532787020,
+      "name": "p0-evidence-18282abe660b4a3a59a8222f072c5b1cd069a2ae",
+      "size_in_bytes": 90589,
+      "url": "https://api.github.com/repos/JamesbbBriz/pg_qdrant/actions/artifacts/11532787020",
+      "declared_digest": "sha256:79cc0f0500579fc474ac9e0b24f40c384d9adcc4b660d1b41f0be95b19a60766",
+      "digest_source": "GitHub artifact metadata and upload log",
+      "archive_download_independently_verified": true,
+      "archive_sha256": "79cc0f0500579fc474ac9e0b24f40c384d9adcc4b660d1b41f0be95b19a60766",
+      "member_count": 53,
+      "uncompressed_bytes": 432341,
+      "extracted_members_verified_against_zip": true,
+      "file_sha256": {
+        "enospc-full-text/edge-full-text-128-capacity-refusal.json": "d37eef79921a0ede17bca9c39bea6640dc678669338b1bff374104ab95819954",
+        "enospc/edge-enospc.json": "ac201a65d7f44d70a8683c3149318013fcf88aa7567b8ec53cb6e7b5a7c26675",
+        "enospc/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "enospc-full-text/edge-full-text-clean.json": "4acd2cdcb5df8b31c41efc86c52efd139a0a317e746302179772f1524ba388f7",
+        "enospc-full-text/edge-full-text-enospc.json": "6c5f5ac4d3c73afcf1b453541a4b2a5c153f9c03dcd285f3d0b9904c37f90669",
+        "enospc-full-text/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "faults/initdb.log": "942ab2ffe54ae26cc9049b60cef02a9cd13850859d6b267458b280bcdb57c7af",
+        "faults/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "faults/p0-fault-results.json": "1686d9308d8780f34a71f58f4f085e385d20de7da3054945ac28fc27cb2f66ce",
+        "faults/postgresql.log": "38e7c79ae445782a8dffa65ca23d2a164444f992497eeb854f79477cbbd5291f",
+        "faults/sql-engine-probe.json": "9622db958aacf1dc860881617de9af326378419304a1d99d9d4d17a534fa5151",
+        "faults/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "helper/helper-fault-pipes.json": "74cb7f7a0f332a8cd37c38708034a53f396823859253dcc589e883a3b9f6409e",
+        "helper/initdb.log": "e085fc6530184b70caf51d60b6c35fe05d6bd55686228279784ab6f2619b8117",
+        "helper/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "helper/p0-fault-results.json": "5025a0aeebc55749a3fce36f43ee0ead927bb7599deb2ba9929f69e2b79a6549",
+        "helper/postgresql.log": "92cc4b0464f1b5d4156e3b4560563752e210e2ec7e5a843561223b4421715a34",
+        "helper/sql-engine-after-supervisor-sigkill.json": "7a6039c5cddc1d8cf397c4939cc1df3943ea2fc714df5207851aed7f47e39290",
+        "helper/sql-engine-probe.json": "6d531c6757e7c98e70425f6a0c51872e6346dcf981b9aa25a4b3615bc5d895df",
+        "helper/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "helper-normal/initdb.log": "4b7e8c93cbc439dda443a9a234b12425b7dafdeba8847b5ba024723cc3299696",
+        "helper-normal/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "helper-normal/helper-pipes.json": "caef9ea0669a64cfdc251d3a46ce6262cae86dc466166de72add29f1023fe3fd",
+        "helper-normal/p0-sql-results.json": "ad4a9893092d8e6dbe46051ef63e3378b791e3b7fa6792b8ce1475c1699767bf",
+        "helper-normal/postgresql.log": "ebbd202d9268dcff4342d9edb422878d40e0232a0ba6c65592b23ca0b755ef9e",
+        "helper-normal/sql-engine-probe.json": "12fb5850ceae121d44ff2dccaf5dd31fbeb4261d3c3fdbcd9946e17d7c252eae",
+        "helper-normal/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "normal/initdb.log": "e437e2151341233f8223be9fd4510897610a989fa802356764fc63bda2147378",
+        "normal/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "normal/p0-sql-results.json": "efe60bbb3b4b2485db7c08aaba7f2f9ec70592f535dde8945b776b1d4a778941",
+        "normal/postgresql.log": "b671b15afa4c0374144dd7e40c8701819c9a58502f55b95567a03ac122f3180f",
+        "normal/sql-engine-probe.json": "821ab50c16ae76903c69258055068b2ba4096dcb552589814188f6368c680b13",
+        "normal/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "oom-direct/container.log": "f301cbf64222daf04ca7c4a2ae326f3870e2c4abd01361e6944f759b3aa377f8",
+        "oom-direct/initdb.log": "49e355ea7ffc2654612b7415fbfcb9cc67dfbe8092f97c09f5f05004733c3071",
+        "oom-direct/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "oom-direct/oom-native.jsonl": "fa5a243a6bbcb5d920b608cc96684af73e6e788840f519938524d71143c70580",
+        "oom-direct/oom-ready.json": "d44c51e89e28cef1db9e15beec2e264d5822c9d8788b9596a2d8c98c345fb816",
+        "oom-direct/oom-replacement-engine.json": "4b509ecbc59c4bb6aa2d98a0a51cbbcca7411a9c8ab1fde36e012d7ded08877b",
+        "oom-direct/oom-result.json": "c0a99e0236a1e2dce1be1162ed4465944d4b440c881f6ad42be6d74b0c88110b",
+        "oom-direct/oom-sql.json": "b72e36936a2cd31e3effd9f6e20e9e14f692dd96e9d72b511bdb676c33bf47f7",
+        "oom-direct/postgresql.log": "5fdc4ade0be9d20118a178dc17c6bba07e489e01dfbdd0c7955d9d4437fd8f25",
+        "oom-direct/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad",
+        "oom-helper/container.log": "715211b4788cd4db014dfe17ee5d0ba78edc28a62ab65241121f503e4f5478ef",
+        "oom-helper/initdb.log": "99e08ccd1edf61556f18a25425e84e23b58f1f178026dc02a915d1d38d28199f",
+        "oom-helper/native-packages.tsv": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+        "oom-helper/oom-native.jsonl": "86fafc3b08dd20542475ec1369ccec99d6e658da34246dd4a047d361d31a43f2",
+        "oom-helper/oom-ready.json": "a9637c2b00f795c77a7db64d5f03e33c23d51722162471255940597cbcd6dedd",
+        "oom-helper/oom-replacement-engine.json": "f3c142d2b9b9339a1cdf1b5c04ea300051b0a3385f8494937615b3f489836439",
+        "oom-helper/oom-result.json": "9ea41318c0030bb934bbdebf560a92a4b723a01103bdc695a81180dc84574e08",
+        "oom-helper/oom-sql.json": "0bd6c80acaaceeb906882b3164416eaac95348648fc8441cb225a3575366c01e",
+        "oom-helper/postgresql.log": "1b03fcb4566c0fca1c1e1683ac003ec8bc075d64bad0f8133cb534be1b92234b",
+        "oom-helper/startup.log": "66afd0411ccc09366e99fdd99b85f21899c8d2d064f5835126859618802153ad"
+      }
+    }
+  },
+  "environment": {
+    "edge": "0.8.0",
+    "pgrx": "0.19.3",
+    "cargo_pgrx": "0.19.3",
+    "rust": "1.96.0",
+    "postgres_package": "17.11-1.pgdg24.04+2",
+    "runner": "ubuntu-24.04",
+    "runtime_os_uid": 10001,
+    "container_memory_limit": "5g for ordinary SQL, pipe and disk containers; 768 MiB with no swap for each separate OOM container",
+    "container_cpu_limit": 2,
+    "runtime_network": "none",
+    "disk_mount": {
+      "path": "/pgq-p0-faults",
+      "type": "tmpfs",
+      "mode": "0700",
+      "uid": 10001,
+      "gid": 10001,
+      "options": [
+        "rw",
+        "noexec",
+        "nosuid",
+        "nodev"
+      ],
+      "narrow_size_bytes": 33554432,
+      "full_text_size_bytes": 402653184,
+      "independent_container_and_mount_per_experiment": true,
+      "refusal_size_bytes": 134217728
+    }
+  },
+  "build": {
+    "image_builds": [
+      {
+        "name": "Build exact Rust, Edge, pgrx and PostgreSQL prototype",
+        "status": "passed"
+      },
+      {
+        "name": "Build explicitly enabled disposable fault-test image",
+        "status": "passed"
+      },
+      {
+        "name": "Build the managed-helper comparison without fault injection",
+        "status": "passed"
+      },
+      {
+        "name": "Build the explicit managed-helper fault comparison",
+        "status": "passed"
+      }
+    ],
+    "all_four_images_built_and_extension_installed": true,
+    "engine_tests": {
+      "passed": 23,
+      "failed": 0,
+      "ignored": 0,
+      "tests": [
+        {
+          "name": "tests::actual_edge_smoke",
+          "job_log_line": 2655
+        },
+        {
+          "name": "fault_probes::capacity_tests::fixed_full_text_capacity_refuses_every_other_budget",
+          "job_log_line": 2662
+        },
+        {
+          "name": "fault_probes::capacity_tests::vector_keyword_capacity_retains_its_original_bound",
+          "job_log_line": 2663
+        },
+        {
+          "name": "advanced_vector_queries_reject_wrong_dimensions_without_fallback",
+          "job_log_line": 2670
+        },
+        {
+          "name": "q04_recommendation_strategies_have_distinct_exact_scores",
+          "job_log_line": 2671
+        },
+        {
+          "name": "q05_discover_and_context_apply_the_published_pair_semantics",
+          "job_log_line": 2672
+        },
+        {
+          "name": "q06_feedback_changes_the_scores_with_an_explicit_contract",
+          "job_log_line": 2673
+        },
+        {
+          "name": "q07_root_mmr_is_bounded_and_preserves_original_similarity_scores",
+          "job_log_line": 2674
+        },
+        {
+          "name": "q08_formula_uses_prefetched_scores_payload_defaults_and_real_errors",
+          "job_log_line": 2675
+        },
+        {
+          "name": "q10_order_by_and_random_sample_obey_filters_and_candidate_domains",
+          "job_log_line": 2676
+        },
+        {
+          "name": "capacity_refusal_characterization_rejects_missing_or_unsafe_mounts_without_writes",
+          "job_log_line": 2683
+        },
+        {
+          "name": "disk_fixture_clean_reopen_without_filling",
+          "job_log_line": 2684
+        },
+        {
+          "name": "full_text_fixture_clean_reopen_without_filling",
+          "job_log_line": 2685
+        },
+        {
+          "name": "metadata_corruption_and_unsafe_disk_environment_are_rejected",
+          "job_log_line": 2686
+        },
+        {
+          "name": "bm25_and_payload_analysis_remain_independent_until_both_are_configured",
+          "job_log_line": 2693
+        },
+        {
+          "name": "phrase_preserves_array_and_field_boundaries_while_text_and_spans_values",
+          "job_log_line": 2694
+        },
+        {
+          "name": "unicode_scalar_lengths_and_long_token_prefix_truncation_are_explicit",
+          "job_log_line": 2695
+        },
+        {
+          "name": "conditional_mutations_and_partial_updates_survive_flush_reopen",
+          "job_log_line": 2702
+        },
+        {
+          "name": "selective_reads_scroll_facets_and_matrix_obey_the_fixture_filter",
+          "job_log_line": 2703
+        },
+        {
+          "name": "explicit_flush_survives_sigkill_without_drop",
+          "job_log_line": 2710
+        },
+        {
+          "name": "public_lifecycle_runs_only_in_bounded_owned_children",
+          "job_log_line": 2717
+        },
+        {
+          "name": "dynamic_dense_sparse_names_and_filtered_vector_deletion_survive_reopen",
+          "job_log_line": 2724
+        },
+        {
+          "name": "payload_index_create_delete_preserves_records_and_filtered_queries_after_reopen",
+          "job_log_line": 2725
+        }
+      ],
+      "scope": "One normal base-image run, reused by later image builds; not multiplied by four."
+    },
+    "real_child_tests": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "tests": [
+        {
+          "name": "already_exited_child_is_reaped_without_cleanup_signal",
+          "job_log_line": 2741
+        },
+        {
+          "name": "explicit_kill_records_result_and_preserves_first_reason",
+          "job_log_line": 2742
+        }
+      ]
+    },
+    "private_oom_negative_guard_tests": {
+      "distinct_tests": 3,
+      "tests": [
+        "oom_probe::tests::nonce_refuses_paths_and_ambiguous_values_without_native_execution",
+        "oom_probe::tests::counters_are_keyed_and_malformed_evidence_is_rejected",
+        "oom_probe::tests::altered_container_limits_fail_before_allocation"
+      ],
+      "runs": [
+        {
+          "profile": "direct_private_faults",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0,
+          "filtered_out": 1,
+          "tests": [
+            {
+              "name": "oom_probe::tests::nonce_refuses_paths_and_ambiguous_values_without_native_execution",
+              "job_log_line": 3090
+            },
+            {
+              "name": "oom_probe::tests::counters_are_keyed_and_malformed_evidence_is_rejected",
+              "job_log_line": 3091
+            },
+            {
+              "name": "oom_probe::tests::altered_container_limits_fail_before_allocation",
+              "job_log_line": 3092
+            }
+          ]
+        },
+        {
+          "profile": "helper_private_faults",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0,
+          "filtered_out": 1,
+          "tests": [
+            {
+              "name": "oom_probe::tests::altered_container_limits_fail_before_allocation",
+              "job_log_line": 3668
+            },
+            {
+              "name": "oom_probe::tests::nonce_refuses_paths_and_ambiguous_values_without_native_execution",
+              "job_log_line": 3669
+            },
+            {
+              "name": "oom_probe::tests::counters_are_keyed_and_malformed_evidence_is_rejected",
+              "job_log_line": 3670
+            }
+          ]
+        }
+      ],
+      "scope": "Pure guard tests; these runs do not allocate to induce OOM."
+    },
+    "python_runner_tests": {
+      "passed": 21,
+      "failed": 0,
+      "elapsed_seconds": 3.644,
+      "job_log_line": 140
+    },
+    "product_contracts": {
+      "status": "passed",
+      "capabilities": 54,
+      "work_items": 70,
+      "scope_completed": false,
+      "compiled_graph_claim": true,
+      "job_log_line": 137
+    },
+    "dependency_resolution": {
+      "packages": 440,
+      "license_metadata_missing": [],
+      "lock_sha256": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d",
+      "job_log_line": 2256
+    }
+  },
+  "sql_profiles": {
+    "direct_normal": {
+      "status": "passed",
+      "checks_passed": 19,
+      "source_groups_passed": 6,
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17,
+          "job_log_line": 3013
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed",
+          "worker_pid": 59,
+          "engine_pid": 59,
+          "job_log_line": 3014
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed",
+          "job_log_line": 3015
+        },
+        {
+          "name": "candidate_vector_format_roundtrip",
+          "status": "passed",
+          "wire_bytes": 115,
+          "signed_zero_and_finite_float32_extremes": true,
+          "public_api_frozen": false,
+          "job_log_line": 3016
+        },
+        {
+          "name": "candidate_vector_format_rejections_and_budgets",
+          "status": "passed",
+          "cases": [
+            "null_argument_0",
+            "null_element_0",
+            "empty_0",
+            "null_argument_1",
+            "null_element_1",
+            "empty_1",
+            "null_argument_2",
+            "null_element_2",
+            "empty_2",
+            "null_argument_3",
+            "null_element_3",
+            "empty_3",
+            "dense_lower_bound",
+            "sparse_index_lower_bound",
+            "sparse_weight_lower_bound",
+            "token_row_lower_bound",
+            "token_column_lower_bound",
+            "dense_not_vector",
+            "indices_not_vector",
+            "weights_not_vector",
+            "tokens_not_matrix",
+            "tokens_three_dimensions",
+            "negative_index",
+            "index_u32_overflow",
+            "duplicate_indices",
+            "unsorted_indices",
+            "sparse_length_mismatch",
+            "nonfinite_0_NaN",
+            "nonfinite_2_NaN",
+            "nonfinite_3_NaN",
+            "nonfinite_0_Infinity",
+            "nonfinite_2_Infinity",
+            "nonfinite_3_Infinity",
+            "nonfinite_0_-Infinity",
+            "nonfinite_2_-Infinity",
+            "nonfinite_3_-Infinity",
+            "postgres_ragged_matrix",
+            "dense_budget",
+            "sparse_budget",
+            "token_row_budget",
+            "token_width_budget",
+            "token_total_budget",
+            "wire_byte_budget"
+          ],
+          "recovery_after_errors": true,
+          "limits": {
+            "sparse_nnz": 4096,
+            "token_rows": 128,
+            "wire_bytes": 262144,
+            "token_width": 1024,
+            "token_values": 16384,
+            "dense_dimensions": 4096,
+            "result_json_bytes": 524288,
+            "owned_scalar_bytes": 131072
+          },
+          "job_log_line": 3017
+        },
+        {
+          "name": "candidate_vector_format_acl_and_runtime_superuser",
+          "status": "passed",
+          "called_on_null": true,
+          "job_log_line": 3018
+        },
+        {
+          "name": "tagged_bigint_uuid_text_identity",
+          "status": "passed",
+          "bigint_exact_above_javascript_range": true,
+          "unicode_normalization": false,
+          "stable_point_id_allocated": false,
+          "job_log_line": 3019
+        },
+        {
+          "name": "source_key_version_incarnation_and_quoted_binding",
+          "status": "passed",
+          "returned_source_text": false,
+          "allocated_incarnations": false,
+          "bounded_candidates": 32,
+          "job_log_line": 3020
+        },
+        {
+          "name": "source_recheck_definition_input_and_error_lock_cleanup",
+          "status": "passed",
+          "rls": "explicitly_rejected",
+          "job_log_line": 3021
+        },
+        {
+          "name": "source_recheck_active_statement_and_repeatable_snapshots",
+          "status": "passed",
+          "caller_xid_assigned": true,
+          "read_committed_new_statement_observes_commit": true,
+          "uncommitted_update_invisible": true,
+          "job_log_line": 3022
+        },
+        {
+          "name": "source_recheck_ddl_and_conditional_namespace_guard",
+          "status": "passed",
+          "production_locking_design": false,
+          "native_cancellation_stage": "primary_index_lock_before_SPI",
+          "same_backend_survived": true,
+          "job_log_line": 3023
+        },
+        {
+          "name": "source_identity_recheck_acl_and_runtime_superuser",
+          "status": "passed",
+          "production_source_select_authorization": false,
+          "job_log_line": 3024
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5345173759999398,
+          "job_log_line": 3025
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.013021932000015113,
+          "native_call_cancelled": false,
+          "job_log_line": 3026
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07152384999994865,
+          "job_log_line": 3027
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed",
+          "job_log_line": 3028
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "rejected",
+            "completed"
+          ],
+          "queue_limit": 8,
+          "job_log_line": 3029
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16,
+          "job_log_line": 3030
+        },
+        {
+          "name": "fault_entrypoint_absent_in_normal_build",
+          "status": "passed",
+          "job_log_line": 3031
+        }
+      ],
+      "artifact_member": "normal/p0-sql-results.json",
+      "artifact_assertions_equal_job_log": true
+    },
+    "direct_private_faults": {
+      "status": "passed",
+      "checks_passed": 21,
+      "source_groups_passed": 6,
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17,
+          "job_log_line": 3298
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed",
+          "worker_pid": 60,
+          "engine_pid": 60,
+          "job_log_line": 3299
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed",
+          "job_log_line": 3300
+        },
+        {
+          "name": "candidate_vector_format_roundtrip",
+          "status": "passed",
+          "wire_bytes": 115,
+          "signed_zero_and_finite_float32_extremes": true,
+          "public_api_frozen": false,
+          "job_log_line": 3301
+        },
+        {
+          "name": "candidate_vector_format_rejections_and_budgets",
+          "status": "passed",
+          "cases": [
+            "null_argument_0",
+            "null_element_0",
+            "empty_0",
+            "null_argument_1",
+            "null_element_1",
+            "empty_1",
+            "null_argument_2",
+            "null_element_2",
+            "empty_2",
+            "null_argument_3",
+            "null_element_3",
+            "empty_3",
+            "dense_lower_bound",
+            "sparse_index_lower_bound",
+            "sparse_weight_lower_bound",
+            "token_row_lower_bound",
+            "token_column_lower_bound",
+            "dense_not_vector",
+            "indices_not_vector",
+            "weights_not_vector",
+            "tokens_not_matrix",
+            "tokens_three_dimensions",
+            "negative_index",
+            "index_u32_overflow",
+            "duplicate_indices",
+            "unsorted_indices",
+            "sparse_length_mismatch",
+            "nonfinite_0_NaN",
+            "nonfinite_2_NaN",
+            "nonfinite_3_NaN",
+            "nonfinite_0_Infinity",
+            "nonfinite_2_Infinity",
+            "nonfinite_3_Infinity",
+            "nonfinite_0_-Infinity",
+            "nonfinite_2_-Infinity",
+            "nonfinite_3_-Infinity",
+            "postgres_ragged_matrix",
+            "dense_budget",
+            "sparse_budget",
+            "token_row_budget",
+            "token_width_budget",
+            "token_total_budget",
+            "wire_byte_budget"
+          ],
+          "recovery_after_errors": true,
+          "limits": {
+            "sparse_nnz": 4096,
+            "token_rows": 128,
+            "wire_bytes": 262144,
+            "token_width": 1024,
+            "token_values": 16384,
+            "dense_dimensions": 4096,
+            "result_json_bytes": 524288,
+            "owned_scalar_bytes": 131072
+          },
+          "job_log_line": 3302
+        },
+        {
+          "name": "candidate_vector_format_acl_and_runtime_superuser",
+          "status": "passed",
+          "called_on_null": true,
+          "job_log_line": 3303
+        },
+        {
+          "name": "tagged_bigint_uuid_text_identity",
+          "status": "passed",
+          "bigint_exact_above_javascript_range": true,
+          "unicode_normalization": false,
+          "stable_point_id_allocated": false,
+          "job_log_line": 3304
+        },
+        {
+          "name": "source_key_version_incarnation_and_quoted_binding",
+          "status": "passed",
+          "returned_source_text": false,
+          "allocated_incarnations": false,
+          "bounded_candidates": 32,
+          "job_log_line": 3305
+        },
+        {
+          "name": "source_recheck_definition_input_and_error_lock_cleanup",
+          "status": "passed",
+          "rls": "explicitly_rejected",
+          "job_log_line": 3306
+        },
+        {
+          "name": "source_recheck_active_statement_and_repeatable_snapshots",
+          "status": "passed",
+          "caller_xid_assigned": true,
+          "read_committed_new_statement_observes_commit": true,
+          "uncommitted_update_invisible": true,
+          "job_log_line": 3307
+        },
+        {
+          "name": "source_recheck_ddl_and_conditional_namespace_guard",
+          "status": "passed",
+          "production_locking_design": false,
+          "native_cancellation_stage": "primary_index_lock_before_SPI",
+          "same_backend_survived": true,
+          "job_log_line": 3308
+        },
+        {
+          "name": "source_identity_recheck_acl_and_runtime_superuser",
+          "status": "passed",
+          "production_source_select_authorization": false,
+          "job_log_line": 3309
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5260999089999814,
+          "job_log_line": 3310
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.013113105999991603,
+          "native_call_cancelled": false,
+          "job_log_line": 3311
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.07123553899998569,
+          "job_log_line": 3312
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed",
+          "job_log_line": 3313
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "rejected"
+          ],
+          "queue_limit": 8,
+          "job_log_line": 3314
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16,
+          "job_log_line": 3315
+        },
+        {
+          "name": "caught_engine_thread_panic",
+          "status": "passed",
+          "worker_survived": true,
+          "job_log_line": 3316
+        },
+        {
+          "name": "worker_sigkill_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": true,
+          "committed_postgresql_marker_retained": true,
+          "original_worker_pid": 60,
+          "replacement_worker_pid": 723,
+          "original_engine_pid": 60,
+          "replacement_engine_pid": 723,
+          "job_log_line": 3317
+        },
+        {
+          "name": "worker_abort_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": true,
+          "committed_postgresql_marker_retained": true,
+          "original_worker_pid": 723,
+          "replacement_worker_pid": 747,
+          "original_engine_pid": 723,
+          "replacement_engine_pid": 747,
+          "job_log_line": 3318
+        }
+      ],
+      "artifact_member": "faults/p0-fault-results.json",
+      "artifact_assertions_equal_job_log": true
+    },
+    "helper_normal": {
+      "status": "passed",
+      "checks_passed": 19,
+      "source_groups_passed": 6,
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17,
+          "job_log_line": 3585
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed",
+          "worker_pid": 58,
+          "engine_pid": 60,
+          "job_log_line": 3586
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed",
+          "job_log_line": 3587
+        },
+        {
+          "name": "candidate_vector_format_roundtrip",
+          "status": "passed",
+          "wire_bytes": 115,
+          "signed_zero_and_finite_float32_extremes": true,
+          "public_api_frozen": false,
+          "job_log_line": 3588
+        },
+        {
+          "name": "candidate_vector_format_rejections_and_budgets",
+          "status": "passed",
+          "cases": [
+            "null_argument_0",
+            "null_element_0",
+            "empty_0",
+            "null_argument_1",
+            "null_element_1",
+            "empty_1",
+            "null_argument_2",
+            "null_element_2",
+            "empty_2",
+            "null_argument_3",
+            "null_element_3",
+            "empty_3",
+            "dense_lower_bound",
+            "sparse_index_lower_bound",
+            "sparse_weight_lower_bound",
+            "token_row_lower_bound",
+            "token_column_lower_bound",
+            "dense_not_vector",
+            "indices_not_vector",
+            "weights_not_vector",
+            "tokens_not_matrix",
+            "tokens_three_dimensions",
+            "negative_index",
+            "index_u32_overflow",
+            "duplicate_indices",
+            "unsorted_indices",
+            "sparse_length_mismatch",
+            "nonfinite_0_NaN",
+            "nonfinite_2_NaN",
+            "nonfinite_3_NaN",
+            "nonfinite_0_Infinity",
+            "nonfinite_2_Infinity",
+            "nonfinite_3_Infinity",
+            "nonfinite_0_-Infinity",
+            "nonfinite_2_-Infinity",
+            "nonfinite_3_-Infinity",
+            "postgres_ragged_matrix",
+            "dense_budget",
+            "sparse_budget",
+            "token_row_budget",
+            "token_width_budget",
+            "token_total_budget",
+            "wire_byte_budget"
+          ],
+          "recovery_after_errors": true,
+          "limits": {
+            "sparse_nnz": 4096,
+            "token_rows": 128,
+            "wire_bytes": 262144,
+            "token_width": 1024,
+            "token_values": 16384,
+            "dense_dimensions": 4096,
+            "result_json_bytes": 524288,
+            "owned_scalar_bytes": 131072
+          },
+          "job_log_line": 3589
+        },
+        {
+          "name": "candidate_vector_format_acl_and_runtime_superuser",
+          "status": "passed",
+          "called_on_null": true,
+          "job_log_line": 3590
+        },
+        {
+          "name": "tagged_bigint_uuid_text_identity",
+          "status": "passed",
+          "bigint_exact_above_javascript_range": true,
+          "unicode_normalization": false,
+          "stable_point_id_allocated": false,
+          "job_log_line": 3591
+        },
+        {
+          "name": "source_key_version_incarnation_and_quoted_binding",
+          "status": "passed",
+          "returned_source_text": false,
+          "allocated_incarnations": false,
+          "bounded_candidates": 32,
+          "job_log_line": 3592
+        },
+        {
+          "name": "source_recheck_definition_input_and_error_lock_cleanup",
+          "status": "passed",
+          "rls": "explicitly_rejected",
+          "job_log_line": 3593
+        },
+        {
+          "name": "source_recheck_active_statement_and_repeatable_snapshots",
+          "status": "passed",
+          "caller_xid_assigned": true,
+          "read_committed_new_statement_observes_commit": true,
+          "uncommitted_update_invisible": true,
+          "job_log_line": 3594
+        },
+        {
+          "name": "source_recheck_ddl_and_conditional_namespace_guard",
+          "status": "passed",
+          "production_locking_design": false,
+          "native_cancellation_stage": "primary_index_lock_before_SPI",
+          "same_backend_survived": true,
+          "job_log_line": 3595
+        },
+        {
+          "name": "source_identity_recheck_acl_and_runtime_superuser",
+          "status": "passed",
+          "production_source_select_authorization": false,
+          "job_log_line": 3596
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5213342929999953,
+          "job_log_line": 3597
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.011920094000060999,
+          "native_call_cancelled": false,
+          "job_log_line": 3598
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.06702048700003616,
+          "job_log_line": 3599
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed",
+          "job_log_line": 3600
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "completed",
+            "completed",
+            "rejected"
+          ],
+          "queue_limit": 8,
+          "job_log_line": 3601
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16,
+          "job_log_line": 3602
+        },
+        {
+          "name": "fault_entrypoint_absent_in_normal_build",
+          "status": "passed",
+          "job_log_line": 3603
+        }
+      ],
+      "artifact_member": "helper-normal/p0-sql-results.json",
+      "artifact_assertions_equal_job_log": true
+    },
+    "helper_private_faults": {
+      "status": "passed",
+      "checks_passed": 25,
+      "source_groups_passed": 6,
+      "checks": [
+        {
+          "name": "install_and_honest_capabilities",
+          "status": "passed",
+          "count": 54,
+          "postgres_major": 17,
+          "job_log_line": 3889
+        },
+        {
+          "name": "concurrent_start_unique_owner",
+          "status": "passed",
+          "worker_pid": 60,
+          "engine_pid": 62,
+          "job_log_line": 3890
+        },
+        {
+          "name": "acl_runtime_superuser_and_input_validation",
+          "status": "passed",
+          "job_log_line": 3891
+        },
+        {
+          "name": "candidate_vector_format_roundtrip",
+          "status": "passed",
+          "wire_bytes": 115,
+          "signed_zero_and_finite_float32_extremes": true,
+          "public_api_frozen": false,
+          "job_log_line": 3892
+        },
+        {
+          "name": "candidate_vector_format_rejections_and_budgets",
+          "status": "passed",
+          "cases": [
+            "null_argument_0",
+            "null_element_0",
+            "empty_0",
+            "null_argument_1",
+            "null_element_1",
+            "empty_1",
+            "null_argument_2",
+            "null_element_2",
+            "empty_2",
+            "null_argument_3",
+            "null_element_3",
+            "empty_3",
+            "dense_lower_bound",
+            "sparse_index_lower_bound",
+            "sparse_weight_lower_bound",
+            "token_row_lower_bound",
+            "token_column_lower_bound",
+            "dense_not_vector",
+            "indices_not_vector",
+            "weights_not_vector",
+            "tokens_not_matrix",
+            "tokens_three_dimensions",
+            "negative_index",
+            "index_u32_overflow",
+            "duplicate_indices",
+            "unsorted_indices",
+            "sparse_length_mismatch",
+            "nonfinite_0_NaN",
+            "nonfinite_2_NaN",
+            "nonfinite_3_NaN",
+            "nonfinite_0_Infinity",
+            "nonfinite_2_Infinity",
+            "nonfinite_3_Infinity",
+            "nonfinite_0_-Infinity",
+            "nonfinite_2_-Infinity",
+            "nonfinite_3_-Infinity",
+            "postgres_ragged_matrix",
+            "dense_budget",
+            "sparse_budget",
+            "token_row_budget",
+            "token_width_budget",
+            "token_total_budget",
+            "wire_byte_budget"
+          ],
+          "recovery_after_errors": true,
+          "limits": {
+            "sparse_nnz": 4096,
+            "token_rows": 128,
+            "wire_bytes": 262144,
+            "token_width": 1024,
+            "token_values": 16384,
+            "dense_dimensions": 4096,
+            "result_json_bytes": 524288,
+            "owned_scalar_bytes": 131072
+          },
+          "job_log_line": 3893
+        },
+        {
+          "name": "candidate_vector_format_acl_and_runtime_superuser",
+          "status": "passed",
+          "called_on_null": true,
+          "job_log_line": 3894
+        },
+        {
+          "name": "tagged_bigint_uuid_text_identity",
+          "status": "passed",
+          "bigint_exact_above_javascript_range": true,
+          "unicode_normalization": false,
+          "stable_point_id_allocated": false,
+          "job_log_line": 3895
+        },
+        {
+          "name": "source_key_version_incarnation_and_quoted_binding",
+          "status": "passed",
+          "returned_source_text": false,
+          "allocated_incarnations": false,
+          "bounded_candidates": 32,
+          "job_log_line": 3896
+        },
+        {
+          "name": "source_recheck_definition_input_and_error_lock_cleanup",
+          "status": "passed",
+          "rls": "explicitly_rejected",
+          "job_log_line": 3897
+        },
+        {
+          "name": "source_recheck_active_statement_and_repeatable_snapshots",
+          "status": "passed",
+          "caller_xid_assigned": true,
+          "read_committed_new_statement_observes_commit": true,
+          "uncommitted_update_invisible": true,
+          "job_log_line": 3898
+        },
+        {
+          "name": "source_recheck_ddl_and_conditional_namespace_guard",
+          "status": "passed",
+          "production_locking_design": false,
+          "native_cancellation_stage": "primary_index_lock_before_SPI",
+          "same_backend_survived": true,
+          "job_log_line": 3899
+        },
+        {
+          "name": "source_identity_recheck_acl_and_runtime_superuser",
+          "status": "passed",
+          "production_source_select_authorization": false,
+          "job_log_line": 3900
+        },
+        {
+          "name": "two_sql_sessions_single_execution_owner",
+          "status": "passed",
+          "elapsed_seconds": 0.5249575309999273,
+          "job_log_line": 3901
+        },
+        {
+          "name": "caller_cancel_retains_active_owner",
+          "status": "passed",
+          "cancel_seconds": 0.01273130200002015,
+          "native_call_cancelled": false,
+          "job_log_line": 3902
+        },
+        {
+          "name": "request_deadline_and_statement_timeout",
+          "status": "passed",
+          "request_timeout_seconds": 0.0706710590000057,
+          "job_log_line": 3903
+        },
+        {
+          "name": "cancelled_queued_request_never_executes",
+          "status": "passed",
+          "job_log_line": 3904
+        },
+        {
+          "name": "bounded_queue_admission",
+          "status": "passed",
+          "outcomes": [
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "completed",
+            "rejected",
+            "completed",
+            "rejected",
+            "completed"
+          ],
+          "queue_limit": 8,
+          "job_log_line": 3905
+        },
+        {
+          "name": "real_sql_to_edge_smoke",
+          "status": "passed",
+          "checks": 16,
+          "job_log_line": 3906
+        },
+        {
+          "name": "caught_engine_thread_panic",
+          "status": "passed",
+          "worker_survived": true,
+          "job_log_line": 3907
+        },
+        {
+          "name": "helper_sigkill_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": false,
+          "committed_postgresql_marker_retained": true,
+          "original_worker_pid": 60,
+          "replacement_worker_pid": 60,
+          "original_engine_pid": 62,
+          "replacement_engine_pid": 711,
+          "job_log_line": 3908
+        },
+        {
+          "name": "helper_abort_collateral_recovery",
+          "status": "passed",
+          "companion_session_terminated": false,
+          "committed_postgresql_marker_retained": true,
+          "original_worker_pid": 60,
+          "replacement_worker_pid": 60,
+          "original_engine_pid": 711,
+          "replacement_engine_pid": 728,
+          "job_log_line": 3909
+        },
+        {
+          "name": "helper_operation_budget_stops_frozen_engine",
+          "status": "passed",
+          "fault": "SIGSTOP",
+          "configured_limit_ms": 125000,
+          "observed_remaining_seconds": 125.28958693899995,
+          "caller_cancelled": true,
+          "native_cancellation": false,
+          "supervisor_preserved": true,
+          "companion_session_completed": true,
+          "stop_reason": "execution_budget",
+          "stopped_engine_pid": 728,
+          "supervisor_kill_requested": true,
+          "kill_attempts": 1,
+          "first_kill_attempt": {
+            "error": null,
+            "succeeded": true,
+            "raw_os_error": null,
+            "after_spawn_ms": 126780
+          },
+          "replacement_engine_pid": 1887,
+          "job_log_line": 3910
+        },
+        {
+          "name": "helper_supervisor_exit_closes_native_owner",
+          "status": "passed",
+          "old_engine_stopped": true,
+          "replacement_owner_ready": true,
+          "shutdown_signal": "SIGTERM",
+          "job_log_line": 3911
+        },
+        {
+          "name": "helper_supervisor_sigkill_recovers_postgresql_and_native_owner",
+          "status": "passed",
+          "shutdown_signal": "SIGKILL",
+          "postgres_crash_recovery_observed": true,
+          "companion_session_terminated": true,
+          "caller_failed": true,
+          "postmaster_identity_preserved": true,
+          "committed_postgresql_marker_retained": true,
+          "old_engine_stopped_before_replacement": true,
+          "helper_stop_confirmed_after_seconds": 0.020254833000080907,
+          "recovery_seconds": 0.13716713000007985,
+          "same_fence_inode": true,
+          "fence_released_then_reacquired": true,
+          "concurrent_replacement_starts_converged": true,
+          "old_supervisor": {
+            "pid": 1902,
+            "start_ticks": 121489,
+            "state": "S",
+            "parent_pid": 33
+          },
+          "replacement_supervisor": {
+            "pid": 1947,
+            "start_ticks": 121515,
+            "state": "S",
+            "parent_pid": 33
+          },
+          "old_engine": {
+            "pid": 1903,
+            "start_ticks": 121490,
+            "state": "S",
+            "parent_pid": 1902
+          },
+          "replacement_engine": {
+            "pid": 1949,
+            "start_ticks": 121516,
+            "state": "S",
+            "parent_pid": 1947
+          },
+          "replacement_edge_smoke_checks": 16,
+          "native_helper_failure_containment_claim": false,
+          "durable_index_recovery_verified": false,
+          "ownership_scope": "P0 native-owner fence; no persistent product index generation",
+          "job_log_line": 3912
+        },
+        {
+          "name": "helper_restart_budget_exhaustion_is_visible",
+          "status": "passed",
+          "start_attempts": 4,
+          "automatic_restarts": 3,
+          "supervisor_preserved": true,
+          "unavailable_requests_refused": true,
+          "job_log_line": 3913
+        }
+      ],
+      "artifact_member": "helper/p0-fault-results.json",
+      "artifact_assertions_equal_job_log": true
+    }
+  },
+  "helper_protocol_profiles": {
+    "normal": {
+      "checks_passed": 7,
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "fault_operation_refused_without_private_feature",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed",
+          "exit_seconds": 0.0032290609999563458
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed",
+          "observed_live_identity": {
+            "pid": 21,
+            "start_ticks": 90880,
+            "state": "S",
+            "parent_pid": 20,
+            "uid": 10001
+          }
+        }
+      ],
+      "job_log_line": 3577
+    },
+    "private_faults": {
+      "checks_passed": 8,
+      "schema_version": 1,
+      "kind": "standalone_helper_protocol",
+      "status": "passed",
+      "checks": [
+        {
+          "name": "unique_native_owner_and_ready_identity",
+          "status": "passed"
+        },
+        {
+          "name": "real_edge_through_helper_pipe",
+          "status": "passed",
+          "checks": 16
+        },
+        {
+          "name": "caught_native_panic_preserves_helper",
+          "status": "passed"
+        },
+        {
+          "name": "parent_pipe_eof_stops_outstanding_work",
+          "status": "passed",
+          "exit_seconds": 0.003217210000002524
+        },
+        {
+          "name": "replacement_ownership_and_replayed_request_refusal",
+          "status": "passed"
+        },
+        {
+          "name": "oversized_incomplete_frame_refused",
+          "status": "passed"
+        },
+        {
+          "name": "supervisor_sigkill_closes_pipe_and_stops_helper",
+          "status": "passed",
+          "observed_live_identity": {
+            "pid": 21,
+            "start_ticks": 105611,
+            "state": "S",
+            "parent_pid": 20,
+            "uid": 10001
+          }
+        },
+        {
+          "name": "private_native_abort_terminates_only_child",
+          "status": "passed"
+        }
+      ],
+      "job_log_line": 3881
+    }
+  },
+  "disk_profiles": {
+    "vector_keyword_enospc_32_mib": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_enospc_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "environment": {
+        "filesystem": "tmpfs",
+        "capacity_bytes": 33554432,
+        "no_mount_aliases_in_current_namespace": true,
+        "mode": "0700",
+        "pgdata_disjoint": true
+      },
+      "profile": "vector_keyword",
+      "fixture": {
+        "points": 8,
+        "named_representations": [
+          "dense",
+          "bm25",
+          "learned",
+          "tokens"
+        ],
+        "wal_segment_capacity_bytes": 65536,
+        "payload_on_disk": true,
+        "dense_and_token_on_disk": true,
+        "keyword_indexes": [
+          "tenant",
+          "document",
+          "sku"
+        ],
+        "text_indexes": [],
+        "storage_scope": "cold payload/vectors and mutable keyword indexes; no text indexes",
+        "excluded_combination": "ENOSPC with writable reopen of full mutable phrase/token-prefix indexes"
+      },
+      "observations": [
+        {
+          "stage": "fixture_query_passed",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534047,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 204,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 33288192,
+            "available_bytes": 33288192
+          }
+        },
+        {
+          "stage": "filled",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534047,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 204,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 0,
+            "available_bytes": 0
+          }
+        },
+        {
+          "stage": "filler_removed",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534047,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 204,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 33288192,
+            "available_bytes": 33288192
+          }
+        },
+        {
+          "stage": "recovery_flushed",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534157,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 204,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 33288192,
+            "available_bytes": 33288192
+          }
+        },
+        {
+          "stage": "recovery_before_reopen",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534157,
+            "allocated_bytes": 266240,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 33288192,
+            "available_bytes": 33288192
+          }
+        },
+        {
+          "stage": "recovery_after_reopen",
+          "storage": {
+            "files": 67,
+            "logical_bytes": 220534157,
+            "allocated_bytes": 15970304,
+            "mapping_rss_kib": 15632,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 33554432,
+            "free_bytes": 17584128,
+            "available_bytes": 17584128
+          }
+        }
+      ],
+      "fill": {
+        "bytes_written": 33288192,
+        "errno": 28,
+        "filler_removed": true
+      },
+      "engine_failure": {
+        "operation": "set_hnsw_config",
+        "error": "Service runtime error: Failed to save structure on disk with error: No space left on device (os error 28)",
+        "persisted_config_unchanged": true,
+        "in_memory_config_changed": false
+      },
+      "recovery": {
+        "config_retry": "passed",
+        "explicit_flush": "passed",
+        "reopen": "passed",
+        "records": 8,
+        "all_representation_records_equal": true,
+        "keyword_tenant_and_maxsim_queries": "passed",
+        "phrase_query": "not_tested",
+        "token_prefix_query": "not_tested"
+      },
+      "scope": "configuration atomic save with vector/keyword fixture only; mutable text-index recovery, WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail_truncated": false,
+        "stages": [
+          "guard",
+          "fixture_create",
+          "fixture_indexes",
+          "fixture_upsert",
+          "fixture_flush",
+          "fixture_ready",
+          "fixture_query",
+          "fill",
+          "config_save",
+          "config_result",
+          "filler_release",
+          "recovery",
+          "recovery_reopen",
+          "completed"
+        ],
+        "stages_truncated": false,
+        "last_stage": "completed",
+        "observation_errors": []
+      },
+      "requested_experiment": {
+        "kind": "edge_enospc_probe",
+        "profile": "vector_keyword",
+        "clean_control": false,
+        "capacity_refusal_characterization": false
+      },
+      "post_exit_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 33554432,
+          "free_bytes": 33554432,
+          "available_bytes": 33554432
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "job_log_line": 2956
+    },
+    "full_text_enospc_384_mib": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_enospc_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "environment": {
+        "filesystem": "tmpfs",
+        "capacity_bytes": 402653184,
+        "no_mount_aliases_in_current_namespace": true,
+        "mode": "0700",
+        "pgdata_disjoint": true
+      },
+      "profile": "full_text",
+      "fixture": {
+        "points": 8,
+        "named_representations": [
+          "dense",
+          "bm25",
+          "learned",
+          "tokens"
+        ],
+        "wal_segment_capacity_bytes": 65536,
+        "keyword_indexes": [
+          "tenant",
+          "document",
+          "sku"
+        ],
+        "text_indexes": [
+          "body",
+          "body_prefix"
+        ],
+        "storage_scope": "unchanged bounded full fixture with mutable phrase and token-prefix indexes"
+      },
+      "observations": [
+        {
+          "stage": "fixture_query_passed",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "filled",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 0,
+            "available_bytes": 0
+          }
+        },
+        {
+          "stage": "filler_removed",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "recovery_flushed",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807462,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "recovery_before_reopen",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807462,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "recovery_after_reopen",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807462,
+            "allocated_bytes": 220508160,
+            "mapping_rss_kib": 215356,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 182145024,
+            "available_bytes": 182145024
+          }
+        }
+      ],
+      "fill": {
+        "bytes_written": 367689728,
+        "errno": 28,
+        "filler_removed": true
+      },
+      "engine_failure": {
+        "operation": "set_hnsw_config",
+        "error": "Service runtime error: Failed to save structure on disk with error: No space left on device (os error 28)",
+        "persisted_config_unchanged": true,
+        "in_memory_config_changed": false
+      },
+      "recovery": {
+        "config_retry": "passed",
+        "explicit_flush": "passed",
+        "reopen": "passed",
+        "records": 8,
+        "all_representation_records_equal": true,
+        "keyword_tenant_and_maxsim_queries": "passed",
+        "phrase_query": "passed",
+        "token_prefix_query": "passed"
+      },
+      "scope": "configuration atomic save and recovery with an already-flushed full mutable text/vector fixture; WAL growth, dirty ingestion, PostgreSQL ACK and machine power loss are unverified",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail_truncated": false,
+        "stages": [
+          "guard",
+          "full_text_fixture",
+          "fixture_query",
+          "fill",
+          "config_save",
+          "config_result",
+          "filler_release",
+          "recovery",
+          "recovery_reopen",
+          "completed"
+        ],
+        "stages_truncated": false,
+        "last_stage": "completed",
+        "observation_errors": []
+      },
+      "requested_experiment": {
+        "kind": "edge_enospc_probe",
+        "profile": "full_text",
+        "clean_control": false,
+        "capacity_refusal_characterization": false
+      },
+      "post_exit_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 402653184,
+          "free_bytes": 402653184,
+          "available_bytes": 402653184
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "job_log_line": 2973
+    },
+    "full_text_clean_384_mib": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_disk_fixture_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "profile": "full_text",
+      "fixture": {
+        "points": 8,
+        "named_representations": [
+          "dense",
+          "bm25",
+          "learned",
+          "tokens"
+        ],
+        "wal_segment_capacity_bytes": 65536,
+        "keyword_indexes": [
+          "tenant",
+          "document",
+          "sku"
+        ],
+        "text_indexes": [
+          "body",
+          "body_prefix"
+        ],
+        "storage_scope": "unchanged bounded full fixture with mutable phrase and token-prefix indexes"
+      },
+      "recovery": {
+        "explicit_flush": "passed",
+        "reopen": "passed",
+        "records": 8,
+        "all_representation_records_equal": true,
+        "keyword_tenant_and_maxsim_queries": "passed",
+        "phrase_query": "passed",
+        "token_prefix_query": "passed"
+      },
+      "storage_observations": {
+        "created_and_flushed": {
+          "files": 85,
+          "logical_bytes": 289807352,
+          "allocated_bytes": 34963456,
+          "mapping_rss_kib": 34080,
+          "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+        },
+        "reopened": {
+          "files": 85,
+          "logical_bytes": 289807352,
+          "allocated_bytes": 220508160,
+          "mapping_rss_kib": 215484,
+          "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+        }
+      },
+      "observations": [
+        {
+          "stage": "clean_fixture_flushed",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 34080,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "clean_before_reopen",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 34963456,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 367689728,
+            "available_bytes": 367689728
+          }
+        },
+        {
+          "stage": "clean_after_reopen",
+          "storage": {
+            "files": 85,
+            "logical_bytes": 289807352,
+            "allocated_bytes": 220508160,
+            "mapping_rss_kib": 215348,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 402653184,
+            "free_bytes": 182145024,
+            "available_bytes": 182145024
+          }
+        }
+      ],
+      "provisioned_tmpfs": true,
+      "enospc_verified": false,
+      "filler_created": false,
+      "scope": "clean fixture reopen and storage observations only; no disk filling or recovery from ENOSPC",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail_truncated": false,
+        "stages": [
+          "clean_fixture_create",
+          "recovery_reopen"
+        ],
+        "stages_truncated": false,
+        "last_stage": "recovery_reopen",
+        "observation_errors": []
+      },
+      "requested_experiment": {
+        "kind": "edge_disk_fixture_probe",
+        "profile": "full_text",
+        "clean_control": true,
+        "capacity_refusal_characterization": false
+      },
+      "post_exit_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 402653184,
+          "free_bytes": 402653184,
+          "available_bytes": 402653184
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "job_log_line": 2983
+    },
+    "full_text_refusal_128_mib": {
+      "schema_version": 1,
+      "engine_version": "0.8.0",
+      "kind": "edge_full_text_128_capacity_refusal_probe",
+      "status": "passed",
+      "sql_integration_verified": false,
+      "release_supported": false,
+      "oom_verified": false,
+      "power_loss_verified": false,
+      "profile": "full_text",
+      "observed_capacity_bytes": 134217728,
+      "required_capacity_bytes": 402653184,
+      "expected_refusal": "full-text tmpfs capacity must be exactly 384 MiB",
+      "entry_refusals": {
+        "enospc": {
+          "schema_version": 1,
+          "engine_version": "0.8.0",
+          "kind": "edge_enospc_probe",
+          "status": "not_run",
+          "sql_integration_verified": false,
+          "release_supported": false,
+          "oom_verified": false,
+          "power_loss_verified": false,
+          "profile": "full_text",
+          "disk_writes_attempted": false,
+          "reason_code": "unsafe_environment",
+          "reason": "full-text tmpfs capacity must be exactly 384 MiB"
+        },
+        "enospc_exit_code": 2,
+        "clean_error": "full-text tmpfs capacity must be exactly 384 MiB"
+      },
+      "observations": [
+        {
+          "stage": "capacity_refusal_before",
+          "storage": {
+            "files": 0,
+            "logical_bytes": 0,
+            "allocated_bytes": 0,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 134217728,
+            "free_bytes": 134217728,
+            "available_bytes": 134217728
+          }
+        },
+        {
+          "stage": "capacity_refusal_after",
+          "storage": {
+            "files": 0,
+            "logical_bytes": 0,
+            "allocated_bytes": 0,
+            "mapping_rss_kib": 0,
+            "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+          },
+          "filesystem": {
+            "type": "tmpfs",
+            "capacity_bytes": 134217728,
+            "free_bytes": 134217728,
+            "available_bytes": 134217728
+          }
+        }
+      ],
+      "disk_writes_attempted": false,
+      "engine_open_attempted": false,
+      "filler_created": false,
+      "enospc_verified": false,
+      "recovery_verified": false,
+      "scope": "exact 128 MiB capacity refusal by both full-text entry paths; no engine execution, ENOSPC or recovery claim",
+      "execution": {
+        "returncode": 0,
+        "exit_code": 0,
+        "signal_number": null,
+        "signal_name": null,
+        "timed_out": false,
+        "timeout_seconds": 90,
+        "launch_error": null,
+        "stderr_tail_truncated": false,
+        "stages": [
+          "capacity_refusal_guard",
+          "guard",
+          "capacity_refusal_completed"
+        ],
+        "stages_truncated": false,
+        "last_stage": "capacity_refusal_completed",
+        "observation_errors": []
+      },
+      "requested_experiment": {
+        "kind": "edge_full_text_128_capacity_refusal_probe",
+        "profile": "full_text",
+        "clean_control": false,
+        "capacity_refusal_characterization": true
+      },
+      "post_exit_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 134217728,
+          "free_bytes": 134217728,
+          "available_bytes": 134217728
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "pre_execution_observation": {
+        "status": "observed",
+        "stage": "after_child_exit",
+        "filesystem": {
+          "type": "tmpfs",
+          "capacity_bytes": 134217728,
+          "free_bytes": 134217728,
+          "available_bytes": 134217728
+        },
+        "storage": {
+          "files": 0,
+          "directories": 0,
+          "logical_bytes": 0,
+          "allocated_bytes": 0,
+          "largest_allocated_files": []
+        },
+        "scope": "post-exit metadata only; no native fault attribution or content inspection"
+      },
+      "job_log_line": 2993
+    }
+  },
+  "kernel_oom_profiles": {
+    "direct_worker": {
+      "schema_version": 1,
+      "kind": "p0_kernel_oom",
+      "profile": "direct_worker",
+      "nonce": "c78e110a1fbab6014012378434a54216",
+      "status": "passed",
+      "stage": "collect_and_attribute",
+      "external_termination_requested": false,
+      "kernel_oom_observed": true,
+      "victim_attribution": "kernel_record",
+      "target_isolation_gate_passed": false,
+      "strict_target_attribution_passed": true,
+      "production_memory_isolation_verified": false,
+      "host_mem_available_before_bytes": 15359275008,
+      "container": {
+        "image_id": "sha256:1073a142a3d879a83014f716b28ca1bc5f9e752960caa335d74c93edd73026fb",
+        "container_id": "b170e839f166096253ddef01e857a63ba426b5c589dc77e448730bae9edf4568",
+        "user": "10001:10001",
+        "memory_limit_bytes": 805306368,
+        "memory_swap_total_bytes": 805306368,
+        "pids_limit": 128,
+        "nano_cpus": 2000000000,
+        "network": "none",
+        "pid_mode": "",
+        "ipc_mode": "private",
+        "cgroup_namespace": "private",
+        "cap_drop": [
+          "ALL"
+        ],
+        "no_new_privileges": true,
+        "host_mounts": false
+      },
+      "target_mapping": {
+        "host_pid": 43208,
+        "container_pid": 80,
+        "start_ticks": 121927,
+        "host_cgroup": "/system.slice/docker-b170e839f166096253ddef01e857a63ba426b5c589dc77e448730bae9edf4568.scope"
+      },
+      "container_exit": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": true,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-10-08T06:34:45.07684646Z",
+        "FinishedAt": "2026-10-08T06:34:50.312054039Z"
+      },
+      "artifact_copy_returncode": 0,
+      "kernel_journal_returncode": 0,
+      "kernel_victim_records": [
+        {
+          "timestamp_us": "1791441288808384",
+          "message": "oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=docker-b170e839f166096253ddef01e857a63ba426b5c589dc77e448730bae9edf4568.scope,mems_allowed=0,oom_memcg=/system.slice/docker-b170e839f166096253ddef01e857a63ba426b5c589dc77e448730bae9edf4568.scope,task_memcg=/system.slice/docker-b170e839f166096253ddef01e857a63ba426b5c589dc77e448730bae9edf4568.scope,task=postgres,pid=43208,uid=10001"
+        },
+        {
+          "timestamp_us": "1791441288808393",
+          "message": "Memory cgroup out of memory: Killed process 43208 (postgres) total-vm:1142420kB, anon-rss:743564kB, file-rss:33204kB, shmem-rss:2556kB, UID:10001 pgtables:1784kB oom_score_adj:1000"
+        }
+      ],
+      "unflushed_edge_recovery_verified": false,
+      "postgres_edge_atomicity_verified": false,
+      "elapsed_seconds": 5.526280879974365,
+      "job_log_line": 3928,
+      "independent_kernel_record_review": {
+        "exact_oom_memcg_equals_mapped_container_cgroup": true,
+        "selector_and_killed_process_match_exact_host_pid": true,
+        "kernel_records_count": 2,
+        "container_pid_start_identity_mapping_retained": true
+      },
+      "inner_postgresql_observation": {
+        "schema_version": 1,
+        "kind": "p0_kernel_oom_sql",
+        "status": "observed",
+        "profile": "direct_worker",
+        "nonce": "c78e110a1fbab6014012378434a54216",
+        "stage": "complete",
+        "kernel_oom_observed": true,
+        "victim_attribution": "correlated_only",
+        "target_isolation_gate_passed": false,
+        "production_memory_isolation_verified": false,
+        "unflushed_edge_recovery_verified": false,
+        "postgres_edge_atomicity_verified": false,
+        "caller_client_kill_requested": false,
+        "companion_client_kill_requested": false,
+        "identities": {
+          "schema_version": 1,
+          "nonce": "c78e110a1fbab6014012378434a54216",
+          "profile": "direct_worker",
+          "target": {
+            "pid": 80,
+            "start_ticks": 121927,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 55,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532269]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532270]"
+          },
+          "supervisor": {
+            "pid": 80,
+            "start_ticks": 121927,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 55,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532269]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532270]"
+          },
+          "controller": {
+            "pid": 63,
+            "start_ticks": 121918,
+            "uid": 10001,
+            "state": "R",
+            "parent_pid": 1,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532269]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532270]"
+          },
+          "postmaster": {
+            "pid": 55,
+            "start_ticks": 121908,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 1,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532269]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532270]"
+          },
+          "companion": {
+            "pid": 83,
+            "start_ticks": 121930,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 55,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532269]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532270]"
+          },
+          "namespaces": {
+            "pid_namespace": "pid:[4026532269]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532270]"
+          },
+          "cgroup": {
+            "device": 30,
+            "inode": 11010,
+            "mount_id": "416"
+          },
+          "data_dir": "<owned-disposable-postgresql-data-directory>",
+          "postgresql_marker_verified": true
+        },
+        "build": {
+          "stage": "P0_feasibility",
+          "engine": {
+            "name": "qdrant-edge",
+            "version": "0.8.0"
+          },
+          "features": {
+            "pg17": true,
+            "cshim": true,
+            "p0_managed_helper": false,
+            "p0_fault_injection": true
+          },
+          "pgrx_version": "0.19.3",
+          "postgres_major": 17,
+          "schema_version": 1,
+          "extension_version": "0.0.1",
+          "prototype_process": "dynamic_postgresql_worker_with_engine_thread",
+          "product_indexing_api": false,
+          "native_engine_cancellation": false,
+          "release_supported_capabilities": []
+        },
+        "counters_before": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "memory_samples": [
+          {
+            "after_ms": 0,
+            "memory_current": 99397632
+          },
+          {
+            "after_ms": 50,
+            "memory_current": 92438528
+          },
+          {
+            "after_ms": 100,
+            "memory_current": 93630464
+          },
+          {
+            "after_ms": 151,
+            "memory_current": 108834816
+          },
+          {
+            "after_ms": 201,
+            "memory_current": 124563456
+          },
+          {
+            "after_ms": 251,
+            "memory_current": 140292096
+          },
+          {
+            "after_ms": 302,
+            "memory_current": 155729920
+          },
+          {
+            "after_ms": 352,
+            "memory_current": 171196416
+          },
+          {
+            "after_ms": 403,
+            "memory_current": 186925056
+          },
+          {
+            "after_ms": 453,
+            "memory_current": 202915840
+          },
+          {
+            "after_ms": 503,
+            "memory_current": 218644480
+          },
+          {
+            "after_ms": 554,
+            "memory_current": 233586688
+          },
+          {
+            "after_ms": 604,
+            "memory_current": 249315328
+          },
+          {
+            "after_ms": 655,
+            "memory_current": 265306112
+          },
+          {
+            "after_ms": 705,
+            "memory_current": 281034752
+          },
+          {
+            "after_ms": 755,
+            "memory_current": 296239104
+          },
+          {
+            "after_ms": 806,
+            "memory_current": 311967744
+          },
+          {
+            "after_ms": 856,
+            "memory_current": 327434240
+          },
+          {
+            "after_ms": 907,
+            "memory_current": 343425024
+          },
+          {
+            "after_ms": 957,
+            "memory_current": 359149568
+          },
+          {
+            "after_ms": 1008,
+            "memory_current": 374734848
+          },
+          {
+            "after_ms": 1058,
+            "memory_current": 390463488
+          },
+          {
+            "after_ms": 1108,
+            "memory_current": 406192128
+          },
+          {
+            "after_ms": 1158,
+            "memory_current": 421658624
+          },
+          {
+            "after_ms": 1209,
+            "memory_current": 437121024
+          },
+          {
+            "after_ms": 1259,
+            "memory_current": 453111808
+          },
+          {
+            "after_ms": 1310,
+            "memory_current": 468840448
+          },
+          {
+            "after_ms": 1360,
+            "memory_current": 484569088
+          },
+          {
+            "after_ms": 1411,
+            "memory_current": 499507200
+          },
+          {
+            "after_ms": 1461,
+            "memory_current": 515497984
+          },
+          {
+            "after_ms": 1512,
+            "memory_current": 531226624
+          },
+          {
+            "after_ms": 1562,
+            "memory_current": 546955264
+          },
+          {
+            "after_ms": 1612,
+            "memory_current": 562155520
+          },
+          {
+            "after_ms": 1663,
+            "memory_current": 577622016
+          },
+          {
+            "after_ms": 1713,
+            "memory_current": 593350656
+          },
+          {
+            "after_ms": 1764,
+            "memory_current": 609341440
+          },
+          {
+            "after_ms": 1814,
+            "memory_current": 624807936
+          },
+          {
+            "after_ms": 1865,
+            "memory_current": 640012288
+          },
+          {
+            "after_ms": 1915,
+            "memory_current": 655478784
+          },
+          {
+            "after_ms": 1965,
+            "memory_current": 671469568
+          },
+          {
+            "after_ms": 2016,
+            "memory_current": 687198208
+          },
+          {
+            "after_ms": 2066,
+            "memory_current": 702660608
+          },
+          {
+            "after_ms": 2116,
+            "memory_current": 718389248
+          },
+          {
+            "after_ms": 2166,
+            "memory_current": 734380032
+          },
+          {
+            "after_ms": 2217,
+            "memory_current": 750370816
+          },
+          {
+            "after_ms": 2267,
+            "memory_current": 765571072
+          },
+          {
+            "after_ms": 2317,
+            "memory_current": 781033472
+          },
+          {
+            "after_ms": 2368,
+            "memory_current": 797024256
+          },
+          {
+            "after_ms": 2418,
+            "memory_current": 805306368
+          },
+          {
+            "after_ms": 2468,
+            "memory_current": 805220352
+          },
+          {
+            "after_ms": 2519,
+            "memory_current": 805281792
+          },
+          {
+            "after_ms": 2569,
+            "memory_current": 58179584
+          }
+        ],
+        "counters_after": {
+          "low": 0,
+          "high": 0,
+          "max": 219,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "counter_delta": {
+          "low": 0,
+          "high": 0,
+          "max": 219,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "native_records": [
+          {
+            "event": "armed",
+            "nonce": "c78e110a1fbab6014012378434a54216",
+            "profile": "direct_worker",
+            "target": {
+              "pid": 80,
+              "start_ticks": 121927,
+              "uid": 10001,
+              "state": "S",
+              "parent_pid": 55,
+              "cgroup": "0::/",
+              "pid_namespace": "pid:[4026532269]",
+              "ipc_namespace": "ipc:[4026532267]",
+              "cgroup_namespace": "cgroup:[4026532270]"
+            },
+            "cgroup": {
+              "device": 30,
+              "inode": 11010,
+              "mount_id": "416",
+              "settings": {
+                "cgroup.subtree_control": "",
+                "cgroup.type": "domain",
+                "cpu.max": "200000 100000",
+                "memory.high": "max",
+                "memory.max": "805306368",
+                "memory.oom.group": "0",
+                "memory.swap.current": "0",
+                "memory.swap.max": "0",
+                "pids.max": "128"
+              },
+              "events": {
+                "high": 0,
+                "low": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_group_kill": 0,
+                "oom_kill": 0
+              },
+              "memory_current": 98648064
+            },
+            "page_size": 4096,
+            "oom_score_adj_before": 0,
+            "oom_score_adj_during": 1000,
+            "allocation_started": false,
+            "requested_bytes_cap": 805306368,
+            "loop_deadline_ms": 10000
+          },
+          {
+            "event": "allocation_started",
+            "touched_bytes": 0,
+            "companion_identity_verified": {
+              "pid": 83,
+              "start_ticks": 121930,
+              "uid": 10001,
+              "state": "S",
+              "parent_pid": 55,
+              "cgroup": "0::/",
+              "pid_namespace": "pid:[4026532269]",
+              "ipc_namespace": "ipc:[4026532267]",
+              "cgroup_namespace": "cgroup:[4026532270]"
+            },
+            "participants_verified_at_barrier": true
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 16777216
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 33554432
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 50331648
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 67108864
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 83886080
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 100663296
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 117440512
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 134217728
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 150994944
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 167772160
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 184549376
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 201326592
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 218103808
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 234881024
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 251658240
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 268435456
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 285212672
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 301989888
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 318767104
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 335544320
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 352321536
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 369098752
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 385875968
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 402653184
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 419430400
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 436207616
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 452984832
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 469762048
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 486539264
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 503316480
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 520093696
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 536870912
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 553648128
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 570425344
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 587202560
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 603979776
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 620756992
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 637534208
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 654311424
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 671088640
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 687865856
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 704643072
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 721420288
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 738197504
+          }
+        ],
+        "companion_overlapped_allocation": true,
+        "companion_overlap_evidence": "observed_PgSleep_then_exact_live_identity_at_native_boundary_within_25s_of_30s_sleep",
+        "faulting_sql": {
+          "returncode": 2,
+          "stdout": "",
+          "stderr": "WARNING:  terminating connection because of crash of another server process\nDETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.\nHINT:  In a moment you should be able to reconnect to the database and repeat your command.\nserver closed the connection unexpectedly\n\tThis probably means the server terminated abnormally\n\tbefore or while processing the request.\nconnection to server was lost\n"
+        },
+        "replacement": {
+          "stage": "P0_feasibility",
+          "active": null,
+          "rejected": 0,
+          "completed": 0,
+          "engine_pid": 118,
+          "worker_pid": 118,
+          "queue_depth": 0,
+          "queue_limit": 8,
+          "database_oid": 5,
+          "engine_ready": true,
+          "worker_reused": false,
+          "process_profile": "direct_worker",
+          "connection_limit": 16,
+          "engine_concurrency": 1,
+          "request_bytes_limit": 16384,
+          "response_bytes_limit": 1048576,
+          "expired_or_disconnected": 0
+        },
+        "target_exit": {
+          "engine_pid": 80,
+          "signal": 9,
+          "supervisor_kill_requested": false,
+          "kill_attempts": 0,
+          "source": "exact_postgresql_child_exit_log"
+        },
+        "companion_result": {
+          "returncode": 2,
+          "stdout": "",
+          "stderr": "WARNING:  terminating connection because of crash of another server process\nDETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.\nHINT:  In a moment you should be able to reconnect to the database and repeat your command.\nserver closed the connection unexpectedly\n\tThis probably means the server terminated abnormally\n\tbefore or while processing the request.\nconnection to server was lost\n"
+        },
+        "companion_survived": false,
+        "supervisor_preserved": false,
+        "postmaster_preserved": true,
+        "committed_marker_retained": true,
+        "recovery_ms": 2688,
+        "counters_after_replacement_smoke": {
+          "low": 0,
+          "high": 0,
+          "max": 219,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "replacement_edge_smoke_passed": true
+      },
+      "inner_evidence_verification": {
+        "archive_download_and_digest_verified": true,
+        "members": [
+          "oom-direct/oom-sql.json",
+          "oom-direct/oom-ready.json",
+          "oom-direct/oom-native.jsonl",
+          "oom-direct/oom-result.json",
+          "oom-direct/oom-replacement-engine.json",
+          "oom-direct/postgresql.log"
+        ],
+        "outer_report_equals_job_log": true,
+        "ready_sql_native_target_nonce_profile_equal": true,
+        "counter_deltas_recomputed": true,
+        "replacement_engine_smoke_checks": 16,
+        "postgresql_crash_lines": [
+          "2026-10-08 06:34:48.838 UTC [55] LOG:  background worker \"pg_qdrant P0 owner\" (PID 80) was terminated by signal 9: Killed",
+          "2026-10-08 06:34:48.840 UTC [55] LOG:  all server processes terminated; reinitializing"
+        ],
+        "raw_inner_attribution_preserved": "correlated_only inside container; exact external kernel victim records close attribution in outer report",
+        "recovery_ms_scope": "Inner controller elapsed time through companion collection; helper value includes waiting for the preexisting 30-second PgSleep, not a helper restart-latency benchmark."
+      }
+    },
+    "managed_helper": {
+      "schema_version": 1,
+      "kind": "p0_kernel_oom",
+      "profile": "managed_helper",
+      "nonce": "7999121b471b95eee42bf48758c784bb",
+      "status": "passed",
+      "stage": "collect_and_attribute",
+      "external_termination_requested": false,
+      "kernel_oom_observed": true,
+      "victim_attribution": "kernel_record",
+      "target_isolation_gate_passed": true,
+      "strict_target_attribution_passed": true,
+      "production_memory_isolation_verified": false,
+      "host_mem_available_before_bytes": 15214202880,
+      "container": {
+        "image_id": "sha256:6e2ae89df55dd893ce4546e57e601b2434244372ffd8d308f1700e297eb660d0",
+        "container_id": "07ba512d098ebbe4439e04e850016cb1ae2455f96974baf35029f9ded30ac611",
+        "user": "10001:10001",
+        "memory_limit_bytes": 805306368,
+        "memory_swap_total_bytes": 805306368,
+        "pids_limit": 128,
+        "nano_cpus": 2000000000,
+        "network": "none",
+        "pid_mode": "",
+        "ipc_mode": "private",
+        "cgroup_namespace": "private",
+        "cap_drop": [
+          "ALL"
+        ],
+        "no_new_privileges": true,
+        "host_mounts": false
+      },
+      "target_mapping": {
+        "host_pid": 43824,
+        "container_pid": 81,
+        "start_ticks": 122483,
+        "host_cgroup": "/system.slice/docker-07ba512d098ebbe4439e04e850016cb1ae2455f96974baf35029f9ded30ac611.scope"
+      },
+      "container_exit": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": true,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-10-08T06:34:50.657890012Z",
+        "FinishedAt": "2026-10-08T06:35:23.173526012Z"
+      },
+      "artifact_copy_returncode": 0,
+      "kernel_journal_returncode": 0,
+      "kernel_victim_records": [
+        {
+          "timestamp_us": "1791441294442585",
+          "message": "oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=docker-07ba512d098ebbe4439e04e850016cb1ae2455f96974baf35029f9ded30ac611.scope,mems_allowed=0,oom_memcg=/system.slice/docker-07ba512d098ebbe4439e04e850016cb1ae2455f96974baf35029f9ded30ac611.scope,task_memcg=/system.slice/docker-07ba512d098ebbe4439e04e850016cb1ae2455f96974baf35029f9ded30ac611.scope,task=pg_qdrant_p0_he,pid=43824,uid=10001"
+        },
+        {
+          "timestamp_us": "1791441294442600",
+          "message": "Memory cgroup out of memory: Killed process 43824 (pg_qdrant_p0_he) total-vm:871576kB, anon-rss:735104kB, file-rss:16596kB, shmem-rss:0kB, UID:10001 pgtables:1592kB oom_score_adj:1000"
+        }
+      ],
+      "unflushed_edge_recovery_verified": false,
+      "postgres_edge_atomicity_verified": false,
+      "elapsed_seconds": 33.162606954574585,
+      "job_log_line": 3933,
+      "independent_kernel_record_review": {
+        "exact_oom_memcg_equals_mapped_container_cgroup": true,
+        "selector_and_killed_process_match_exact_host_pid": true,
+        "kernel_records_count": 2,
+        "container_pid_start_identity_mapping_retained": true
+      },
+      "inner_postgresql_observation": {
+        "schema_version": 1,
+        "kind": "p0_kernel_oom_sql",
+        "status": "observed",
+        "profile": "managed_helper",
+        "nonce": "7999121b471b95eee42bf48758c784bb",
+        "stage": "complete",
+        "kernel_oom_observed": true,
+        "victim_attribution": "correlated_only",
+        "target_isolation_gate_passed": false,
+        "production_memory_isolation_verified": false,
+        "unflushed_edge_recovery_verified": false,
+        "postgres_edge_atomicity_verified": false,
+        "caller_client_kill_requested": false,
+        "companion_client_kill_requested": false,
+        "identities": {
+          "schema_version": 1,
+          "nonce": "7999121b471b95eee42bf48758c784bb",
+          "profile": "managed_helper",
+          "target": {
+            "pid": 81,
+            "start_ticks": 122483,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 80,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532270]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532271]"
+          },
+          "supervisor": {
+            "pid": 80,
+            "start_ticks": 122482,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 49,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532270]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532271]"
+          },
+          "controller": {
+            "pid": 63,
+            "start_ticks": 122471,
+            "uid": 10001,
+            "state": "R",
+            "parent_pid": 1,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532270]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532271]"
+          },
+          "postmaster": {
+            "pid": 49,
+            "start_ticks": 122461,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 1,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532270]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532271]"
+          },
+          "companion": {
+            "pid": 85,
+            "start_ticks": 122487,
+            "uid": 10001,
+            "state": "S",
+            "parent_pid": 49,
+            "cgroup": "0::/",
+            "pid_namespace": "pid:[4026532270]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532271]"
+          },
+          "namespaces": {
+            "pid_namespace": "pid:[4026532270]",
+            "ipc_namespace": "ipc:[4026532267]",
+            "cgroup_namespace": "cgroup:[4026532271]"
+          },
+          "cgroup": {
+            "device": 30,
+            "inode": 11096,
+            "mount_id": "416"
+          },
+          "data_dir": "<owned-disposable-postgresql-data-directory>",
+          "postgresql_marker_verified": true
+        },
+        "build": {
+          "stage": "P0_feasibility",
+          "engine": {
+            "name": "qdrant-edge",
+            "version": "0.8.0"
+          },
+          "features": {
+            "pg17": true,
+            "cshim": true,
+            "p0_managed_helper": true,
+            "p0_fault_injection": true
+          },
+          "pgrx_version": "0.19.3",
+          "postgres_major": 17,
+          "schema_version": 1,
+          "extension_version": "0.0.1",
+          "prototype_process": "postgresql_supervisor_with_exec_helper",
+          "product_indexing_api": false,
+          "native_engine_cancellation": false,
+          "release_supported_capabilities": []
+        },
+        "counters_before": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0
+        },
+        "memory_samples": [
+          {
+            "after_ms": 0,
+            "memory_current": 96628736
+          },
+          {
+            "after_ms": 50,
+            "memory_current": 96362496
+          },
+          {
+            "after_ms": 100,
+            "memory_current": 96362496
+          },
+          {
+            "after_ms": 151,
+            "memory_current": 96362496
+          },
+          {
+            "after_ms": 201,
+            "memory_current": 96362496
+          },
+          {
+            "after_ms": 251,
+            "memory_current": 103845888
+          },
+          {
+            "after_ms": 302,
+            "memory_current": 102842368
+          },
+          {
+            "after_ms": 352,
+            "memory_current": 98013184
+          },
+          {
+            "after_ms": 402,
+            "memory_current": 115576832
+          },
+          {
+            "after_ms": 453,
+            "memory_current": 132878336
+          },
+          {
+            "after_ms": 503,
+            "memory_current": 150179840
+          },
+          {
+            "after_ms": 553,
+            "memory_current": 166932480
+          },
+          {
+            "after_ms": 603,
+            "memory_current": 183705600
+          },
+          {
+            "after_ms": 654,
+            "memory_current": 200740864
+          },
+          {
+            "after_ms": 704,
+            "memory_current": 217780224
+          },
+          {
+            "after_ms": 754,
+            "memory_current": 234553344
+          },
+          {
+            "after_ms": 805,
+            "memory_current": 251068416
+          },
+          {
+            "after_ms": 855,
+            "memory_current": 267845632
+          },
+          {
+            "after_ms": 905,
+            "memory_current": 284622848
+          },
+          {
+            "after_ms": 956,
+            "memory_current": 301924352
+          },
+          {
+            "after_ms": 1006,
+            "memory_current": 318431232
+          },
+          {
+            "after_ms": 1057,
+            "memory_current": 335732736
+          },
+          {
+            "after_ms": 1107,
+            "memory_current": 352808960
+          },
+          {
+            "after_ms": 1157,
+            "memory_current": 369844224
+          },
+          {
+            "after_ms": 1207,
+            "memory_current": 386355200
+          },
+          {
+            "after_ms": 1258,
+            "memory_current": 403394560
+          },
+          {
+            "after_ms": 1308,
+            "memory_current": 420696064
+          },
+          {
+            "after_ms": 1358,
+            "memory_current": 437997568
+          },
+          {
+            "after_ms": 1409,
+            "memory_current": 454770688
+          },
+          {
+            "after_ms": 1459,
+            "memory_current": 471547904
+          },
+          {
+            "after_ms": 1509,
+            "memory_current": 488587264
+          },
+          {
+            "after_ms": 1559,
+            "memory_current": 505888768
+          },
+          {
+            "after_ms": 1610,
+            "memory_current": 522924032
+          },
+          {
+            "after_ms": 1660,
+            "memory_current": 539701248
+          },
+          {
+            "after_ms": 1710,
+            "memory_current": 556740608
+          },
+          {
+            "after_ms": 1761,
+            "memory_current": 574042112
+          },
+          {
+            "after_ms": 1811,
+            "memory_current": 591343616
+          },
+          {
+            "after_ms": 1861,
+            "memory_current": 607858688
+          },
+          {
+            "after_ms": 1912,
+            "memory_current": 624898048
+          },
+          {
+            "after_ms": 1962,
+            "memory_current": 642199552
+          },
+          {
+            "after_ms": 2012,
+            "memory_current": 659238912
+          },
+          {
+            "after_ms": 2062,
+            "memory_current": 675491840
+          },
+          {
+            "after_ms": 2113,
+            "memory_current": 692793344
+          },
+          {
+            "after_ms": 2163,
+            "memory_current": 710352896
+          },
+          {
+            "after_ms": 2213,
+            "memory_current": 727650304
+          },
+          {
+            "after_ms": 2264,
+            "memory_current": 744685568
+          },
+          {
+            "after_ms": 2314,
+            "memory_current": 761200640
+          },
+          {
+            "after_ms": 2365,
+            "memory_current": 778764288
+          },
+          {
+            "after_ms": 2415,
+            "memory_current": 796061696
+          },
+          {
+            "after_ms": 2465,
+            "memory_current": 805306368
+          },
+          {
+            "after_ms": 2516,
+            "memory_current": 805068800
+          },
+          {
+            "after_ms": 2566,
+            "memory_current": 805199872
+          },
+          {
+            "after_ms": 2617,
+            "memory_current": 48619520
+          }
+        ],
+        "counters_after": {
+          "low": 0,
+          "high": 0,
+          "max": 224,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "counter_delta": {
+          "low": 0,
+          "high": 0,
+          "max": 224,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "native_records": [
+          {
+            "event": "armed",
+            "nonce": "7999121b471b95eee42bf48758c784bb",
+            "profile": "managed_helper",
+            "target": {
+              "pid": 81,
+              "start_ticks": 122483,
+              "uid": 10001,
+              "state": "S",
+              "parent_pid": 80,
+              "cgroup": "0::/",
+              "pid_namespace": "pid:[4026532270]",
+              "ipc_namespace": "ipc:[4026532267]",
+              "cgroup_namespace": "cgroup:[4026532271]"
+            },
+            "cgroup": {
+              "device": 30,
+              "inode": 11096,
+              "mount_id": "416",
+              "settings": {
+                "cgroup.subtree_control": "",
+                "cgroup.type": "domain",
+                "cpu.max": "200000 100000",
+                "memory.high": "max",
+                "memory.max": "805306368",
+                "memory.oom.group": "0",
+                "memory.swap.current": "0",
+                "memory.swap.max": "0",
+                "pids.max": "128"
+              },
+              "events": {
+                "high": 0,
+                "low": 0,
+                "max": 0,
+                "oom": 0,
+                "oom_group_kill": 0,
+                "oom_kill": 0
+              },
+              "memory_current": 101650432
+            },
+            "page_size": 4096,
+            "oom_score_adj_before": 0,
+            "oom_score_adj_during": 1000,
+            "allocation_started": false,
+            "requested_bytes_cap": 805306368,
+            "loop_deadline_ms": 10000
+          },
+          {
+            "event": "allocation_started",
+            "touched_bytes": 0,
+            "companion_identity_verified": {
+              "pid": 85,
+              "start_ticks": 122487,
+              "uid": 10001,
+              "state": "S",
+              "parent_pid": 49,
+              "cgroup": "0::/",
+              "pid_namespace": "pid:[4026532270]",
+              "ipc_namespace": "ipc:[4026532267]",
+              "cgroup_namespace": "cgroup:[4026532271]"
+            },
+            "participants_verified_at_barrier": true
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 16777216
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 33554432
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 50331648
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 67108864
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 83886080
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 100663296
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 117440512
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 134217728
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 150994944
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 167772160
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 184549376
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 201326592
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 218103808
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 234881024
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 251658240
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 268435456
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 285212672
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 301989888
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 318767104
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 335544320
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 352321536
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 369098752
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 385875968
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 402653184
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 419430400
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 436207616
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 452984832
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 469762048
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 486539264
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 503316480
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 520093696
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 536870912
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 553648128
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 570425344
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 587202560
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 603979776
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 620756992
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 637534208
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 654311424
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 671088640
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 687865856
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 704643072
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 721420288
+          },
+          {
+            "event": "progress",
+            "touched_bytes": 738197504
+          }
+        ],
+        "companion_overlapped_allocation": true,
+        "companion_overlap_evidence": "observed_PgSleep_then_exact_live_identity_at_native_boundary_within_25s_of_30s_sleep",
+        "faulting_sql": {
+          "returncode": 1,
+          "stdout": "",
+          "stderr": "ERROR:  managed helper disconnected\nDETAIL:  The PostgreSQL supervisor remains available; inspect its helper restart status.\n"
+        },
+        "replacement": {
+          "stage": "P0_feasibility",
+          "active": null,
+          "rejected": 0,
+          "completed": 1,
+          "engine_pid": 116,
+          "worker_pid": 80,
+          "queue_depth": 0,
+          "queue_limit": 8,
+          "database_oid": 5,
+          "engine_ready": true,
+          "worker_reused": true,
+          "process_profile": "managed_helper",
+          "connection_limit": 16,
+          "helper_last_exit": {
+            "signal": 9,
+            "exit_code": null,
+            "engine_pid": 81,
+            "stop_reason": "unexpected_exit",
+            "kill_attempts": 0,
+            "last_kill_attempt": null,
+            "first_kill_attempt": null,
+            "supervisor_kill_requested": false
+          },
+          "helper_last_error": null,
+          "engine_concurrency": 1,
+          "request_bytes_limit": 16384,
+          "helper_restart_limit": 3,
+          "response_bytes_limit": 1048576,
+          "helper_start_attempts": 2,
+          "expired_or_disconnected": 0,
+          "helper_restart_exhausted": false,
+          "helper_operation_limit_ms": 125000
+        },
+        "target_exit": {
+          "signal": 9,
+          "exit_code": null,
+          "engine_pid": 81,
+          "stop_reason": "unexpected_exit",
+          "kill_attempts": 0,
+          "last_kill_attempt": null,
+          "first_kill_attempt": null,
+          "supervisor_kill_requested": false
+        },
+        "companion_result": {
+          "returncode": 0,
+          "stdout": "\n",
+          "stderr": ""
+        },
+        "companion_survived": true,
+        "supervisor_preserved": true,
+        "postmaster_preserved": true,
+        "committed_marker_retained": true,
+        "recovery_ms": 29947,
+        "counters_after_replacement_smoke": {
+          "low": 0,
+          "high": 0,
+          "max": 224,
+          "oom": 1,
+          "oom_kill": 1,
+          "oom_group_kill": 0
+        },
+        "replacement_edge_smoke_passed": true
+      },
+      "inner_evidence_verification": {
+        "archive_download_and_digest_verified": true,
+        "members": [
+          "oom-helper/oom-sql.json",
+          "oom-helper/oom-ready.json",
+          "oom-helper/oom-native.jsonl",
+          "oom-helper/oom-result.json",
+          "oom-helper/oom-replacement-engine.json",
+          "oom-helper/postgresql.log"
+        ],
+        "outer_report_equals_job_log": true,
+        "ready_sql_native_target_nonce_profile_equal": true,
+        "counter_deltas_recomputed": true,
+        "replacement_engine_smoke_checks": 16,
+        "postgresql_crash_lines": [],
+        "raw_inner_attribution_preserved": "correlated_only inside container; exact external kernel victim records close attribution in outer report",
+        "recovery_ms_scope": "Inner controller elapsed time through companion collection; helper value includes waiting for the preexisting 30-second PgSleep, not a helper restart-latency benchmark."
+      }
+    }
+  },
+  "historical_evidence": [
+    {
+      "evidence": "docs/evidence/p0-postgresql-ci.json",
+      "sha256_at_tested_head": "b01e481c2f3e4eda934ee08f161a0a63ce24d8052652781582d45c9e0db1be9a",
+      "run_id": 37716391262,
+      "conclusion": "success",
+      "preserved": true
+    },
+    {
+      "evidence": "docs/evidence/p0-helper-ci.json",
+      "sha256_at_tested_head": "3df17ad18ac2c6c511a5880b8fda4ef30cc1079d1ec47f1ae386c318089983df",
+      "run_id": 37720263848,
+      "conclusion": "failure",
+      "preserved": true
+    },
+    {
+      "evidence": "docs/evidence/p0-disk-ci.json",
+      "sha256_at_tested_head": "dd52e93de9f44972e131121aa9620d696c9b00c828214efa3788637a3f735646",
+      "run_id": 37724223470,
+      "conclusion": "failure",
+      "preserved": true
+    },
+    {
+      "evidence": "docs/evidence/p0-regression-ci.json",
+      "sha256_at_tested_head": "a74d471d5cbf770bd989d28420fdba28745316ecda79ba69ff75621ad2c3c038",
+      "run_id": 37725563600,
+      "conclusion": "failure",
+      "preserved": true
+    },
+    {
+      "evidence": "docs/evidence/p0-full-text-disk-ci.json",
+      "sha256_at_tested_head": "8d851ca55602cbe2f2c71bc9264de6bec4e640fcc208af896bea3f3a0d655372",
+      "run_id": 37729282903,
+      "conclusion": "failure",
+      "preserved": true
+    },
+    {
+      "evidence": "docs/evidence/p0-capacity-and-sql-ci.json",
+      "sha256_at_tested_head": "ac6a405e8cbaa346b19ac859832752cd4f055864339806c363dcada581df47a0",
+      "run_id": 37732857051,
+      "conclusion": "failure",
+      "preserved": true
+    }
+  ],
+  "interpretation": {
+    "workflow": "All four image builds, four SQL profiles, two helper pipe suites, four disk/capacity experiments and both kernel-OOM characterization profiles completed successfully at this source revision.",
+    "source_recheck": "The six P0 source/identity groups passed in all four profiles: tagged keys, bounded version/incarnation recheck, strict definitions/RLS refusal and quoted/bound inputs, active-statement and repeatable-read visibility, DDL/namespace guard plus pre-SPI cancellation cleanup, and internal ACL/runtime-superuser checks. These are fixture diagnostics; no production source authorization or synchronization is implemented.",
+    "later_source_work_excluded": "The later secondary-index inside-SPI cancellation group and explicit built-in heap table-AM restriction are absent from this tested commit. CI7 does not validate those changes.",
+    "capacity": "At exact 384 MiB, both already-flushed full-text config-save ENOSPC/recovery and independent clean reopen passed with all eight records/four representations, phrase and token-prefix queries. Allocated bytes rose from 34,963,456 before reopen to 220,508,160 after reopen; remaining capacity was 182,145,024 bytes. This is a tiny fixed fixture, not a product sizing formula.",
+    "capacity_refusal": "At exact 128 MiB, both full-text entry paths refused before engine open, filler creation or writes; before/after allocation stayed zero. This is successful guard behavior, not a successful 128 MiB reopen or recovery.",
+    "historical_capacity_failures": "CI5 and CI6 128 MiB full-text SIGBUS failures remain recorded. CI7 changes the supported experiment capacity to 384 MiB and characterizes 128 MiB refusal; it does not convert the historical failures into passes or identify a native fault instruction.",
+    "oom": "Two separate 768 MiB/no-swap containers produced exact memory-cgroup kernel victim records for the mapped target. Direct-worker death caused the expected PostgreSQL recovery/collateral loss; native-helper death preserved the supervisor and companion SQL under this experiment. Both retained the committed PostgreSQL marker and passed replacement 16-check Edge smoke. Retrieved inner reports have exactly one oom_kill, no group kill, target SIGKILL, zero supervisor/client/manual kill interventions and unchanged counters after replacement smoke.",
+    "oom_evidence_limit": "CI7's archive digest and every extracted member were independently verified. Inner observations, ready identity, native allocation records, outer result, PostgreSQL log and replacement engine report were cross-checked. The inner report correctly retains correlated_only attribution; the matching external kernel cgroup/victim messages support the outer strict conclusion. This controlled positive-oom_score_adj experiment does not establish production memory isolation.",
+    "helper_fault_domain": "Native-helper SIGKILL/abort containment is distinct from SIGKILL of the PostgreSQL supervisor, which caused PostgreSQL recovery and companion termination. The 125-second frozen-helper test is a recorded supervisor kill after a SIGSTOP fault, not native cancellation or OOM.",
+    "count_scope": "19+21+19+25 SQL assertion groups and 7+8 pipe groups include repeated common cases. Nested 16-check engine smoke is one containing assertion group. The 23 normal engine tests, two child tests, 21 Python tests and three distinct OOM guard tests have separate scopes; none is a capability-completion count."
+  },
+  "reproduction": {
+    "source_revision": "88885db08d17c074af097ddca14bc85d6978980c",
+    "workflow_path": ".github/workflows/p0.yml",
+    "workflow_url": "https://github.com/JamesbbBriz/pg_qdrant/blob/88885db08d17c074af097ddca14bc85d6978980c/.github/workflows/p0.yml",
+    "commands": [
+      {
+        "purpose": "base_image",
+        "command": "docker build --file Dockerfile.p0 --tag pg-qdrant-p0 ."
+      },
+      {
+        "purpose": "direct_private_image",
+        "command": "docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults ."
+      },
+      {
+        "purpose": "helper_normal_image",
+        "command": "docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal ."
+      },
+      {
+        "purpose": "helper_private_image",
+        "command": "docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper ."
+      },
+      {
+        "purpose": "engine_tests",
+        "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1"
+      },
+      {
+        "purpose": "real_child_tests",
+        "command": "cargo test --locked -p pg-qdrant-helper --test supervisor_child"
+      },
+      {
+        "purpose": "python_tests",
+        "command": "python3 -m unittest discover -s scripts/tests -p 'test_*.py'"
+      },
+      {
+        "purpose": "normal_sql_inside_image",
+        "command": "bash crates/pg_qdrant/tests/run-p0.sh"
+      },
+      {
+        "purpose": "private_sql_inside_image",
+        "command": "bash crates/pg_qdrant/tests/run-faults.sh"
+      },
+      {
+        "purpose": "normal_helper_protocol_inside_image",
+        "command": "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --out /src/artifacts/helper-pipes.json"
+      },
+      {
+        "purpose": "private_helper_protocol_inside_image",
+        "command": "python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --faults --out /src/artifacts/helper-fault-pipes.json"
+      },
+      {
+        "purpose": "narrow_enospc_inside_provisioned_image",
+        "command": "python3 scripts/run_disk_probe.py"
+      },
+      {
+        "purpose": "full_text_enospc_inside_provisioned_image",
+        "command": "python3 scripts/run_disk_probe.py --profile full-text"
+      },
+      {
+        "purpose": "full_text_clean_inside_provisioned_image",
+        "command": "python3 scripts/run_disk_probe.py --profile full-text --clean"
+      },
+      {
+        "purpose": "full_text_128_mib_refusal_inside_provisioned_image",
+        "command": "python3 scripts/run_disk_probe.py --profile full-text --characterize-128-capacity-refusal"
+      },
+      {
+        "purpose": "private_oom_negative_guards",
+        "command": "cargo test --locked -p pg-qdrant-edge-probe --features p0-fault-injection --lib oom_probe::tests"
+      },
+      {
+        "purpose": "bounded_direct_worker_kernel_oom",
+        "command": "python3 scripts/run_oom_container.py --image pg-qdrant-p0-faults --profile direct_worker --artifacts artifacts/oom-direct"
+      },
+      {
+        "purpose": "bounded_managed_helper_kernel_oom",
+        "command": "python3 scripts/run_oom_container.py --image pg-qdrant-p0-helper --profile managed_helper --artifacts artifacts/oom-helper"
+      }
+    ],
+    "runtime_provisioning": "Use the exact fresh containers and capacity/resource limits in the committed workflow. Positive fault commands require their dedicated guarded environment; no positive fault was run while normalizing this evidence."
+  },
+  "normalization": {
+    "removed": "Duplicate disk stderr/stdout tails and duplicate execution observations; incidental tmpfs mount device/inode numbers removed. Numeric storage observations, recovery results and capacity-refusal outcomes retained.",
+    "oom_attribution": "Exact ephemeral container IDs, cgroup paths, host/container PIDs, start ticks, nonce and two kernel messages are retained because their relationships establish attribution; they are not credentials or user-controlled product paths.",
+    "inner_observations": "One random owned PostgreSQL data-directory path per inner report is replaced with a placeholder. Duplicate armed data is omitted because identical content is retained in native_records[0]. All counters, identities, namespace/cgroup attribution data, memory samples, native progress and actual SQL/exit outcomes are retained. CI7 archive verification does not upgrade older archives.",
+    "log_lines": "job_log_line is one-based in the hashed complete job log."
+  },
+  "gates": {
+    "all_54_capabilities_completed": false,
+    "identity_source_recheck_fixture_sql_verified": true,
+    "inside_spi_cancellation_verified": false,
+    "heap_only_source_guard_in_tested_revision": false,
+    "full_text_384_mib_clean_reopen_verified": true,
+    "full_text_384_mib_flushed_config_enospc_recovery_verified": true,
+    "full_text_128_mib_zero_write_refusal_verified": true,
+    "full_text_128_mib_clean_reopen_verified": false,
+    "full_text_128_mib_enospc_recovery_verified": false,
+    "direct_worker_kernel_oom_victim_attribution_verified": true,
+    "direct_worker_kernel_oom_containment_verified": false,
+    "managed_helper_kernel_oom_victim_attribution_verified": true,
+    "managed_helper_kernel_oom_containment_in_this_experiment": true,
+    "production_memory_isolation_verified": false,
+    "dirty_index_recovery_verified": false,
+    "unflushed_wal_replay_verified": false,
+    "postgresql_edge_atomicity_verified": false,
+    "power_loss_verified": false,
+    "production_authorization_verified": false,
+    "p0_exit_passed": false,
+    "release_supported": false
+  }
+}

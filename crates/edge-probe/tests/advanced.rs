@@ -60,6 +60,7 @@ struct Fixture {
 
 impl Fixture {
     fn new() -> Self {
+        pg_qdrant_edge_probe::cpu::require().expect("fixed Edge native CPU baseline");
         let directory = tempfile::tempdir().expect("owned advanced-query fixture directory");
         let mut dense = EdgeVectorParams::builder(2, Distance::Dot).build();
         dense.on_disk = Some(true);

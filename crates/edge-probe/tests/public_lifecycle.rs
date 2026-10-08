@@ -160,6 +160,7 @@ fn point(id: u64, revision: u64, x: f32, y: f32, group: &str) -> PointStructPers
 }
 
 fn fixture(path: &Path) -> EdgeShard {
+    pg_qdrant_edge_probe::cpu::require().expect("fixed Edge native CPU baseline");
     stage("fixture_create");
     fs::create_dir(path).unwrap();
     let mut parameters = EdgeVectorParams::builder(DIMENSION, Distance::Dot).build();
@@ -602,6 +603,7 @@ fn empty_bootstrap(cpu: u32) -> Value {
 
 #[test]
 fn public_lifecycle_runs_only_in_bounded_owned_children() {
+    pg_qdrant_edge_probe::cpu::require().expect("fixed Edge native CPU baseline");
     if let Ok(mode) = std::env::var(CHILD_ENV) {
         let cpu = verify_child_bounds(); // Must precede every engine constructor.
         let report = match mode.as_str() {

@@ -3,8 +3,10 @@
 //! The enum matches deliberately have no wildcard arms: additions to those
 //! enums require a mapping decision. This does not enumerate every public
 //! method, nested implementation type, struct field, or valid combination.
-//! Method references and typed constructors below are compile-only evidence;
-//! they do not prove invocation, persistence, query behavior, or SQL support.
+//! Typed call bodies and constructors below are compile-only evidence; they do
+//! not prove runtime invocation, persistence, query behavior, or SQL support.
+//! The lifecycle method audit and fixed-version exclusions are recorded in
+//! `docs/p0-edge-methods.md`.
 
 #![allow(dead_code)]
 
@@ -541,30 +543,191 @@ pub fn construct_load_profiles(filter: &Filter, order_key: &JsonPath) -> [LoadPr
     [search, scroll, retrieve, combined]
 }
 
-/// Method references only, including paths whose runtime scenarios are pending.
-/// Inferred return types avoid importing unnameable implementation types. A new
-/// method will not cause this list to fail compilation; keep the source audit.
-fn lifecycle_and_read_compile_surface() {
-    let _ = EdgeShard::new;
-    let _ = EdgeShard::load;
-    let _ = EdgeShard::config;
-    let _ = EdgeShard::flush;
-    let _ = EdgeShard::update;
-    let _ = EdgeShard::optimize;
-    let _ = EdgeShard::set_hnsw_config;
-    let _ = EdgeShard::set_vector_hnsw_config;
-    let _ = EdgeShard::set_optimizers_config;
-    let _ = EdgeShard::query;
-    let _ = EdgeShard::retrieve;
-    let _ = EdgeShard::scroll;
-    let _ = EdgeShard::count;
-    let _ = EdgeShard::facet;
-    let _ = EdgeShard::info;
-    let _ = <EdgeShard as EdgeShardRead>::search_matrix;
-    let _ = <EdgeShard as EdgeShardRead>::query_groups;
-    let _ = EdgeShard::unpack_snapshot;
-    let _ = EdgeShard::snapshot_manifest;
-    let _ = EdgeShard::recover_partial_snapshot;
-    let _ = ReadOnlyEdgeShard::open_mmap;
-    let _ = UpdateOnlyEdgeShard::open_mmap;
+/// No safe code can construct this private type or a reference to it. Every
+/// operation-bearing compile probe requires that reference, so adding the
+/// probes to the library never opens, mutates, optimizes, or restores a shard.
+/// Rust still checks every argument and result type in the function bodies.
+enum CompileOnly {}
+
+fn method_probe_config() -> EdgeConfig {
+    EdgeConfig {
+        vectors: [(
+            "dense".into(),
+            EdgeVectorParams::builder(2, Distance::Dot).build(),
+        )]
+        .into_iter()
+        .collect(),
+        max_search_threads: Some(1),
+        ..Default::default()
+    }
+}
+
+fn method_probe_vector_query() -> QueryEnum {
+    QueryEnum::Nearest(NamedQuery {
+        using: Some("dense".into()),
+        query: VectorInternal::Dense(vec![1.0, 0.0]),
+    })
+}
+
+fn method_probe_query() -> QueryRequest {
+    let mut request = QueryRequest::new(2);
+    request.query = Some(ScoringQuery::Vector(method_probe_vector_query()));
+    request.params = Some(SearchParams {
+        exact: true,
+        ..Default::default()
+    });
+    request
+}
+
+/// All eleven EdgeShardRead declarations, with concrete bounded requests.
+/// `search` is retained only as a compatibility compile sentinel; the proposed
+/// SQL adapter uses `query`, as required by upstream's deprecation guidance.
+fn read_method_calls<T: EdgeShardRead>(
+    _compile_only: &CompileOnly,
+    shard: &T,
+) -> OperationResult<()> {
+    let _: std::sync::Arc<EdgeConfig> = EdgeShardRead::config_snapshot(shard);
+    let _: &std::path::Path = EdgeShardRead::path(shard);
+    let _ = EdgeShardRead::search(shard, SearchRequest::new(method_probe_vector_query(), 2))?;
+    let _ = EdgeShardRead::query(shard, method_probe_query())?;
+    let mut scroll = ScrollRequest::new();
+    scroll.limit = Some(2);
+    let _ = EdgeShardRead::scroll(shard, scroll)?;
+    let _ = EdgeShardRead::retrieve(shard, RetrieveRequest::new(vec![PointId::NumId(1)]))?;
+    let _: usize = EdgeShardRead::count(shard, CountRequest::new())?;
+    let _ = EdgeShardRead::facet(shard, FacetRequest::new("tenant".parse().unwrap()))?;
+    let _: SearchMatrixResponse =
+        EdgeShardRead::search_matrix(shard, SearchMatrixRequest::new(2, 1, "dense".into()))?;
+    let _: Vec<Group> = EdgeShardRead::query_groups(
+        shard,
+        GroupRequest::new(method_probe_query(), "document_id".parse().unwrap(), 2, 1),
+    )?;
+    let _: ShardInfo = EdgeShardRead::info(shard)?;
+    Ok(())
+}
+
+/// Concrete calls for ordinary ownership, configuration, maintenance and
+/// inherent read wrappers. This body is never registered as a runtime test.
+fn lifecycle_and_read_compile_surface(
+    compile_only: &CompileOnly,
+    new_path: &std::path::Path,
+    existing_path: &std::path::Path,
+) -> OperationResult<()> {
+    let shard = EdgeShard::new(new_path, method_probe_config())?;
+    let _: &std::path::Path = EdgeShard::path(&shard);
+    // Release the read guard before taking a configuration write lock.
+    let config: EdgeConfig = shard.config().clone();
+    shard.set_hnsw_config(HnswIndexConfig {
+        max_indexing_threads: 1,
+        ..Default::default()
+    })?;
+    shard.set_vector_hnsw_config("dense", HnswIndexConfig::default())?;
+    shard.set_optimizers_config(EdgeOptimizersConfig {
+        default_segment_number: Some(1),
+        ..Default::default()
+    })?;
+    shard.update(UpdateOperation::PointOperation(
+        PointOperations::DeletePoints {
+            ids: vec![PointId::NumId(1)],
+        },
+    ))?;
+    let _: bool = shard.optimize()?;
+    shard.flush()?;
+
+    let _ = EdgeShard::search(&shard, SearchRequest::new(method_probe_vector_query(), 2))?;
+    let _ = EdgeShard::query(&shard, method_probe_query())?;
+    let mut scroll = ScrollRequest::new();
+    scroll.limit = Some(2);
+    let _ = EdgeShard::scroll(&shard, scroll)?;
+    let _ = EdgeShard::retrieve(&shard, RetrieveRequest::new(vec![PointId::NumId(1)]))?;
+    let _: usize = EdgeShard::count(&shard, CountRequest::new())?;
+    let _ = EdgeShard::facet(&shard, FacetRequest::new("tenant".parse().unwrap()))?;
+    let _: ShardInfo = EdgeShard::info(&shard)?;
+    read_method_calls(compile_only, &shard)?;
+    drop(shard);
+
+    // Load can repair/write state; it is not a read-only inspection API.
+    let loaded = EdgeShard::load(existing_path, Some(config))?;
+    drop(loaded);
+    Ok(())
+}
+
+/// Type inference carries the public method's manifest return value directly
+/// into recovery. There is no `internal::SnapshotManifest` import, archive
+/// producer, fabricated manifest, or runtime restore assertion here.
+fn snapshot_compile_surface(
+    _compile_only: &CompileOnly,
+    current: EdgeShard,
+    snapshot: EdgeShard,
+    archive_path: &std::path::Path,
+    unpack_target: &std::path::Path,
+    recovery_target: &std::path::Path,
+) -> OperationResult<()> {
+    let current_manifest = current.snapshot_manifest()?;
+    let snapshot_manifest = snapshot.snapshot_manifest()?;
+    // No live shard owner is retained across the file-moving recovery call.
+    drop(current);
+    drop(snapshot);
+    EdgeShard::unpack_snapshot(archive_path, unpack_target)?;
+    let recovered: EdgeShard = EdgeShard::recover_partial_snapshot(
+        recovery_target,
+        &current_manifest,
+        unpack_target,
+        &snapshot_manifest,
+    )?;
+    drop(recovered);
+    Ok(())
+}
+
+/// Both branches must have the same concrete result type. `open_mmap` pins
+/// that type, letting `Default` construct the unexported mmap filesystem
+/// without naming private modules or introducing another I/O dependency.
+fn read_only_compile_surface(
+    compile_only: &CompileOnly,
+    path: &std::path::Path,
+    with_profile: bool,
+) -> OperationResult<()> {
+    let reader = if with_profile {
+        ReadOnlyEdgeShard::open(
+            Default::default(),
+            path,
+            Some(method_probe_config()),
+            Some(LoadProfile::for_retrieve()),
+        )?
+    } else {
+        ReadOnlyEdgeShard::open_mmap(path)?
+    };
+    let _: &std::path::Path = reader.path();
+    let _: usize = reader.segments_count();
+    reader.refresh()?;
+    read_method_calls(compile_only, &reader)?;
+    // refresh_with cannot construct its hidden HardwareCounterCell through
+    // the selected public surface. See the explicit fixed-version exclusion.
+    Ok(())
+}
+
+fn update_only_compile_surface(
+    _compile_only: &CompileOnly,
+    path: &std::path::Path,
+    explicit_enumerator: bool,
+) -> OperationResult<()> {
+    let writer = if explicit_enumerator {
+        UpdateOnlyEdgeShard::open(Default::default(), path, LocalSegmentEnumerator::new(path))?
+    } else {
+        UpdateOnlyEdgeShard::open_mmap(path)?
+    };
+    let _: &std::path::Path = writer.path();
+    let _: usize = writer.segments_count();
+    let _: Vec<SegmentConfigInfo> = writer.segment_configs();
+    let operations = vec![(
+        1_u64,
+        UpdateOperation::PointOperation(PointOperations::DeletePoints {
+            ids: vec![PointId::NumId(1)],
+        }),
+    )];
+    let _: UpdateBatchPreview = writer.preview_batch(operations.clone())?;
+    // Compile-only, including the unavailable Delete branch. Existing runtime
+    // tests observe its fixed-release todo panic; it is not a writable adapter.
+    let _: UpdateBatchOutcome = writer.apply_batch(operations)?;
+    Ok(())
 }

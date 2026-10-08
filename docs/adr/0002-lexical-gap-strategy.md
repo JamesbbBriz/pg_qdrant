@@ -1,14 +1,14 @@
 # ADR 0002: Evaluate richer lexical search without weakening the source contract
 
-Status: **next experiment selected; dependency adoption pending**.
+Status: **initial isolated semantic experiments passed; dependency adoption pending**.
 
 Reviewed: 2026-10-08. Owners: lexical adapter, query planner, results, source/lifecycle, PostgreSQL integration, quality, and distribution maintainers.
 
 ## Decision
 
-Keep published Qdrant Edge as the core retrieval dependency. Select an isolated **direct Tantivy 0.26.2 experiment** as the first investigation of fuzzy and positional matching. Compare it against extension-owned query/presentation policy and a separately installed **pg_search 0.26.0**. This selects work to perform, not an additional production dependency.
+Keep published Qdrant Edge as the core retrieval dependency. Continue the isolated **direct Tantivy 0.26.2 experiment** selected for fuzzy and positional matching. Its first five synthetic semantic cases now pass. The comparison against extension-owned query/presentation policy and a separately installed **pg_search 0.26.0** remains required. No additional production dependency is selected.
 
-No Tantivy or pg_search dependency is adopted by this ADR. Neither candidate has been compiled, installed, or quality-tested in this project's dependency graph. Adoption requires the semantic, resource, authorization, synchronization, lifecycle, quality, and distribution gates below. F13–F20 remain formal requirements with individual owners; an unsuccessful experiment does not remove them from the product.
+No Tantivy or pg_search dependency is adopted into the core extension by this ADR. Tantivy has compiled and run only in the [separate evaluation workspace](../../experiments/tantivy-probe/README.md); pg_search remains source-reviewed only. Neither a combined Edge/PostgreSQL build nor held-out relevance quality has been verified for either candidate. Adoption requires the semantic, resource, authorization, synchronization, lifecycle, quality, and distribution gates below. F13–F20 remain formal requirements with individual owners; an unsuccessful experiment does not remove them from the product.
 
 The [capability contract](../capabilities.md), [dependency policy](../dependencies.md), [baseline](../dependency-baseline.json), and [work ledger](../work-items.json) remain authoritative. This ADR refines the lexical decision in [ADR 0001](0001-embedded-engine-boundary.md). It does not complete P0 or authorize a full-FTS product claim.
 
@@ -19,7 +19,7 @@ The following evidence is from published packages or immutable release sources, 
 | Candidate | Fixed source and declaration | Evidence reached here |
 | --- | --- | --- |
 | Qdrant Edge | Registry `qdrant-edge =0.8.0`; Apache-2.0 declaration; archive SHA-256 `0b8072302c87506a34bffec9bc16dbdcd36df8ab1321406b6e141530348c7e54` | Source review and the existing [engine probe](../../crates/edge-probe/README.md). Its narrow runtime checks do not implement F13–F20. [E1] |
-| Direct Tantivy | Registry `tantivy =0.26.2`, published 2026-09-08; MIT declaration; declared Rust minimum 1.86; archive SHA-256 `861facfabd71044968f364837f9a083b56464ba5a59079f88706ee5c451ca069` | Registry metadata, archive checksum, public source/API review only. No combined build or relevance evidence. [T1] [T2] |
+| Direct Tantivy | Registry `tantivy =0.26.2`, published 2026-09-08; MIT declaration; declared Rust minimum 1.86; archive SHA-256 `861facfabd71044968f364837f9a083b56464ba5a59079f88706ee5c451ca069` | Registry/source review plus the [locked standalone build and five semantic experiments](../evidence/p0-tantivy-local.json). No combined Edge/PG build, authorization or held-out relevance evidence. [T1] [T2] |
 | pg_search | Stable ParadeDB release `v0.26.0`, published 2026-10-03; commit `aa7f9dd407018036d144a54a3f875c5a00d20cda`; workspace license declaration `AGPL-3.0` | Release, immutable manifests, license, lexical APIs/docs and regression-fixture review only. This was the latest stable release returned by the upstream release endpoint on the review date. [P1] [P2] [P3] |
 
 Tantivy's published defaults enable `mmap`, `stopwords`, `lz4-compression`, `columnar-zstd-compression`, and `stemmer`. Those are build features, not a field's effective analysis policy. Its compiler declaration does not establish compatibility of the combined graph. [T2]
@@ -38,21 +38,59 @@ Tantivy supplies concrete candidates:
 - `SnippetGenerator` retokenizes text using the field analyzer and derives terms through the query's term visitor. `FuzzyTermQuery` does not populate that visitor in this release. `snippet_from_doc` joins repeated field values with spaces. Fuzzy highlights, array boundaries, source offsets and field provenance therefore require explicit additional work. [T3] [T6]
 - `PhrasePrefixQuery` has a separate expansion limit. Counts/facets and reader/writer APIs provide useful primitives; they do not create a permission-safe completion corpus or a cross-engine commit protocol. [T7] [T8] [T9]
 
+The [Edge negative-input experiment](../evidence/p0-negative-inputs-local.json)
+adds an F08 planner requirement: missing or non-phrase-capable text indexes do
+not reliably reject a required phrase query. Missing indexes use raw substring
+matching; disabled phrase positions produce empty fixture results. A compatible
+phrase index and effective analyzer policy must be checked before execution.
+A successful Rust call does not establish the required matching contract.
+
 The fixed pg_search release already exposes fuzzy SQL options, ordered/unordered proximity, phrase prefixes, snippets and snippet positions. Its current documentation still excludes fuzzy highlighting, and its regression inputs explicitly exercise unsupported fuzzy/phrase and fuzzy/proximity combinations. Reuse cannot be credited with those combinations without new evidence. [P5] [P6] [P7] [P8]
 
 Neither candidate is accepted as a complete synonym system or Meilisearch-equivalent ranking experience. A shared tokenizer library, fuzzy primitive, or snippet helper does not establish that product behavior.
+
+## Initial isolated runtime evidence
+
+The [standalone probe](../../experiments/tantivy-probe/README.md) and
+[source-bound local record](../evidence/p0-tantivy-local.json) separate the
+candidate's compilation and runtime findings from product acceptance. The
+[independent manifest](../../experiments/tantivy-probe/Cargo.toml) pins Tantivy
+0.26.2 with defaults disabled and only `mmap`/`lz4-compression` enabled. The
+public dictionary bridge explicitly pins `levenshtein_automata =0.2.1` and
+`tantivy-fst =0.5.0`; it uses their public APIs, not a copied fuzzy engine.
+Its [lockfile](../../experiments/tantivy-probe/Cargo.lock) and
+[109-package Linux inventory](../../experiments/tantivy-probe/dependency-inventory.json)
+are separate from the core graph and retain declared licenses/checksums. This
+is not a completed distribution or license acceptance review.
+
+| Local observation | Acceptance still required |
+| --- | --- |
+| Fuzzy edit distances 0/1/2, transposition costs, token/prefix differences and case-sensitive keyword equality behave as asserted; distance 3 fails during execution. | Project input/identifier policy and real multilingual quality. |
+| Native fuzzy matching finds 40 distinct terms/documents despite `TopDocs(1)` and uses constant score 1.0. A single-term dictionary bridge rejects more than 32 returned expansions without partial results; diary/dairy match sets agree. | A hard bound on traversal work, time and memory, combined token budgets, and a protected vocabulary. Match-set agreement does not establish score/ranking equivalence. |
+| Slop 1 admits a gap and crosses repeated field values; slop 2 admits reversed terms. Parser OR defaults, explicit AND and invalid syntax are verified. | Required ordered/array/field boundaries, language positions and the controlled product grammar. The initial failed array-boundary expectation is retained as evidence. |
+| A complete Unicode value yields valid half-open UTF-8 byte spans and escaped HTML. Repeated values are joined; a fuzzy match provides no snippet terms or fuzzy highlights. | Original field/array provenance, general fragment/normalization mappings and real fuzzy/synonym attribution. |
+| Repeated stable-ID delete/add leaves one live replacement; commit/reload and retained searcher views differ; rollback retains the committed replacement. | PostgreSQL transactions, two-engine idempotence, failure recovery, paired generations and upgrade/rollback. |
+
+The largest fixture has 49 documents; each writer uses one thread and a
+15,000,000-byte buffer. The recorded executable has a 45-second wall-clock and
+30-second CPU envelope. These controls do not measure or cap complete query
+work, process RSS or mmap residency. The analyzer is `SimpleTokenizer` plus
+`LowerCaser`, without Chinese segmentation, folding, stemming or stopwords.
+The Unicode span test is not Edge analyzer parity or bilingual search quality.
+Synonyms, instant suggestions, facets and document-level statistics are not
+implemented by this probe. All F13–F20 requirements and their owners remain.
 
 ## Alternatives and costs
 
 | Route | Useful work to reuse | Project work and cost | Decision |
 | --- | --- | --- | --- |
 | Supplemental query/presentation policy over Edge | Existing text/keyword predicates, BM25, filtering and fusion; controlled parser; explicit dictionary expansion; identifier policy; source-based presentation | Lowest additional storage/topology cost. Full typo/proximity support still needs a mature term/position engine or an explicitly limited contract. Final top-k text scanning cannot recover missing candidates or implement a required retrieval predicate. Analyzer parity and trustworthy offsets are still substantial work. | Keep as the baseline and implement product policy needed by every route. Do not create a new fuzzy/positional engine as an assumed inexpensive default. |
-| Direct Tantivy | Published Rust fuzzy/phrase/query/parser/snippet/collector primitives; direct control of schema, analysis, budgets and source identity | A second derived index, commit/reload boundary, memory/disk/merge schedule, recovery path and format upgrade. The project owns the SQL adapter, shared authorization, cross-engine freshness and outer fusion. Fuzzy work bounds and fuzzy highlights are open gates. | First isolated experiment. Potentially fits the existing owned-data engine boundary, subject to measurement and topology evidence. |
+| Direct Tantivy | Published Rust fuzzy/phrase/query/parser/snippet/collector primitives; direct control of schema, analysis, budgets and source identity | A second derived index, commit/reload boundary, memory/disk/merge schedule, recovery path and format upgrade. The project owns the SQL adapter, shared authorization, cross-engine freshness and outer fusion. Fuzzy work bounds and fuzzy highlights are open gates. | Initial isolated semantics verified; retain as a candidate pending budget, quality, integration and topology evidence. |
 | Reuse pg_search through its SQL extension interface | Existing PostgreSQL indexing/query integration, lexical operators, ordered proximity, snippets and aggregate execution | Additional installed extension and independently versioned SQL/PG/platform support. Must prove co-installation, hooks/plans, cancellation, permissions, source-ID extraction, visibility alignment with asynchronous Edge, and coordinated rebuilds/upgrades. Its forked dependency graph and AGPL distribution obligations need their own review. | Fixed comparator and a real alternative if it materially reduces total work or improves quality. No source copying or direct Rust linkage is selected. |
 
 The pg_search route may avoid manually dual-writing its PostgreSQL-maintained index. It does **not** remove the need to align its committed view with Edge's asynchronous projection, define when a combined plan is ready, or recover a generation pair. Conversely, linking Tantivy does not provide pg_search's PostgreSQL integration for free.
 
-The license declarations above are source facts. Before adoption, distribution must inventory the complete resolved dependency/native/dictionary licenses and notices. Assess the actual integration and redistribution obligations of pg_search; calling its SQL API does not by itself settle that assessment. Do not copy its AGPL implementation into Apache-2.0 project files or relabel it. Preserve the notices of any adopted MIT dependency. [T2] [P3]
+The license declarations above are source facts. Before adoption, distribution must inventory the complete resolved dependency/native/dictionary licenses and notices. Assess the actual integration and redistribution obligations of pg_search; calling its SQL API does not by itself settle that assessment. The project now declares AGPL-3.0-only in LICENSE; this does not authorize unreviewed reuse or relabel third-party implementation. Preserve the notices of any adopted MIT dependency. [T2] [P3]
 
 ## Ownership and acceptance for every gap
 
@@ -118,18 +156,30 @@ Allocate an initial **40 engineer-hour investigation budget**, with actual time 
 | LX-05: integration cost | Source/lifecycle + PostgreSQL integration. Prototype duplicate/out-of-order events, deletion/key reuse, one-engine failure, wait, paired cutover, role checks and cancellation. | No stale resurrection, false readiness or unauthorized result/snippet/count; measured recovery and rebuild work. A pg_search-only test does not establish Edge alignment. |
 | LX-06: adoption decision | Maintainers for lexical, quality, lifecycle and distribution. Compare correctness, quality, installation, RSS/disk, build/update/merge/recovery costs and maintenance ownership. | A follow-up adoption or rejection ADR, plus updated ledger and dependency contract if adopted. No option wins merely by exposing more function names. |
 
-These work items are planned; their new harnesses and fixtures do not exist merely because this ADR names them. Existing reproducible Edge evidence remains:
+LX-01 now has a locked standalone Tantivy build and dependency inventory;
+its pg_search installation and full native/license gates remain open. LX-02
+has the five bounded semantic observations above, including negative budget,
+array-boundary and highlight findings. This does not complete its hard-resource
+or comparison acceptance. LX-03–LX-06 retain their uncompleted parity, quality,
+integration and adoption gates. No elapsed engineering effort or completion
+estimate is inferred from the small executable's runtime.
+
+Reproduce the independent candidate checks from the repository root:
 
 ```sh
-cargo test --locked -p pg-qdrant-edge-probe
+cargo build --locked --manifest-path experiments/tantivy-probe/Cargo.toml
+timeout 45s cargo run --locked --manifest-path experiments/tantivy-probe/Cargo.toml
+python3 experiments/tantivy-probe/inventory.py --check
 ```
 
-For the Tantivy source smoke, extract the checksum-verified archive into an isolated directory and set `lexical_source` to that directory. The archive does not ship a Cargo.lock; the first command creates a separate evaluation baseline, which must be retained. These commands exercise published examples, not the product acceptance tests, and have not been run for this ADR:
+Build before applying the execution timeout. The public record identifies the
+actual bounded subprocess invocation and source hashes. These commands do not
+link Tantivy with Edge or PostgreSQL, execute the pg_search comparator, or run
+the frozen held-out comparison dataset. Existing Edge regression remains
+separate:
 
 ```sh
-cargo generate-lockfile --manifest-path "$lexical_source/Cargo.toml"
-CARGO_BUILD_JOBS=2 cargo run --locked --manifest-path "$lexical_source/Cargo.toml" --example fuzzy_search
-CARGO_BUILD_JOBS=2 cargo run --locked --manifest-path "$lexical_source/Cargo.toml" --example snippet
+cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1
 ```
 
 ### SQL seed for the fixed pg_search comparator

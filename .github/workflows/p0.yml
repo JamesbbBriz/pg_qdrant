@@ -32,6 +32,29 @@ jobs:
         run: docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .
       # Each experiment depends on its image, not unrelated earlier experiments.
       # A failed experiment still fails the job; no continue-on-error is used.
+      - name: Build the independent lexical candidate experiment
+        id: lexical_image
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
+        run: docker build --file Dockerfile.p0-lexical --tag pg-qdrant-p0-lexical .
+      - name: Characterize isolated Tantivy lexical primitives
+        if: ${{ !cancelled() && steps.lexical_image.outcome == 'success' }}
+        run: |
+          docker create --name pg-qdrant-p0-tantivy-run --memory=512m --memory-swap=512m \
+            --pids-limit=64 --cpus=1 --network=none pg-qdrant-p0-lexical bash -c '
+              set -euo pipefail
+              ulimit -c 0
+              timeout --kill-after=5s 45s target/tantivy-probe/debug/pg-qdrant-tantivy-feasibility \
+                > /src/artifacts/tantivy-probe.json
+              cat /src/artifacts/tantivy-probe.json
+            '
+          docker start --attach pg-qdrant-p0-tantivy-run
+      - name: Collect isolated lexical evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/tantivy
+          if docker inspect pg-qdrant-p0-tantivy-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-tantivy-run:/src/artifacts/. artifacts/tantivy/
+          fi
       - name: Test Edge ENOSPC on a dedicated 32 MiB tmpfs
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: |

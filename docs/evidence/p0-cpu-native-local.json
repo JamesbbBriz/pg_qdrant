@@ -1,0 +1,610 @@
+{
+  "schema_version": 1,
+  "kind": "p0_cpu_native_and_integrated_local_validation",
+  "observed_on": "2026-10-08",
+  "source": {
+    "base_commit": "88885db08d17c074af097ddca14bc85d6978980c",
+    "status": "uncommitted_source_snapshot",
+    "inputs": [
+      {
+        "path": "Cargo.toml",
+        "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+      },
+      {
+        "path": "Cargo.lock",
+        "sha256": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d"
+      },
+      {
+        "path": "rust-toolchain.toml",
+        "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+      },
+      {
+        "path": "crates/edge-probe/Cargo.toml",
+        "sha256": "99118fc920d732fb569bc002276fcce78f06115505356b4b9591afaebdb0a066"
+      },
+      {
+        "path": "crates/edge-probe/src/api_inventory.rs",
+        "sha256": "d58e698089206cfa282b2154e4e1a5abe71191b84191074f930db076ce7e9a38"
+      },
+      {
+        "path": "crates/edge-probe/src/cpu.rs",
+        "sha256": "f82a975694f83448fe17921552842dc39341cf422c0a47b9d942a573bcb90b0b"
+      },
+      {
+        "path": "crates/edge-probe/src/fault_probes.rs",
+        "sha256": "b9226f9d214066b29e034f945003b950262fad7805ea8c64f472177672df0b94"
+      },
+      {
+        "path": "crates/edge-probe/src/lib.rs",
+        "sha256": "d53ea193c6f68aff75e744c5addd7533ff0c4853a447cec64d035b3dad95988d"
+      },
+      {
+        "path": "crates/edge-probe/src/main.rs",
+        "sha256": "8343bd2d58ade61e21ac9b5b3e9164ecbef40aa83e475b32bbb35454cd653693"
+      },
+      {
+        "path": "crates/edge-probe/src/oom_probe.rs",
+        "sha256": "836726ff37758912c67dbef0e24ba45485dd2ce11456fd03e94c6f7fe24ff8d6"
+      },
+      {
+        "path": "crates/edge-probe/tests/advanced.rs",
+        "sha256": "01ad2a183c1402b88b0443648148516c5ab69bade52978f2a73d5bbced2111e8"
+      },
+      {
+        "path": "crates/edge-probe/tests/dirty_rebuild.rs",
+        "sha256": "a44c0063df53e463371eedc3b32cf04073343e6be2344e19f50d651f5320db31"
+      },
+      {
+        "path": "crates/edge-probe/tests/faults.rs",
+        "sha256": "f3900b6ab3bb8033fcde3a8da3d318b41e51427c9007477669b7d91e12a690d7"
+      },
+      {
+        "path": "crates/edge-probe/tests/invalid_inputs.rs",
+        "sha256": "1d77614bab4f996e287e073c2b45a8b77c8d672a93e27504ee18f728d847da97"
+      },
+      {
+        "path": "crates/edge-probe/tests/lexical.rs",
+        "sha256": "3a335a696f844bb24c129bce885c0c9b092daee4157af259d9d070a4ac7010d8"
+      },
+      {
+        "path": "crates/edge-probe/tests/lifecycle.rs",
+        "sha256": "22cf73f77660882aa85d813c5988fcb5d6323bbc9664898bc0b05897d7f5f0a2"
+      },
+      {
+        "path": "crates/edge-probe/tests/persistence.rs",
+        "sha256": "22788f4420c1f6ae106e176e68956286b82f298e1f494e2eb1a7bb598cb7ba23"
+      },
+      {
+        "path": "crates/edge-probe/tests/public_lifecycle.rs",
+        "sha256": "87cb722c29c75c9e9fdbe64a315738c099ae92e2f1768ba45ff1866a5bbe71a1"
+      },
+      {
+        "path": "crates/edge-probe/tests/schema.rs",
+        "sha256": "839f5a58bb7d55a646219c228ee9dbf434466e5bac7932f81bbf09770e58ef64"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/Cargo.toml",
+        "sha256": "c1cca09fe0b0d590b93942ce03b29814da88071b6ec9151e7ac89a95d4be020c"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/src/main.rs",
+        "sha256": "b797a20c7e049166e794b734d560fabb94408a35c689c813a86c67ccabbaacad"
+      },
+      {
+        "path": "crates/pg_qdrant-helper/tests/supervisor_child.rs",
+        "sha256": "2e3bc074a1d05849a161e8923320fb2813e22d358069744d92eb3f98c354cd54"
+      },
+      {
+        "path": "crates/pg_qdrant-protocol/Cargo.toml",
+        "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
+      },
+      {
+        "path": "crates/pg_qdrant-protocol/src/lib.rs",
+        "sha256": "c33ed27c20d85740815579e0d538552d54967939823009aa1d31e1d4ad452f0e"
+      },
+      {
+        "path": "crates/pg_qdrant/Cargo.toml",
+        "sha256": "5f717b6eaa3fd711bb65780aef4e391713d8c6e37ea64f98144fb47ef480e5eb"
+      },
+      {
+        "path": "crates/pg_qdrant/src/formats.rs",
+        "sha256": "db230bbc34ec2e6069cbba43c210269f48685cfe86febb3e4d80845d640761b3"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper.rs",
+        "sha256": "9fdce7a421d44319ab06541783de02e63e2414d79c38c710da099811fc351c78"
+      },
+      {
+        "path": "crates/pg_qdrant/src/helper_child.rs",
+        "sha256": "ec051fa5efdd319debcb2b1dc74add0390dc0cf9e30a4eef08c0cca23ac41c9f"
+      },
+      {
+        "path": "crates/pg_qdrant/src/identity.rs",
+        "sha256": "0d862451a4f5219c6d75f807de42abc6493660d9233193e214e60be1db35483b"
+      },
+      {
+        "path": "crates/pg_qdrant/src/ipc.rs",
+        "sha256": "ebb1491f4b1d2677d5eb1018580fd84d96cc84a8396cd985b1dca8e91c315d4e"
+      },
+      {
+        "path": "crates/pg_qdrant/src/lib.rs",
+        "sha256": "bd42295b42dd15ad4ffa443f95a63d1573fd133d32239403f5ee00fd320d0d98"
+      },
+      {
+        "path": "crates/pg_qdrant/src/recheck.rs",
+        "sha256": "087b63cb95a371b08a043a8554a3f80255dbfbc16de66c37e1266b7f7721efcf"
+      },
+      {
+        "path": "crates/pg_qdrant/src/worker.rs",
+        "sha256": "f6f7656d3ef2ed53708f830f061aa63292962fd5a8a701a870372acb65944733"
+      }
+    ],
+    "source_input_record_sha256": "a124d7ddd40b9501dd3765ebc6448f8a7b45f31f5f2e7e79adefc7e44856c873"
+  },
+  "environment": {
+    "os": "Linux",
+    "target": "x86_64-unknown-linux-gnu",
+    "rust": "1.96.0",
+    "postgres_headers": "17.11",
+    "edge": "0.8.0",
+    "pgrx": "0.19.3",
+    "cargo_locked": true,
+    "build_jobs": 2,
+    "rust_target_cpu_override": null,
+    "postgres_runtime_executed": false
+  },
+  "commands": [
+    {
+      "name": "cpu-preflight",
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "-p",
+        "pg-qdrant-edge-probe",
+        "--",
+        "--cpu-check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 8.846891739998682,
+      "log_sha256": "413fa25c9cd22fdb39f5baede7c1200b3f8ce1b46f9f2911617d3e575807dfc0",
+      "saved_log_verified": true
+    },
+    {
+      "name": "engine-tests",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "-p",
+        "pg-qdrant-edge-probe",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 33.880033752997406,
+      "log_sha256": "6eed95424080597e2037bbd15761eb66586b37a958e46bbcd5686baf8488f83d",
+      "saved_log_verified": true
+    },
+    {
+      "name": "pg-direct-normal",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.539832293998188,
+      "log_sha256": "6b85c42db9b64c78f007c76325ad7546cb808ce51cda716d92d6b226483006a6",
+      "saved_log_verified": true
+    },
+    {
+      "name": "pg-direct-private",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17 p0-fault-injection"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.629291645000194,
+      "log_sha256": "76d2d86085d7c86bd1a364274ff9df88310006dbb3444907ecb2b68a7ce4eb9f",
+      "saved_log_verified": false,
+      "retained_anomaly": {
+        "recorded_log_sha256": "76d2d86085d7c86bd1a364274ff9df88310006dbb3444907ecb2b68a7ce4eb9f",
+        "observed_log_sha256": "57d4bdfbe2d7e9810b38fa8e88f0f38435efd2a9cda625047169dc40a2e6babc",
+        "observed_log_bytes": 194,
+        "reason": "Stored log lacks the final Cargo completion line and no longer matches the originally captured digest. Cause not established. Prior raw evidence is not rewritten; repeat only this command against unchanged source."
+      },
+      "accepted_for_current_validation": false
+    },
+    {
+      "name": "pg-helper-normal",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17 p0-managed-helper"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.3364249749974988,
+      "log_sha256": "757df5d317d6a437359af21a65ee15ae5c6ff5cbe18152543a63208ffc2618c6",
+      "saved_log_verified": true
+    },
+    {
+      "name": "pg-helper-private",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17 p0-managed-helper p0-fault-injection"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.153367935003189,
+      "log_sha256": "72cc56db046d1dd8140669b806a9b796146a6425c27d2373a0deddb078fff590",
+      "saved_log_verified": true
+    },
+    {
+      "name": "helper-normal",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg-qdrant-helper"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.1440578900001128,
+      "log_sha256": "3eae6b0aba7d23f524b92160e4d5c58ac6c75979f4f0ff9f6b998f1f1d8dcc94",
+      "saved_log_verified": true
+    },
+    {
+      "name": "helper-private",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg-qdrant-helper",
+        "--features",
+        "p0-fault-injection"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.9593341199979477,
+      "log_sha256": "002a76f07c008243b6bc2122b331fc2219fee1017bd95e6b21323c152a7f5386",
+      "saved_log_verified": true
+    },
+    {
+      "name": "pg-direct-private-rerun",
+      "command": [
+        "cargo",
+        "check",
+        "--locked",
+        "-p",
+        "pg_qdrant",
+        "--no-default-features",
+        "--features",
+        "pg17 p0-fault-injection"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.9271950179972919,
+      "log_sha256": "bb5dd9f5b788fa5c16fdaf739fc6210a075b86b2cc524330280ad0ef9324d60f",
+      "source_inputs_sha256": "a124d7ddd40b9501dd3765ebc6448f8a7b45f31f5f2e7e79adefc7e44856c873",
+      "reason": "Resolves the incomplete saved-log digest mismatch without altering the prior record.",
+      "saved_log_verified": true
+    }
+  ],
+  "results": {
+    "engine_tests_passed": 27,
+    "engine_tests_failed": 0,
+    "engine_tests_ignored": 0,
+    "pure_cpu_policy_tests_included": 2,
+    "postgres_compile_profiles_passed": 4,
+    "helper_compile_profiles_passed": 2,
+    "cpu_admission": {
+      "schema_version": 1,
+      "kind": "p0_cpu_admission",
+      "baseline": "edge-0.8.0-native-haswell-conservative-v1",
+      "architecture": "x86_64",
+      "admitted": true,
+      "required_features": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c",
+        "bmi1",
+        "bmi2",
+        "lzcnt",
+        "movbe",
+        "popcnt",
+        "sse3",
+        "ssse3",
+        "sse4.1",
+        "sse4.2",
+        "cmpxchg16b",
+        "pclmulqdq",
+        "rdrand",
+        "xsave",
+        "xsaveopt",
+        "lahf_sahf",
+        "fsgsbase"
+      ],
+      "detected_usable_features": {
+        "avx": true,
+        "avx2": true,
+        "bmi1": true,
+        "bmi2": true,
+        "cmpxchg16b": true,
+        "f16c": true,
+        "fma": true,
+        "fsgsbase": true,
+        "lahf_sahf": true,
+        "lzcnt": true,
+        "movbe": true,
+        "pclmulqdq": true,
+        "popcnt": true,
+        "rdrand": true,
+        "sse3": true,
+        "sse4.1": true,
+        "sse4.2": true,
+        "ssse3": true,
+        "xsave": true,
+        "xsaveopt": true
+      },
+      "missing_features": [],
+      "optional_observations": {
+        "hle": false
+      },
+      "hle_required": false,
+      "avx_detection_includes_os_state": true,
+      "cpuid_hardware_only_features": [
+        "lahf_sahf",
+        "fsgsbase"
+      ],
+      "native_build_flags": [
+        "-march=haswell",
+        "-O3",
+        "-mpopcnt"
+      ],
+      "equivalent_to_x86_64_v3": false,
+      "release_platform_supported": false
+    }
+  },
+  "native_object_audit": {
+    "command": [
+      "python3",
+      "scripts/check_native_cpu.py"
+    ],
+    "exit_code": 0,
+    "script_sha256": "ccf0b29803a565d2fb627408d445aa204073f2bc52547b10a0aa52061f04fe88",
+    "raw_json_sha256": "34a78b65e2417e032a2e0760d3e84658cd34779a41aee5cdc5d35df90039f767",
+    "report": {
+      "schema_version": 1,
+      "kind": "p0_edge_native_cpu_object_audit",
+      "status": "passed",
+      "edge_version": "0.8.0",
+      "compiler_version": "13.3.0",
+      "disassembler_version": "GNU objdump (GNU Binutils for Ubuntu) 2.42",
+      "objects": [
+        {
+          "sse": {
+            "object_name": "a7019a7e8f23ab52-sse.o",
+            "object_sha256": "5dff97371d68840db72c0a5ee579b98e04aec4789196d527a858eaa614f4eea5",
+            "decoded_instructions_sha256": "041ad1466324031ddb4cb74c2d1f31c425bff42dbf2651ee64875225762e79d4",
+            "instructions_decoded": 1152,
+            "vector_mnemonics": [
+              "vaddps",
+              "vaddss",
+              "vcvtdq2ps",
+              "vcvtsi2ss",
+              "vcvttss2si",
+              "vmovd",
+              "vmovdqa",
+              "vmovdqu",
+              "vmovhlps",
+              "vmovq",
+              "vpaddd",
+              "vpaddw",
+              "vpermilps",
+              "vpextrw",
+              "vpinsrd",
+              "vpmaddubsw",
+              "vpmaxub",
+              "vpmovsxwd",
+              "vpmovzxbw",
+              "vpmovzxwd",
+              "vpmulld",
+              "vpsrldq",
+              "vpsubusb",
+              "vpunpckhbw",
+              "vpunpckhwd",
+              "vpunpcklqdq",
+              "vpxor",
+              "vxorps"
+            ],
+            "hle_rtm_instructions": 0,
+            "avx512_register_operands": 0
+          },
+          "avx2": {
+            "object_name": "a7019a7e8f23ab52-avx2.o",
+            "object_sha256": "3937b38f58262661bbefd8c4bd8d3f3990071d82934ae85c221ceee9af8dfef0",
+            "decoded_instructions_sha256": "7a379746e34c4483b893fb6ddcfefde8a659b9aae9b6d2cc907749c23a546e4a",
+            "instructions_decoded": 296,
+            "vector_mnemonics": [
+              "vaddps",
+              "vaddss",
+              "vcvtdq2ps",
+              "vcvtsi2ss",
+              "vcvttss2si",
+              "vextractf128",
+              "vextracti128",
+              "vinserti128",
+              "vmovaps",
+              "vmovd",
+              "vmovdqa",
+              "vmovdqu",
+              "vmovhlps",
+              "vmovq",
+              "vpaddd",
+              "vpaddw",
+              "vpand",
+              "vpbroadcastq",
+              "vpermilps",
+              "vpinsrd",
+              "vpmaddubsw",
+              "vpmaxub",
+              "vpmovsxwd",
+              "vpmovzxbd",
+              "vpmovzxbw",
+              "vpmovzxwd",
+              "vpmulld",
+              "vpmullw",
+              "vpsrld",
+              "vpsrldq",
+              "vpsubusb",
+              "vpunpckhbw",
+              "vpunpckhwd",
+              "vpunpcklbw",
+              "vpunpcklqdq",
+              "vpunpcklwd",
+              "vpxor",
+              "vxorps",
+              "vzeroupper"
+            ],
+            "hle_rtm_instructions": 0,
+            "avx512_register_operands": 0
+          }
+        },
+        {
+          "sse": {
+            "object_name": "a7019a7e8f23ab52-sse.o",
+            "object_sha256": "5dff97371d68840db72c0a5ee579b98e04aec4789196d527a858eaa614f4eea5",
+            "decoded_instructions_sha256": "041ad1466324031ddb4cb74c2d1f31c425bff42dbf2651ee64875225762e79d4",
+            "instructions_decoded": 1152,
+            "vector_mnemonics": [
+              "vaddps",
+              "vaddss",
+              "vcvtdq2ps",
+              "vcvtsi2ss",
+              "vcvttss2si",
+              "vmovd",
+              "vmovdqa",
+              "vmovdqu",
+              "vmovhlps",
+              "vmovq",
+              "vpaddd",
+              "vpaddw",
+              "vpermilps",
+              "vpextrw",
+              "vpinsrd",
+              "vpmaddubsw",
+              "vpmaxub",
+              "vpmovsxwd",
+              "vpmovzxbw",
+              "vpmovzxwd",
+              "vpmulld",
+              "vpsrldq",
+              "vpsubusb",
+              "vpunpckhbw",
+              "vpunpckhwd",
+              "vpunpcklqdq",
+              "vpxor",
+              "vxorps"
+            ],
+            "hle_rtm_instructions": 0,
+            "avx512_register_operands": 0
+          },
+          "avx2": {
+            "object_name": "a7019a7e8f23ab52-avx2.o",
+            "object_sha256": "3937b38f58262661bbefd8c4bd8d3f3990071d82934ae85c221ceee9af8dfef0",
+            "decoded_instructions_sha256": "7a379746e34c4483b893fb6ddcfefde8a659b9aae9b6d2cc907749c23a546e4a",
+            "instructions_decoded": 296,
+            "vector_mnemonics": [
+              "vaddps",
+              "vaddss",
+              "vcvtdq2ps",
+              "vcvtsi2ss",
+              "vcvttss2si",
+              "vextractf128",
+              "vextracti128",
+              "vinserti128",
+              "vmovaps",
+              "vmovd",
+              "vmovdqa",
+              "vmovdqu",
+              "vmovhlps",
+              "vmovq",
+              "vpaddd",
+              "vpaddw",
+              "vpand",
+              "vpbroadcastq",
+              "vpermilps",
+              "vpinsrd",
+              "vpmaddubsw",
+              "vpmaxub",
+              "vpmovsxwd",
+              "vpmovzxbd",
+              "vpmovzxbw",
+              "vpmovzxwd",
+              "vpmulld",
+              "vpmullw",
+              "vpsrld",
+              "vpsrldq",
+              "vpsubusb",
+              "vpunpckhbw",
+              "vpunpckhwd",
+              "vpunpcklbw",
+              "vpunpcklqdq",
+              "vpunpcklwd",
+              "vpxor",
+              "vxorps",
+              "vzeroupper"
+            ],
+            "hle_rtm_instructions": 0,
+            "avx512_register_operands": 0
+          }
+        }
+      ],
+      "hle_cpu_requirement": false,
+      "hle_disposition": "No HLE/RTM instructions in either selected native source object; repeat after every native or upstream build change.",
+      "generic_x86_64_compatibility": false,
+      "complete_instruction_isa_proof": false,
+      "scope": "Checks the exact two C objects and the policy's TSX exclusion. Runtime CPU admission and clean integration are separate checks; this does not prove every dependency's ISA or broader platform support."
+    }
+  },
+  "limitations": [
+    "Local build inputs are recorded; the new frozen native Docker installation has not executed.",
+    "The inside-SPI cancellation group and heap-only source restriction compile; their SQL runtime is not part of this local record.",
+    "Pure CPU policy tests do not emulate missing hardware features or disabled operating-system AVX state.",
+    "The object audit checks the stated TSX exclusion and AVX-512 operands, not a complete ISA proof or generic x86_64 compatibility.",
+    "One prior saved Cargo log is incomplete and mismatches its captured digest. Its record is retained and excluded as current verification; a fresh repeat against unchanged source passed with a verified log.",
+    "No positive OOM/disk-fill experiment, local PostgreSQL execution, package installation or production lifecycle test was run for this checkpoint."
+  ],
+  "p0_exit_gate_passed": false,
+  "release_gate_passed": false,
+  "production_authorization_verified": false,
+  "postgres_edge_atomicity_verified": false,
+  "later_repository_metadata_change": {
+    "source_commit": "8d1972b919b9e504a20586399df22f1904ca8e7f",
+    "change": "Preserve the current main AGPL-3.0-only license, concise overview and expanded design. Project manifests and generated license metadata are subsequently aligned; the executable Rust source and both dependency lockfiles are unchanged.",
+    "runtime_repeated_for_metadata_only_change": false,
+    "current_combined_ci_required": true
+  }
+}

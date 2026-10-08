@@ -17,6 +17,13 @@ fn main() {
 }
 
 fn run() -> Result<(), ProbeError> {
+    pg_qdrant_edge_probe::cpu::require().map_err(|message| {
+        ProbeError::new(
+            "cpu_unsupported",
+            message,
+            "Use a host satisfying the fixed P0 native CPU baseline before starting the helper.",
+        )
+    })?;
     let mut arguments = std::env::args_os().skip(1);
     let owner_path = arguments
         .next()

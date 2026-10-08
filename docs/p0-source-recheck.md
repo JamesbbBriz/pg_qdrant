@@ -1,7 +1,9 @@
 # P0 tagged identity and source visibility probe
 
-Status: private feasibility code, normal PostgreSQL 17 compile/link verified,
-SQL execution pending. This experiment contributes evidence to L05, L08 and L09;
+Status: the original six diagnostic groups passed in all four PostgreSQL profiles
+in [CI7](evidence/p0-source-capacity-oom-ci.json), head `88885db`. The later seventh
+inside-SPI cancellation group and built-in heap restriction compile but await
+their own SQL run. This experiment contributes evidence to L05, L08 and L09;
 none of those product capabilities is complete. It adds two diagnostic functions
 without implementing source capture, a point-ID registry, an asynchronous index,
 production authorization or a public SQL API.
@@ -37,7 +39,8 @@ DROP SCHEMA p0_fixture CASCADE;
 ```
 
 These examples target the additive private prototype and require its installation.
-They are authored runtime scenarios, not evidence of a successful SQL execution.
+The original fixture semantics have CI7 runtime evidence; later changes retain
+their separately stated validation boundary.
 All source data and versions above are fixture values supplied by the caller.
 
 ## Identity representation
@@ -76,9 +79,12 @@ JSON is limited to 64 KiB after bounded field validation; the result is limited
 to 8 KiB. PostgreSQL/JSONB input allocation happens before these checks, so these
 are copied-data budgets, not complete backend memory limits.
 
-The source must be a persistent ordinary table outside system and extension
-schemas. Partitioned tables, partitions, inheritance, views, foreign tables,
-temporary/unlogged tables and RLS-enabled or forced-RLS tables are rejected.
+The source must be a persistent ordinary table using PostgreSQL's built-in heap
+access method, outside system and extension schemas. The check uses the pinned
+PG17 `HEAP_TABLE_AM_OID` identifier; custom table access methods are rejected and
+have no verified snapshot/read support in this probe. Partitioned tables,
+partitions, inheritance, views, foreign tables, temporary/unlogged tables and
+RLS-enabled or forced-RLS tables are rejected.
 The named key must be exactly `bigint`, `uuid` or `text`, not a domain. Its primary
 key must be valid, immediate, nondeferrable, single-column built-in btree, with
 no included columns and the corresponding default `pg_catalog` operator class.
@@ -171,7 +177,7 @@ PostgreSQL argument conversion, relation lookup, lock timeout and cancellation
 can independently raise PostgreSQL errors. In particular, the pre-body
 `PgRelation` conversion caveat above affects error ordering.
 
-`crates/pg_qdrant/tests/verify_source.py` adds six named check groups to the
+`crates/pg_qdrant/tests/verify_source.py` adds seven named check groups to the
 existing disposable-cluster harness:
 
 1. Exact tagged bigint/uuid/text roundtrip, int64 extremes and values above
@@ -192,15 +198,28 @@ existing disposable-cluster harness:
    guard; it then verifies guard release and continued use of the same backend.
    This cancellation occurs **before SPI**, so it is not evidence of cleanup
    after a PostgreSQL error during the generated source SELECT.
-6. Default ACL denial and independent function-body superuser checks after
+6. A separate PostgreSQL cancellation while awaiting an ordinary secondary-index
+   lock. Source validation opens only the primary index; PG17's planner opens
+   the secondary index during the generated SELECT inside
+   `SPI_execute_with_args`. The test observes that exact ungranted lock together
+   with the granted namespace guard before canceling. It catches
+   `query_canceled`, verifies guard release, and requires a subsequent matched
+   recheck in the same backend. This targets error cleanup after SPI connection,
+   including `SPI_finish`, rather than the earlier pre-SPI validation path.
+7. Default ACL denial and independent function-body superuser checks after
    explicit grants, including null input; no production authorization claim.
 
-These tests are authored and syntax-checked, not runtime-verified. Explicit
+These tests are authored and syntax-checked, not runtime-verified. The heap-AM
+restriction and seventh group are a follow-up to the local checkpoints below;
+neither compilation nor SQL execution of this follow-up has been performed.
+Explicit
 SQL cases for nondeterministic collations, custom operator classes, partition
 and inheritance rejection, malicious operator search paths, source-schema
-rename races and a PostgreSQL error during SPI execution remain open.
+rename races and errors during the executor stage of SPI remain open. The new
+planning-stage cancellation is an authored experiment, not a general proof of
+cleanup after every PostgreSQL error.
 
-## Current local checkpoint
+## Historical local checkpoint
 
 On the source derived from commit
 `77f9ecca11ede76e42ba197e294b177ea865d830`, the following commands passed with
@@ -224,8 +243,9 @@ permissions or error-cleanup runtime gates.
 [The local evidence record](evidence/p0-source-recheck-local.json) binds this
 checkpoint to its source, manifest, lockfile and observed generated-SQL hashes.
 The bounded native-cancellation assertion was added to the Python suite after
-linking and received syntax validation only. All six new SQL groups remain
-unrun; builds of later combined source require their own evidence.
+linking and received syntax validation only. That checkpoint covers the original
+six authored SQL groups, which were unrun; builds and runs of later combined
+source require their own evidence.
 
 Fixed-version source basis:
 
@@ -233,8 +253,30 @@ Fixed-version source basis:
 - [pgrx 0.19.3 SPI client](https://docs.rs/crate/pgrx/0.19.3/source/src/spi/client.rs)
 - [PostgreSQL 17.11 SPI execution and snapshot behavior](https://github.com/postgres/postgres/blob/REL_17_11/src/backend/executor/spi.c)
 - [PostgreSQL 17.11 schema rename locking](https://github.com/postgres/postgres/blob/REL_17_11/src/backend/commands/schemacmds.c)
+- [PostgreSQL 17.11 built-in heap access-method OID](https://github.com/postgres/postgres/blob/REL_17_11/src/include/catalog/pg_am.dat)
+- [PostgreSQL 17.11 primary-index lookup without opening secondary indexes](https://github.com/postgres/postgres/blob/REL_17_11/src/backend/utils/cache/relcache.c)
+- [PostgreSQL 17.11 planner index-open locks](https://github.com/postgres/postgres/blob/REL_17_11/src/backend/optimizer/util/plancat.c)
+- [PostgreSQL 17.11 REINDEX index and source-table locks](https://github.com/postgres/postgres/blob/REL_17_11/src/backend/commands/indexcmds.c)
 
 The [integrated local validation](evidence/p0-integrated-local.json) subsequently
 checks all four extension profiles together with the OOM and capacity changes.
 That record is compilation evidence only; the earlier normal linked schema and
-the six still-pending SQL groups retain their separate scope.
+the six SQL groups authored at that checkpoint retain their separate scope. It
+does not cover the later heap-AM restriction or the seventh, inside-SPI
+cancellation group.
+
+
+## Latest execution boundary
+
+CI7 passed the original six groups in every direct/helper normal/private profile,
+including active-statement and repeatable-read visibility, strict source/RLS
+refusals, quoted identifiers and bound values, namespace/DDL guard behavior and
+cancellation before SPI execution. The local records above are preserved at their
+earlier source snapshots.
+
+The [later method/input/rebuild checkpoint](evidence/p0-method-input-rebuild-local.json)
+compiles all four profiles with the explicit heap-only rule and seventh
+inside-SPI cancellation assertion. That assertion deliberately waits on a
+secondary-index lock while the SPI query is planned, catches cancellation,
+checks namespace-guard cleanup and reuses the same backend. It requires the next
+SQL run and does not retrospectively add a seventh CI7 pass.

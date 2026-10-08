@@ -1,10 +1,11 @@
 # P0 full-text tmpfs capacity follow-up
 
-Status: implemented bounded experiment with local Rust and Python validation.
-The [integrated record](evidence/p0-integrated-local.json) includes the two pure
-capacity tests, unsafe/missing-path test and all 13 disk-wrapper tests. Actual
-dedicated-mount experiments still require CI. This does not establish full-text
-recovery, a production capacity recommendation or a P0 exit.
+Status: all four bounded disk/capacity profiles passed in
+[CI7](evidence/p0-source-capacity-oom-ci.json), head `88885db`. Both independent
+384 MiB full-text reopens passed, as did the exact 128 MiB zero-write refusal.
+The earlier [local record](evidence/p0-integrated-local.json) separately covers
+guard/wrapper tests. These results do not establish dirty-ingestion recovery,
+a production capacity recommendation or a complete P0 exit.
 
 The historical 128 MiB full-text runs remain failures. In CI6
 ([run 37732857051](https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37732857051)),
@@ -18,7 +19,7 @@ created no filler. These are distinct observations of logical size, allocated
 storage and process mapping behavior, not proof of a repaired loader or safe
 dirty-data recovery.
 
-The next experiment changes only the fixed full-text capacity allowance to
+The follow-up changes the fixed full-text capacity allowance to
 **exactly 384 MiB (402,653,184 bytes)**. It retains eight fixture rows, all four
 representations, tenant/document/SKU keyword indexes, both mutable text indexes,
 the original fixture settings, and the existing record/phrase/token-prefix/
@@ -94,7 +95,9 @@ the new `edge-full-text-128-capacity-refusal.json` artifact.
 Local Rust validation passes the normal 23-test engine suite, including the new
 capacity tests, and all 13 disk-wrapper tests pass as part of the integrated
 21-test Python suite. Neither local command uses a positive fault mount. The
-exact 128 MiB refusal and both 384 MiB native runs remain CI gates. Historical
-CI5/CI6 failures stay separately recorded; a future 384 MiB pass cannot
+exact 128 MiB refusal and both 384 MiB native runs subsequently passed in CI7.
+Each reopened full-text fixture used 220,508,160 allocated bytes, leaving
+182,145,024 bytes available. Historical CI5/CI6 failures remain failures; the
+384 MiB pass cannot
 retrospectively make the 128 MiB reopen supported or prove WAL growth, dirty
 ingestion, PostgreSQL ACK durability, power-loss recovery or P0 completion.

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "p0_ci6_four_profile_sql_verified_128m_full_text_failed_new_experiments_pending",
+  "status": "p0_ci7_passed_current_cpu_engine_compile_verified_native_and_current_ci_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -70,7 +70,18 @@
     "cargo_requirement_candidate": "=0.26.2",
     "adopted": false,
     "decision_gate": "FTS gap evaluation and lifecycle/fusion ADR",
-    "registry_record": "https://crates.io/api/v1/crates/tantivy/0.26.2"
+    "registry_record": "https://crates.io/api/v1/crates/tantivy/0.26.2",
+    "package_sha256": "861facfabd71044968f364837f9a083b56464ba5a59079f88706ee5c451ca069",
+    "experiment_manifest": "../experiments/tantivy-probe/Cargo.toml",
+    "experiment_lockfile": "../experiments/tantivy-probe/Cargo.lock",
+    "experiment_default_features": false,
+    "experiment_features": [
+      "mmap",
+      "lz4-compression"
+    ],
+    "experiment_inventory": "../experiments/tantivy-probe/dependency-inventory.json",
+    "experiment_evidence": "evidence/p0-tantivy-local.json",
+    "experiment_status": "five_local_primitive_characterizations_passed_ci_pending"
   },
   "mandatory_inference_dependencies": [],
   "mandatory_network_qdrant_client_dependencies": [],
@@ -92,7 +103,7 @@
     "container_base": "ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
     "native_package_lock_complete": false,
     "container_execution_verified": true,
-    "container_evidence": "evidence/p0-capacity-and-sql-ci.json",
+    "container_evidence": "evidence/p0-source-capacity-oom-ci.json",
     "current_source_container_execution_verified": false,
     "managed_helper_default": false,
     "prototype_profiles": [
@@ -114,7 +125,7 @@
       ]
     ],
     "latest_failed_container_evidence": "evidence/p0-capacity-and-sql-ci.json",
-    "last_complete_four_profile_runtime_evidence": "evidence/p0-capacity-and-sql-ci.json",
+    "last_complete_four_profile_runtime_evidence": "evidence/p0-source-capacity-oom-ci.json",
     "profile_resolution_evidence": "dependency-profiles.json",
     "profile_resolution_status": "locked_metadata_verified_runtime_separate",
     "private_fault_feature_forwarding": {
@@ -131,7 +142,41 @@
         "normal_profile_edge_enabled": false
       },
       "default_enabled": false,
-      "positive_oom_verified": false
+      "positive_oom_verified": true,
+      "positive_oom_evidence": "evidence/p0-source-capacity-oom-ci.json",
+      "positive_oom_source_commit": "88885db08d17c074af097ddca14bc85d6978980c",
+      "production_memory_isolation_verified": false
+    },
+    "native_freeze_configuration": {
+      "status": "implemented_signed_metadata_and_safe_verifier_checked_clean_image_pending",
+      "ubuntu_snapshot": "20261008T061600Z",
+      "postgres_repository": "https://apt-archive.postgresql.org/pub/repos/apt",
+      "postgres_archive_manifest": "../packaging/native/pgdg-packages.json",
+      "postgres_archive_count": 7,
+      "expected_installed_inventory": "../packaging/native/expected-installed.tsv",
+      "expected_installed_entries": 246,
+      "expected_installed_inventory_sha256": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+      "source_evidence": "evidence/p0-native-source.json",
+      "clean_install_verified": false,
+      "complete_distribution_license_review": false
+    },
+    "cpu_admission": {
+      "baseline": "edge-0.8.0-native-haswell-conservative-v1",
+      "required_feature_count": 20,
+      "rust_target_cpu_flag": null,
+      "native_flags": [
+        "-march=haswell",
+        "-O3",
+        "-mpopcnt"
+      ],
+      "hle_required": false,
+      "hle_object_audit_required": true,
+      "documentation": "p0-cpu-baseline.md",
+      "source": "../crates/edge-probe/src/cpu.rs",
+      "local_preflight_passed": true,
+      "clean_image_verified": false,
+      "generic_x86_64_supported": false,
+      "equivalent_to_x86_64_v3": false
     }
   },
   "build_evidence": [
@@ -363,6 +408,41 @@
       "rust": "1.96.0",
       "evidence": "evidence/p0-integrated-local.json",
       "scope": "Recorded integration snapshot passes 23 normal engine tests, 3 private native OOM guard tests, 21 Python tests, all 4 extension compile profiles and both helper binary compile profiles. No new local link/install, SQL, dedicated fault mount or positive OOM execution; no P0/release claim."
+    },
+    {
+      "kind": "ci7_four_profile_source_capacity_kernel_oom",
+      "status": "passed",
+      "rust": "1.96.0",
+      "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c",
+      "evidence": "evidence/p0-source-capacity-oom-ci.json",
+      "scope": "All four images build and install. SQL 19/21/19/25, helper pipes 7/8, 23 normal engine, two child and 21 Python tests pass. Original six source-recheck and three format groups pass per SQL profile. Narrow 32 MiB and full-text 384 MiB ENOSPC/reopen, a separate clean reopen and exact 128 MiB zero-write refusal pass. Both exact kernel OOM attributions pass; direct-worker containment fails and helper containment passes for the controlled experiment. The artifact digest and all 53 members are independently verified. Later source is excluded; production authorization, atomicity, P0 exit and release remain unverified."
+    },
+    {
+      "kind": "later_callable_input_rebuild_local",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-method-input-rebuild-local.json",
+      "scope": "Exact recorded source passes 43 concrete Edge method call bodies, 25 ordinary engine tests and four PostgreSQL compile profiles. Invalid-input behavior requires adapter validation; dirty-generation reconstruction uses a complete synthetic source. The seventh inside-SPI SQL group and heap-only restriction compile but are not runtime-verified. Later native/CPU changes are excluded."
+    },
+    {
+      "kind": "isolated_tantivy_primitive_runtime",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-tantivy-local.json",
+      "scope": "The independent workspace pins Tantivy 0.26.2 with its own lockfile and 109 selected Linux packages. Five small primitive cases pass, with fuzzy budget, phrase/array, snippet and reader/update limitations retained. No core adoption, analyzer parity, held-out quality, SQL integration or release claim."
+    },
+    {
+      "kind": "cpu_native_integrated_local",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-cpu-native-local.json",
+      "scope": "Exact source hashes pass local CPU admission, 27 ordinary engine tests (including two pure CPU policy tests), all four PostgreSQL compile profiles and both helper compile profiles. Actual local native objects pass the scoped HLE/RTM and AVX-512 audit. A mismatched historical saved compile log is retained but excluded; its verified fresh repeat passed. Revised clean native installation and current SQL/runtime remain pending."
     }
-  ]
+  ],
+  "project_license": {
+    "spdx": "AGPL-3.0-only",
+    "source": "../LICENSE",
+    "decision_source_commit": "8d1972b919b9e504a20586399df22f1904ca8e7f",
+    "scope": "Original project material; third-party packages and model artifacts retain their own licenses."
+  }
 }

@@ -2,23 +2,42 @@
 FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG PG_PACKAGE_VERSION=17.11-1.pgdg24.04+2
 ARG RUSTUP_SHA256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# The minimal base has no CA bundle. Bootstrap only public roots from a package
+# whose checksum is anchored in the reviewed signed Ubuntu snapshot metadata.
+# BuildKit downloads this over verified TLS; no APT/TLS checks are disabled.
+ADD --checksum=sha256:6bac2a01979e210d9eac1d4d56747ec709ea60654744d66705dc3c36e7629e50 \
+    https://snapshot.ubuntu.com/ubuntu/20261008T061600Z/pool/main/c/ca-certificates/ca-certificates_20260601~24.04.1_all.deb \
+    /tmp/pgq-bootstrap-ca.deb
+COPY packaging/native/ /opt/pg_qdrant_native/
+COPY scripts/verify_native.py /opt/pg_qdrant_native/verify_native.py
+RUN test "$(dpkg --print-architecture)" = amd64 \
+    && mkdir -p /tmp/pgq-bootstrap-roots /etc/ssl/certs \
+    && dpkg-deb --extract /tmp/pgq-bootstrap-ca.deb /tmp/pgq-bootstrap-roots \
+    && cat /tmp/pgq-bootstrap-roots/usr/share/ca-certificates/mozilla/*.crt \
+       >/etc/ssl/certs/ca-certificates.crt \
+    && rm -rf /tmp/pgq-bootstrap-ca.deb /tmp/pgq-bootstrap-roots \
+    && rm -f /etc/apt/sources.list \
+    && rm -f /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources \
+    && cp /opt/pg_qdrant_native/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources \
+    && cp /opt/pg_qdrant_native/99-pg-qdrant-freeze /etc/apt/apt.conf.d/99-pg-qdrant-freeze \
+    && apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl gnupg build-essential pkg-config cmake python3 \
     libssl-dev libreadline-dev zlib1g-dev libxml2-dev libxslt1-dev libicu-dev \
     flex bison locales util-linux \
     && rm -rf /var/lib/apt/lists/*
-RUN curl --fail --silent --show-error \
-    https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-    -o /usr/share/keyrings/postgresql.asc \
-    && echo 'deb [signed-by=/usr/share/keyrings/postgresql.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' \
-       > /etc/apt/sources.list.d/pgdg.list \
+RUN cp /opt/pg_qdrant_native/postgresql.asc /usr/share/keyrings/postgresql.asc \
+    && cp /opt/pg_qdrant_native/pgdg.sources /etc/apt/sources.list.d/pgdg.sources \
+    && cp /opt/pg_qdrant_native/pgdg.pref /etc/apt/preferences.d/pg-qdrant-pgdg.pref \
     && apt-get update \
-    && apt-get install -y --no-install-recommends \
-       postgresql-17=${PG_PACKAGE_VERSION} postgresql-client-17=${PG_PACKAGE_VERSION} \
-       postgresql-server-dev-17=${PG_PACKAGE_VERSION} \
+    && xargs -r -a /opt/pg_qdrant_native/pgdg-packages.txt \
+       apt-get install -y --no-install-recommends --download-only \
+    && python3 /opt/pg_qdrant_native/verify_native.py archives \
+       --manifest /opt/pg_qdrant_native/pgdg-packages.json --cache /var/cache/apt/archives \
+       >/opt/pg_qdrant_native/verified-pgdg-archives.json \
+    && xargs -r -a /opt/pg_qdrant_native/pgdg-packages.txt \
+       apt-get install -y --no-install-recommends --no-download \
     && rm -rf /var/lib/apt/lists/*
 
 ENV CARGO_HOME=/opt/cargo RUSTUP_HOME=/opt/rustup
@@ -40,6 +59,7 @@ WORKDIR /src
 COPY . .
 RUN cargo fmt --all -- --check \
     && python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check \
+    && cargo run --locked -p pg-qdrant-edge-probe -- --cpu-check >/tmp/cpu-admission.json \
     && cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1 \
     && cargo test --locked -p pg-qdrant-helper --test supervisor_child \
     && cargo run --locked -p pg-qdrant-edge-probe >/tmp/edge-probe.json
@@ -68,7 +88,31 @@ RUN pgq_features=pg17 \
          --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked
 ENV PG_QDRANT_MANAGED_HELPER=${P0_HELPER}
 RUN mkdir -p /src/artifacts \
+    && target/debug/pg-qdrant-edge-probe --cpu-check >/src/artifacts/cpu-admission.json \
+    && python3 scripts/check_native_cpu.py >/src/artifacts/native-cpu-objects.json \
     && dpkg-query -W -f='${binary:Package}\t${Version}\n' >/src/artifacts/native-packages.tsv \
+    && python3 /opt/pg_qdrant_native/verify_native.py installed \
+       --expected /opt/pg_qdrant_native/expected-installed.tsv \
+       --observed /src/artifacts/native-packages.tsv \
+       >/src/artifacts/native-inventory-verification.json \
+    && cp /opt/pg_qdrant_native/verified-pgdg-archives.json /src/artifacts/ \
+    && set -- --expected-packages /opt/pg_qdrant_native/expected-installed.tsv \
+       --pg-config "${PGRX_PG_CONFIG_PATH}" \
+       --extension "$("${PGRX_PG_CONFIG_PATH}" --pkglibdir)/pg_qdrant.so" \
+       --out /src/artifacts/native-build-report.json \
+    && pgq_profile=direct \
+    && if [ "${P0_HELPER}" = 1 ]; then \
+         pgq_profile=helper; \
+         set -- "$@" --helper "$("${PGRX_PG_CONFIG_PATH}" --bindir)/pg_qdrant_p0_helper"; \
+       fi \
+    && if [ "${P0_FAULTS}" = 1 ]; then pgq_profile="${pgq_profile}-fault"; fi \
+    && for pgq_trace in target/debug/build/pgrx-pg-sys-*/stderr; do \
+         if [ -f "${pgq_trace}" ]; then set -- "$@" --pgrx-build-stderr "${pgq_trace}"; fi; \
+       done \
+    && for pgq_binding in target/debug/build/pgrx-pg-sys-*/out/pg17.rs; do \
+         if [ -f "${pgq_binding}" ]; then set -- "$@" --bindings-artifact "${pgq_binding}"; fi; \
+       done \
+    && python3 scripts/native_build_report.py "$@" --profile "${pgq_profile}" \
     && useradd --create-home --uid 10001 builder \
     && chown builder:builder /src/artifacts
 USER builder

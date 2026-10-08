@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "status": "signed_metadata_verified_clean_image_rebuild_pending",
+  "base_image": "ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
+  "platform": "linux/amd64",
+  "ubuntu_snapshot": "20261008T061600Z",
+  "ci_observation": {
+    "run_id": 37736655218,
+    "job_id": 113177607334,
+    "head_sha": "88885db08d17c074af097ddca14bc85d6978980c",
+    "url": "https://github.com/JamesbbBriz/pg_qdrant/actions/runs/37736655218",
+    "artifact_id": 11532787020,
+    "artifact_sha256": "79cc0f0500579fc474ac9e0b24f40c384d9adcc4b660d1b41f0be95b19a60766",
+    "native_inventory_sha256": "df4b121fd4610bbe95ef7d31bf267b8ef117e933cc3bcb69cc4d6e455f77d872",
+    "installed_entries": 246,
+    "identical_profile_inventories": 8,
+    "observed_downloads": 155,
+    "matching_signed_package_entries": 155,
+    "entries_without_logged_download": 91
+  },
+  "repository_metadata": [
+    {
+      "name": "ubuntu-noble",
+      "url": "https://snapshot.ubuntu.com/ubuntu/20261008T061600Z/dists/noble/InRelease",
+      "sha256": "cdb2f31d809f589719a53c6ad15f255b27569c4059542ada282aaa21b8e164b0",
+      "size": 255850
+    },
+    {
+      "name": "ubuntu-noble-updates",
+      "url": "https://snapshot.ubuntu.com/ubuntu/20261008T061600Z/dists/noble-updates/InRelease",
+      "sha256": "23d0cc537f13aead7bab160048cfb90251b69b96336530af194f49385f3f7b98",
+      "size": 126125
+    },
+    {
+      "name": "ubuntu-noble-security",
+      "url": "https://snapshot.ubuntu.com/ubuntu/20261008T061600Z/dists/noble-security/InRelease",
+      "sha256": "8398a7b7719c777fded0b28706174ca75af6755d04fc5ab38773bfb29901c5bf",
+      "size": 126127
+    },
+    {
+      "name": "ubuntu-noble-backports",
+      "url": "https://snapshot.ubuntu.com/ubuntu/20261008T061600Z/dists/noble-backports/InRelease",
+      "sha256": "ece680fd6473ad17377ef82809b7f84328c714fef427b43ab820e771f071caf6",
+      "size": 126173
+    },
+    {
+      "name": "pgdg-archive",
+      "url": "https://apt-archive.postgresql.org/pub/repos/apt/dists/noble-pgdg-archive/InRelease",
+      "sha256": "8f20bd276e9c843d5199a27d799c724f649bb4e61d7950304e7676d56de58ab8",
+      "size": 5615
+    },
+    {
+      "name": "pgdg-key",
+      "url": "https://www.postgresql.org/media/keys/ACCC4CF8.asc",
+      "sha256": "0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76",
+      "size": 4812
+    }
+  ],
+  "signature_verification": [
+    {
+      "file": "pgdg-archive.InRelease",
+      "valid_signatures": [
+        "B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8"
+      ]
+    },
+    {
+      "file": "ubuntu-noble-backports.InRelease",
+      "valid_signatures": [
+        "F6ECB3762474EDA9D21B7022871920D1991BC93C"
+      ]
+    },
+    {
+      "file": "ubuntu-noble-security.InRelease",
+      "valid_signatures": [
+        "F6ECB3762474EDA9D21B7022871920D1991BC93C"
+      ]
+    },
+    {
+      "file": "ubuntu-noble-updates.InRelease",
+      "valid_signatures": [
+        "F6ECB3762474EDA9D21B7022871920D1991BC93C"
+      ]
+    },
+    {
+      "file": "ubuntu-noble.InRelease",
+      "valid_signatures": [
+        "F6ECB3762474EDA9D21B7022871920D1991BC93C"
+      ]
+    }
+  ],
+  "bootstrap_ca_package": {
+    "package": "ca-certificates",
+    "architecture": "all",
+    "version": "20260601~24.04.1",
+    "filename": "pool/main/c/ca-certificates/ca-certificates_20260601~24.04.1_all.deb",
+    "deb_sha256": "6bac2a01979e210d9eac1d4d56747ec709ea60654744d66705dc3c36e7629e50",
+    "deb_size": 139430,
+    "package_index_sha256": "3ec3c18993414db1a8146c7c5bf35cf36f18b739de946dcf1d3c292045bf5118"
+  },
+  "package_index_checks": [
+    {
+      "file": "ubuntu-noble-main-binary-amd64-Packages.xz",
+      "size": 1401160,
+      "sha256": "2a6a199e1031a5c279cb346646d594993f35b1c03dd4a82aaa0323980dd92451",
+      "matches_signed_inrelease": true
+    },
+    {
+      "file": "ubuntu-noble-updates-main-binary-amd64-Packages.xz",
+      "size": 1374836,
+      "sha256": "3ec3c18993414db1a8146c7c5bf35cf36f18b739de946dcf1d3c292045bf5118",
+      "matches_signed_inrelease": true
+    },
+    {
+      "file": "ubuntu-noble-updates-universe-binary-amd64-Packages.xz",
+      "size": 1701904,
+      "sha256": "c5717072edff98ed519e2029151446517fe5e612cf2ac4fff1a5dafcc9a88965",
+      "matches_signed_inrelease": true
+    },
+    {
+      "file": "pgdg-archive-main-binary-amd64-Packages.bz2",
+      "size": 2964619,
+      "sha256": "f05ee0a03d9b5a621bbf353c3c082f52f0d84bdc2c4087291405a5d694e6ecf7",
+      "matches_signed_inrelease": true
+    }
+  ],
+  "limits": [
+    "The fixed snapshot and package metadata were fetched and signatures/hashes verified without installing packages or running Docker.",
+    "The seven PGDG archive hashes are from verified signed metadata, not a new download of those .deb files.",
+    "PGDG historical metadata is a moving all-versions archive; package version pins, deny rules, archive checksums and final inventory equality provide the proposed build gate.",
+    "No claim of bit-identical compiler output, final CPU compatibility, release packaging or complete native license audit."
+  ],
+  "primary_references": [
+    "https://snapshot.ubuntu.com/",
+    "https://apt-archive.postgresql.org/",
+    "https://manpages.ubuntu.com/manpages/noble/man5/apt_preferences.5.html",
+    "https://docs.docker.com/reference/dockerfile/#add---checksum"
+  ],
+  "bootstrap_local_check": {
+    "archive_bytes_downloaded_and_hash_verified": true,
+    "package_control_identity": [
+      "ca-certificates",
+      "20260601~24.04.1",
+      "all"
+    ],
+    "root_certificates_extracted": 121,
+    "extracted_bundle_sha256": "9481fcd95f41b221f02f14d896535fe500bec539bc563c4cdca1acee483a8bdd",
+    "isolated_bundle_tls_check": "failed_certificate_verify_unable_to_get_local_issuer_in_review_environment",
+    "docker_or_apt_bootstrap_executed": false,
+    "limitation": "The extracted package roots alone did not validate the endpoint in the review network. No trust weakening or injected private root was used; the unchanged public-root bootstrap must pass in the clean CI image before adoption."
+  },
+  "safe_local_checks": {
+    "native_verifier_unit_tests": 9,
+    "failed": 0,
+    "ignored": 0,
+    "historical_ci7_inventory_comparison": "passed_246_entries",
+    "clean_rebuild": "not_run"
+  }
+}

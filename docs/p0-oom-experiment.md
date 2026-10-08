@@ -1,9 +1,11 @@
 # P0 directed OOM comparison
 
-Status: reviewable experiment; no positive OOM outcome is established by the
-implementation or by its negative tests. This experiment is separate from the
-ordinary SQL, SIGKILL, abort, and 125-second helper-stop tests. It does not change
-the selected production architecture or establish a production memory quota.
+Status: both directed OOM comparisons passed their stated assertions in
+[CI7](evidence/p0-source-capacity-oom-ci.json), head `88885db`. Exact kernel
+victim/cgroup records support the result; source and negative tests alone do not.
+Direct-worker containment failed as expected; the native helper preserved its
+PostgreSQL supervisor and companion session. This remains separate from ordinary
+SIGKILL/abort and the 125-second stop test, and is not a production memory quota.
 
 The native operation is compiled only with `p0-fault-injection`. That feature
 forwards to the existing Edge adapter and enables an exact optional
@@ -106,7 +108,8 @@ The P0 workflow now wires two sequential positive OOM steps after successful
 private image builds. Independent failure conditions keep a failed direct
 comparison from hiding the helper comparison; the experiments do not run
 concurrently. A final always-run artifact upload retains both directories.
-Positive execution remains pending. The regenerated
+The [recorded CI7 execution](evidence/p0-source-capacity-oom-ci.json) passed
+both comparisons. The regenerated
 [normal dependency graph](dependency-graph.json),
 [four-profile feature comparison](dependency-profiles.json) and
 [dependency baseline](dependency-baseline.json) identify the integrated normal
@@ -129,3 +132,27 @@ source inputs: all four extension profiles and both helper binary profiles pass
 compilation; three native guard tests and eight Python OOM decision tests pass.
 No positive OOM allocation or new PostgreSQL SQL execution occurred locally.
 A CI result must independently prove its target victim and PostgreSQL outcome.
+
+## Recorded positive outcome
+
+The verified archive contains the actual inner SQL reports, ready identities,
+native allocation records, replacement engine reports and PostgreSQL logs.
+They agree with the outer kernel selector/killed-process records for each exact
+host PID and limiting memory cgroup. Each run has one OOM kill, no group kill and
+no external, supervisor or client kill intervention.
+
+| Observation | Direct worker | Managed helper |
+| --- | --- | --- |
+| `memory.events.local` delta: max / oom / oom_kill | 219 / 1 / 1 | 224 / 1 / 1 |
+| Faulting SQL client exit | 2, PostgreSQL recovery | 1, managed helper disconnected |
+| Companion SQL client exit | 2, terminated | 0, completed |
+| PostgreSQL supervisor | Replaced during PG recovery | Same process survives |
+| Committed PostgreSQL marker | Retained | Retained |
+| Replacement Edge smoke | 16 groups passed | 16 groups passed |
+| Counters after replacement work | No additional OOM kill | No additional OOM kill |
+
+Inner reports retain `correlated_only`; matching external kernel records establish
+the outer `kernel_record` attribution. The helper's roughly 30-second recorded
+recovery interval includes waiting for the already running companion `pg_sleep`;
+it is not a restart-latency measurement. The deliberate positive OOM preference
+and tiny fixture do not establish general memory isolation or index durability.

@@ -1,0 +1,15 @@
+Package: postgresql-17 postgresql-client-17 postgresql-server-dev-17
+Pin: version 17.11-1.pgdg24.04+2
+Pin-Priority: 1001
+
+Package: postgresql-common postgresql-client-common
+Pin: version 293.pgdg24.04+1
+Pin-Priority: 1001
+
+Package: libpq5 libpq-dev
+Pin: version 18.6-1.pgdg24.04+2
+Pin-Priority: 1001
+
+Package: *
+Pin: release o=apt-archive.postgresql.org
+Pin-Priority: -1

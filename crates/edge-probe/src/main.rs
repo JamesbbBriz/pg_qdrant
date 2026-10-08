@@ -1,7 +1,24 @@
 mod fault_probes;
 
 fn main() {
-    let mut args = std::env::args_os().skip(1);
+    let arguments: Vec<_> = std::env::args_os().skip(1).collect();
+    if arguments
+        .first()
+        .is_some_and(|argument| argument == "--cpu-check")
+    {
+        if arguments.len() != 1 {
+            eprintln!("--cpu-check does not accept additional arguments");
+            std::process::exit(2);
+        }
+        let report = pg_qdrant_edge_probe::cpu_report();
+        println!("{}", serde_json::to_string_pretty(&report).unwrap());
+        std::process::exit(if report["admitted"] == true { 0 } else { 78 });
+    }
+    if let Err(error) = pg_qdrant_edge_probe::cpu::require() {
+        eprintln!("{error}");
+        std::process::exit(78);
+    }
+    let mut args = arguments.into_iter();
     if let Some(command) = args.next() {
         if command == "--corruption-probe"
             || command == "--disk-full-probe"

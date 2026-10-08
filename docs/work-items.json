@@ -1238,6 +1238,17 @@
           "source_paths": [
             "crates/edge-probe/tests/persistence.rs"
           ]
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_negative_input_characterization",
+          "status": "passed",
+          "source": "docs/evidence/p0-negative-inputs-local.json",
+          "scope": "Seventeen owned children characterize eight typed errors, eight accepted cases including the phrase control, and one caught Rust panic. Finite values, sparse shape/unique indices, vector names/dimensions and phrase prerequisites require adapter checks. Observing this behavior does not pass product input-rejection acceptance.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#fts-ranking-matching-analysis-and-presentation",
@@ -1345,7 +1356,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
       }
     },
     {
@@ -1930,6 +1942,17 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "decision_pending": "I-07: quality, lifecycle, fusion and license comparison before adopting a completion path."
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_isolated_tantivy_primitives",
+          "status": "passed",
+          "source": "docs/evidence/p0-tantivy-local.json",
+          "scope": "The independent pinned Tantivy workspace passes five primitive cases. Returned fuzzy expansions are bounded; cross-value/reversed phrase matching, missing fuzzy highlight terms and reader-reload boundaries remain explicit. There is no core dependency adoption, common analyzer, held-out quality benchmark, dual-engine lifecycle or formal FTS completion.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#fts-ranking-matching-analysis-and-presentation",
@@ -2038,7 +2061,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
       }
     },
     {
@@ -2062,6 +2086,17 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "decision_pending": "I-07: quality, lifecycle, fusion and license comparison before adopting a completion path."
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_isolated_tantivy_primitives",
+          "status": "passed",
+          "source": "docs/evidence/p0-tantivy-local.json",
+          "scope": "The independent pinned Tantivy workspace passes five primitive cases. Returned fuzzy expansions are bounded; cross-value/reversed phrase matching, missing fuzzy highlight terms and reader-reload boundaries remain explicit. There is no core dependency adoption, common analyzer, held-out quality benchmark, dual-engine lifecycle or formal FTS completion.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#fts-ranking-matching-analysis-and-presentation",
@@ -2168,7 +2203,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
       }
     },
     {
@@ -2192,6 +2228,17 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "decision_pending": "I-07: quality, lifecycle, fusion and license comparison before adopting a completion path."
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_isolated_tantivy_primitives",
+          "status": "passed",
+          "source": "docs/evidence/p0-tantivy-local.json",
+          "scope": "The independent pinned Tantivy workspace passes five primitive cases. Returned fuzzy expansions are bounded; cross-value/reversed phrase matching, missing fuzzy highlight terms and reader-reload boundaries remain explicit. There is no core dependency adoption, common analyzer, held-out quality benchmark, dual-engine lifecycle or formal FTS completion.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#fts-ranking-matching-analysis-and-presentation",
@@ -2298,7 +2345,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
       }
     },
     {
@@ -2453,6 +2501,17 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "decision_pending": "I-07: quality, lifecycle, fusion and license comparison before adopting a completion path."
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_isolated_tantivy_primitives",
+          "status": "passed",
+          "source": "docs/evidence/p0-tantivy-local.json",
+          "scope": "The independent pinned Tantivy workspace passes five primitive cases. Returned fuzzy expansions are bounded; cross-value/reversed phrase matching, missing fuzzy highlight terms and reader-reload boundaries remain explicit. There is no core dependency adoption, common analyzer, held-out quality benchmark, dual-engine lifecycle or formal FTS completion.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#fts-ranking-matching-analysis-and-presentation",
@@ -2565,7 +2624,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
       }
     },
     {
@@ -2857,6 +2917,17 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "decision_pending": "I-07: quality, lifecycle, fusion and license comparison before adopting a completion path."
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_isolated_tantivy_primitives",
+          "status": "passed",
+          "source": "docs/evidence/p0-tantivy-local.json",
+          "scope": "The independent pinned Tantivy workspace passes five primitive cases. Returned fuzzy expansions are bounded; cross-value/reversed phrase matching, missing fuzzy highlight terms and reader-reload boundaries remain explicit. There is no core dependency adoption, common analyzer, held-out quality benchmark, dual-engine lifecycle or formal FTS completion.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#fts-ranking-matching-analysis-and-presentation",
@@ -2966,7 +3037,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
       }
     },
     {
@@ -3008,6 +3080,17 @@
             "named_dense_exact"
           ],
           "fixture_points": 8
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_negative_input_characterization",
+          "status": "passed",
+          "source": "docs/evidence/p0-negative-inputs-local.json",
+          "scope": "Seventeen owned children characterize eight typed errors, eight accepted cases including the phrase control, and one caught Rust panic. Finite values, sparse shape/unique indices, vector names/dimensions and phrase prerequisites require adapter checks. Observing this behavior does not pass product input-rejection acceptance.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#vector-representations-and-storage",
@@ -3116,7 +3199,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
       }
     },
     {
@@ -3174,6 +3258,17 @@
           "source_paths": [
             "crates/edge-probe/tests/persistence.rs"
           ]
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_negative_input_characterization",
+          "status": "passed",
+          "source": "docs/evidence/p0-negative-inputs-local.json",
+          "scope": "Seventeen owned children characterize eight typed errors, eight accepted cases including the phrase control, and one caught Rust panic. Finite values, sparse shape/unique indices, vector names/dimensions and phrase prerequisites require adapter checks. Observing this behavior does not pass product input-rejection acceptance.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#vector-representations-and-storage",
@@ -3283,7 +3378,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
       }
     },
     {
@@ -3340,6 +3436,17 @@
           "source_paths": [
             "crates/edge-probe/tests/persistence.rs"
           ]
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_negative_input_characterization",
+          "status": "passed",
+          "source": "docs/evidence/p0-negative-inputs-local.json",
+          "scope": "Seventeen owned children characterize eight typed errors, eight accepted cases including the phrase control, and one caught Rust panic. Finite values, sparse shape/unique indices, vector names/dimensions and phrase prerequisites require adapter checks. Observing this behavior does not pass product input-rejection acceptance.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#vector-representations-and-storage",
@@ -3450,7 +3557,8 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
       }
     },
     {
@@ -6237,6 +6345,18 @@
           "forced_postgresql_supervisor_sigkill_verified": false,
           "total_start_attempts": 4,
           "automatic_restarts": 3
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_four_profiles",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "CI7 builds and installs all four images; SQL 19/21/19/25 and helper pipes 7/8 pass. Source diagnostics are superuser-only fixture probes. Production indexing, permissions and release remain incomplete.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -6343,10 +6463,10 @@
         "diagnostic_sql_runtime_verified": true,
         "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed",
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed",
         "direct_worker_production_containment": "failed",
         "helper_postgresql_containment": "passed_named_native_failures",
         "helper_comparison_required": true,
@@ -6357,7 +6477,8 @@
         "helper_hard_stop_runtime_verified": true,
         "helper_supervisor_sigterm_runtime_verified": true,
         "helper_restart_exhaustion_runtime_verified": true,
-        "native_query_cancellation": false
+        "native_query_cancellation": false,
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
     },
     {
@@ -6737,6 +6858,29 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_ci7_disk_capacity",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "Already-flushed eight-row/four-representation full-text configuration-save ENOSPC/retry/reopen and separate clean reopen pass on exactly 384 MiB. Narrow 32 MiB passes; exactly 128 MiB refuses before writes. No dirty-ingestion, WAL-replay, PostgreSQL atomicity or backup claim.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_dirty_refusal_fixture_reconstruction",
+          "status": "passed",
+          "source": "docs/evidence/p0-dirty-rebuild-local.json",
+          "scope": "An owned child is killed after mutations and before explicit flush. The controller refuses the old generation, preserves 36 files and builds a new generation from a complete fixture, verifying deletion, primary-key reuse and revision decisions. This is not a PostgreSQL data loop, ACK crash cut, unflushed-survival or production-generation cutover test.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -6847,7 +6991,12 @@
         "positive_enospc_experiment_status": "failed",
         "positive_enospc_runtime_verified": false,
         "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true
+        "positive_enospc_retry_required": true,
+        "latest_scoped_evidence": "docs/evidence/p0-dirty-rebuild-local.json",
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed"
       }
     },
     {
@@ -6884,6 +7033,18 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_six_source_recheck_groups",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "The original six source-identity/recheck groups pass per profile: tagged keys, revision/incarnation/fingerprint comparison, active-statement and repeatable-read visibility, strict source/RLS refusal, DDL guards and pre-SPI cancellation. This does not allocate stable identities, capture source changes or implement production SELECT, tenant or RLS support. The later inside-SPI group is excluded.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -6988,7 +7149,12 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed"
       }
     },
     {
@@ -7111,7 +7277,31 @@
       "phase": "P3",
       "owner": "catalog/lifecycle",
       "status": "pending",
-      "evidence": [],
+      "evidence": [
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_ci7_disk_capacity",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "Already-flushed eight-row/four-representation full-text configuration-save ENOSPC/retry/reopen and separate clean reopen pass on exactly 384 MiB. Narrow 32 MiB passes; exactly 128 MiB refuses before writes. No dirty-ingestion, WAL-replay, PostgreSQL atomicity or backup claim.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_dirty_refusal_fixture_reconstruction",
+          "status": "passed",
+          "source": "docs/evidence/p0-dirty-rebuild-local.json",
+          "scope": "An owned child is killed after mutations and before explicit flush. The controller refuses the old generation, preserves 36 files and builds a new generation from a complete fixture, verifying deletion, primary-key reuse and revision decisions. This is not a PostgreSQL data loop, ACK crash cut, unflushed-survival or production-generation cutover test.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
+        }
+      ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
       "deliverable": "Truthful tasks/status, query-only versus rebuild/reencode classification and atomic new-generation switch.",
       "dependencies": [
@@ -7217,7 +7407,12 @@
         "full_capability_acceptance": false,
         "sql_product_integration_verified": false,
         "release_supported": false,
-        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+        "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
+        "latest_scoped_evidence": "docs/evidence/p0-dirty-rebuild-local.json",
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed"
       }
     },
     {
@@ -7376,6 +7571,29 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "workflow_conclusion": "failure"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_four_profiles",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "CI7 builds and installs all four images; SQL 19/21/19/25 and helper pipes 7/8 pass. Source diagnostics are superuser-only fixture probes. Production indexing, permissions and release remain incomplete.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_negative_input_characterization",
+          "status": "passed",
+          "source": "docs/evidence/p0-negative-inputs-local.json",
+          "scope": "Seventeen owned children characterize eight typed errors, eight accepted cases including the phrase control, and one caught Rust panic. Finite values, sparse shape/unique indices, vector names/dimensions and phrase prerequisites require adapter checks. Observing this behavior does not pass product input-rejection acceptance.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7488,10 +7706,11 @@
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed"
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed",
+        "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
       }
     },
     {
@@ -7633,6 +7852,18 @@
             "normal": 7,
             "private_fault": 8
           }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_six_source_recheck_groups",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "The original six source-identity/recheck groups pass per profile: tagged keys, revision/incarnation/fingerprint comparison, active-statement and repeatable-read visibility, strict source/RLS refusal, DDL guards and pre-SPI cancellation. This does not allocate stable identities, capture source changes or implement production SELECT, tenant or RLS support. The later inside-SPI group is excluded.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -7748,10 +7979,11 @@
         "authorization_limit": "Actual diagnostic ACL and runtime-superuser checks pass; synthetic tenant filters and restricted diagnostics do not establish indexed-source SELECT/column/RLS safety.",
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed"
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed",
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
     },
     {
@@ -8021,6 +8253,30 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "workflow_conclusion": "failure"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_four_profiles",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "CI7 builds and installs all four images; SQL 19/21/19/25 and helper pipes 7/8 pass. Source diagnostics are superuser-only fixture probes. Production indexing, permissions and release remain incomplete.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_kernel_oom",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "Exact kernel victim and limiting-cgroup records identify the target in two 768 MiB/no-swap runs. Direct-worker death terminates companion SQL; helper death retains the supervisor and companion. Both retain the committed marker and pass 16 replacement-engine checks. No external, client or supervisor kill intervenes. The directed OOM preference does not establish production memory isolation.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -8129,10 +8385,10 @@
         "helper_comparison_required": true,
         "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed",
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed",
         "helper_comparison_scoped_result": "passed",
         "preferred_topology_candidate": "managed_helper",
         "forced_postgresql_supervisor_sigkill_verified": false,
@@ -8144,7 +8400,8 @@
         "positive_enospc_experiment_status": "failed",
         "positive_enospc_runtime_verified": false,
         "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true
+        "positive_enospc_retry_required": true,
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
     },
     {
@@ -8739,6 +8996,18 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "workflow_conclusion": "failure"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_four_profiles",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "CI7 builds and installs all four images; SQL 19/21/19/25 and helper pipes 7/8 pass. Source diagnostics are superuser-only fixture probes. Production indexing, permissions and release remain incomplete.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "deliverable": "Real manifests and Cargo.lock, exact compiler and matched pgrx tool, selected features, container/system libraries/PG headers/CPU inputs, actual dependency and license inventories.",
@@ -8782,10 +9051,11 @@
         "release_supported": false,
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed"
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed",
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
     },
     {
@@ -8917,6 +9187,28 @@
             "normal": 7,
             "private_fault": 8
           }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "compile-verified",
+          "kind": "p0_callable_inventory_compilation",
+          "status": "passed",
+          "source": "docs/evidence/p0-method-input-rebuild-local.json",
+          "scope": "43 concrete method call bodies compile for 44 reviewed declarations; refresh_with has an explicit inaccessible-type exclusion. All 25 normal engine tests and four PG compile profiles pass at the recorded source hashes.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_negative_input_characterization",
+          "status": "passed",
+          "source": "docs/evidence/p0-negative-inputs-local.json",
+          "scope": "Seventeen owned children characterize eight typed errors, eight accepted cases including the phrase control, and one caught Rust panic. Finite values, sparse shape/unique indices, vector names/dimensions and phrase prerequisites require adapter checks. Observing this behavior does not pass product input-rejection acceptance.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Every selected public query/match/vector/storage/payload/read/update/lifecycle variant maps to a formal ID or explicit scope exclusion; probes cover real invocations and negative unsupported types.",
@@ -8966,7 +9258,8 @@
         "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
         "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
         "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed"
+        "latest_ci_workflow_conclusion": "failed",
+        "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
       }
     },
     {
@@ -9264,6 +9557,30 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "workflow_conclusion": "failure"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_four_profiles",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "CI7 builds and installs all four images; SQL 19/21/19/25 and helper pipes 7/8 pass. Source diagnostics are superuser-only fixture probes. Production indexing, permissions and release remain incomplete.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_kernel_oom",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "Exact kernel victim and limiting-cgroup records identify the target in two 768 MiB/no-swap runs. Direct-worker death terminates companion SQL; helper death retains the supervisor and companion. Both retain the committed marker and pass 16 replacement-engine checks. No external, client or supervisor kill intervenes. The directed OOM preference does not establish production memory isolation.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "deliverable": "Minimal loaded extension, owned IPC and two sessions plus panic/native crash/SIGKILL/constrained OOM/disk-full experiments; measured background-worker versus managed-helper go/no-go.",
@@ -9315,10 +9632,10 @@
         "release_supported": false,
         "helper_initial_standalone_observation": "normal_7_and_private_8_checks_passed_locally_and_repeated_in_second_ci",
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed",
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed",
         "helper_comparison_scoped_result": "passed",
         "preferred_topology_candidate": "managed_helper",
         "forced_postgresql_supervisor_sigkill_verified": false,
@@ -9330,7 +9647,8 @@
         "positive_enospc_experiment_status": "failed",
         "positive_enospc_runtime_verified": false,
         "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true
+        "positive_enospc_retry_required": true,
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
     },
     {
@@ -9428,6 +9746,18 @@
             "acl_runtime_superuser_and_input_validation"
           ],
           "command": "bash crates/pg_qdrant/tests/run-p0.sh"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_six_source_recheck_groups",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "The original six source-identity/recheck groups pass per profile: tagged keys, revision/incarnation/fingerprint comparison, active-statement and repeatable-read visibility, strict source/RLS refusal, DDL guards and pre-SPI cancellation. This does not allocate stable identities, capture source changes or implement production SELECT, tenant or RLS support. The later inside-SPI group is excluded.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "deliverable": "Multi-role/column/index privilege and unsafe-RLS negative tests, trusted tenant domains if adopted, no hits/snippets/count/example/cache/explain leakage, bounded source-version refill.",
@@ -9465,6 +9795,20 @@
           "observed_result",
           "limits_and_failures"
         ]
+      },
+      "full_acceptance_complete": false,
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed"
       }
     },
     {
@@ -9577,6 +9921,17 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_isolated_tantivy_primitives",
+          "status": "passed",
+          "source": "docs/evidence/p0-tantivy-local.json",
+          "scope": "The independent pinned Tantivy workspace passes five primitive cases. Returned fuzzy expansions are bounded; cross-value/reversed phrase matching, missing fuzzy highlight terms and reader-reload boundaries remain explicit. There is no core dependency adoption, common analyzer, held-out quality benchmark, dual-engine lifecycle or formal FTS completion.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Compare bounded extension policies, direct Tantivy and pg_search using fixed-version primitives, multilingual quality, install/license cost, lifecycle and outer-fusion requirements; select a concrete completion path before core Alpha.",
@@ -9615,7 +9970,15 @@
         ]
       },
       "full_acceptance_complete": false,
-      "release_supported": false
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false
+      }
     },
     {
       "id": "I-08",
@@ -9769,6 +10132,29 @@
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_ci7_disk_capacity",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "Already-flushed eight-row/four-representation full-text configuration-save ENOSPC/retry/reopen and separate clean reopen pass on exactly 384 MiB. Narrow 32 MiB passes; exactly 128 MiB refuses before writes. No dirty-ingestion, WAL-replay, PostgreSQL atomicity or backup claim.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_dirty_refusal_fixture_reconstruction",
+          "status": "passed",
+          "source": "docs/evidence/p0-dirty-rebuild-local.json",
+          "scope": "An owned child is killed after mutations and before explicit flush. The controller refuses the old generation, preserves 36 files and builds a new generation from a complete fixture, verifying deletion, primary-key reuse and revision decisions. This is not a PostgreSQL data loop, ACK crash cut, unflushed-survival or production-generation cutover test.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
         }
       ],
       "deliverable": "Concurrent queries pin generations while mutations/late outputs/deletes/rebuild/optimize/restarts interleave; crash, disk-full and corruption cannot create false readiness or lost durable events.",
@@ -9818,7 +10204,12 @@
         "positive_enospc_experiment_status": "failed",
         "positive_enospc_runtime_verified": false,
         "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true
+        "positive_enospc_retry_required": true,
+        "latest_scoped_evidence": "docs/evidence/p0-dirty-rebuild-local.json",
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed"
       }
     },
     {
@@ -10135,6 +10526,18 @@
             "normal": 7,
             "private_fault": 8
           }
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_four_profiles",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "CI7 builds and installs all four images; SQL 19/21/19/25 and helper pipes 7/8 pass. Source diagnostics are superuser-only fixture probes. Production indexing, permissions and release remain incomplete.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "deliverable": "Supported platform artifacts with library/control/install/upgrade SQL, tested clean installation/uninstall, current README/API/examples and executable operating/recovery runbooks.",
@@ -10183,10 +10586,11 @@
         "release_supported": false,
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed"
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed",
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
     },
     {
@@ -10473,6 +10877,18 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "workflow_conclusion": "failure"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "SQL-integration-verified",
+          "kind": "p0_ci7_kernel_oom",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "Exact kernel victim and limiting-cgroup records identify the target in two 768 MiB/no-swap runs. Direct-worker death terminates companion SQL; helper death retains the supervisor and companion. Both retain the committed marker and pass 16 replacement-engine checks. No external, client or supervisor kill intervenes. The directed OOM preference does not establish production memory isolation.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
         }
       ],
       "deliverable": "Enforced queues, candidate/HasId/token/matrix/response bounds, engine threads and RSS/mmap, cancellation from SQL through every stage, overload behavior and resumable maintenance.",
@@ -10520,10 +10936,10 @@
         "release_supported": false,
         "diagnostic_sql_runtime_verified": true,
         "helper_postgresql_runtime_verified": true,
-        "latest_ci_evidence": "docs/evidence/p0-helper-ci.json",
-        "verified_ci_head": "a22d3c73ad838ff606a080345b65d634f5144c39",
-        "verified_ci_tree": "9db0bd4a20780be31b07b018fdbc0d029983e5ab",
-        "latest_ci_workflow_conclusion": "failed",
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed",
         "helper_hard_stop_runtime_verified": true,
         "helper_supervisor_sigterm_runtime_verified": true,
         "helper_restart_exhaustion_runtime_verified": true,
@@ -10531,7 +10947,8 @@
         "positive_enospc_experiment_status": "failed",
         "positive_enospc_runtime_verified": false,
         "positive_enospc_child_exit_cause": "unknown",
-        "positive_enospc_retry_required": true
+        "positive_enospc_retry_required": true,
+        "latest_scoped_evidence": "docs/evidence/p0-source-capacity-oom-ci.json"
       }
     },
     {
@@ -10650,7 +11067,31 @@
       "phase": "P3",
       "owner": "lifecycle/recovery",
       "status": "pending",
-      "evidence": [],
+      "evidence": [
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_ci7_disk_capacity",
+          "status": "passed",
+          "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+          "scope": "Already-flushed eight-row/four-representation full-text configuration-save ENOSPC/retry/reopen and separate clean reopen pass on exactly 384 MiB. Narrow 32 MiB passes; exactly 128 MiB refuses before writes. No dirty-ingestion, WAL-replay, PostgreSQL atomicity or backup claim.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false,
+          "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-08",
+          "level": "engine-runtime-verified",
+          "kind": "p0_dirty_refusal_fixture_reconstruction",
+          "status": "passed",
+          "source": "docs/evidence/p0-dirty-rebuild-local.json",
+          "scope": "An owned child is killed after mutations and before explicit flush. The controller refuses the old generation, preserves 36 files and builds a new generation from a complete fixture, verifying deletion, primary-key reuse and revision decisions. This is not a PostgreSQL data loop, ACK crash cut, unflushed-survival or production-generation cutover test.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": false,
+          "release_supported": false
+        }
+      ],
       "deliverable": "Execute source/config/BYOV rebuild; independently test pg_dump metadata, base backup, PITR, physical replication and failover before supporting each; timeline mismatch cannot open an unverified serving shard.",
       "dependencies": [
         "W-L07",
@@ -10687,6 +11128,20 @@
           "observed_result",
           "limits_and_failures"
         ]
+      },
+      "full_acceptance_complete": false,
+      "release_supported": false,
+      "probe_progress": {
+        "checkpoint": "docs/p0-report.md",
+        "observed_on": "2026-10-08",
+        "latest_scoped_evidence": "docs/evidence/p0-dirty-rebuild-local.json",
+        "full_capability_acceptance": false,
+        "sql_product_integration_verified": false,
+        "release_supported": false,
+        "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "latest_ci_workflow_conclusion": "passed"
       }
     }
   ],
@@ -10694,9 +11149,9 @@
     "observed_on": "2026-10-08",
     "starting_revision": "f3b4cff09e3abc2aaaa3c647028aef4942d89636",
     "report": "docs/p0-report.md",
-    "engine_evidence": "docs/evidence/p0-engine-extended.json",
+    "engine_evidence": "docs/evidence/p0-method-input-rebuild-local.json",
     "dependency_evidence": "docs/dependency-baseline.json",
-    "source_identity": "CI6 engine/container and four-profile PostgreSQL results apply only to d8437068 and its identical merge tree. The later integrated local snapshot has 23 ordinary engine tests, three private OOM guard tests and successful compilation of all four extension profiles; its new SQL and positive resource experiments remain pending.",
+    "source_identity": "CI7 results bind head 88885db and its identical merge tree. Later callable-method, invalid-input and dirty-rebuild source passes 25 normal engine tests and four PG compile profiles locally; the new inside-SPI group, heap restriction and native/CPU changes require their own clean CI.",
     "p0_exit_passed": false,
     "sql_runtime_verified": true,
     "product_completed": false,
@@ -10707,33 +11162,33 @@
     "container_runtime_verified": true,
     "postgres_fault_cdylib_and_schema_verified": true,
     "postgresql_ci_evidence": "docs/evidence/p0-postgresql-ci.json",
-    "verified_ci_head": "d84370682e9a2a7f0455c9c6a877ad2d09d45b57",
-    "verified_ci_checkout": "5009fbbf07630690a4909133566ac5ed748f6fc8",
-    "verified_ci_tree": "baba67b93ffceca35eaadfbbf524d4c04b8efc5a",
+    "verified_ci_head": "88885db08d17c074af097ddca14bc85d6978980c",
+    "verified_ci_checkout": "18282abe660b4a3a59a8222f072c5b1cd069a2ae",
+    "verified_ci_tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
     "diagnostic_sql_runtime_verified": true,
     "sql_runtime_scope": "Recorded direct-worker and managed-helper P0 diagnostics only; source-table indexing, source permissions and public search remain unimplemented.",
     "direct_worker_production_containment": "failed",
-    "managed_helper_comparison": "scoped_sql_and_native_faults_passed; preferred_candidate; production_topology_pending",
+    "managed_helper_comparison": "scoped_sql_native_and_kernel_oom_passed; conditional_go; production_data_loop_pending",
     "helper_postgresql_runtime_verified": true,
     "metadata_corruption_runtime_verified": true,
     "positive_enospc_runtime_verified": true,
     "evidence_scope": "Every verification level applies only to its named probe. All product completion and release flags remain false.",
     "helper_initial_standalone_observation": "Historical local 7/8 pass records do not independently prove controller-SIGKILL cleanup without a live PID precondition. CI2 and CI6 independently passed both pipe suites; the CI4 process-observer failure remains a separate historical result.",
     "helper_hard_stop_runtime_verified": true,
-    "latest_ci_evidence": "docs/evidence/p0-capacity-and-sql-ci.json",
-    "verified_ci_scope": "Four images, 20 engine tests, two child tests, nine Python diagnostics, all four SQL profiles (13/15/13/19), both helper pipe suites (7/8) and narrow 32 MiB ENOSPC passed. Both separate 128 MiB full-text experiments failed with SIGBUS at recovery_reopen; no steps were skipped.",
-    "latest_ci_run": 37732857051,
-    "latest_ci_job": 113165715578,
-    "latest_ci_workflow_conclusion": "failed",
+    "latest_ci_evidence": "docs/evidence/p0-source-capacity-oom-ci.json",
+    "verified_ci_scope": "All four images, SQL 19/21/19/25, helper pipes 7/8, 23 normal engine tests, two child tests, 21 Python tests and three distinct private OOM guards pass. The original six source-recheck groups pass per profile. Narrow 32 MiB and full-text 384 MiB fault/clean reopen and exact 128 MiB zero-write refusal pass. Exact kernel OOM attribution passes both profiles; direct-worker containment fails and helper containment passes this controlled experiment.",
+    "latest_ci_run": 37736655218,
+    "latest_ci_job": 113177607334,
+    "latest_ci_workflow_conclusion": "passed",
     "helper_postgresql_containment": "passed_named_native_failures",
     "helper_hard_stop_limit_ms": 125000,
     "helper_native_query_cancellation": false,
     "helper_supervisor_sigterm_runtime_verified": true,
     "helper_restart_exhaustion_runtime_verified": true,
     "forced_postgresql_supervisor_sigkill_verified": true,
-    "kernel_oom_runtime_verified": false,
-    "positive_enospc_experiment_status": "passed_narrow_configuration_save_only",
-    "positive_enospc_child_exit_cause": "Exit 0 for narrow CI4/CI5/CI6; SIGBUS for full-text CI5 and both full-text CI6 experiments; initial CI2 cause remains unknown.",
+    "kernel_oom_runtime_verified": true,
+    "positive_enospc_experiment_status": "passed_narrow_and384m_flushed_full_text_configuration_save_recovery",
+    "positive_enospc_child_exit_cause": "CI7 narrow and full-text native exits are zero. The CI5/CI6 128 MiB SIGBUS failures and the unknown CI2 cause remain recorded.",
     "preferred_topology_candidate": "managed_helper",
     "ci_history": [
       {
@@ -10783,10 +11238,18 @@
         "tree": "baba67b93ffceca35eaadfbbf524d4c04b8efc5a",
         "workflow_conclusion": "failed",
         "scope": "Four images, 20 engine tests, two child tests, nine Python diagnostics, all four SQL profiles (13/15/13/19), both helper pipe suites (7/8) and narrow 32 MiB ENOSPC passed. Both separate 128 MiB full-text experiments failed with SIGBUS at recovery_reopen; no steps were skipped."
+      },
+      {
+        "run": 37736655218,
+        "source": "docs/evidence/p0-source-capacity-oom-ci.json",
+        "head": "88885db08d17c074af097ddca14bc85d6978980c",
+        "tree": "7d02f181cc1c6ca8d14d5b82c03cc74d4a349265",
+        "workflow_conclusion": "passed",
+        "scope": "All four images, SQL 19/21/19/25, helper pipes 7/8, 23 normal engine tests, two child tests, 21 Python tests and three distinct private OOM guards pass. The original six source-recheck groups pass per profile. Narrow 32 MiB and full-text 384 MiB fault/clean reopen and exact 128 MiB zero-write refusal pass. Exact kernel OOM attribution passes both profiles; direct-worker containment fails and helper containment passes this controlled experiment."
       }
     ],
-    "positive_enospc_scope": "32 MiB vector/keyword configuration-save recovery only. Both full mutable-text 128 MiB CI6 experiments exhausted the mount during writable reopen and failed with SIGBUS; exact 384 MiB positive experiments and a separate 128 MiB zero-write refusal are implemented but not runtime verified.",
-    "current_engine_tests_passed": 23,
+    "positive_enospc_scope": "Already-flushed tiny fixture config-save ENOSPC/retry/reopen only; no transactional dirty-ingestion recovery.",
+    "current_engine_tests_passed": 25,
     "current_engine_tests_failed": 0,
     "current_engine_tests_ignored": 0,
     "current_source_postgres_regression_verified": false,
@@ -10803,7 +11266,7 @@
       "requirement": "The SQL adapter must enforce result projections and strip all unrequested vectors; never expose upstream results unchanged.",
       "product_status": "pending"
     },
-    "full_text_enospc_runtime_verified": false,
+    "full_text_enospc_runtime_verified": true,
     "public_lifecycle_observation": {
       "source": "crates/edge-probe/tests/public_lifecycle.rs",
       "read_only_with_test_supplied_manifest": "passed",
@@ -10834,13 +11297,19 @@
       "sql_runtime_evidence": "docs/evidence/p0-capacity-and-sql-ci.json",
       "sql_runtime_scope": "Three assertion groups passed in each of the four CI6 PostgreSQL profiles; backend-only candidate formats, no public API freeze or cross-process model contract."
     },
-    "current_engine_evidence": "docs/evidence/p0-integrated-local.json",
+    "current_engine_evidence": "docs/evidence/p0-method-input-rebuild-local.json",
     "current_private_oom_guard_tests_passed": 3,
     "current_python_diagnostic_tests_passed": 21,
-    "current_positive_oom_runtime_verified": false,
+    "current_positive_oom_runtime_verified": true,
     "current_source_recheck_sql_runtime_verified": false,
-    "current_full_text_384_runtime_verified": false,
-    "current_full_text_128_refusal_runtime_verified": false
+    "current_full_text_384_runtime_verified": true,
+    "current_full_text_128_refusal_runtime_verified": true,
+    "original_six_source_recheck_sql_runtime_verified": true,
+    "production_memory_isolation_verified": false,
+    "dirty_generation_refusal_and_synthetic_reconstruction_local_verified": true,
+    "production_dirty_recovery_implemented": false,
+    "costed_p0_decision": "docs/adr/0004-p0-go-no-go.md",
+    "module_effort_model": "docs/p0-effort.md"
   },
   "remaining_p0_estimate_review": {
     "observed_on": "2026-10-08",

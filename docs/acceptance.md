@@ -1,10 +1,12 @@
 # Stage acceptance and release gates
 
 Status: required acceptance with source-bound diagnostic evidence. The latest
-recorded CI6 ran all four PostgreSQL profiles successfully but failed both
-128 MiB full-text disk experiments. New identity/recheck, capacity and OOM
-changes require their own verification. No complete P0 exit or release is
-declared. The [capability contract](capabilities.md), [work ledger](work-items.json)
+recorded [CI7](evidence/p0-source-capacity-oom-ci.json) passed all four PostgreSQL
+profiles, bounded capacity experiments and the victim-attributed OOM comparison.
+[ADR 0004](adr/0004-p0-go-no-go.md) conditionally selects the packaged helper and
+source-rebuild route. The later source additions and revised native/CPU inputs
+still require a clean combined run; no complete P0 exit or release is declared.
+The [capability contract](capabilities.md), [work ledger](work-items.json)
 and [user journeys](user-journeys.md) retain every formal requirement; the
 [P0 checkpoint](p0-report.md) separates executed results from proposed product SQL.
 
@@ -38,12 +40,16 @@ P0 is a decision gate. A 5–10 engineering-day investigation budget is a stop-l
 | P0-FAULT | Disposable-cluster experiments for Rust panic, native process crash, SIGKILL, constrained-memory/OOM and disk-full/I/O failure; observe affected PostgreSQL sessions, instance restart, owner reacquisition, on-disk state and recovery |
 | P0-DECISION | Go/no-go ADR cites the preceding evidence, accepts a process topology, records unavailable capabilities and alternatives, and revises work/critical-path estimates |
 
-The production process choice remains open until the necessary fault, resource
-and persistence evidence supports it. [CI6](evidence/p0-capacity-and-sql-ci.json)
-at head `d843706` passed SQL 13/15/13/19 across direct-normal/private and
-helper-normal/private, plus 7/8 standalone helper checks. The workflow failed
-at the independent full-text disk experiments. Prior failed or skipped slices
-remain in the [historical records](p0-report.md#retained-historical-outcomes).
+The conditional implementation choice and finite remaining P0 conditions are
+recorded in [ADR 0004](adr/0004-p0-go-no-go.md), with the
+[phase allocation](p0-effort.md). CI7 at head `88885db` passed SQL 19/21/19/25
+across direct-normal/private and helper-normal/private, plus 7/8 standalone
+helper checks. It ran 23 normal engine tests, two helper child tests and 21
+Python tests. The later [local checkpoint](evidence/p0-method-input-rebuild-local.json)
+passed 25 normal engine tests and four PostgreSQL compile profiles; this is
+separate from SQL execution. The current combined/container run, including the
+new inside-SPI assertion and native/CPU baseline, remains pending. Prior failed
+or skipped slices remain in the [historical records](p0-report.md#retained-historical-outcomes).
 
 These distinctions remain mandatory:
 
@@ -57,37 +63,56 @@ These distinctions remain mandatory:
 - The measured 125-second stop budget, cancelled queued work and restart limits
   are process/queue contracts. They do not establish native Edge cancellation,
   production index readiness or graceful durable shutdown.
-- CI6's 20 engine tests retain phrase, malformed copied-metadata and explicitly
+- The engine tests retain phrase, malformed copied-metadata and explicitly
   flushed SIGKILL/reopen assertions. Read-only/manual-manifest paths and
   update-only preview/no-write branches have narrow evidence. Store, Delete and
   empty bootstrap in the fixed update-only type remain unavailable; manifest
   inspection does not prove snapshot archive creation or restoration.
-- All three candidate-vector format groups passed in each CI6 SQL profile,
-  including shape/null/budget/float32/ACL checks. The new tagged-identity/source
-  fixture rechecks have compile/link evidence and six authored SQL groups,
-  with actual runtime still pending. Neither diagnostic is a public API freeze
+- All three candidate-vector format groups and six tagged-identity/source
+  recheck groups passed in each CI7 SQL profile. A later heap-only guard and
+  seventh inside-SPI cancellation/retry group have compile evidence but await
+  their SQL run. These are superuser-only diagnostics, not a public API freeze
   or a production source SELECT/tenant/RLS proof.
 - A positive disk gate needs a dedicated bounded filesystem, actual errno 28,
   retained child status, configuration observations, cleanup, retry, explicit
   flush and successful reopen/query assertions. `not_run`, a crash or a timeout
   cannot pass it. The narrow 32 MiB vector/keyword pass excludes mutable text
   indexes. Both 128 MiB full-text fault and no-filler clean controls failed with
-  SIGBUS at reopen and exhausted the mount. Their evidence stays failed; a new
-  capacity profile and a separately named no-write refusal test do not fix the
-  upstream loader or prove dirty recovery. The older missing-exit failure is
+  SIGBUS at reopen and exhausted the mount. Their evidence stays failed. CI7's
+  separate exact 384 MiB full-text configuration-save/retry/flush/reopen and
+  clean-reopen cases pass; its exact 128 MiB refusal makes no writes. These
+  observations neither fix the upstream loader nor establish a general sizing
+  rule or arbitrary partial-write recovery. The older missing-exit failure is
   still of unknown cause.
 - OOM requires bounded fresh-container evidence and exact victim/limiting-cgroup
   attribution. Counter correlation or SIGKILL alone is insufficient. Safe
   negative tests, compile success and absent journal access do not pass the gate.
+  CI7 identifies the actual victims in two fresh 768 MiB/no-swap containers:
+  direct-worker OOM terminates companion SQL; helper OOM preserves the supervisor
+  and companion, then a replacement runs Edge. Both retain the committed marker.
+  The selected victim score and container limit do not prove production memory
+  isolation or arbitrary-pressure containment.
 - The [durability ADR](adr/0003-edge-durability-and-recovery.md) records no
   logical WAL replay in the fixed load path and no public durable cursor or
   reclamation API. Update return is not durable ACK; load can repair/mutate
-  state. Exact-event flush/ACK ordering, dirty-generation readiness, preservation,
-  reconstruction and WAL growth remain implementation and crash-test gates.
+  state. The later [dirty-rebuild experiment](evidence/p0-dirty-rebuild-local.json)
+  demonstrates controller refusal without opening the killed generation,
+  unchanged old-file hashes, and reconstruction from a separate complete fixture.
+  It does not establish unflushed WAL survival, PostgreSQL ACK or live generation
+  switching. Exact-event flush/ACK, persistent dirty state, production
+  reconstruction and bounded WAL growth retain their P1/P3 implementation and
+  crash-test gates.
+- The [negative-input characterization](evidence/p0-negative-inputs-local.json)
+  records typed errors alongside accepted nonfinite/malformed inputs and a
+  caught panic. It requires adapter validation; it is not a passing claim that
+  Edge rejects every invalid request. The isolated
+  [Tantivy experiment](evidence/p0-tantivy-local.json) measures five primitive
+  cases without adopting a second engine or completing F13–F20.
 
-All original requirements, including source authorization, complete analysis,
-resource faults and the overall topology decision, remain. Future source or
-feature changes must earn new regression evidence.
+All 54 capabilities, 70 work items and 45 acceptance rows remain. The finite P0
+conditions distinguish feasibility and the conditional architecture decision
+from production capture, authorization, recovery, resource policy and quality
+work in P1–P5. Future source or feature changes must earn new regression evidence.
 
 For full dependency-graph failures, record the exact missing package/compiler/API/native requirement and whether it is an environmental acquisition problem or a version incompatibility. Do not substitute qdrant-client, advertise an unbuilt dependency graph, or change pins without reviewing the [upgrade contract](dependencies.md).
 

@@ -7,21 +7,23 @@ source-table synchronization, a product search function, or a durable indexing
 service. The 54 product requirements remain in the capability registry as
 planned and not release-supported.
 
-The [latest recorded CI](../../docs/evidence/p0-capacity-and-sql-ci.json), run
-37732857051 at `d843706`, built all four profiles and passed SQL 13/15/13/19
-(direct normal/private, helper normal/private), helper pipes 7/8, 20 standalone
-engine tests, two child tests and nine Python tests. All three candidate-vector
-format groups ran in every SQL profile. The workflow failed independently:
-both full-text 128 MiB fault and no-filler clean controls received SIGBUS during
-reopen after exhausting their mounts. The [P0 report](../../docs/p0-report.md)
-retains prior outcomes and the precise scope of this regression.
+The [latest recorded CI](../../docs/evidence/p0-source-capacity-oom-ci.json), run
+37736655218 at `88885db`, passed all four builds/installations and SQL 19/21/19/25
+(direct normal/private, helper normal/private), helper pipes 7/8, 23 normal engine
+tests, two child tests and 21 Python tests. The original six source-identity/recheck
+and three vector-format groups passed in every SQL profile. Full-text ENOSPC and
+an independent clean reopen passed on exactly 384 MiB; exactly 128 MiB was refused
+before writes. Historical 128 MiB SIGBUS failures remain recorded.
 
-New tagged identity/source-recheck diagnostics and the guarded OOM comparison
-have all four local PG17 compile profiles passing. The source-recheck normal
-schema was also linked in a separately recorded earlier source snapshot. Their
-new SQL/positive fault assertions remain pending; the prior CI does not certify
-later additions. Proposed vector, source and public search contracts remain
-unfrozen.
+Both directed OOM experiments have exact kernel victim/cgroup evidence.
+Direct-worker OOM interrupts companion SQL; helper OOM preserves the supervisor
+and companion, and its replacement runs the engine smoke. This is scoped
+process-failure evidence, not durable source indexing or general memory isolation.
+
+The [later local checkpoint](../../docs/evidence/p0-method-input-rebuild-local.json)
+compiles all four profiles with the built-in heap restriction and seventh
+inside-SPI cancellation assertion. Those changes still require SQL execution.
+Proposed vector, source and public search contracts remain unfrozen.
 
 ## Build inputs
 
@@ -211,10 +213,10 @@ the committed marker, stopped the old helper before replacement, and reacquired
 the same fence inode. That is expected supervisor collateral, not failure of
 the separate native-helper containment assertion.
 
-These results establish only the recorded P0 behavior. Source outbox durability,
-positive kernel OOM, full-text recovery at the supported experiment capacity,
-production generations, permissions, upgrade safety and topology acceptance
-remain separate gates. The [OOM harness](../../docs/p0-oom-experiment.md) uses
+These results establish only the recorded P0 behavior. CI7 adds positive kernel
+OOM characterization and full-text recovery at the fixed experiment capacity.
+Source outbox durability, production generations, memory admission, permissions
+and upgrade safety remain separate product gates. The [OOM harness](../../docs/p0-oom-experiment.md) uses
 fresh inspected fixed-limit containers and exact kernel victim attribution;
 its private selector is not part of the ordinary fault script or normal build.
 

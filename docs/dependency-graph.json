@@ -10,7 +10,7 @@
   "manifest_inputs": [
     {
       "path": "Cargo.toml",
-      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+      "sha256": "41147677b739b22d21c724a7d0fee34989cf35cb7e8d4c9ac4d7a52f363b305c"
     },
     {
       "path": "crates/edge-probe/Cargo.toml",
@@ -18,15 +18,15 @@
     },
     {
       "path": "crates/pg_qdrant/Cargo.toml",
-      "sha256": "5f717b6eaa3fd711bb65780aef4e391713d8c6e37ea64f98144fb47ef480e5eb"
+      "sha256": "1eff4b263088d20e8dd4224c00dca6364eb45b73c9e86dc0395f4e28b5b268ff"
     },
     {
       "path": "crates/pg_qdrant-helper/Cargo.toml",
-      "sha256": "c1cca09fe0b0d590b93942ce03b29814da88071b6ec9151e7ac89a95d4be020c"
+      "sha256": "08fced4f33410d377152dffe1632f851923d5405bd708f964e3c39babf36fd58"
     },
     {
       "path": "crates/pg_qdrant-protocol/Cargo.toml",
-      "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
+      "sha256": "330d0a8e798579f34cd4b2074db9b18de1032dc2c50002bbc6418f151a9ad317"
     },
     {
       "path": "rust-toolchain.toml",
@@ -3537,7 +3537,7 @@
       "package": "pg-qdrant-edge-probe@0.0.1",
       "source": "workspace",
       "checksum": null,
-      "license_expression": "Apache-2.0",
+      "license_expression": "AGPL-3.0-only",
       "license_file_sha256": null,
       "features": [
         "default"
@@ -3552,7 +3552,7 @@
       "package": "pg-qdrant-helper@0.0.1",
       "source": "workspace",
       "checksum": null,
-      "license_expression": "Apache-2.0",
+      "license_expression": "AGPL-3.0-only",
       "license_file_sha256": null,
       "features": [],
       "dependencies": [
@@ -3566,7 +3566,7 @@
       "package": "pg-qdrant-protocol@0.0.1",
       "source": "workspace",
       "checksum": null,
-      "license_expression": "Apache-2.0",
+      "license_expression": "AGPL-3.0-only",
       "license_file_sha256": null,
       "features": [],
       "dependencies": [
@@ -3578,7 +3578,7 @@
       "package": "pg_qdrant@0.0.1",
       "source": "workspace",
       "checksum": null,
-      "license_expression": "Apache-2.0",
+      "license_expression": "AGPL-3.0-only",
       "license_file_sha256": null,
       "features": [
         "pg17"

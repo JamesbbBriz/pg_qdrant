@@ -1,12 +1,13 @@
 # ADR 0001: Embedded retrieval and the PostgreSQL boundary
 
-Status: **accepted product boundaries; managed helper preferred after scoped
-PostgreSQL fault tests; production topology and overall P0 remain open**.
-CI6 passes all four diagnostic SQL profiles, including vector formats and
-PostgreSQL-supervisor SIGKILL/fence recovery. The workflow fails at both 128 MiB
-full-text reopen experiments. New source rechecks, capacity-correct recovery,
-positive OOM, durable ACK/reconstruction and production resource policies remain
-unverified or unimplemented.
+Status: **accepted product boundaries; packaged helper and source-rebuild route
+conditionally selected by [ADR 0004](0004-p0-go-no-go.md); overall P0 exit pending**.
+CI7 passes all four diagnostic SQL profiles, six source-recheck groups per
+profile, bounded storage cases and the victim-attributed OOM comparison. Later
+method/input/rebuild additions have separate local evidence. The current
+combined source/container run, new inside-SPI SQL assertion and revised
+native/CPU baseline remain pending. Production ACK, generation, resource and
+authorization policies are not implemented by this decision.
 
 ## Context and decision scope
 
@@ -32,7 +33,7 @@ The first implemented experiment is a PostgreSQL-managed owner worker per databa
 
 The owner count, shard count, runtime thread count, request queue and per-stage budgets must be explicit. Limits include request/response bytes, candidate count, HasId count, token matrices, matrix cells, wall time, engine memory/RSS/mmap and worker concurrency. PostgreSQL `work_mem` alone does not bound the embedded engine.
 
-A PostgreSQL background worker is not an unconditional crash-isolation mechanism. The direct-worker experiments measured caught Rust panic, native abort and SIGKILL in a disposable cluster, including companion sessions and recovery. A Rust helper installed and managed with the extension package preserved the supervisor and companion SQL session in the recorded native-failure experiments. Constrained-memory/kernel OOM, full-text disk-failure recovery and complete dirty-index recovery remain required; the passing narrow vector/keyword configuration-save experiment does not close those gates. The helper is an implementation boundary; applications still do not separately deploy a network Qdrant service.
+A PostgreSQL background worker is not an unconditional crash-isolation mechanism. The direct-worker experiments measured caught Rust panic, native abort and SIGKILL in a disposable cluster, including companion sessions and recovery. A Rust helper installed and managed with the extension package preserved the supervisor and companion SQL session in the recorded native-failure experiments, including CI7's controlled kernel OOM. CI7 also passes full-text configuration-save ENOSPC/retry/flush/reopen at the exact measured capacity. Those bounded results do not establish production memory isolation or arbitrary dirty-index recovery. The helper is an implementation boundary; applications still do not separately deploy a network Qdrant service.
 
 IPC must carry request IDs, generation identity, caller-authorized retrieval domain, budgets, cancellation/deadline and owned source/model metadata. It cannot carry live PostgreSQL values or arbitrary engine DAGs. A cancellation must stop queued work or signal an active bounded operation; dropping only the SQL receiver is insufficient. A dead owner cannot leave its generation marked query-ready without startup validation.
 
@@ -47,14 +48,14 @@ The [initial CI evidence](../evidence/p0-postgresql-ci.json) identifies head `f5
 | Native abort inside the engine thread | Companion SQL session terminates with the same committed-marker recovery | A thread inside the PostgreSQL worker does not provide the required native-failure containment |
 | Caller/statement cancellation and queue pressure | Caller stops waiting; active native ownership is retained; cancelled queued work is not executed; admission is bounded | Preserve these verified semantics in the helper comparison |
 
-**Decision:** prefer the managed helper for further product integration, based on its measured containment of the exercised native failures. Retain the direct-worker implementation as the default P0 control profile; this ADR does not change the compiled default or accept a production topology. The helper ships beside the PostgreSQL executable. The PostgreSQL worker remains responsible for SQL authorization, queueing and signals; the helper owns Edge after exec, exchanges bounded owned frames, and performs no PostgreSQL calls. This remains one installed product with one application source-write path.
+**Decision:** [ADR 0004](0004-p0-go-no-go.md) conditionally selects the managed helper for product implementation, based on its measured containment of the exercised native failures and the stated remaining P0 conditions. Retain the direct-worker implementation as the default P0 control profile; this documentation does not change that compiled default or certify production operation. The helper ships beside the PostgreSQL executable. The PostgreSQL worker remains responsible for SQL authorization, queueing and signals; the helper owns Edge after exec, exchanges bounded owned frames, and performs no PostgreSQL calls. This remains one installed product with one application source-write path.
 
 The helper has explicit ready/build/process/request identities, a separate
 process-lifetime engine-owner fence, EOF-driven shutdown, reap-before-replacement
 behavior and three restart attempts after initial startup.
 
-The latest [CI6 evidence](../evidence/p0-capacity-and-sql-ci.json) at `d843706`
-passes SQL 13/15/13/19 and standalone helper pipes 7/8. It repeats native-helper
+The latest [CI7 evidence](../evidence/p0-source-capacity-oom-ci.json) at `88885db`
+passes SQL 19/21/19/25 and standalone helper pipes 7/8. It repeats native-helper
 SIGKILL/abort containment and the actual 125-second execution-budget stop path.
 It also measures forced PostgreSQL-supervisor SIGKILL: companion SQL terminates
 under PostgreSQL recovery, while the postmaster/committed marker remain and a
@@ -62,8 +63,9 @@ replacement supervisor/helper acquires the same fence only after the old owner
 stops. The supervisor is itself inside PostgreSQL's failure domain. No criterion
 was weakened to make the direct/helper comparison pass.
 
-All four image/SQL profiles completed despite two independent disk failures.
-Both full-text fault and no-filler clean controls received SIGBUS while reopening
+The earlier [CI6](../evidence/p0-capacity-and-sql-ci.json) completed all four
+image/SQL profiles despite two independent disk failures. Both full-text fault
+and no-filler clean controls received SIGBUS while reopening
 on 128 MiB tmpfs, consuming all remaining capacity. The preceding deliberate
 fill is not necessary to reproduce this failure. This supports correcting the
 fixed experiment capacity while retaining the original failed profile; it does
@@ -71,11 +73,25 @@ not identify the exact native fault instruction, repair the loader or prove
 production dirty-index recovery. Earlier unrecorded native exits retain their
 unknown causes. See the [P0 report](../p0-report.md) for all historical outcomes.
 
-The private [OOM comparison](../p0-oom-experiment.md) is implemented as a bounded
-fresh-container experiment; positive victim-attributed results remain pending.
-The [identity/source-recheck prototype](../p0-source-recheck.md) has compile/link
-and authored SQL evidence, with new runtime outcomes also pending. CI6's vector
-format assertions do not certify these later additions or freeze the product API.
+CI7 passes separate exact 384 MiB full-text configuration-save ENOSPC/recovery
+and clean-reopen cases, plus a separate exact 128 MiB zero-write refusal. These
+are measured fixture-capacity observations, not a loader fix or production
+sizing rule. The earlier 128 MiB failures remain recorded as failures.
+
+The private [OOM comparison](../p0-oom-experiment.md) ran in two fresh
+768 MiB/no-swap containers. Kernel records and cgroup identity attribute the
+actual victim: direct-worker death terminates companion SQL; helper death
+preserves the supervisor and companion, and a replacement runs Edge. Both
+retain the committed PostgreSQL marker. Deliberate victim-score selection and
+a limit on the whole container do not prove a production helper memory quota
+or arbitrary-pressure containment.
+
+The [identity/source-recheck prototype](../p0-source-recheck.md) passes its
+original six groups in all four CI7 SQL profiles, alongside the candidate-vector
+format assertions. A later heap-only guard and seventh inside-SPI cancellation
+and same-backend retry group compile but await SQL execution. These superuser-only
+diagnostics do not freeze the product API or establish source SELECT/tenant/RLS
+authorization for ordinary users.
 
 Fixed Edge read-only/manual-manifest paths have narrow runtime evidence, while
 update-only Store, Delete and empty bootstrap reach unimplemented panics; its
@@ -83,13 +99,20 @@ flush body is also unimplemented. Ordinary EdgeShard mutation is a separate
 candidate. The [durability ADR](0003-edge-durability-and-recovery.md) records that
 update return is not a durable ACK, Edge load does not logically replay WAL,
 loading can mutate/repair state, and no public durable cursor or reclamation API
-was found. Exact-event flush/ACK, preserved dirty artifacts, validated
-reconstruction and bounded WAL growth remain required implementation work.
+was found. A later [local dirty-generation experiment](../evidence/p0-dirty-rebuild-local.json)
+refuses the killed generation without opening it, verifies unchanged old-file
+hashes and reconstructs expected records/vectors from an independent complete
+fixture into a new generation. This is a test-controller policy, not unflushed
+WAL replay or production cutover. Exact-event flush/ACK, persistent dirty-state
+tracking, source reconstruction under concurrent writes and bounded WAL growth
+retain their P1/P3 implementation and crash-test gates.
 
-The helper is preferred for continued integration, not accepted as a production
-topology. Memory/storage isolation, persistent generation ownership, recovery,
-packaging and upgrades remain open. Workload ranges are planning assumptions;
-these diagnostic results do not complete P0 or justify removing formal scope.
+The [conditional go/no-go decision](0004-p0-go-no-go.md) and
+[costed phase allocation](../p0-effort.md) separate the finite remaining P0
+conditions from subsequent product work. Memory/storage admission, persistent
+generation ownership, production recovery, packaging and upgrades remain
+required. Workload ranges are planning assumptions; these diagnostic results
+do not complete P0 or justify removing formal scope.
 
 ## Module responsibilities
 
@@ -124,7 +147,7 @@ The SQL backend rechecks each exposed source and its identity/version/permission
 
 Local BM25 ranking and payload text/keyword predicates have independent upstream configurations. A field's common analysis policy must be compiled separately for BM25, text and keyword structures and its effective hash retained. Chinese/mixed-language settings must explicitly handle English stemming/stopword defaults; a multilingual tokenizer does not prove analyzer parity.
 
-F13–F20 remain formal product work. P0 must distinguish verified native primitives from fuzzy/proximity/query-syntax/synonym/highlighting/suggestion/statistics/ranking gaps. The decision compares extension query/presentation policy, direct Tantivy, and reuse of pg_search. Tantivy `0.26.2` is a named candidate, not an adopted dependency. pg_search is an independent integration/license option, not another name for linking Tantivy. Meilisearch is not the embedded baseline.
+F13–F20 remain formal product work. P0 must distinguish verified native primitives from fuzzy/proximity/query-syntax/synonym/highlighting/suggestion/statistics/ranking gaps. The decision compares extension query/presentation policy, direct Tantivy, and reuse of pg_search. Tantivy `0.26.2` is the leading mature-library candidate after five isolated local semantic cases, not an adopted core dependency. The [lexical ADR](0002-lexical-gap-strategy.md) retains the quality, bounded-work, analyzer/offset and integration gates before core Alpha. pg_search is an independent integration/license option, not another name for linking Tantivy. Meilisearch is not the embedded baseline.
 
 The comparison needs fixed-version quality results on Chinese/English text, identifiers and long documents, plus installation cost, memory/disk, synchronization, permissions, generations, recovery, outer fusion, upgrade and license obligations. Complex fuzzy/positional indexing is not assumed to be inexpensive custom extension code. Shared Charabia does not supply a complete Meilisearch search experience.
 
@@ -144,7 +167,7 @@ Track these version domains separately:
 
 Each dependency upgrade reviews the released archive/public API/format/features/licenses; changes exact pins and lockfile together; compiles every mapped capability; runs engine and SQL combinations, lexical/quality, authorization/transaction/cancellation/concurrency/crash tests; validates old-index reopen or generation migration; runs actual rollback; and updates compatibility and release documentation. A dependency-update robot can open reviewable grouped changes after a real manifest exists, but detecting a version is not permission to release it automatically.
 
-No fork, vendor copy or `internal` namespace import is accepted without a documented public-API gap, fixed version/source, license review, compatibility tests and ongoing upgrade owner. Upstream implementation code stays upstream-owned. Project Apache-2.0 licensing remains a separate decision; it cannot relicense copied AGPL implementation code or waive dependency notices.
+No fork, vendor copy or `internal` namespace import is accepted without a documented public-API gap, fixed version/source, license review, compatibility tests and ongoing upgrade owner. Upstream implementation code stays upstream-owned. Original project material follows the repository's AGPL-3.0-only license. That choice does not replace upstream licenses or waive dependency notices and integration review.
 
 ## Backup, restore and lifecycle boundary
 
@@ -156,14 +179,14 @@ The first recovery contract rebuilds from consistent PostgreSQL source data, ret
 
 | Question | Current position | Evidence needed to close |
 | --- | --- | --- |
-| Direct Edge crate and Rust adapter | Accepted direction; executable engine and SQL diagnostic paths | Remaining complete public-call and product adapter acceptance |
+| Direct Edge crate and Rust adapter | Accepted direction; [44 public method declarations audited, 43 concrete call bodies compiled](../p0-edge-methods.md), with one documented construction exclusion | Runtime combinations and validated product adapter acceptance; compile calls are not SQL support |
 | Exact Edge/pgrx/tool/compiler combination | Recorded Linux/PG17 diagnostic build and runtime pass | Regression for changed sources/features; complete native/CPU/license and release matrix |
-| Owner background worker or packaged helper | Direct worker fails containment; helper is preferred after historical scoped SQL/native-fault/lifecycle passes | Regression for later changes, bounded kernel OOM, full-text capacity/recovery, production lifecycle and topology acceptance |
-| Array/JSON SQL signatures and ticket shape | Candidate-vector format assertions passed across all four CI6 SQL profiles; new identity/recheck diagnostics compile but their SQL remains pending | New source-recheck SQL and complete product driver, transaction/savepoint and concurrency tests |
-| Engine persistence condition for ACK | Explicit flush is the candidate fence; source audit rules out assumed automatic logical WAL replay | Exact-set ACK and dirty reconstruction/reclamation tests in ADR 0003 |
-| Analysis parity and richer lexical dependency | Open, blocking full FTS claims | Golden analysis/phrase/prefix/offset tests and F13–F20 quality/cost ADR |
-| Source recheck and supported authorization | Diagnostic ACL/runtime-superuser checks pass; product policy still proposed | Source SELECT/column/RLS and every-path leakage tests |
+| Owner background worker or packaged helper | Direct worker fails containment; helper conditionally selected after CI7 native/OOM/lifecycle evidence | Current source/native/CPU regression and remaining ADR 0004 conditions; product ownership/admission/lifecycle follows in P1/P3 |
+| Array/JSON SQL signatures and ticket shape | Candidate-vector formats and six source-recheck groups pass in all four CI7 profiles; later heap/inside-SPI additions compile | New inside-SPI SQL run; complete product driver, transaction/savepoint, ticket and concurrency tests |
+| Engine persistence condition for ACK | Explicit successful flush selected as the minimum fence to implement; local refusal/rebuild primitive passes; no assumed logical WAL replay | Exact-set PG ACK, persistent dirty/clean transitions, concurrent reconstruction and WAL admission/rotation under ADR 0003/0004 |
+| Analysis parity and richer lexical dependency | Edge semantic probes and five isolated Tantivy cases have narrow evidence; no core adoption or full FTS claim | Frozen bilingual quality/budget/offset comparison and the pre-Alpha adoption gate in ADR 0002 |
+| Source recheck and supported authorization | Diagnostic ACL/runtime-superuser checks and six fixture groups pass; product policy still proposed | Source SELECT/column/RLS and every-path leakage tests in the product authorization implementation |
 | Upgrade/reopen/rollback compatibility | Unverified | Old/new generation fixtures and executed rollback procedure |
-| Package and platform support | All four Linux x86_64 / PG17 diagnostic profiles built/installed/executed at CI6; later additions require separate regression | Current full-profile regression, complete declared product journey, native/CPU/license acceptance and release gates |
+| Package and platform support | All four Linux x86_64 / PG17 diagnostic profiles built/installed/executed at CI7; later local checkpoint passes 25 engine tests and four PG compile profiles | Current clean full-profile/native/CPU regression; complete declared product journey, platform/license acceptance and release gates |
 
 See [stage acceptance](../acceptance.md) for P0 exit conditions and [work items](../work-items.json) for remaining scope. Progress is recorded with reproducible evidence rather than by changing a candidate into an accepted claim in this ADR alone.

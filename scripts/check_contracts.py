@@ -82,11 +82,18 @@ def main() -> None:
                     f"Registry checksum differs for {dep['name']}.")
 
     root_manifest = tomllib.loads((ROOT / "Cargo.toml").read_text())
+    project_license = baseline["project_license"]["spdx"]
+    require(root_manifest["workspace"]["package"]["license"] == project_license,
+            "Workspace license must match the project license contract.")
     workspace_deps = root_manifest["workspace"]["dependencies"]
     declared: dict[str, set[str]] = collections.defaultdict(set)
     declared_defaults: dict[str, set[bool]] = collections.defaultdict(set)
     for manifest in [ROOT / "Cargo.toml", *sorted((ROOT / "crates").glob("*/Cargo.toml"))]:
         contents = tomllib.loads(manifest.read_text())
+        package_license = contents.get("package", {}).get("license")
+        if package_license is not None:
+            require(package_license == project_license or package_license == {"workspace": True},
+                    f"Project license drift in {manifest.relative_to(ROOT)}.")
         for section in [contents.get("dependencies", {}),
                         contents.get("workspace", {}).get("dependencies", {})]:
             for name, dep in section.items():
@@ -152,6 +159,43 @@ def main() -> None:
                 "Normal inventory and profile comparison disagree.")
         require(baseline["build_configuration"].get("profile_resolution_evidence") ==
                 "dependency-profiles.json", "Baseline must identify the profile comparison.")
+
+    native_root = ROOT / "packaging/native"
+    if native_root.exists():
+        native = read_json("packaging/native/pgdg-packages.json")
+        rows = native["packages"]
+        pins = {(row["package"], row["version"]) for row in rows}
+        install_pins = {tuple(line.split("=", 1)) for line in
+                        (native_root / "pgdg-packages.txt").read_text().splitlines()}
+        require(len(rows) == len(pins) == 7 and pins == install_pins,
+                "The seven native package checksums and exact install arguments must agree.")
+        pg_version = baseline["build_configuration"]["postgres_package_version"]
+        require(all((name, pg_version) in pins for name in [
+            "postgresql-17", "postgresql-client-17", "postgresql-server-dev-17"]),
+            "PostgreSQL native package pins must match the declared build baseline.")
+        freeze = baseline["build_configuration"]["native_freeze_configuration"]
+        require(hashlib.sha256((native_root / "expected-installed.tsv").read_bytes()).hexdigest()
+                == freeze["expected_installed_inventory_sha256"],
+                "The expected native inventory and baseline digest disagree.")
+
+    lexical_root = ROOT / "experiments/tantivy-probe"
+    if lexical_root.exists():
+        candidate = baseline["optional_lexical_candidate"]
+        manifest = tomllib.loads((lexical_root / "Cargo.toml").read_text())
+        require(manifest["package"]["license"] == project_license,
+                "The independent experiment must retain the original-project license declaration.")
+        dependency = manifest["dependencies"]["tantivy"]
+        require(dependency["version"] == candidate["cargo_requirement_candidate"] and
+                dependency["default-features"] == candidate["experiment_default_features"] and
+                set(dependency["features"]) == set(candidate["experiment_features"]),
+                "The isolated Tantivy pin/features and candidate baseline must agree.")
+        lexical_lock = tomllib.loads((lexical_root / "Cargo.lock").read_text())
+        package = next(p for p in lexical_lock["package"] if p["name"] == "tantivy")
+        require(package["version"] == dependency["version"][1:] and
+                package["checksum"] == candidate["package_sha256"],
+                "The isolated Tantivy lockfile/checksum differs from its candidate baseline.")
+        require(not candidate["adopted"] and "tantivy" not in declared,
+                "Core lexical adoption requires an explicit revised integration contract.")
     print(json.dumps({"status": "passed", "capabilities": 54, "work_items": len(work),
                       "scope_completed": False, "compiled_graph_claim": baseline["compiled_dependency_graph_verified"]}))
 

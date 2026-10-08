@@ -90,6 +90,23 @@ library or network Qdrant client. Local BM25 and BYOV retain their core dependen
 contract. Profile resolution does not promote compilation, runtime, isolation,
 or release support status.
 
+## Native and independent lexical build inputs
+
+The [native build contract](p0-native-build.md) supplements Cargo.lock with a
+fixed Ubuntu snapshot, seven exact PGDG archive checksums, the unchanged image
+digest and a complete installed-package comparison. Its source metadata and
+verifier are reviewed; the revised clean installation remains pending. The
+actual CPU and native-link boundary must be recorded by the same build. A Rust
+edition or default target cannot certify the upstream C compiler's ISA choices.
+
+The [Tantivy experiment](../experiments/tantivy-probe/README.md) is a separate
+Cargo workspace with its own 0.26.2 pin, lockfile and 109-package Linux inventory.
+Only `mmap` and `lz4-compression` are enabled. Its public dictionary bridge pins
+`levenshtein_automata 0.2.1` and `tantivy-fst 0.5.0`, both already transitive in
+that graph. These are candidate evaluation inputs; the extension's root graph
+is unchanged. Five local primitive experiments and their negative findings do
+not adopt Tantivy or fulfill the pre-Alpha quality/lifecycle decision.
+
 ## Boundaries that make upgrades manageable
 
 Keep project-owned SQL request/response types and configuration schemas outside upstream engine structs. Translate them in one adapter. Upstream Rust/serde layout changes must not silently change the public SQL JSON contract.
@@ -126,3 +143,12 @@ The initial direct dependency remains Edge. Rich FTS requirements are tracked, n
 Tantivy is the named library candidate for position-based/fuzzy lexical primitives. It exposes a [fuzzy query](https://docs.rs/tantivy/0.26.2/tantivy/query/struct.FuzzyTermQuery.html) and a [snippet generator](https://docs.rs/tantivy/0.26.2/tantivy/snippet/struct.SnippetGenerator.html); it is not automatically a complete Meilisearch experience. Synonym policy, query UX, multilingual analysis, and ranking evaluation still belong to the product.
 
 Before adopting it, compare quality and maintenance cost with extension-owned query policy. Adoption must include stable source-ID mapping, shared authorization, two-index generation/readiness rules, idempotent dual writes, maintenance, and explicit outer fusion. External Tantivy ranks cannot be treated as native inputs to Edge's prefetch fusion. A change to the engine topology needs an ADR and updated dependency baseline.
+
+## Project license
+
+Original project material uses **AGPL-3.0-only**, as declared by the current
+project overview and [LICENSE](../LICENSE). Cargo declarations and the generated
+workspace license inventory follow that choice. Third-party packages, native
+libraries, dictionaries and model artifacts keep their own licenses. Package
+metadata and this project license do not complete distribution review or
+third-party notices.

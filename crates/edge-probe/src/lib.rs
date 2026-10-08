@@ -5,6 +5,7 @@
 //! All shard ownership, threads, and temporary storage are local to this call.
 
 pub mod api_inventory;
+pub mod cpu;
 #[cfg(feature = "p0-fault-injection")]
 pub mod oom_probe;
 
@@ -26,6 +27,23 @@ use qdrant_edge::{
 use serde_json::{Value, json};
 
 type ProbeResult<T> = Result<T, String>;
+
+/// Host admission facts only; no engine or release support is inferred.
+pub fn cpu_report() -> Value {
+    let report = cpu::report();
+    let detected: std::collections::BTreeMap<_, _> = report.detected.iter().copied().collect();
+    json!({
+        "schema_version": 1, "kind": "p0_cpu_admission", "baseline": cpu::BASELINE,
+        "architecture": report.architecture, "admitted": report.admitted(),
+        "required_features": cpu::REQUIRED, "detected_usable_features": detected,
+        "missing_features": report.missing,
+        "optional_observations": {"hle": report.hle_observed},
+        "hle_required": false, "avx_detection_includes_os_state": true,
+        "cpuid_hardware_only_features": ["lahf_sahf", "fsgsbase"],
+        "native_build_flags": ["-march=haswell", "-O3", "-mpopcnt"],
+        "equivalent_to_x86_64_v3": false, "release_platform_supported": false
+    })
+}
 
 const MAX_RESULTS: usize = 16;
 
@@ -150,6 +168,7 @@ fn key(name: &str) -> ProbeResult<JsonPath> {
 }
 
 fn neutral_bm25() -> ProbeResult<EdgeBm25> {
+    cpu::require()?;
     // StemmingAlgorithm/StopwordsInterface are fields of the public config but
     // not re-exported names in 0.8.0. Deserialize this project-owned constant
     // into the public config. Never expose this serde layout as SQL options.
@@ -299,6 +318,7 @@ fn upsert_fixtures(shard: &EdgeShard, bm25: &EdgeBm25) -> ProbeResult<()> {
 /// Keeping the returned shard alive prevents a graceful Drop from substituting
 /// for the explicit persistence boundary being tested.
 pub fn persistence_fixture(path: &std::path::Path, flush: bool) -> ProbeResult<EdgeShard> {
+    cpu::require()?;
     persistence_fixture_config(path, flush, shard_config(), PersistenceProfile::Full)
 }
 
@@ -315,6 +335,7 @@ fn small_wal_config() -> EdgeConfig {
 /// The complete eight-row fixture with a small WAL for owned corruption tests.
 /// Payload/text placement and the normal smoke fixture remain unchanged.
 pub fn bounded_persistence_fixture(path: &std::path::Path) -> ProbeResult<EdgeShard> {
+    cpu::require()?;
     persistence_fixture_config(path, true, small_wal_config(), PersistenceProfile::Full)
 }
 
@@ -323,6 +344,7 @@ pub fn bounded_persistence_fixture(path: &std::path::Path) -> ProbeResult<EdgeSh
 /// The two mutable text indexes are deliberately absent: their Edge 0.8 writable
 /// loader populates at least 64 MiB regardless of on_disk/memory settings.
 pub fn disk_persistence_fixture(path: &std::path::Path) -> ProbeResult<EdgeShard> {
+    cpu::require()?;
     let mut config = small_wal_config();
     config.on_disk_payload = Some(true);
     for vector in config.vectors.values_mut() {
@@ -343,6 +365,7 @@ fn persistence_fixture_config(
     config: EdgeConfig,
     profile: PersistenceProfile,
 ) -> ProbeResult<EdgeShard> {
+    cpu::require()?;
     let report_progress = profile == PersistenceProfile::DiskConfig;
     let bm25 = neutral_bm25()?;
     if report_progress {
@@ -487,6 +510,7 @@ fn record(checks: &mut Vec<Value>, name: &str, capabilities: &[&str], detail: Va
 /// Run actual public-API engine checks; success is not a P0 phase exit or a
 /// release support claim. In particular, PostgreSQL safety is not tested here.
 pub fn run_smoke() -> ProbeResult<Value> {
+    cpu::require()?;
     let started = Instant::now();
     let mut checks = Vec::new();
     let dir = context(

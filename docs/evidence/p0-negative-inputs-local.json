@@ -1,0 +1,619 @@
+{
+  "schema_version": 1,
+  "kind": "p0_core_negative_input_characterization",
+  "status": "characterization_passed_with_validation_gaps",
+  "base_revision": "88885db08d17c074af097ddca14bc85d6978980c",
+  "source_scope": "One isolated uncommitted integration test; no dependency or main-worktree changes. Development test profile only.",
+  "command": "CARGO_BUILD_JOBS=2 cargo test --locked --offline -p pg-qdrant-edge-probe --test invalid_inputs -- --test-threads=1 --nocapture",
+  "source_inputs": {
+    "crates/edge-probe/tests/invalid_inputs.rs": "8964d33963cd61a9fd6b3793d3ec9c503d79a4dea10bb7ad70c12c30abcb4ed7",
+    "crates/edge-probe/Cargo.toml": "99118fc920d732fb569bc002276fcce78f06115505356b4b9591afaebdb0a066",
+    "Cargo.toml": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e",
+    "Cargo.lock": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d",
+    "rust-toolchain.toml": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2",
+    "docs/capabilities.md": "9cc7db5814ac078c16c82ac2abddd3bbc7bc79c516668f3d914feb0e95cbc5c9",
+    "docs/dependencies.md": "302e5b7a24fa1b3feee0ffb4b0eabb797d5677d9ad0725ca1d48758b933ffa0d",
+    "docs/dependency-baseline.json": "f81725a28815d0852494c2209fe65b3b7c21f4af291ad99735bab426e77658eb"
+  },
+  "fixed_upstream": {
+    "name": "qdrant-edge",
+    "version": "0.8.0",
+    "package_sha256": "0b8072302c87506a34bffec9bc16dbdcd36df8ab1321406b6e141530348c7e54",
+    "source_files": [
+      {
+        "path": "src/edge/types/vector.rs",
+        "sha256": "1ae6a31422b66933db8d3e65dfadaf8bc10a1e74958ab07ff86795879c8069d5",
+        "archive_bytes_verified": true,
+        "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/types/vector.rs"
+      },
+      {
+        "path": "src/sparse/common/sparse_vector.rs",
+        "sha256": "485981c626e847ef11727615f320e25f68c9118be77f0af5cae942c0446f4940",
+        "archive_bytes_verified": true,
+        "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/sparse/common/sparse_vector.rs"
+      },
+      {
+        "path": "src/segment/common/mod.rs",
+        "sha256": "597c992df9b1d82a2a7cf6b842766d9441c24a1362286f3a8a1fae767d452f7e",
+        "archive_bytes_verified": true,
+        "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/common/mod.rs"
+      },
+      {
+        "path": "src/segment/payload_storage/condition_checker.rs",
+        "sha256": "2935fefd0612107258697ac717037d6951809bcf4e6558fdc92fc1efb7aa89fb",
+        "archive_bytes_verified": true,
+        "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/payload_storage/condition_checker.rs"
+      },
+      {
+        "path": "src/segment/index/sparse_index/indices_tracker.rs",
+        "sha256": "ec0c0c3c42b171e5f6024a5adf3ef2ca15109549ddefccc9df466ebe165ccbd8",
+        "archive_bytes_verified": true,
+        "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/segment/index/sparse_index/indices_tracker.rs"
+      },
+      {
+        "path": "src/edge/edge_shard/update.rs",
+        "sha256": "a3811395984f3c2fcc52b67da0def1c679d975b63ab3e7f1393de5820b2bbf85",
+        "archive_bytes_verified": true,
+        "url": "https://docs.rs/crate/qdrant-edge/0.8.0/source/src/edge/edge_shard/update.rs"
+      }
+    ]
+  },
+  "test_summary": {
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "owned_child_cases": 17,
+    "typed_errors": 8,
+    "accepted": 8,
+    "accepted_malformed_or_missing_prerequisite_cases": 7,
+    "valid_control_cases": 1,
+    "caught_rust_panics": 1,
+    "native_signal_exits": 0,
+    "timeouts": 0,
+    "output_overruns": 0,
+    "compile_seconds": 6.41,
+    "runtime_seconds": 0.85
+  },
+  "attempts": [
+    {
+      "ordinal": 1,
+      "status": "failed_parent_record_parsing",
+      "log_sha256": "b2ba18bf19dc4db8fb9c25cb4a48e674a488b748db5d9ba6ce9417d17f4e6ba2",
+      "reason": "All17children exited0 but parent start-of-line parser missed the JSON marker appended after the Rust test-harness prefix. No upstream rejection outcome can be inferred from the missing parsed records.",
+      "correction": "Extract the unique controlled marker within the line; check output byte limits after final exit too."
+    },
+    {
+      "ordinal": 2,
+      "status": "characterization_completed_before_outcome_assertions",
+      "log_sha256": "27e3542d18e93586fe3ef09329dff0c28514ad6da98d6a08f269f3f5885c86df"
+    },
+    {
+      "ordinal": 3,
+      "status": "frozen_outcome_assertions_passed",
+      "log_sha256": "11cf39330696077e0933991170dba59bd1e1e507e20670fca8deb61ec566fca0"
+    }
+  ],
+  "matrix": {
+    "status": "characterization_passed_with_validation_gaps",
+    "malformed_input_rejection_gate": "not_satisfied_by_engine_alone",
+    "engine_version": "0.8.0",
+    "cases": [
+      {
+        "case": "missing_named_query",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "missing_named_query",
+          "observation": {
+            "outcome": "error",
+            "variant": "VectorNameNotExists",
+            "message": "Not existing vector name error: absent"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "wrong_dense_query",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "wrong_dense_query",
+          "observation": {
+            "outcome": "error",
+            "variant": "WrongVectorDimension",
+            "message": "Vector dimension error: expected dim: 2, got 3"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "wrong_dense_update",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "wrong_dense_update",
+          "observation": {
+            "outcome": "error",
+            "variant": "WrongVectorDimension",
+            "message": "Vector dimension error: expected dim: 2, got 3"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "wrong_tokens_query",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "wrong_tokens_query",
+          "observation": {
+            "outcome": "error",
+            "variant": "WrongVectorDimension",
+            "message": "Vector dimension error: expected dim: 2, got 3"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "wrong_tokens_update",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "wrong_tokens_update",
+          "observation": {
+            "outcome": "error",
+            "variant": "WrongVectorDimension",
+            "message": "Vector dimension error: expected dim: 2, got 3"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "ragged_tokens_constructor",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "ragged_tokens_constructor",
+          "observation": {
+            "outcome": "error",
+            "variant": "WrongVectorDimension",
+            "message": "Vector dimension error: expected dim: 2, got 1"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "sparse_shape_constructor",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "sparse_shape_constructor",
+          "observation": {
+            "outcome": "error",
+            "variant": "ValidationError",
+            "message": "Validation failed: values: Validation error: must be the same length as indices [{}]"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "sparse_duplicate_constructor",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "sparse_duplicate_constructor",
+          "observation": {
+            "outcome": "error",
+            "variant": "ValidationError",
+            "message": "Validation failed: indices: Validation error: must be unique [{}]"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "sparse_nan_constructor",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "sparse_nan_constructor",
+          "observation": {
+            "outcome": "accepted",
+            "nonfinite_input_values": 1
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "sparse_nan_query",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "sparse_nan_query",
+          "observation": {
+            "outcome": "accepted",
+            "hits": []
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "sparse_infinity_query",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "sparse_infinity_query",
+          "observation": {
+            "outcome": "accepted",
+            "hits": [
+              {
+                "id": 2,
+                "score": {
+                  "kind": "positive_infinity"
+                }
+              },
+              {
+                "id": 3,
+                "score": {
+                  "kind": "positive_infinity"
+                }
+              },
+              {
+                "id": 1,
+                "score": {
+                  "kind": "positive_infinity"
+                }
+              }
+            ]
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "dense_nan_query",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "dense_nan_query",
+          "observation": {
+            "outcome": "accepted",
+            "hits": [
+              {
+                "id": 3,
+                "score": {
+                  "kind": "nan"
+                }
+              },
+              {
+                "id": 1,
+                "score": {
+                  "kind": "nan"
+                }
+              },
+              {
+                "id": 2,
+                "score": {
+                  "kind": "nan"
+                }
+              }
+            ]
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "raw_sparse_shape_query",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "raw_sparse_shape_query",
+          "observation": {
+            "outcome": "rust_panic",
+            "message": "index out of bounds: the len is 1 but the index is 1"
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ],
+        "panic_source": {
+          "package": "qdrant-edge",
+          "version": "0.8.0",
+          "path": "src/segment/index/sparse_index/indices_tracker.rs",
+          "line": 63,
+          "column": 39
+        }
+      },
+      {
+        "case": "raw_sparse_duplicate_query",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "raw_sparse_duplicate_query",
+          "observation": {
+            "outcome": "accepted",
+            "hits": [
+              {
+                "id": 1,
+                "score": {
+                  "kind": "finite",
+                  "value": 3.0
+                }
+              },
+              {
+                "id": 2,
+                "score": {
+                  "kind": "finite",
+                  "value": 3.0
+                }
+              },
+              {
+                "id": 3,
+                "score": {
+                  "kind": "finite",
+                  "value": 3.0
+                }
+              }
+            ]
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "phrase_no_index",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "phrase_no_index",
+          "observation": {
+            "outcome": "accepted",
+            "hits": [
+              {
+                "id": 1,
+                "score": {
+                  "kind": "finite",
+                  "value": 1.0
+                }
+              },
+              {
+                "id": 3,
+                "score": {
+                  "kind": "finite",
+                  "value": 1.0
+                }
+              }
+            ]
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "phrase_positions_disabled",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "phrase_positions_disabled",
+          "observation": {
+            "outcome": "accepted",
+            "hits": []
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": true
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      },
+      {
+        "case": "phrase_positions_enabled_control",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "output_exceeded": false,
+        "record": {
+          "case": "phrase_positions_enabled_control",
+          "observation": {
+            "outcome": "accepted",
+            "hits": [
+              {
+                "id": 1,
+                "score": {
+                  "kind": "finite",
+                  "value": 1.0
+                }
+              },
+              {
+                "id": 2,
+                "score": {
+                  "kind": "finite",
+                  "value": 1.0
+                }
+              }
+            ]
+          },
+          "verified_single_cpu": true,
+          "product_adapter_must_validate": false
+        },
+        "stages": [
+          "fixture",
+          "exercise"
+        ]
+      }
+    ],
+    "scope": {
+      "owned_child_characterization_only": true,
+      "adapter_validation_implemented": false,
+      "postgresql_authorization_verified": false,
+      "safe_post_error_owner_reuse_verified": false,
+      "p0_exit_passed": false,
+      "release_supported": false
+    },
+    "bounds": {
+      "child_deadline_seconds": 30,
+      "output_bytes_per_stream": 65536,
+      "single_cpu_affinity": true,
+      "fixture_points": 4,
+      "query_limit": 8
+    }
+  },
+  "required_adapter_validation": [
+    {
+      "capability_ids": [
+        "V01",
+        "V03",
+        "L08"
+      ],
+      "requirement": "Reject unknown or unavailable named representations and validate dense width, rectangular nonempty token rows and configured token width before engine query/update."
+    },
+    {
+      "capability_ids": [
+        "V01",
+        "V02",
+        "V03",
+        "L08"
+      ],
+      "requirement": "Reject every nonfinite input component before any engine call, including sparse values. Numeric Rust types and checked sparse constructors do not enforce this."
+    },
+    {
+      "capability_ids": [
+        "V02",
+        "L08"
+      ],
+      "requirement": "Require equal sparse indices/weights length and unique indices; use checked public constructors after project validation. A public struct or serde conversion is not validated input."
+    },
+    {
+      "capability_ids": [
+        "F08",
+        "L08"
+      ],
+      "requirement": "A required phrase condition needs a compatible phrase-capable text index and effective analyzer policy. Reject missing/disabled prerequisites explicitly; raw substring or empty-result behavior is not an allowed silent fallback."
+    },
+    {
+      "capability_ids": [
+        "L04",
+        "L05",
+        "L10"
+      ],
+      "requirement": "Do not interpret query/update errors or a caught panic as proof of safe owner reuse, rollback or durable rejection. The update path can append WAL before a later error; this test discards each owner without another operation or Drop flush."
+    }
+  ],
+  "scope_limits": {
+    "owned_child_characterization_only": true,
+    "adapter_validation_implemented": false,
+    "postgresql_authorization_verified": false,
+    "safe_post_error_owner_reuse_verified": false,
+    "p0_exit_passed": false,
+    "release_supported": false
+  },
+  "post_run_documentation_correction": {
+    "change": "The module header and phrase adapter requirement map to F08; F07 is Boolean composition. Only a source comment changed, with no executable change. Recorded run-input hashes remain historical.",
+    "path": "crates/edge-probe/tests/invalid_inputs.rs",
+    "run_source_sha256": "8964d33963cd61a9fd6b3793d3ec9c503d79a4dea10bb7ad70c12c30abcb4ed7",
+    "comment_corrected_source_sha256": "02d0be4452dfe937e3c903a3b3fd3cb6c67dd188b87fd00386443dc89e856fc7",
+    "engine_reexecuted_for_comment_only_change": false
+  }
+}

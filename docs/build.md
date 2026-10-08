@@ -14,7 +14,7 @@ search functions. Successful probes do not constitute a production release.
 | PostgreSQL | 17, headers/package 17.11 | Other PostgreSQL majors are outside the tested target |
 | pgrx features | `pg17`, `cshim` | Exactly one PostgreSQL major; unsafe fault injection is off by default |
 | Charabia | 0.9.9 in current lockfile | Upstream-owned transitive dependency; not a separate analyzer implementation |
-| Rust CPU target | Default x86_64 target, no `target-cpu=native` | Upstream C SIMD kernels include Haswell code; broader CPUs remain a separate gate |
+| CPU policy | Generic Rust target plus explicit conservative admission for upstream Haswell C code | [Shared runtime guard and generated-object audit](p0-cpu-baseline.md); broader CPUs are not claimed |
 | Container base | Digest-pinned Ubuntu 24.04 | Exact digest and selected native inputs in Dockerfile.p0 |
 
 `Cargo.lock` records the entire resolution, including platform-specific packages.
@@ -23,10 +23,12 @@ features, package checksums, dependency edges and package-declared licenses. It
 omits local build paths. The graph is not a substitute for compilation or a
 complete third-party license audit.
 
-The container pins its base image, PostgreSQL package, Rust, cargo-pgrx and Rust
-dependency graph. Other native APT packages are inventoried at build time; they
-are not yet fully pinned to an immutable package snapshot. A bit-for-bit
-reproducible native package set is therefore not claimed.
+The [native freeze](p0-native-build.md) now fixes Ubuntu to snapshot
+`20261008T061600Z`, pins and verifies all seven PGDG archives, and compares the
+entire 246-entry installed inventory with the successful CI7 build. The base
+image digest, Rust, cargo-pgrx and core Cargo graph remain fixed. The new native
+configuration has signed-metadata and safe verifier evidence; its clean TLS/APT
+reinstall is still pending. Bit-identical compiler output is not claimed.
 
 ## Standalone engine
 
@@ -45,9 +47,11 @@ engine API; they are not outputs of a claimed production model. The persistence
 test kills only a dedicated child process after explicit flush, then checks its
 reopened data. This does not establish atomicity with PostgreSQL commits.
 
-The current local locked suite passes 23 normal harness tests, including three
-new safe capacity guards. Three private OOM guard tests pass separately. The
-[integrated evidence](evidence/p0-integrated-local.json) binds the source inputs.
+The method/input local locked checkpoint passes 25 normal harness tests, including owned-child
+invalid-input characterization and unclean-generation refusal/reconstruction.
+The [method/input/rebuild record](evidence/p0-method-input-rebuild-local.json)
+binds its exact source and all four PG compile profiles. CI7 separately passed
+23 tests at its earlier source; private OOM guard tests have their own count.
 The engine coverage includes read-only
 loading and refresh with an explicitly test-supplied manifest, snapshot-manifest
 inspection, and update-only preview/no-write replay. Fixed Edge 0.8.0's
@@ -58,6 +62,27 @@ CPU affinity before engine pools start, and uses only owned temporary fixtures.
 These tests do not establish snapshot archive production/restoration or SQL
 source/authorization behavior. The [probe inventory](../crates/edge-probe/README.md)
 records the exact coverage.
+
+## Independent lexical experiment
+
+The nested [Tantivy workspace](../experiments/tantivy-probe/README.md) pins its own
+0.26.2 dependency and lockfile. It does not enter the extension's Cargo graph.
+Five local semantic experiments cover fuzzy expansion, phrase/parser behavior,
+source snippets and reader/update visibility, with concrete gaps retained.
+
+```sh
+cargo build --locked --manifest-path experiments/tantivy-probe/Cargo.toml
+timeout 45s cargo run --locked --manifest-path experiments/tantivy-probe/Cargo.toml
+python3 experiments/tantivy-probe/inventory.py --check
+```
+
+The separate `Dockerfile.p0-lexical` image compiles this binary after the core
+image succeeds. Its failure cannot skip the independent core SQL/fault paths.
+CI runs it as the ordinary user
+in a network-disabled 512 MiB container with one CPU, 64 PIDs and a 45-second
+execution deadline, then retains its JSON report. That added CI path is pending
+its first recorded run. The small fixture is not a held-out quality comparison,
+a selected production lexical adapter or a completed license review.
 
 ## PostgreSQL prototype
 
@@ -110,13 +135,14 @@ Those results include a negative finding about direct-worker crash isolation.
 New code and additional profiles must earn their own run evidence before their
 verification status advances.
 
-The [latest recorded CI](evidence/p0-capacity-and-sql-ci.json), run 37732857051
-at `d843706`, built and installed all four images and passed SQL 13/15/13/19,
-helper pipes 7/8, 20 engine tests, two child tests and nine Python tests. The
-workflow failed at both independent 128 MiB full-text reopen experiments,
-including a no-filler clean control. Historical and new-source results remain
-separate in the [P0 report](p0-report.md). Later source/feature changes require
-new build/runtime evidence.
+The [latest recorded CI](evidence/p0-source-capacity-oom-ci.json), run 37736655218
+at `88885db`, passed all four image builds/installations and SQL 19/21/19/25,
+helper pipes 7/8, 23 normal engine tests, two child tests and 21 Python tests.
+All four disk/capacity profiles and both kernel-attributed OOM comparisons passed
+their stated assertions. Direct-worker OOM containment is a negative finding.
+The independently downloaded artifact digest and all 53 members were verified.
+Historical failures and later-source evidence remain separate in the
+[P0 report](p0-report.md). New code must earn its own validation.
 
 For intentionally destructive *disposable-cluster* experiments only:
 
@@ -231,14 +257,17 @@ separate capacity characterization.
 free before reopen and zero afterward; owned allocation reached the complete
 mount capacity. A larger fixed experiment budget addresses the demonstrated
 fixture-sizing problem, not the upstream loader or a production resource policy.
-The original failures remain recorded. The new 384 MiB positive results and
-exact 128 MiB guard result still require CI. See the
+The original failures remain recorded. CI7 passed the two independent 384 MiB
+reopen experiments and the exact zero-write 128 MiB guard. Reopen allocation in
+each 384 MiB fixture reached 220,508,160 bytes; this is not a product capacity
+formula. See the
 [capacity follow-up](p0-full-text-capacity.md) and
 [fixed-source fixture details](../crates/edge-probe/README.md#why-the-small-disk-fixture-excludes-mutable-text-indexes).
 
 Separate corruption and explicitly flushed SIGKILL tests retain their phrase
-assertions. WAL growth, dirty ingestion, exact-event PostgreSQL ACK,
-positive kernel OOM and power-loss behavior remain independent open gates.
+assertions. The later dirty-generation fixture proves only preserved refusal
+and reconstruction from a complete synthetic source. WAL growth, transactional
+dirty-ingestion recovery, exact-event PostgreSQL ACK and power loss remain open.
 
 ## Bounded kernel OOM comparison
 
@@ -248,8 +277,11 @@ limit, UID, process and cgroup isolation, one-shot ownership markers and resourc
 budgets before native allocation. It records the actual victim and limiting
 cgroup from available kernel evidence. It does not elevate privileges or turn
 missing attribution into success. The ordinary cluster and disk runners never
-invoke this allocator. Compile and safe negative-test results are separate from
-the still-required positive runtime result.
+invoke this allocator. CI7 produced exact kernel victim/cgroup records in both
+profiles: direct-worker death caused PostgreSQL collateral, while helper death
+preserved the supervisor and companion SQL. Both replacement engine smokes
+passed; no external, supervisor or client kill caused either OOM outcome.
+Production memory isolation and unflushed-index recovery remain unverified.
 
 The [profile comparison](dependency-profiles.json) records exact manifests,
 lockfile and enabled features for all four builds. Check it with:
@@ -278,7 +310,7 @@ validator rejects a pgrx update without the matching cargo-pgrx tool change.
 The configuration becomes active only when present on the repository's default
 branch and enabled by GitHub. No automatic release or merge is configured.
 
-Open gates include product transactions and source authorization, complete
-memory/disk fault coverage, a settled process architecture, full lexical quality,
-index upgrades/rollback, native package reproducibility and clean release
-installation. Their owners and required evidence remain in `work-items.json`.
+The P0 decision distinguishes feasibility from product implementation. Current
+source and native/CPU build verification are finite P0 gates; product transactions,
+source authorization, resource admission, lexical quality, index upgrades/rollback
+and clean release installation retain their P1–P5 owners in `work-items.json`.

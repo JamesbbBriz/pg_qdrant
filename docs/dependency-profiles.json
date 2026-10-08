@@ -7,7 +7,7 @@
   "manifest_inputs": [
     {
       "path": "Cargo.toml",
-      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+      "sha256": "41147677b739b22d21c724a7d0fee34989cf35cb7e8d4c9ac4d7a52f363b305c"
     },
     {
       "path": "crates/edge-probe/Cargo.toml",
@@ -15,15 +15,15 @@
     },
     {
       "path": "crates/pg_qdrant/Cargo.toml",
-      "sha256": "5f717b6eaa3fd711bb65780aef4e391713d8c6e37ea64f98144fb47ef480e5eb"
+      "sha256": "1eff4b263088d20e8dd4224c00dca6364eb45b73c9e86dc0395f4e28b5b268ff"
     },
     {
       "path": "crates/pg_qdrant-helper/Cargo.toml",
-      "sha256": "c1cca09fe0b0d590b93942ce03b29814da88071b6ec9151e7ac89a95d4be020c"
+      "sha256": "08fced4f33410d377152dffe1632f851923d5405bd708f964e3c39babf36fd58"
     },
     {
       "path": "crates/pg_qdrant-protocol/Cargo.toml",
-      "sha256": "0443e68db0aff1e4b8495cfb3378a66aa0c8561b08ad538c17f927419295374c"
+      "sha256": "330d0a8e798579f34cd4b2074db9b18de1032dc2c50002bbc6418f151a9ad317"
     },
     {
       "path": "rust-toolchain.toml",
@@ -40,7 +40,7 @@
         "pg_qdrant/pg17",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "434b6640820a4880b738e3dde7f07f0afcff962139f297c9713264b05740b354",
+      "full_inventory_sha256": "5b8977ad2d3787cf86c6608b2496aeb1285dcf61351fbc9682ffb55094268ff7",
       "package_count": 440,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
@@ -48,7 +48,7 @@
           "package": "pg-qdrant-edge-probe@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "default"
@@ -63,7 +63,7 @@
           "package": "pg-qdrant-helper@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
@@ -77,7 +77,7 @@
           "package": "pg-qdrant-protocol@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
@@ -89,7 +89,7 @@
           "package": "pg_qdrant@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "pg17"
@@ -121,7 +121,7 @@
         "pg_qdrant/p0-fault-injection",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "c905c257f761cd4b330404fb8e351f182c292c7ad4df94abbab74524e7d8ae0c",
+      "full_inventory_sha256": "0d8d03c27bdf2d131791cfe523828d2086fadf9ceb25fe4643b3ad845008bc9a",
       "package_count": 440,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
@@ -129,7 +129,7 @@
           "package": "pg-qdrant-edge-probe@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "default",
@@ -146,7 +146,7 @@
           "package": "pg-qdrant-helper@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
@@ -160,7 +160,7 @@
           "package": "pg-qdrant-protocol@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
@@ -172,7 +172,7 @@
           "package": "pg_qdrant@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "p0-fault-injection",
@@ -226,7 +226,7 @@
         "pg_qdrant/p0-managed-helper",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "9c4af7978abd20a96e9c91c551f9798d36ad46c1fde52035f6edd0a2766a1051",
+      "full_inventory_sha256": "1007ff6e1b8c1792aa52bfe5146fb673cdbc1eeaf983f477f527caef7b091d85",
       "package_count": 440,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
@@ -234,7 +234,7 @@
           "package": "pg-qdrant-edge-probe@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "default"
@@ -249,7 +249,7 @@
           "package": "pg-qdrant-helper@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
@@ -263,7 +263,7 @@
           "package": "pg-qdrant-protocol@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
@@ -275,7 +275,7 @@
           "package": "pg_qdrant@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "p0-managed-helper",
@@ -322,7 +322,7 @@
         "pg-qdrant-helper/p0-fault-injection",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "2fc0facf90200367a38e9485dd5ca21f268a898bc1f07540f0cdec0992df741a",
+      "full_inventory_sha256": "0a4d82e3bca1dcf2badccdcda2051578af4205e5a01e3e8a7f5561bbaadf75cf",
       "package_count": 440,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
@@ -330,7 +330,7 @@
           "package": "pg-qdrant-edge-probe@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "default",
@@ -347,7 +347,7 @@
           "package": "pg-qdrant-helper@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "p0-fault-injection"
@@ -363,7 +363,7 @@
           "package": "pg-qdrant-protocol@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
@@ -375,7 +375,7 @@
           "package": "pg_qdrant@0.0.1",
           "source": "workspace",
           "checksum": null,
-          "license_expression": "Apache-2.0",
+          "license_expression": "AGPL-3.0-only",
           "license_file_sha256": null,
           "features": [
             "p0-fault-injection",

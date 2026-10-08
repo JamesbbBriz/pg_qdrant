@@ -10,6 +10,12 @@ Each capability ID must acquire: input/configuration contract, dependency/API ma
 
 Evidence progresses through source/API-reviewed, compile-verified, engine-runtime-verified, SQL-integration-verified, and release-supported. Product implementation remains pending. Public API compile sentinels and synthetic runtime probes are recorded in the [P0 inventory](../crates/edge-probe/README.md); their scope is narrower than full product acceptance. Source review is not implementation evidence. Every ID has a detailed owner, contract and acceptance entry in the [work ledger](work-items.json).
 
+The [fixed-version shard method audit](p0-edge-methods.md) maps 44 declarations
+on four selected public shard/read surfaces. Its 43 concrete call bodies are
+compile-verified; `refresh_with` retains a documented public-construction
+exclusion. This covers the listed methods, not every auxiliary type or runtime
+combination, and does not promote them to SQL or release support.
+
 Every public Edge query/match variant, vector/storage kind, payload-index schema, and read/update/lifecycle operation must be mapped to an ID, used internally, or explicitly marked outside the product scope. Newly introduced upstream variants require a mapping decision before an upgraded release. A complete coverage inventory does not mean all capabilities are implemented or that every combination is valid.
 
 ## Proposed capability discovery
@@ -62,6 +68,16 @@ The following are product requirements, not verified native Edge features. Evalu
 
 Fuzzy matching, synonyms, or prefix tokenization alone do not establish Meilisearch-equivalent behavior. Expanded sparse terms do not establish where a word occurred in source text; semantic hits must not receive invented lexical highlights.
 
+The [standalone Tantivy 0.26.2 experiment](../experiments/tantivy-probe/README.md)
+has a separate locked dependency graph and [five local semantic observations](evidence/p0-tantivy-local.json).
+It exercises fuzzy matching and returned-expansion rejection, phrase/slop and
+parser behavior, literal snippets, and writer/reader visibility. These are
+candidate-engine runtime checks. Tantivy is not linked into the extension or
+Edge adapter, and pg_search remains an unexecuted fixed comparator. Hard fuzzy
+work bounds, shared analyzer/offset policy, authorization, two-engine lifecycle,
+held-out relevance and all F13–F20 acceptance requirements remain open under
+[ADR 0002](adr/0002-lexical-gap-strategy.md).
+
 ### Analyzer configuration contract
 
 Declare one lexical policy per field/representation: tokenizer, language defaults, normalization, token length, stopwords, stemmer, phrase positions, prefix strategy, field identity, and dictionary/model version.
@@ -71,6 +87,16 @@ Compile that policy separately into `EdgeBm25Config`, `TextIndexParams`, and `Ke
 Persist the effective configuration hash. Incompatible policy changes require a new index generation, and affected representations must be re-encoded. Prefix representation and primary BM25 are separate when their scoring/tokenization contracts differ. A phrase constraint must be applied during retrieval to the declared fields, not just after a top-k result has been collected.
 
 The fixed-version [lexical probe](../crates/edge-probe/tests/lexical.rs) observes an additional F09 boundary: the prefix tokenizer truncates query tokens beyond `max_token_len`. The planner must reject a required prefix beyond the proven analyzed Unicode-scalar bound before calling Edge, or execute an explicitly permitted ready alternative that preserves the entire predicate. If the configured normalization/stemming parity cannot be established, reject the combination. Do not infer that bound from sparse IDs, silently truncate a query, substitute whole-value F11 semantics, or attempt to repair the predicate after top-k retrieval. The probe's word/phrase/array/Unicode cases are engine observations; the SQL compiler and complete multilingual parity remain work.
+
+The [negative-input matrix](evidence/p0-negative-inputs-local.json) also records
+an F08 prerequisite gap: a phrase query without a text index is accepted with
+raw case-sensitive substring behavior; a text index with phrase matching
+disabled accepts the query but returns no fixture hits. The phrase-capable
+control returns the expected token matches. The planner must therefore require
+and validate the declared phrase-capable index and analysis policy before
+calling Edge. Neither an empty result nor substring behavior is an acceptable
+silent fallback for a required phrase predicate. This adapter check remains
+unimplemented.
 
 ## Vector representations and storage
 
@@ -86,6 +112,17 @@ The fixed-version [lexical probe](../crates/edge-probe/tests/lexical.rs) observe
 | V08 | Native binary/bit input distinction | Input-type audit gate | Separate bit-vector inputs from binary quantization; explicitly reject unsupported input kinds |
 
 Evidence: [vector concepts](https://qdrant.tech/documentation/manage-data/vectors/), [quantization](https://qdrant.tech/documentation/manage-data/quantization/), [Edge configuration](https://qdrant.tech/documentation/edge/edge-api/configuration/). This inventory is a review scope; it does not promise all listed representations or storage combinations are valid in Edge `0.8.0`.
+
+The [17-case engine input characterization](evidence/p0-negative-inputs-local.json)
+observes typed errors for missing vector names and wrong dense/MaxSim widths,
+and checked-constructor errors for ragged tokens and malformed/duplicate sparse
+indices. It also records acceptance of nonfinite values, nonfinite scores or
+empty results, and an actual caught Rust panic after a public sparse struct
+bypasses shape validation. These observations do not satisfy V01–V03 or L08
+input rejection. The adapter must validate finite components, dimensions,
+rectangular token rows, equal sparse lengths and unique indices before any
+engine call. Each case uses its own bounded child; no safe post-error owner
+reuse, rollback or SQL error mapping is established.
 
 ## Query execution and filtering
 
@@ -140,10 +177,24 @@ justify READY; exact-event PostgreSQL ACK after serialized explicit flush,
 unclean-artifact preservation, reconstruction and WAL-growth handling remain
 required. These are source-reviewed boundaries, not completed SQL behavior.
 
+The [dirty-generation experiment](evidence/p0-dirty-rebuild-local.json) adds a
+narrow controller-policy observation for L01/L04/L05/L07. After a known applied
+mutation and before an explicit post-mutation flush, an owned child is killed.
+The test controller refuses to reopen that dirty generation, preserves its
+identity/file hashes through the experiment, and reconstructs a separate
+generation only from a complete authoritative source fixture. Explicit flush
+and reopen of that new generation preserve expected deletions, replacement
+incarnation, vectors and filtered query identities. This does not inspect old
+WAL survival, implement PostgreSQL capture/ACK, preserve artifacts after test
+cleanup, or verify concurrent catch-up, production readiness/cutover or
+machine-loss durability.
+
 The [CI6 record](evidence/p0-capacity-and-sql-ci.json) adds diagnostic SQL evidence
-for L08 array conversion and L10 supervisor/fence recovery. New
-[identity/recheck probes](p0-source-recheck.md) remain superuser-only with SQL
-runtime pending. They do not complete L05 identity allocation, L09 source
+for L08 array conversion and L10 supervisor/fence recovery. The
+[CI7 record](evidence/p0-source-capacity-oom-ci.json) executes the original six
+superuser-only [identity/recheck groups](p0-source-recheck.md). Later validation
+of the source table's heap access method and inside-SPI cancellation changes
+have separate runtime gates. These diagnostics do not complete L05 identity allocation, L09 product
 permissions/RLS or any product capability. The full 54-ID registry remains open.
 
 ## Feature combinations and release gates

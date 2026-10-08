@@ -29,6 +29,7 @@ fn create_index(shard: &EdgeShard, field: &str) {
 }
 
 fn fixture(path: &Path) -> EdgeShard {
+    pg_qdrant_edge_probe::cpu::require().expect("fixed Edge native CPU baseline");
     let shard = EdgeShard::new(
         path,
         EdgeConfig {

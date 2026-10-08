@@ -223,6 +223,54 @@ def exercise_identity_and_source(scalar, jsql, run, spawn, finish, wait_for, exp
     record("source_recheck_ddl_and_conditional_namespace_guard", production_locking_design=False,
            native_cancellation_stage="primary_index_lock_before_SPI", same_backend_survived=True)
 
+    # Unlike the primary-index case above, source definition validation never
+    # opens this secondary index. PG17 get_relation_info opens it while planning
+    # the final source SELECT inside SPI_execute_with_args. Observing this exact
+    # wait places cancellation after Spi::connect, exercising SPI_finish on ERROR.
+    run("CREATE INDEX revision_spi_probe_idx ON pgq_p0_sources.bigints(revision)")
+    holder = spawn("SET application_name='pgq_recheck_spi_holder'; BEGIN; "
+                   "REINDEX INDEX pgq_p0_sources.revision_spi_probe_idx; SELECT pg_sleep(5); COMMIT")
+    canceled = None
+    try:
+        wait_for(lambda: scalar("SELECT EXISTS(SELECT FROM pg_stat_activity WHERE application_name="
+                                "'pgq_recheck_spi_holder' AND wait_event='PgSleep')") == "t")
+        canceled = spawn(
+            "SET application_name='pgq_recheck_spi_waiter'; DO $body$ BEGIN BEGIN "
+            + sql().replace("SELECT ", "PERFORM ", 1)
+            + "; RAISE EXCEPTION 'SPI recheck did not wait for cancellation'; "
+            "EXCEPTION WHEN query_canceled THEN NULL; END; "
+            "IF EXISTS(SELECT FROM pg_locks WHERE pid=pg_backend_pid() "
+            "AND relation='pg_catalog.pg_namespace'::regclass AND mode='ShareLock' AND granted) "
+            "THEN RAISE EXCEPTION 'catalog guard leaked after SPI cancellation'; END IF; "
+            "END $body$; SELECT pg_backend_pid(); " + sql() + "; SELECT pg_backend_pid()")
+        waiter_pid = wait_for(lambda: scalar(
+            "SELECT a.pid FROM pg_stat_activity a WHERE a.application_name='pgq_recheck_spi_waiter' "
+            "AND EXISTS(SELECT FROM pg_locks l WHERE l.pid=a.pid "
+            "AND l.relation='pgq_p0_sources.revision_spi_probe_idx'::regclass "
+            "AND l.mode='AccessShareLock' AND NOT l.granted) "
+            "AND EXISTS(SELECT FROM pg_locks n WHERE n.pid=a.pid "
+            "AND n.relation='pg_catalog.pg_namespace'::regclass AND n.mode='ShareLock' AND granted)"))
+        assert scalar(f"SELECT pg_cancel_backend({int(waiter_pid)})") == "t"
+        # The same waiter immediately performs another recheck. It may wait for
+        # the held secondary index again; normal holder commit releases it.
+        finish(holder)
+        out, _ = finish(canceled)
+        lines = out.splitlines()
+        results = [json.loads(line) for line in lines if line.startswith('{')]
+        assert [line for line in lines if not line.startswith('{')] == [waiter_pid, waiter_pid], out
+        assert len(results) == 1 and results[0]["rows"] == [{"ordinal": 0, "status": "matched"}], results
+        assert results[0]["spi_read_only"] and results[0]["snapshot_scope"] == "active_statement_snapshot"
+    finally:
+        for process in [canceled, holder]:
+            if process is not None and process.poll() is None:
+                process.kill()
+                process.communicate(timeout=3)
+    run("DROP INDEX pgq_p0_sources.revision_spi_probe_idx")
+    assert check() == ["matched"]
+    record("source_recheck_SPI_error_cleanup_and_same_backend_retry",
+           native_cancellation_stage="secondary_index_lock_inside_SPI_planning",
+           namespace_lock_released_after_error=True, same_backend_retry_matched=True)
+
     run("CREATE ROLE pgq_p0_source_unprivileged")
     expect_error("SET ROLE pgq_p0_source_unprivileged; " + sql(), "42501")
     run("GRANT USAGE ON SCHEMA qdrant_internal,pgq_p0_sources TO pgq_p0_source_unprivileged; "

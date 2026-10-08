@@ -1,0 +1,426 @@
+{
+  "schema_version": 1,
+  "kind": "p0_dirty_generation_refusal_and_complete_source_rebuild",
+  "status": "passed_narrow_controller_policy_experiment",
+  "base_revision": "88885db08d17c074af097ddca14bc85d6978980c",
+  "source_scope": "One uncommitted integration test in an isolated worktree; base files unchanged; not a published or supported recovery implementation.",
+  "command": "CARGO_BUILD_JOBS=2 cargo test --locked --offline -p pg-qdrant-edge-probe --test dirty_rebuild -- --test-threads=1 --nocapture",
+  "source_inputs": {
+    "crates/edge-probe/tests/dirty_rebuild.rs": "46b232e58c4dbfb1b7b74a4a42cd5711d1cacc13b1f21550c0cad5718921677a",
+    "crates/edge-probe/Cargo.toml": "99118fc920d732fb569bc002276fcce78f06115505356b4b9591afaebdb0a066",
+    "Cargo.toml": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e",
+    "Cargo.lock": "a22e16a01d1e12597066d4f22183124f2830eaa0eb1bdc3ab6a37a143bb5090d",
+    "rust-toolchain.toml": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2",
+    "docs/adr/0003-edge-durability-and-recovery.md": "6fd774b3483beec01bc4fc72d47f0076a5b08b52ece28bfd4ebe74b631f90771",
+    "docs/capabilities.md": "9cc7db5814ac078c16c82ac2abddd3bbc7bc79c516668f3d914feb0e95cbc5c9",
+    "docs/dependencies.md": "302e5b7a24fa1b3feee0ffb4b0eabb797d5677d9ad0725ca1d48758b933ffa0d",
+    "docs/dependency-baseline.json": "f81725a28815d0852494c2209fe65b3b7c21f4af291ad99735bab426e77658eb"
+  },
+  "test_summary": {
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "compile_seconds": 4.81,
+    "runtime_seconds": 1.18
+  },
+  "attempts": [
+    {
+      "ordinal": 1,
+      "status": "failed_closed_before_engine_creation",
+      "log_sha256": "cb9f42d25f738b5d66d35bf826886ee680cf3288eedd6de2848b7d99f07fb7a2",
+      "reason": "Controller getpid and child procfs PPid used distinct PID namespaces. Direct-parent guard refused before Edge creation.",
+      "correction": "Compare controller procfs Pid with child procfs PPid; preserve local Child::id/getpid for exact owned-process kill handshake."
+    },
+    {
+      "ordinal": 2,
+      "status": "passed",
+      "log_sha256": "5b69e7cf00378c32299314d8c0ddbfd92826a46779ac6046da2699368bfa9b0e"
+    }
+  ],
+  "report": {
+    "status": "passed",
+    "engine_version": "0.8.0",
+    "capability_ids": [
+      "L01",
+      "L04",
+      "L05",
+      "L07"
+    ],
+    "policy": "test_controller_dirty_refusal_then_complete_source_rebuild",
+    "writer": {
+      "termination_signal": 9,
+      "ready": {
+        "status": "applied_before_explicit_flush",
+        "pid": 167,
+        "verified_cpu": 0,
+        "generation": "generation-old",
+        "baseline_explicit_flush_completed": true,
+        "explicit_flush_after_mutation": false,
+        "in_process_observations": {
+          "surviving_point_ids": [
+            11,
+            14,
+            15,
+            22
+          ],
+          "absent_point_ids": [
+            12,
+            13
+          ],
+          "exact_tenant_query_ids": [
+            22,
+            11,
+            15
+          ],
+          "exact_tenant_query_scores": [
+            1.0,
+            0.6,
+            0.2
+          ],
+          "reused_business_key": "reused",
+          "replacement_point_id": 22,
+          "replacement_incarnation": 2,
+          "payloads_and_named_vectors_equal_complete_source": true
+        }
+      }
+    },
+    "preserved_generation": {
+      "path": "generation-old",
+      "device": 27,
+      "inode": 1196704,
+      "inventory": {
+        "files": {
+          "edge_config.json": {
+            "length": 322,
+            "device": 27,
+            "inode": 1197604,
+            "mode": 33188,
+            "sha256": "f00afddc6927fc84e46fd82fc66ff9f69f553941e82d27e71caab7df776c8031"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/mutable_id_tracker.mappings": {
+            "length": 52,
+            "device": 27,
+            "inode": 1196723,
+            "mode": 33188,
+            "sha256": "f2e1da708dac2d2fc236ec88107c92e159ebc148efa5dc1b35b3047b4a6c5ed4"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/mutable_id_tracker.versions": {
+            "length": 32,
+            "device": 27,
+            "inode": 1197126,
+            "mode": 33188,
+            "sha256": "57e4d1a3e55577e929c7d374d3aeb7a4a287507c0748bc3c35d8ac881347a369"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-map/bitmask.dat": {
+            "length": 32768,
+            "device": 27,
+            "inode": 1197623,
+            "mode": 33188,
+            "sha256": "ae0a70e7875e98b1c6e0868a6eb3e67b985f991aa50afa467c034e025f2804d3"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-map/config.json": {
+            "length": 113,
+            "device": 27,
+            "inode": 1197628,
+            "mode": 33188,
+            "sha256": "a74363d429b6d7922ddda056d4a4203ceef38cf9cda184f9462e67a849517fd1"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-map/gaps.dat": {
+            "length": 192,
+            "device": 27,
+            "inode": 1197624,
+            "mode": 33188,
+            "sha256": "139e9d18ec3b85244daa690ac47e8f158c688f973cfd6d5ffdbdb87797e285ee"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-map/page_0.dat": {
+            "length": 4194304,
+            "device": 27,
+            "inode": 1197626,
+            "mode": 33188,
+            "sha256": "e15a6b823426eb9b5e38c29251b05c6c6604f3c38d2721bb8764b00e33e912b1"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-map/tracker.dat": {
+            "length": 1048576,
+            "device": 27,
+            "inode": 1197625,
+            "mode": 33188,
+            "sha256": "067fb5e9b80b5ec6210ca7c3b1c5c79dd23723dd2396b11bbc47118fae76bc3c"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-null/has_values/flags_a.dat": {
+            "length": 128,
+            "device": 27,
+            "inode": 1197618,
+            "mode": 33188,
+            "sha256": "90d08e2188dcc032986659fdcf868c5da2fa2933cf2470a320a68e5c3946e5a3"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-null/has_values/status.dat": {
+            "length": 16,
+            "device": 27,
+            "inode": 1197617,
+            "mode": 33188,
+            "sha256": "6b6f14e6af2627186bf8a55e474dcf6ef3f6ce81af560da871ec51eb670171a9"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-null/is_null/flags_a.dat": {
+            "length": 128,
+            "device": 27,
+            "inode": 1197621,
+            "mode": 33188,
+            "sha256": "38723a2e5e8a17aa7950dc008209944e898f69a7bd10a23c839d341e935fd5ca"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/5hoe2arq0p3fi8jpugjsfcse-key-null/is_null/status.dat": {
+            "length": 16,
+            "device": 27,
+            "inode": 1197620,
+            "mode": 33188,
+            "sha256": "6b6f14e6af2627186bf8a55e474dcf6ef3f6ce81af560da871ec51eb670171a9"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/config.json": {
+            "length": 499,
+            "device": 27,
+            "inode": 1197629,
+            "mode": 33188,
+            "sha256": "b628799f2d645d9cbef5e30e7f9fa84a5392c138e6f79b4779ee5eda6f15f035"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-map/bitmask.dat": {
+            "length": 32768,
+            "device": 27,
+            "inode": 1197610,
+            "mode": 33188,
+            "sha256": "ae0a70e7875e98b1c6e0868a6eb3e67b985f991aa50afa467c034e025f2804d3"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-map/config.json": {
+            "length": 113,
+            "device": 27,
+            "inode": 1197615,
+            "mode": 33188,
+            "sha256": "a74363d429b6d7922ddda056d4a4203ceef38cf9cda184f9462e67a849517fd1"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-map/gaps.dat": {
+            "length": 192,
+            "device": 27,
+            "inode": 1197611,
+            "mode": 33188,
+            "sha256": "139e9d18ec3b85244daa690ac47e8f158c688f973cfd6d5ffdbdb87797e285ee"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-map/page_0.dat": {
+            "length": 4194304,
+            "device": 27,
+            "inode": 1197613,
+            "mode": 33188,
+            "sha256": "de33a2d49ed1038b36ff7dcccb0b0f5dfd43a29c9d151b1605219531781e57da"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-map/tracker.dat": {
+            "length": 1048576,
+            "device": 27,
+            "inode": 1197612,
+            "mode": 33188,
+            "sha256": "0f5155955ad075bc629ef93cd97973516b9af024752a8d053f20f50ffe3d2287"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-null/has_values/flags_a.dat": {
+            "length": 128,
+            "device": 27,
+            "inode": 1197605,
+            "mode": 33188,
+            "sha256": "90d08e2188dcc032986659fdcf868c5da2fa2933cf2470a320a68e5c3946e5a3"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-null/has_values/status.dat": {
+            "length": 16,
+            "device": 27,
+            "inode": 1197603,
+            "mode": 33188,
+            "sha256": "6b6f14e6af2627186bf8a55e474dcf6ef3f6ce81af560da871ec51eb670171a9"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-null/is_null/flags_a.dat": {
+            "length": 128,
+            "device": 27,
+            "inode": 1197608,
+            "mode": 33188,
+            "sha256": "38723a2e5e8a17aa7950dc008209944e898f69a7bd10a23c839d341e935fd5ca"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_index/t7d8dkqhpud7cgmook0pbgvk-tenant-null/is_null/status.dat": {
+            "length": 16,
+            "device": 27,
+            "inode": 1197607,
+            "mode": 33188,
+            "sha256": "6b6f14e6af2627186bf8a55e474dcf6ef3f6ce81af560da871ec51eb670171a9"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_storage/bitmask.dat": {
+            "length": 32768,
+            "device": 27,
+            "inode": 1197586,
+            "mode": 33188,
+            "sha256": "ae0a70e7875e98b1c6e0868a6eb3e67b985f991aa50afa467c034e025f2804d3"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_storage/config.json": {
+            "length": 114,
+            "device": 27,
+            "inode": 1197591,
+            "mode": 33188,
+            "sha256": "0e57ec31570ceb70dac08c32238952b9dd437d89a2655c25664d631e542b2c6a"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_storage/gaps.dat": {
+            "length": 192,
+            "device": 27,
+            "inode": 1197587,
+            "mode": 33188,
+            "sha256": "139e9d18ec3b85244daa690ac47e8f158c688f973cfd6d5ffdbdb87797e285ee"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_storage/page_0.dat": {
+            "length": 33554432,
+            "device": 27,
+            "inode": 1197589,
+            "mode": 33188,
+            "sha256": "707ca6b73a79d0b841a4168e9751dcdc980e79babc2e36ff16ec22fc4b19953f"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/payload_storage/tracker.dat": {
+            "length": 1048576,
+            "device": 27,
+            "inode": 1197588,
+            "mode": 33188,
+            "sha256": "a4126b6b3ba96620d727c8c4b1ce1057f27c16d25ced6e098e21d0812a83867a"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/segment.json": {
+            "length": 232,
+            "device": 27,
+            "inode": 1197630,
+            "mode": 33188,
+            "sha256": "c43afff9c909d1cb98011c967016396aa375c09cddfa09035fe0667f90d99ee9"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/vector_storage-dense/deleted/flags_a.dat": {
+            "length": 128,
+            "device": 27,
+            "inode": 1197597,
+            "mode": 33188,
+            "sha256": "38723a2e5e8a17aa7950dc008209944e898f69a7bd10a23c839d341e935fd5ca"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/vector_storage-dense/deleted/status.dat": {
+            "length": 16,
+            "device": 27,
+            "inode": 1197596,
+            "mode": 33188,
+            "sha256": "6b6f14e6af2627186bf8a55e474dcf6ef3f6ce81af560da871ec51eb670171a9"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/vector_storage-dense/vectors/chunk_0.mmap": {
+            "length": 33554432,
+            "device": 27,
+            "inode": 1197616,
+            "mode": 33188,
+            "sha256": "645c68c2dbf53efb89501699df0b831245c6d452b45cbb7951c5e8bcf123633a"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/vector_storage-dense/vectors/config.json": {
+            "length": 83,
+            "device": 27,
+            "inode": 1197595,
+            "mode": 33188,
+            "sha256": "8b3b0091b34096676bd896ac3854a20848281835b103b5c06f1fae13b5fd99b5"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/vector_storage-dense/vectors/status.dat": {
+            "length": 8,
+            "device": 27,
+            "inode": 1197593,
+            "mode": 33188,
+            "sha256": "f0a0278e4372459cca6159cd5e71cfee638302a7b9ca9b05c34181ac0a65ac5d"
+          },
+          "segments/079117fa-db80-418f-9583-646cd1db737f/version.info": {
+            "length": 5,
+            "device": 27,
+            "inode": 1197602,
+            "mode": 33188,
+            "sha256": "29ef1be9a3a40608ee71e155eb871ca34630e23beee9af29441aba9d0ea76d54"
+          },
+          "wal/open-1": {
+            "length": 65536,
+            "device": 27,
+            "inode": 1196722,
+            "mode": 33188,
+            "sha256": "f1054f2b85477090f33d5ef5b8910d4f84d3651fd76d1a9a5ae8bbc05ca99f37"
+          },
+          "wal/open-2": {
+            "length": 65536,
+            "device": 27,
+            "inode": 1197599,
+            "mode": 33188,
+            "sha256": "5e55caef991a29e5cc9703b8e1fed4bc184164582871770d149bac850db29459"
+          }
+        },
+        "logical_bytes": 78875445
+      },
+      "hashes_and_identity_unchanged": true,
+      "post_kill_edge_open_attempts": 0
+    },
+    "source": {
+      "baseline_sha256": "ae2b16003c8f3139508b739f3b3a4472a44f6e39cd03f71194cde0a0cffdb099",
+      "complete_source_sha256": "fd3e7eca1e7f771fe38bca08b6140e1a76c1eccbd5f3c901e707f56d04be6172",
+      "both_digests_unchanged": true,
+      "rebuild_uses_complete_fixture_only": true
+    },
+    "rebuild": {
+      "status": "passed",
+      "verified_cpu": 0,
+      "generation": "generation-rebuilt",
+      "explicit_flush_then_reopen": true,
+      "source": "complete-source.json",
+      "observations": {
+        "surviving_point_ids": [
+          11,
+          14,
+          15,
+          22
+        ],
+        "absent_point_ids": [
+          12,
+          13
+        ],
+        "exact_tenant_query_ids": [
+          22,
+          11,
+          15
+        ],
+        "exact_tenant_query_scores": [
+          1.0,
+          0.6,
+          0.2
+        ],
+        "reused_business_key": "reused",
+        "replacement_point_id": 22,
+        "replacement_incarnation": 2,
+        "payloads_and_named_vectors_equal_complete_source": true
+      }
+    },
+    "bounds": {
+      "child_deadline_seconds": 45,
+      "output_bytes_per_stream": 65536,
+      "kernel_affinity_cpus": 1,
+      "qdrant_num_cpus_override": 1,
+      "hash_files": 128,
+      "hash_logical_bytes": 268435456,
+      "query_limit": 8
+    },
+    "scope": {
+      "controller_policy_only": true,
+      "dirty_state_survival_inspected": false,
+      "wal_replay_verified": false,
+      "postgresql_ack_or_atomicity_verified": false,
+      "production_generation_cutover_verified": false,
+      "machine_loss_durability_verified": false,
+      "p0_exit_passed": false,
+      "release_supported": false
+    }
+  },
+  "interpretation": [
+    "Dirty refusal is a test-controller rule, not a behavior promised by Edge. The dirty generation is never opened by Edge after SIGKILL.",
+    "Rebuild input is the complete authoritative fixture, with unchanged SHA256 before and after; it is separate from the flushed baseline source.",
+    "Explicit-flush/reopen succeeds for the newly constructed generation on the same running kernel. No observation of dirty state survival, WAL logical replay, PostgreSQL ACK/atomicity, machine-loss durability or production generation switch is made.",
+    "The parent-owned temporary fixture is removed after this test; preservation means unchanged identity/file bytes throughout refusal and reconstruction, not archival retention after test completion."
+  ],
+  "scope_limits": {
+    "controller_policy_only": true,
+    "dirty_state_survival_inspected": false,
+    "wal_replay_verified": false,
+    "postgresql_ack_or_atomicity_verified": false,
+    "production_generation_cutover_verified": false,
+    "machine_loss_durability_verified": false,
+    "p0_exit_passed": false,
+    "release_supported": false
+  }
+}

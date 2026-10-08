@@ -11,6 +11,7 @@ use qdrant_edge::*;
 use serde_json::{Value, json};
 
 fn new_shard(path: &Path, sparse: &[&str]) -> EdgeShard {
+    pg_qdrant_edge_probe::cpu::require().expect("fixed Edge native CPU baseline");
     let shard = EdgeShard::new(
         path,
         EdgeConfig {
@@ -356,6 +357,7 @@ fn unicode_scalar_lengths_and_long_token_prefix_truncation_are_explicit() {
 }
 
 fn neutral(ascii_folding: bool) -> EdgeBm25 {
+    pg_qdrant_edge_probe::cpu::require().expect("fixed Edge native CPU baseline");
     // The public config exposes unnameable nested types. This fixed constant
     // remains probe-owned and is not a SQL/serde configuration contract.
     EdgeBm25::new(
@@ -370,6 +372,7 @@ fn neutral(ascii_folding: bool) -> EdgeBm25 {
 
 #[test]
 fn bm25_and_payload_analysis_remain_independent_until_both_are_configured() {
+    pg_qdrant_edge_probe::cpu::require().expect("fixed Edge native CPU baseline");
     let default = EdgeBm25::new(EdgeBm25Config::default()).unwrap();
     let literal = neutral(false);
     let folded = neutral(true);

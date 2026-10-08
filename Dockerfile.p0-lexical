@@ -1,0 +1,9 @@
+# Independent P0 candidate experiment, after the core image has built.
+# A lexical build failure must not prevent the core SQL/fault comparisons.
+FROM pg-qdrant-p0
+USER root
+RUN cargo fmt --manifest-path experiments/tantivy-probe/Cargo.toml -- --check \
+    && python3 experiments/tantivy-probe/inventory.py --check \
+    && CARGO_TARGET_DIR=/src/target/tantivy-probe \
+       cargo build --locked --manifest-path experiments/tantivy-probe/Cargo.toml
+USER builder

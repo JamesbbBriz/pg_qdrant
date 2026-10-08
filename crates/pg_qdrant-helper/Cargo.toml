@@ -3,7 +3,7 @@ name = "pg-qdrant-helper"
 version = "0.0.1"
 edition = "2024"
 rust-version = "1.96"
-license = "Apache-2.0"
+license = "AGPL-3.0-only"
 description = "Managed native-engine process comparison for pg_qdrant P0"
 publish = false
 

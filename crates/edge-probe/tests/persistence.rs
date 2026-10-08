@@ -4,6 +4,7 @@
 #[cfg(unix)]
 #[test]
 fn explicit_flush_survives_sigkill_without_drop() {
+    pg_qdrant_edge_probe::cpu::require().expect("fixed Edge native CPU baseline");
     use std::io::{BufRead, BufReader};
     use std::os::unix::process::ExitStatusExt;
     use std::process::{Command, Stdio};

@@ -32,6 +32,7 @@ mod qdrant {
             "stage": "P0_feasibility",
             "engine": {"name": "qdrant-edge", "version": "0.8.0"},
             "pgrx_version": "0.19.3",
+            "cpu_admission": pg_qdrant_edge_probe::cpu_report(),
             "postgres_major": 17,
             "features": {"pg17": cfg!(feature="pg17"), "cshim": true,
                 "p0_managed_helper": cfg!(feature="p0-managed-helper"),
