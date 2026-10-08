@@ -56,6 +56,21 @@ class DiskProbeRunnerTest(unittest.TestCase):
         self.assertEqual(report["execution"]["signal_name"], "SIGTERM")
         self.assertEqual(report["execution"]["last_stage"], "fixture_create")
 
+    def test_observation_survives_native_signal_without_claiming_recovery(self) -> None:
+        report = self.run_child(
+            "import os, signal, sys; "
+            "print('pg_qdrant_p0_observation={\"stage\":\"before_reopen\",\"free_bytes\":4096}', file=sys.stderr, flush=True); "
+            "os.kill(os.getpid(), signal.SIGTERM)")
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["execution"]["observations"], [{"stage": "before_reopen", "free_bytes": 4096}])
+        self.assertEqual(report["execution"]["observation_errors"], [])
+
+    def test_clean_control_does_not_substitute_for_enospc(self) -> None:
+        command = [sys.executable, "-c", "print('{\"kind\":\"edge_disk_fixture_probe\",\"status\":\"passed\",\"profile\":\"full_text\"}')"]
+        self.assertEqual(RUNNER.run_probe(command, required_profile="full_text")["status"], "failed")
+        self.assertEqual(RUNNER.run_probe(command, required_profile="full_text",
+                                        required_kind="edge_disk_fixture_probe")["status"], "passed")
+
     def test_not_run_and_wrong_experiment_are_not_passes(self) -> None:
         for body in [
             '{"kind":"edge_enospc_probe","status":"not_run"}',
@@ -80,6 +95,18 @@ class DiskProbeRunnerTest(unittest.TestCase):
         self.assertIsNone(report["execution"]["returncode"])
         self.assertIsNone(report["execution"]["signal_name"])
         self.assertEqual(report["execution"]["last_stage"], "fill")
+
+    def test_timeout_parses_observations_before_truncating_display_tail(self) -> None:
+        report = self.run_child(
+            "import sys, time; "
+            "print('pg_qdrant_p0_stage=before_reopen', file=sys.stderr, flush=True); "
+            "print('pg_qdrant_p0_observation={\"stage\":\"before_reopen\",\"free_bytes\":4096}', file=sys.stderr, flush=True); "
+            "print('x'*9000, file=sys.stderr, flush=True); time.sleep(10)", timeout=0.2)
+        self.assertEqual(report["status"], "failed")
+        self.assertTrue(report["execution"]["timed_out"])
+        self.assertTrue(report["execution"]["stderr_tail_truncated"])
+        self.assertEqual(report["execution"]["last_stage"], "before_reopen")
+        self.assertEqual(report["execution"]["observations"], [{"stage": "before_reopen", "free_bytes": 4096}])
 
 
 if __name__ == "__main__":

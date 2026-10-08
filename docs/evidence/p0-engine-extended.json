@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "observed_on": "2026-10-08",
+  "kind": "p0_engine_extended_local_evidence",
+  "base_revision": "77f9ecca11ede76e42ba197e294b177ea865d830",
+  "source_identity": "Development changes after the base revision; exact source inputs below.",
+  "platform": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "rust": "1.96.0",
+    "edge": "0.8.0"
+  },
+  "source_inputs": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "2d7b7d276d256722830f53e85d8a9d2d3a139fa69dc45cc1324936190e17772e"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "7c882422b33587e824b8b4aba7d69add0fe4bf11b3aa58ed0770ef039d81047f"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+    },
+    {
+      "path": "crates/edge-probe/Cargo.toml",
+      "sha256": "cf6109fc8f380c82b97f26985249d5b4430e9cd5483a7a6e426404cf95a9bbc2"
+    },
+    {
+      "path": "crates/edge-probe/src/api_inventory.rs",
+      "sha256": "4a269bb84608a28a6ee054b9ca68c1f7c24c6420621c43c165c1958a302a1fad"
+    },
+    {
+      "path": "crates/edge-probe/src/fault_probes.rs",
+      "sha256": "6f17e0105f100e5e97bb1aaa9372b635293fb185e0ec450c087443dc01a58379"
+    },
+    {
+      "path": "crates/edge-probe/src/lib.rs",
+      "sha256": "7d67856d3c1bfd88ed031f0eea86cef6e6042197d13efcd9da9a21c7afd70d35"
+    },
+    {
+      "path": "crates/edge-probe/src/main.rs",
+      "sha256": "1cfda348df39f2b6c79f8b3af8d897f494a86a7f1007cae49b14e1695e24f141"
+    },
+    {
+      "path": "crates/edge-probe/tests/advanced.rs",
+      "sha256": "9026d7f7d4b836b6d0433c5585229d261b902769e5c19ff2758a232dce50f093"
+    },
+    {
+      "path": "crates/edge-probe/tests/faults.rs",
+      "sha256": "4cb80596f08b1fdbec9ed6c99c48c75ccbb3239c6d7c9a6d0cff031250007808"
+    },
+    {
+      "path": "crates/edge-probe/tests/lexical.rs",
+      "sha256": "79341c5a15a01f6457a173b98f81941b162a9ee2de8dcdc0484d754d7d8e3225"
+    },
+    {
+      "path": "crates/edge-probe/tests/lifecycle.rs",
+      "sha256": "22cf73f77660882aa85d813c5988fcb5d6323bbc9664898bc0b05897d7f5f0a2"
+    },
+    {
+      "path": "crates/edge-probe/tests/persistence.rs",
+      "sha256": "006e71319eb123f9f35290d692b0d387d84c63e1efe069b5b3f4fa212988fc15"
+    },
+    {
+      "path": "crates/edge-probe/tests/public_lifecycle.rs",
+      "sha256": "a859c4182a201ca69f3202339f33b8878c4c69a42e6e7d64d95048931bf29412"
+    },
+    {
+      "path": "crates/edge-probe/tests/schema.rs",
+      "sha256": "65e1fc5c0b0c82ef433daae020e5ed5c1754205a8e5555c67c86a6e5f0c71c21"
+    }
+  ],
+  "earlier_evidence": "p0-engine.json",
+  "commands": [
+    {
+      "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
+      "exit_code": 0,
+      "tests_passed": 20,
+      "tests_failed": 0,
+      "tests_ignored": 0,
+      "test_names": [
+        "tests::actual_edge_smoke",
+        "advanced_vector_queries_reject_wrong_dimensions_without_fallback",
+        "q04_recommendation_strategies_have_distinct_exact_scores",
+        "q05_discover_and_context_apply_the_published_pair_semantics",
+        "q06_feedback_changes_the_scores_with_an_explicit_contract",
+        "q07_root_mmr_is_bounded_and_preserves_original_similarity_scores",
+        "q08_formula_uses_prefetched_scores_payload_defaults_and_real_errors",
+        "q10_order_by_and_random_sample_obey_filters_and_candidate_domains",
+        "disk_fixture_clean_reopen_without_filling",
+        "full_text_fixture_clean_reopen_without_filling",
+        "metadata_corruption_and_unsafe_disk_environment_are_rejected",
+        "bm25_and_payload_analysis_remain_independent_until_both_are_configured",
+        "phrase_preserves_array_and_field_boundaries_while_text_and_spans_values",
+        "unicode_scalar_lengths_and_long_token_prefix_truncation_are_explicit",
+        "conditional_mutations_and_partial_updates_survive_flush_reopen",
+        "selective_reads_scroll_facets_and_matrix_obey_the_fixture_filter",
+        "explicit_flush_survives_sigkill_without_drop",
+        "public_lifecycle_runs_only_in_bounded_owned_children",
+        "dynamic_dense_sparse_names_and_filtered_vector_deletion_survive_reopen",
+        "payload_index_create_delete_preserves_records_and_filtered_queries_after_reopen"
+      ],
+      "transcript_sha256": "a3bd03a47d694ed3726e6c76739553f0e97fb6ae56decf645b9c455747c07d13",
+      "source_input_overrides": [
+        {
+          "path": "crates/edge-probe/tests/faults.rs",
+          "sha256": "8b908370ca48dfbe78e7b862a184ebd5216d07ce8fde389135f45e4d97be1ce1",
+          "difference": "Before adding status/stderr to two failed child-exit assertion messages. No tested implementation or expected outcome changed."
+        }
+      ]
+    },
+    {
+      "command": "cargo test --locked -p pg-qdrant-edge-probe --test faults -- --test-threads=1",
+      "exit_code": 0,
+      "tests_passed": 3,
+      "tests_failed": 0,
+      "tests_ignored": 0,
+      "source_scope": "Final source inputs, including both updated assertion diagnostics.",
+      "transcript_sha256": "bbeca131174db6ad295c792ccae8e25aff8ae67682a94addcc762f8565d5494f"
+    },
+    {
+      "command": "target/debug/pg-qdrant-edge-probe --full-text-disk-fixture-probe",
+      "exit_code": 0,
+      "scope": "Clean ordinary-filesystem full-text fixture only; no filler or positive disk fault.",
+      "report_sha256": "8bf320e97e15eaad0dd67adeab8228d27b9311823c85fc09a51db48f24226ffd"
+    }
+  ],
+  "lexical_observations": {
+    "capabilities": [
+      "F01",
+      "F04",
+      "F05",
+      "F06",
+      "F08",
+      "F09",
+      "F10",
+      "F11"
+    ],
+    "source": "crates/edge-probe/tests/lexical.rs",
+    "passed": [
+      "Phrase boundaries across fields and array values; text AND may span array values",
+      "Independent BM25 and payload configuration, English defaults and explicit neutral policy",
+      "Unicode scalar length bounds, folding examples, token-prefix truncation and whole-keyword distinction"
+    ],
+    "prefix_counterexample": "With max_token_len=3, token-prefix query e-acute/clipse truncates and can match e-acute/clair; whole-keyword prefix does not. The source fixture uses the exact Unicode strings.",
+    "product_requirement": "Reject required predicates beyond proven analyzed scalar bounds, or use an explicitly permitted ready alternative preserving the complete predicate.",
+    "sql_guard_implemented": false,
+    "full_analyzer_parity_verified": false,
+    "original_text_offsets_verified": false,
+    "real_relevance_benchmark": false
+  },
+  "public_lifecycle_report": {
+    "kind": "public_lifecycle_probe",
+    "status": "passed",
+    "lifecycle": {
+      "status": "passed",
+      "mode": "lifecycle",
+      "engine_version": "0.8.0",
+      "snapshot_manifest_segments": 2,
+      "test_supplied_manifest_segments": 2,
+      "copy": {
+        "files": 49,
+        "logical_bytes_scanned": 74694620,
+        "nonzero_bytes_written": 310676
+      },
+      "read_only": {
+        "row_coverage": 4,
+        "exact_filtered_scores": "passed",
+        "manual_manifest_refresh": "passed",
+        "missing_manifest": "error"
+      },
+      "update_only": {
+        "preview_materialized_goldens": "passed",
+        "preview_unchanged": "passed",
+        "no_write_apply_and_replay": "passed",
+        "store_supported": false,
+        "delete_supported": false,
+        "store_panic": "not yet implemented: needs the append-only storages and field indexes of the write target",
+        "delete_panic": "not yet implemented: needs an appendable deleted-points bitmask",
+        "records_unchanged_after_panics": true,
+        "unsupported_operations": 3,
+        "original_source_records_preserved": true
+      },
+      "probe_resources": {
+        "kernel_affinity_cpus": 1,
+        "qdrant_num_cpus_override": 1,
+        "override_scope": "probe_only",
+        "child_deadline_seconds": 60
+      },
+      "snapshot_archive_created": false,
+      "snapshot_restore_verified": false,
+      "sql_integration_verified": false,
+      "automatic_manifest_publication_verified": false,
+      "unflushed_wal_recovery_verified": false
+    },
+    "empty_bootstrap": {
+      "status": "passed",
+      "mode": "empty-bootstrap",
+      "engine_version": "0.8.0",
+      "observed_outcome": "caught_rust_unimplemented_panic",
+      "bootstrap_supported": false,
+      "sql_integration_verified": false,
+      "panic_message": "not yet implemented: creating the initial appendable segment needs the append-only components"
+    }
+  },
+  "full_text_clean_report": {
+    "schema_version": 1,
+    "engine_version": "0.8.0",
+    "kind": "edge_disk_fixture_probe",
+    "status": "passed",
+    "sql_integration_verified": false,
+    "release_supported": false,
+    "oom_verified": false,
+    "power_loss_verified": false,
+    "profile": "full_text",
+    "fixture": {
+      "points": 8,
+      "named_representations": [
+        "dense",
+        "bm25",
+        "learned",
+        "tokens"
+      ],
+      "wal_segment_capacity_bytes": 65536,
+      "keyword_indexes": [
+        "tenant",
+        "document",
+        "sku"
+      ],
+      "text_indexes": [
+        "body",
+        "body_prefix"
+      ],
+      "storage_scope": "unchanged bounded full fixture with mutable phrase and token-prefix indexes"
+    },
+    "recovery": {
+      "explicit_flush": "passed",
+      "reopen": "passed",
+      "records": 8,
+      "all_representation_records_equal": true,
+      "keyword_tenant_and_maxsim_queries": "passed",
+      "phrase_query": "passed",
+      "token_prefix_query": "passed"
+    },
+    "storage_observations": {
+      "created_and_flushed": {
+        "files": 85,
+        "logical_bytes": 289807352,
+        "allocated_bytes": 331776,
+        "mapping_rss_kib": 34080,
+        "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+      },
+      "reopened": {
+        "files": 85,
+        "logical_bytes": 289807352,
+        "allocated_bytes": 331776,
+        "mapping_rss_kib": 215756,
+        "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+      }
+    },
+    "observations": [
+      {
+        "stage": "clean_fixture_flushed",
+        "storage": {
+          "files": 85,
+          "logical_bytes": 289807352,
+          "allocated_bytes": 331776,
+          "mapping_rss_kib": 34080,
+          "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+        },
+        "filesystem": {
+          "type": "overlayfs",
+          "host_capacity_fields_omitted": true
+        }
+      },
+      {
+        "stage": "clean_before_reopen",
+        "storage": {
+          "files": 85,
+          "logical_bytes": 289807352,
+          "allocated_bytes": 331776,
+          "mapping_rss_kib": 0,
+          "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+        },
+        "filesystem": {
+          "type": "overlayfs",
+          "host_capacity_fields_omitted": true
+        }
+      },
+      {
+        "stage": "clean_after_reopen",
+        "storage": {
+          "files": 85,
+          "logical_bytes": 289807352,
+          "allocated_bytes": 331776,
+          "mapping_rss_kib": 215548,
+          "scope": "owned shard mappings only; not process RSS or a tmpfs capacity proof"
+        },
+        "filesystem": {
+          "type": "overlayfs",
+          "host_capacity_fields_omitted": true
+        }
+      }
+    ],
+    "provisioned_tmpfs": false,
+    "enospc_verified": false,
+    "filler_created": false,
+    "scope": "clean fixture reopen and storage observations only; no disk filling or recovery from ENOSPC"
+  },
+  "source_scope_notes": [
+    "The integrated 20-test suite and final three-test diagnostic rerun jointly bind the current source inputs; the prior assertion-only version is identified separately.",
+    "Public lifecycle results use child-owned copies, a test-supplied manifest and one verified kernel CPU. They do not validate snapshot archive production, restore or a production manifest publisher.",
+    "UpdateOnlyShard Store, Delete and empty bootstrap panic as unimplemented in the fixed release. A passing negative test is not support for those operations; the ordinary EdgeShard mutation path is separate.",
+    "The full-text clean report omits transient host filesystem capacity values and retains all fixture storage measurements. Mapped RSS is not tmpfs allocation or proof of the CI5 SIGBUS cause.",
+    "The latest full-text fault result remains failed in p0-full-text-disk-ci.json. No local disk filling, actual OOM or PostgreSQL server execution was performed by these tests."
+  ],
+  "quality_benchmark": false,
+  "sql_integration_verified": false,
+  "full_text_enospc_verified": false,
+  "kernel_oom_verified": false,
+  "p0_exit_passed": false,
+  "release_supported": false
+}

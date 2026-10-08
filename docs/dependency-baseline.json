@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "p0_narrow_enospc_verified_private_helper_regression_pending",
+  "status": "p0_narrow_enospc_verified_full_text_sigbus_current_sql_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -113,7 +113,7 @@
         "p0-fault-injection"
       ]
     ],
-    "latest_failed_container_evidence": "evidence/p0-regression-ci.json",
+    "latest_failed_container_evidence": "evidence/p0-full-text-disk-ci.json",
     "last_complete_four_profile_runtime_evidence": "evidence/p0-helper-ci.json"
   },
   "build_evidence": [
@@ -130,7 +130,7 @@
       "status": "passed",
       "rust": "1.96.0",
       "evidence": "evidence/p0-engine.json",
-      "scope": "Four tests pass: 16 synthetic engine groups, actual phrase/vector queries after explicit-flush/SIGKILL, full-fixture copied-metadata rejection/recovery, and clean reopen of a separate disk-specific vector/keyword fixture. Positive ENOSPC and its full mutable-text combination remain unverified."
+      "scope": "Historical four-test checkpoint: 16 synthetic groups, explicit-flush/SIGKILL, copied-metadata corruption and clean narrow-fixture reopen. Later 15-test and 20-test coverage is recorded separately; this entry does not establish full-text ENOSPC recovery."
     },
     {
       "kind": "postgres_check",
@@ -279,8 +279,9 @@
       "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
       "status": "passed",
       "evidence": "evidence/p0-engine.json",
-      "scope": "Current integrated 15-test local suite: zero failed/ignored. Source hashes are recorded in the engine evidence. Advanced queries, lifecycle and dynamic schemas add engine feasibility coverage; no product completion or current PostgreSQL runtime claim.",
-      "rust": "1.96.0"
+      "scope": "Historical integrated 15-test local suite: zero failed/ignored. Source hashes are recorded in the engine evidence. Advanced queries, lifecycle and dynamic schemas add engine feasibility coverage; no product completion or current PostgreSQL runtime claim.",
+      "rust": "1.96.0",
+      "verified_source_commit": "77f9ecca11ede76e42ba197e294b177ea865d830"
     },
     {
       "kind": "helper_child_bookkeeping",
@@ -289,6 +290,31 @@
       "rust": "1.96.0",
       "evidence": "evidence/p0-helper-exit-local.json",
       "scope": "Two actual-child tests using the private production module. Complete local pipe suites fail their live-PID visibility precondition; current SQL runtime requires CI."
+    },
+    {
+      "kind": "ci5_full_text_enospc_regression",
+      "command": "GitHub Actions P0 run 37729282903",
+      "status": "failed",
+      "rust": "1.96.0",
+      "verified_source_commit": "77f9ecca11ede76e42ba197e294b177ea865d830",
+      "evidence": "evidence/p0-full-text-disk-ci.json",
+      "scope": "Base image/extension install, 15 engine tests, 2 real-child tests, 6 Python diagnostics and narrow 32 MiB ENOSPC passed. Full-text 128 MiB terminated with SIGBUS at recovery_reopen; all four PostgreSQL profiles were skipped. No full-text recovery, current SQL or P0 exit claim."
+    },
+    {
+      "kind": "engine_runtime",
+      "command": "cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-engine-extended.json",
+      "scope": "20 local engine tests passed with no failures or ignored tests; final fault-assertion diagnostic changes are checked separately. Synthetic fixtures only; no SQL or complete product claim."
+    },
+    {
+      "kind": "postgres_format_check",
+      "command": "cargo check --locked -p pg_qdrant --no-default-features --features pg17",
+      "status": "passed",
+      "rust": "1.96.0",
+      "evidence": "evidence/p0-input-formats-local.json",
+      "scope": "Corrected candidate-format source compiles against PG17.11. The earlier linked iteration is separately identified; all three new SQL assertion groups remain pending."
     }
   ]
 }

@@ -45,6 +45,17 @@ engine API; they are not outputs of a claimed production model. The persistence
 test kills only a dedicated child process after explicit flush, then checks its
 reopened data. This does not establish atomicity with PostgreSQL commits.
 
+The current local locked suite passes 20 engine tests. It includes read-only
+loading and refresh with an explicitly test-supplied manifest, snapshot-manifest
+inspection, and update-only preview/no-write replay. Fixed Edge 0.8.0's
+update-only Store, Delete and empty bootstrap paths trigger unimplemented panics
+and are reported unavailable; the ordinary `EdgeShard` mutation path is separate.
+The bounded public-lifecycle test requires Linux `taskset`, verifies singleton
+CPU affinity before engine pools start, and uses only owned temporary fixtures.
+These tests do not establish snapshot archive production/restoration or SQL
+source/authorization behavior. The [probe inventory](../crates/edge-probe/README.md)
+records the exact coverage.
+
 ## PostgreSQL prototype
 
 The build requires PostgreSQL 17 server headers and `pg_config`, libclang for
@@ -96,6 +107,15 @@ Those results include a negative finding about direct-worker crash isolation.
 New code and additional profiles must earn their own run evidence before their
 verification status advances.
 
+The [latest CI](evidence/p0-full-text-disk-ci.json), run 37729282903 at head
+`77f9ecc`, built and installed the normal extension and passed 15 engine tests,
+two child-bookkeeping tests, six Python runner tests and narrow 32 MiB ENOSPC.
+The separate full-text 128 MiB experiment received SIGBUS at `recovery_reopen`;
+all four SQL profiles were skipped. Historical [four-profile helper evidence](evidence/p0-helper-ci.json)
+and the [partially passing later regression](evidence/p0-regression-ci.json)
+remain tied to their own revisions. Current local Python tests pass nine cases;
+they do not substitute for a current container/SQL regression.
+
 For intentionally destructive *disposable-cluster* experiments only:
 
 ```sh
@@ -126,14 +146,16 @@ docker run --rm --memory=5g --cpus=2 pg-qdrant-p0-helper-faults \
   bash crates/pg_qdrant/tests/run-faults.sh
 ```
 
-CI runs both normal and fault-enabled helper profiles, including their standalone
+CI defines both normal and fault-enabled helper profiles, including their standalone
 pipe tests and actual SQL calls. The selected image sets
 `PG_QDRANT_MANAGED_HELPER=1`; the suite checks this against the extension build
 and helper handshake. Missing or mismatched helpers fail explicitly and do not
 silently select the direct-worker profile. See the [helper protocol tests](../crates/pg_qdrant-helper/README.md)
 and [PostgreSQL prototype](../crates/pg_qdrant/README.md) for ownership, restart,
 parent-death and cancellation boundaries. Presence of these CI steps alone does
-not claim that they passed.
+not claim that they passed. Independently qualified steps now depend on their
+image outcome and cancellation state, so a disk or pipe failure need not skip
+unrelated SQL probes; any failed experiment still fails the overall job.
 
 ### Bounded disk and corruption experiments
 
@@ -166,17 +188,49 @@ run before the container build:
 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 ```
 
-The [first provisioned attempt](evidence/p0-helper-ci.json) failed without a JSON
-report; that older wrapper did not preserve its exit code, so the cause remains
-unknown. New storage-placement settings and diagnostics require a new provisioned
-run. The revised fixture retains eight records, four named vectors and keyword
-indexes, while explicitly excluding the two mutable text indexes whose writable
-loader eagerly populates backing pages. Its independent clean-reopen test passes;
-it does not establish ENOSPC or full-text recovery. The full phrase/ENOSPC/reopen
-combination remains open, and the separate corruption and flushed-SIGKILL tests
-keep their phrase assertions. See the [fixture and source details](../crates/edge-probe/README.md#why-the-small-disk-fixture-excludes-mutable-text-indexes).
-WAL exhaustion, source-event ACK durability, OOM and power-loss behavior remain
-separate gates.
+The narrow fixture retains eight records, four named representations and keyword
+indexes while excluding the mutable text indexes. Its 32 MiB ENOSPC
+configuration-save/retry/reopen checks passed in [CI4](evidence/p0-regression-ci.json)
+and [CI5](evidence/p0-full-text-disk-ci.json). The older full-fixture 32 MiB
+attempt in [CI2](evidence/p0-helper-ci.json) produced no JSON and did not retain
+its exit code; its cause remains unknown. The intervening
+[errno-wrapper failure](evidence/p0-disk-ci.json) is a separate preserved result.
+
+The full-text combination has its own 128 MiB bound and remains a failing gate.
+Run the fault experiment and its clean control in **separate disposable
+containers**, each with an initially empty mount:
+
+```sh
+docker run --rm --memory=5g --cpus=2 --network=none \
+  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+  pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text
+
+docker run --rm --memory=5g --cpus=2 --network=none \
+  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+  pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text --clean
+```
+
+The clean control creates no filler and reports a different experiment kind; it
+cannot satisfy ENOSPC acceptance. CI5 observed SIGBUS after reaching
+`recovery_reopen` in the full-text fault profile. Added diagnostics retain
+stage-specific logical/allocated bytes, owned mapping RSS, filesystem free
+blocks and post-exit metadata without labeling those observations as the cause.
+The new instrumented tmpfs runs have no positive result yet.
+
+A local clean full-text reopen on an ordinary filesystem passed and recorded
+289,807,352 logical bytes, 331,776 allocated bytes and approximately 215,756 KiB
+of owned mapping RSS after reopen. Mapping RSS exceeds the 128 MiB experiment
+capacity, but it is not a measurement of tmpfs allocation or proof of the
+failing operation. Eager mutable-text loading is a hypothesis to test; neither
+these measurements nor a clean ordinary-filesystem pass establishes full-text
+ENOSPC recovery.
+See the [fixture and fixed-source details](../crates/edge-probe/README.md#why-the-small-disk-fixture-excludes-mutable-text-indexes).
+
+Separate corruption and explicitly flushed SIGKILL tests retain their phrase
+assertions. WAL exhaustion, dirty ingestion, source-event ACK durability,
+actual kernel OOM and power-loss behavior remain independent open gates.
 
 ## Keeping evidence current
 

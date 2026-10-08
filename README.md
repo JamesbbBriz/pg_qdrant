@@ -61,7 +61,7 @@ Typo tolerance, synonyms, query syntax, proximity, highlighting, and autocomplet
 
 ## Dependencies and upstream upgrades
 
-The implementation depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. Edge `0.8.0`, pgrx/cargo-pgrx `0.19.3`, and Rust `1.96.0` have passed a combined Linux PostgreSQL 17.11 build and scoped SQL feasibility tests. This establishes an executable baseline; production capability and upgrade support remain separate gates in the version baseline.
+The implementation depends directly on the published `qdrant-edge` Rust crate for retrieval and local BM25, and on `pgrx` for PostgreSQL integration. Edge `0.8.0`, pgrx/cargo-pgrx `0.19.3`, and Rust `1.96.0` have passed a combined Linux PostgreSQL 17.11 build and scoped SQL feasibility tests at recorded earlier revisions. The latest CI built the normal extension but skipped all four SQL profiles after a disk experiment failed. This establishes a historical executable baseline; production capability and upgrade support remain separate gates in the version baseline.
 
 Use released public APIs through an engine adapter. Track tokenizer configuration, model contracts, SQL API versions, and on-disk generations separately from dependency versions. An upstream update must pass capability, quality, authorization, lifecycle, and migration checks before it becomes a supported release.
 
@@ -83,51 +83,46 @@ local BM25, dense/sparse/MaxSim, fusion, text constraints, grouping and persiste
 they do not establish production retrieval quality. See the [probe inventory](crates/edge-probe/README.md)
 and [PostgreSQL prototype](crates/pg_qdrant/README.md) for exact scope and commands.
 
-The [first PostgreSQL CI result](docs/evidence/p0-postgresql-ci.json) records
-successful installation and SQL/IPC diagnostics, plus a negative architecture
-result: killing or aborting the direct engine background worker terminated an
-unrelated SQL session. Committed PostgreSQL data survived recovery.
+The [latest recorded CI](docs/evidence/p0-full-text-disk-ci.json), run
+37729282903 at head `77f9ecc`, built and installed the normal extension, passed
+15 engine tests, two helper child-bookkeeping tests, six Python runner tests,
+and the narrow 32 MiB ENOSPC experiment. The separate 128 MiB full-text
+experiment terminated with **SIGBUS at `recovery_reopen`**. All four PostgreSQL
+SQL profiles were skipped, so this run provides no current SQL regression pass.
+The signal and last stage are observed; the failing native allocation or I/O
+operation has not been identified.
 
-The [helper comparison CI](docs/evidence/p0-helper-ci.json) passed all four
-PostgreSQL profiles at its recorded source tree: 10/12 direct-worker checks and
-10/15 managed-helper checks, plus 7/8 standalone helper pipe checks. Helper
-SIGKILL/native abort preserved the companion SQL session and PostgreSQL
-supervisor. Its actual 125-second process-stop budget, supervisor SIGTERM/EOF
-cleanup and bounded restart exhaustion also passed. These results make the
-same-package helper the preferred topology candidate. Process termination is
-distinct from native query cancellation or durable index recovery.
+Earlier results remain evidence for their recorded source revisions:
 
-The overall helper comparison workflow **failed** at a provisioned 32 MiB tmpfs
-experiment: the child returned no JSON, and its exit cause remains unknown.
-The revised small disk fixture retains vectors and keyword filtering while
-omitting the mutable text indexes; its independent clean-reopen checks pass.
-Full mutable-text ENOSPC recovery remains an open combination.
+| Record | Scoped result and remaining failure |
+| --- | --- |
+| [Initial PostgreSQL CI](docs/evidence/p0-postgresql-ci.json) | Direct-worker SQL diagnostics passed, but killing or aborting its engine owner terminated a companion SQL session; committed PostgreSQL data survived recovery |
+| [Helper comparison CI](docs/evidence/p0-helper-ci.json), head `a22d3c7` | Direct SQL 10/12, helper SQL 10/15, and helper pipe 7/8 checks passed; helper native faults preserved the companion session and supervisor. The workflow failed at a 32 MiB disk experiment whose exit cause was not recorded |
+| [Disk retry CI](docs/evidence/p0-disk-ci.json), head `cce2b41` | Filling reached real ENOSPC, but the temporary-file wrapper hid its raw errno; configuration-save/recovery and all SQL profiles were not reached |
+| [Regression CI](docs/evidence/p0-regression-ci.json), head `1f9d8bb` | Narrow 32 MiB ENOSPC, direct SQL 10/12, normal-helper SQL 10 and pipe 7 checks passed. The private pipe observer failed with `ProcessLookupError`; private-helper SQL was not reached |
 
-The subsequent [disk retry CI](docs/evidence/p0-disk-ci.json), run 37724223470 at
-head `cce2b41`, **failed during filling** because the temporary-file wrapper hid
-the raw OS errno and the probe misclassified genuine ENOSPC. Configuration-save
-and recovery checks were not reached, and **all four PostgreSQL SQL profiles
-were skipped on that head**. This diagnosis does not explain the earlier
-missing-report failure; both failures remain recorded.
+These helper results make the same-package helper the preferred topology
+candidate. Process termination remains distinct from native query cancellation
+and durable index recovery. The [stricter helper harness](docs/evidence/p0-helper-exit-local.json)
+requires a live process identity before its controller-kill experiment; its
+recorded local attempts failed that precondition without sending the kill.
+Current SQL regression and forced PostgreSQL-supervisor SIGKILL remain open.
 
-The [next regression CI](docs/evidence/p0-regression-ci.json), run 37725563600
-at head `1f9d8bb`, passed the narrow 32 MiB ENOSPC configuration-save/recovery
-experiment, direct-worker SQL checks **10/12**, normal-helper SQL checks **10**,
-and normal-helper pipe checks **7**. The workflow still **failed**: the private
-helper pipe suite passed six checks, then its controller-SIGKILL cleanup observer
-raised `ProcessLookupError` while reading `/proc`. The private-helper PostgreSQL
-suite was not reached. This does not supersede the earlier successful private
-SQL evidence or establish a successful current regression.
+The current local locked engine suite passes **20 tests**, and the Python runner
+suite passes **nine**. New engine-only checks cover lexical boundaries and
+prefix truncation, full-text clean reopen, read-only loading with a test-supplied
+manifest, and update-only preview/no-write branches. Fixed Edge 0.8.0's
+`UpdateOnlyEdgeShard` Store, Delete and empty bootstrap paths are explicitly
+unavailable: the probes observed their unimplemented panics. Ordinary
+`EdgeShard` mutation is a separate tested path. None of these engine results
+establish PostgreSQL authorization or source consistency.
 
-The current local locked engine suite passes **15 tests**, including advanced
-query scores, mutations, dynamic vector/payload schemas and explicit-flush
-reopen. The [stricter helper harness](docs/evidence/p0-helper-exit-local.json) now requires a live process identity before
-its kill experiment; local normal/private reruns each pass six checks and then
-fail that precondition before sending the kill. Earlier local cleanup observations
-cannot independently prove that gate. The next CI must validate this correction,
-forced PostgreSQL-supervisor SIGKILL and the separate bounded 128 MiB full-text
-ENOSPC profile. Full-text ENOSPC, actual OOM and production/release gates remain
-open; the narrow disk success is not a full storage-recovery contract.
+A clean full-text reopen on an ordinary filesystem also records storage and
+mapping measurements. Those observations motivate the separate clean tmpfs
+control; they do not prove the cause of SIGBUS or a full-text ENOSPC recovery
+pass. See the [build and fault instructions](docs/build.md) and [P0 report](docs/p0-report.md).
+Full-text disk recovery, actual kernel OOM, production durability and release
+gates remain open; the narrow disk success is not a complete storage contract.
 
 [User journeys](docs/user-journeys.md), [phase acceptance](docs/acceptance.md),
 the [P0 evidence report](docs/p0-report.md), and the [work ledger](docs/work-items.json) retain all 54 formal capabilities and

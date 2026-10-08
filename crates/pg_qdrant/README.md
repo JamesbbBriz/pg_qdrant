@@ -7,6 +7,25 @@ source-table synchronization, a product search function, or a durable indexing
 service. The 54 product requirements remain in the capability registry as
 planned and not release-supported.
 
+The [latest CI evidence](../../docs/evidence/p0-full-text-disk-ci.json), run
+37729282903 at head `77f9ecc`, built and installed the normal extension and
+passed 15 standalone engine tests, two helper child-bookkeeping tests, six
+Python runner tests and narrow 32 MiB configuration-save ENOSPC. Its separate
+128 MiB full-text experiment terminated with SIGBUS at `recovery_reopen`; all
+four SQL profiles were skipped. This is not a current SQL integration pass.
+Historical [CI2](../../docs/evidence/p0-helper-ci.json) passed direct SQL 10/12
+and helper SQL 10/15 checks; [CI4](../../docs/evidence/p0-regression-ci.json)
+passed direct SQL 10/12 and normal-helper SQL 10, then failed in a private pipe
+observer before private-helper SQL. Those results retain their recorded source
+and feature boundaries.
+
+Current local verification passes 20 engine tests and nine Python runner tests.
+These include no PostgreSQL source-table indexing or authorization proof. The
+candidate-format experiment linked in an earlier iteration. The corrected
+source passes normal PG17 checking; its signed-zero and compact float-bit SQL
+assertions still await execution. Proposed `real[]`, sparse and token-matrix product
+contracts remain unfrozen.
+
 ## Build inputs
 
 - Rust 1.96.0 and pgrx/cargo-pgrx 0.19.3.
@@ -121,9 +140,10 @@ PG_QDRANT_ARTIFACT_DIR=artifacts/p0-faults \
 
 The fault runner checks a caught Rust panic, worker `SIGKILL`, native process
 abort, effects on another SQL session, and recovery of a committed PostgreSQL
-marker. It records incomplete OOM, disk-full, and persistent-index corruption
-gates explicitly. It does not allocate until the host is exhausted or fill the
-host filesystem. OOM and disk-full tests require isolated resource domains.
+marker. It does not establish actual kernel OOM, full-text disk-failure
+recovery, or persistent product-index corruption recovery. The separate narrow
+engine ENOSPC pass does not close these PostgreSQL durability gates. It does
+not allocate until the host is exhausted or fill the host filesystem. OOM and disk-full tests require isolated resource domains.
 
 PostgreSQL background workers attach to shared memory. Their process boundary
 must not be advertised as unconditional crash isolation. If the measured worker
@@ -181,10 +201,20 @@ The standalone helper suite also checks pipe cleanup after killing its own pure
 controller. Forced **PostgreSQL** supervisor `SIGKILL` remains a separate gate;
 none of these test implementations count as passing until their run is recorded.
 
-Passing this comparison would establish only the measured P0 fault behavior.
-Source outbox durability, memory/disk limits, production generations, recovery,
-upgrade safety and an architecture adoption decision still have independent
-acceptance gates.
+The historical passing comparison establishes only its measured P0 fault
+behavior. Current SQL regression, forced PostgreSQL-supervisor SIGKILL, source
+outbox durability, memory/disk limits, production generations, recovery, upgrade
+safety and an architecture adoption decision still have independent acceptance
+gates. The latest full-text disk signal is documented separately from the
+helper containment results; a clean ordinary-filesystem reopen cannot turn it
+into a full-text ENOSPC pass.
+
+The sibling engine suite also verifies read-only loading/refresh using a
+test-supplied manifest and update-only preview/no-write branches. In fixed Edge
+0.8.0, update-only Store, Delete and empty bootstrap trigger unimplemented
+panics and remain unavailable. Those experiments do not provide a replacement
+for the ordinary EdgeShard mutation path, a snapshot restore mechanism, or a
+PostgreSQL committed-change ACK contract.
 
 ## Versioned source evidence
 

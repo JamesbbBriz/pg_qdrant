@@ -65,8 +65,10 @@ fn metadata_corruption_and_unsafe_disk_environment_are_rejected() {
     let output = bounded_output(corruption);
     assert!(
         output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stdout)
+        "status: {}\nstdout: {}\nstderr: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
     let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(report["status"], "passed");
@@ -116,4 +118,41 @@ fn metadata_corruption_and_unsafe_disk_environment_are_rejected() {
             .count(),
         0
     );
+}
+
+#[test]
+fn full_text_fixture_clean_reopen_without_filling() {
+    let mut probe = Command::new(env!("CARGO_BIN_EXE_pg-qdrant-edge-probe"));
+    probe.arg("--full-text-disk-fixture-probe");
+    let output = bounded_output(probe);
+    assert!(
+        output.status.success(),
+        "status: {}\nstdout: {}\nstderr: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["status"], "passed");
+    assert_eq!(report["profile"], "full_text");
+    assert_eq!(
+        report["fixture"]["text_indexes"],
+        serde_json::json!(["body", "body_prefix"])
+    );
+    assert_eq!(report["recovery"]["all_representation_records_equal"], true);
+    assert_eq!(report["recovery"]["phrase_query"], "passed");
+    assert_eq!(report["recovery"]["token_prefix_query"], "passed");
+    assert_eq!(report["enospc_verified"], false);
+    assert_eq!(report["filler_created"], false);
+    assert_eq!(report["provisioned_tmpfs"], false);
+    assert_eq!(report["observations"].as_array().unwrap().len(), 3);
+
+    let owned = tempfile::tempdir().unwrap();
+    let mut refused = Command::new(env!("CARGO_BIN_EXE_pg-qdrant-edge-probe"));
+    refused
+        .arg("--full-text-tmpfs-fixture-probe")
+        .env("PG_QDRANT_ENOSPC_DIR", owned.path());
+    let refused = bounded_output(refused);
+    assert!(!refused.status.success());
+    assert_eq!(std::fs::read_dir(owned.path()).unwrap().count(), 0);
 }

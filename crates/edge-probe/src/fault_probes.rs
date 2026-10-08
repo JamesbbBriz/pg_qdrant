@@ -168,38 +168,77 @@ fn fixture_observation(shard: &EdgeShard) -> Result<Vec<qdrant_edge::Record>, St
 
 /// Safe preflight of the disk-specific fixture on an ordinary owned directory.
 /// This does not fill a filesystem or provide positive ENOSPC evidence.
-pub fn disk_fixture_probe() -> Result<Value, String> {
-    let root = context(
-        tempfile::Builder::new()
-            .prefix("pgq-disk-fixture-")
-            .tempdir(),
-        "owned disk-fixture directory",
-    )?;
+pub fn disk_fixture_probe(full_text: bool, provisioned_tmpfs: bool) -> Result<Value, String> {
+    #[cfg(target_os = "linux")]
+    let guard = if provisioned_tmpfs {
+        require(
+            full_text,
+            "only the full-text clean control uses a provisioned tmpfs",
+        )?;
+        let path =
+            std::env::var_os(TMPFS_ENV).ok_or("clean tmpfs control requires its explicit mount")?;
+        Some(validate_tmpfs(Path::new(&path), MAX_FULL_TEXT_FAULT_BYTES)?)
+    } else {
+        None
+    };
+    #[cfg(not(target_os = "linux"))]
+    require(!provisioned_tmpfs, "clean tmpfs control requires Linux")?;
+    let mut builder = tempfile::Builder::new();
+    builder.prefix("pgq-disk-fixture-");
+    #[cfg(target_os = "linux")]
+    let owned = if let Some(guard) = &guard {
+        builder.tempdir_in(&guard.root)
+    } else {
+        builder.tempdir()
+    };
+    #[cfg(not(target_os = "linux"))]
+    let owned = builder.tempdir();
+    let root = context(owned, "owned disk-fixture directory")?;
     let outcome = (|| {
-        let shard = pg_qdrant_edge_probe::disk_persistence_fixture(root.path())?;
-        let expected = records_and_vector_observation(&shard)?;
+        progress("clean_fixture_create");
+        let shard = if full_text {
+            pg_qdrant_edge_probe::bounded_persistence_fixture(root.path())?
+        } else {
+            pg_qdrant_edge_probe::disk_persistence_fixture(root.path())?
+        };
+        let observe = if full_text { fixture_observation } else { records_and_vector_observation };
+        let expected = observe(&shard)?;
         context(shard.flush(), "disk-fixture explicit flush")?;
         let created_footprint = storage_footprint(root.path())?;
+        let mut observations = vec![disk_observation("clean_fixture_flushed", root.path())?];
         drop(shard);
+        observations.push(disk_observation("clean_before_reopen", root.path())?);
         progress("recovery_reopen");
         let reopened = context(EdgeShard::load(root.path(), None), "clean disk-fixture reopen")?;
+        observations.push(disk_observation("clean_after_reopen", root.path())?);
         require(
-            records_and_vector_observation(&reopened)? == expected,
+            observe(&reopened)? == expected,
             "clean disk-fixture reopen changed source representations",
         )?;
         let reopened_footprint = storage_footprint(root.path())?;
         drop(reopened);
         let mut result = report("edge_disk_fixture_probe", "passed");
-        result["fixture"] = disk_fixture_description();
-        result["recovery"] = json!({"explicit_flush":"passed","reopen":"passed","records":8,"all_representation_records_equal":true,"keyword_tenant_and_maxsim_queries":"passed","phrase_query":"not_tested"});
+        result["profile"] = if full_text { "full_text" } else { "vector_keyword" }.into();
+        result["fixture"] = if full_text { full_text_fixture_description() } else { disk_fixture_description() };
+        let text_result = if full_text { "passed" } else { "not_tested" };
+        result["recovery"] = json!({"explicit_flush":"passed","reopen":"passed","records":8,"all_representation_records_equal":true,"keyword_tenant_and_maxsim_queries":"passed","phrase_query":text_result,"token_prefix_query":text_result});
         result["storage_observations"] = json!({"created_and_flushed":created_footprint,"reopened":reopened_footprint});
+        result["observations"] = observations.into();
+        result["provisioned_tmpfs"] = provisioned_tmpfs.into();
         result["enospc_verified"] = false.into();
         result["filler_created"] = false.into();
-        result["scope"] = "clean disk-specific fixture reopen only; full mutable text indexes are excluded".into();
+        result["scope"] = "clean fixture reopen and storage observations only; no disk filling or recovery from ENOSPC".into();
         Ok(result)
     })().map_err(|error| scrub(error, root.path()));
     context(root.close(), "clean up owned disk fixture")?;
     outcome
+}
+
+fn full_text_fixture_description() -> Value {
+    json!({"points":8,"named_representations":["dense","bm25","learned","tokens"],
+        "wal_segment_capacity_bytes":65_536,"keyword_indexes":["tenant","document","sku"],
+        "text_indexes":["body","body_prefix"],
+        "storage_scope":"unchanged bounded full fixture with mutable phrase and token-prefix indexes"})
 }
 
 fn disk_fixture_description() -> Value {
@@ -285,6 +324,40 @@ fn storage_footprint(root: &Path) -> Result<Value, String> {
 #[cfg(not(target_os = "linux"))]
 fn storage_footprint(_root: &Path) -> Result<Value, String> {
     Ok(json!({"status":"not_available","reason":"Linux /proc mapping observation only"}))
+}
+
+/// Emitted before risky native calls so a parent retains partial observations
+/// after a signal. This reads owned metadata; it neither touches backing pages
+/// nor changes capacity. Logical bytes, allocated bytes and RSS stay distinct.
+fn disk_observation(stage: &str, root: &Path) -> Result<Value, String> {
+    let mut observation = json!({"stage":stage,"storage":storage_footprint(root)?});
+    #[cfg(target_os = "linux")]
+    {
+        let output = context(
+            std::process::Command::new("/usr/bin/stat")
+                .args(["--file-system", "--format=%T %S %b %f %a", "--"])
+                .arg(root)
+                .env("LC_ALL", "C")
+                .output(),
+            "observe filesystem blocks",
+        )?;
+        require(output.status.success(), "filesystem observation failed")?;
+        let output = context(String::from_utf8(output.stdout), "decode filesystem blocks")?;
+        let fields: Vec<_> = output.split_whitespace().collect();
+        require(fields.len() == 5, "invalid filesystem observation")?;
+        let unit = context(fields[1].parse::<u64>(), "parse filesystem block unit")?;
+        let bytes = |field: &str| -> Result<u64, String> {
+            context(field.parse::<u64>(), "parse filesystem block count")?
+                .checked_mul(unit)
+                .ok_or_else(|| "filesystem block size overflow".into())
+        };
+        observation["filesystem"] = json!({
+            "type":fields[0],"capacity_bytes":bytes(fields[2])?,
+            "free_bytes":bytes(fields[3])?,"available_bytes":bytes(fields[4])?
+        });
+    }
+    eprintln!("pg_qdrant_p0_observation={observation}");
+    Ok(observation)
 }
 
 fn copy_owned_tree(source: &Path, destination: &Path) -> Result<(), String> {
@@ -641,6 +714,7 @@ fn run_disk_full(guard: &TmpfsGuard, full_text: bool) -> Result<Value, String> {
         progress("fixture_query");
         let observe = if full_text { fixture_observation } else { records_and_vector_observation };
         let expected = observe(&shard)?;
+        let mut observations = vec![disk_observation("fixture_query_passed", &shard_path)?];
         let config_path = shard_path.join("edge_config.json");
         let before_bytes = context(fs::read(&config_path), "read persisted baseline config")?;
         let before_memory = shard.config().clone();
@@ -674,6 +748,8 @@ fn run_disk_full(guard: &TmpfsGuard, full_text: bool) -> Result<Value, String> {
             }
         }
 
+        observations.push(disk_observation("filled", &shard_path)?);
+
         progress("config_save");
         let edge_result = shard.set_hnsw_config(target_config);
         progress("config_result");
@@ -683,6 +759,7 @@ fn run_disk_full(guard: &TmpfsGuard, full_text: bool) -> Result<Value, String> {
         // failed assertion. No mount or foreign file is removed.
         progress("filler_release");
         context(filler.close(), "release owned tmpfs filler")?;
+        observations.push(disk_observation("filler_removed", &shard_path)?);
         let edge_error = match edge_result {
             Err(error) => error,
             Ok(()) => return Err("Edge configuration save unexpectedly succeeded on full tmpfs".into()),
@@ -695,9 +772,12 @@ fn run_disk_full(guard: &TmpfsGuard, full_text: bool) -> Result<Value, String> {
         progress("recovery");
         context(shard.set_hnsw_config(target_config), "retry Edge config after releasing space")?;
         context(shard.flush(), "successful explicit flush after retry")?;
+        observations.push(disk_observation("recovery_flushed", &shard_path)?);
         drop(shard);
+        observations.push(disk_observation("recovery_before_reopen", &shard_path)?);
         progress("recovery_reopen");
         let reopened = context(EdgeShard::load(&shard_path, None), "reopen after ENOSPC recovery")?;
+        observations.push(disk_observation("recovery_after_reopen", &shard_path)?);
         require(reopened.config().hnsw_config == Some(target_config), "retried config not persisted")?;
         require(observe(&reopened)? == expected, "ENOSPC recovery changed flushed source representations")?;
         context(reopened.flush(), "final recovered flush")?;
@@ -707,11 +787,9 @@ fn run_disk_full(guard: &TmpfsGuard, full_text: bool) -> Result<Value, String> {
         result["environment"] = json!({"filesystem":"tmpfs","capacity_bytes":guard.capacity_bytes,"no_mount_aliases_in_current_namespace":true,"mode":"0700","pgdata_disjoint":true});
         result["profile"] = if full_text { "full_text" } else { "vector_keyword" }.into();
         result["fixture"] = if full_text {
-            json!({"points":8,"named_representations":["dense","bm25","learned","tokens"],
-                "wal_segment_capacity_bytes":65_536,"keyword_indexes":["tenant","document","sku"],
-                "text_indexes":["body","body_prefix"],
-                "storage_scope":"unchanged bounded full fixture with mutable phrase and token-prefix indexes"})
+            full_text_fixture_description()
         } else { disk_fixture_description() };
+        result["observations"] = observations.into();
         result["fill"] = json!({"bytes_written":bytes_written,"errno":28,"filler_removed":true});
         result["engine_failure"] = json!({"operation":"set_hnsw_config","error":scrub(message, root.path()),"persisted_config_unchanged":true,"in_memory_config_changed":memory_changed});
         let text_result = if full_text { "passed" } else { "not_tested" };

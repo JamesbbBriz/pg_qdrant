@@ -5,6 +5,7 @@
 
 use pgrx::prelude::*;
 
+mod formats;
 #[cfg(feature = "p0-managed-helper")]
 mod helper;
 #[cfg(feature = "p0-managed-helper")]
@@ -73,9 +74,21 @@ mod qdrant {
 
 #[pg_schema]
 mod qdrant_internal {
-    use super::{ipc, worker};
+    use super::{formats, ipc, worker};
     use pgrx::JsonB;
     use pgrx::prelude::*;
+
+    /// Candidate SQL types only: backend validation and owned JSON roundtrip.
+    #[pg_extern(volatile, parallel_unsafe)]
+    fn p0_vector_formats(
+        dense: Option<Array<'_, f32>>,
+        sparse_indices: Option<Array<'_, i64>>,
+        sparse_weights: Option<Array<'_, f32>>,
+        tokens: Option<Array<'_, f32>>,
+    ) -> JsonB {
+        require_superuser();
+        formats::roundtrip(dense, sparse_indices, sparse_weights, tokens)
+    }
 
     #[pg_extern(volatile, parallel_unsafe)]
     fn p0_start_worker(timeout_ms: default!(i32, 5000)) -> JsonB {

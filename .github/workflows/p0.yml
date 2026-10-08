@@ -23,12 +23,17 @@ jobs:
         with:
           persist-credentials: false
       - name: Validate locked product contracts
+        id: contracts
         run: |
           python3 scripts/check_contracts.py
           python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Build exact Rust, Edge, pgrx and PostgreSQL prototype
+        id: base_image
         run: docker build --file Dockerfile.p0 --tag pg-qdrant-p0 .
+      # Each experiment depends on its image, not unrelated earlier experiments.
+      # A failed experiment still fails the job; no continue-on-error is used.
       - name: Test Edge ENOSPC on a dedicated 32 MiB tmpfs
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: |
           docker create --name pg-qdrant-p0-disk-run --memory=5g --cpus=2 --network=none \
             --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \
@@ -43,12 +48,21 @@ jobs:
             docker cp pg-qdrant-p0-disk-run:/src/artifacts/. artifacts/enospc/
           fi
       - name: Test full-text ENOSPC recovery on a dedicated 128 MiB tmpfs
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: |
           docker create --name pg-qdrant-p0-full-text-disk-run --memory=5g --cpus=2 --network=none \
             --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
             --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
             pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text
           docker start --attach pg-qdrant-p0-full-text-disk-run
+      - name: Observe a clean full-text reopen on a separate 128 MiB tmpfs
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
+        run: |
+          docker create --name pg-qdrant-p0-full-text-clean-run --memory=5g --cpus=2 --network=none \
+            --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \
+            --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \
+            pg-qdrant-p0 python3 scripts/run_disk_probe.py --profile full-text --clean
+          docker start --attach pg-qdrant-p0-full-text-clean-run
       - name: Collect full-text disk-failure evidence
         if: always()
         run: |
@@ -56,7 +70,11 @@ jobs:
           if docker inspect pg-qdrant-p0-full-text-disk-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-full-text-disk-run:/src/artifacts/. artifacts/enospc-full-text/
           fi
+          if docker inspect pg-qdrant-p0-full-text-clean-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-full-text-clean-run:/src/artifacts/. artifacts/enospc-full-text/
+          fi
       - name: Run PostgreSQL integration probes as a non-root user
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: |
           docker create --name pg-qdrant-p0-run --memory=5g --cpus=2 --network=none pg-qdrant-p0
           docker start --attach pg-qdrant-p0-run
@@ -68,8 +86,11 @@ jobs:
             docker cp pg-qdrant-p0-run:/src/artifacts/. artifacts/normal/
           fi
       - name: Build explicitly enabled disposable fault-test image
+        id: fault_image
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: docker build --file Dockerfile.p0 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .
       - name: Measure worker crash and PostgreSQL collateral recovery
+        if: ${{ !cancelled() && steps.fault_image.outcome == 'success' }}
         run: |
           docker create --name pg-qdrant-p0-fault-run --memory=5g --cpus=2 --network=none pg-qdrant-p0-faults bash crates/pg_qdrant/tests/run-faults.sh
           docker start --attach pg-qdrant-p0-fault-run
@@ -81,32 +102,56 @@ jobs:
             docker cp pg-qdrant-p0-fault-run:/src/artifacts/. artifacts/faults/
           fi
       - name: Build the managed-helper comparison without fault injection
+        id: helper_normal_image
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal .
-      - name: Test the normal helper protocol and SQL profile
+      - name: Test the normal helper protocol
+        if: ${{ !cancelled() && steps.helper_normal_image.outcome == 'success' }}
+        run: |
+          docker create --name pg-qdrant-p0-helper-normal-pipes-run --memory=5g --cpus=2 --network=none \
+            pg-qdrant-p0-helper-normal python3 crates/pg_qdrant-helper/tests/probe.py \
+            target/debug/pg_qdrant_p0_helper --out /src/artifacts/helper-pipes.json
+          docker start --attach pg-qdrant-p0-helper-normal-pipes-run
+      - name: Test the normal helper SQL profile
+        if: ${{ !cancelled() && steps.helper_normal_image.outcome == 'success' }}
         run: |
           docker create --name pg-qdrant-p0-helper-normal-run --memory=5g --cpus=2 --network=none \
-            pg-qdrant-p0-helper-normal bash -c \
-            'python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --out /src/artifacts/helper-pipes.json && bash crates/pg_qdrant/tests/run-p0.sh'
+            pg-qdrant-p0-helper-normal bash crates/pg_qdrant/tests/run-p0.sh
           docker start --attach pg-qdrant-p0-helper-normal-run
       - name: Collect normal managed-helper evidence
         if: always()
         run: |
           mkdir -p artifacts/helper-normal
+          if docker inspect pg-qdrant-p0-helper-normal-pipes-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-helper-normal-pipes-run:/src/artifacts/. artifacts/helper-normal/
+          fi
           if docker inspect pg-qdrant-p0-helper-normal-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-helper-normal-run:/src/artifacts/. artifacts/helper-normal/
           fi
       - name: Build the explicit managed-helper fault comparison
+        id: helper_fault_image
+        if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
         run: docker build --file Dockerfile.p0 --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper .
-      - name: Test helper SQL behavior and process isolation
+      - name: Test private helper protocol and process isolation
+        if: ${{ !cancelled() && steps.helper_fault_image.outcome == 'success' }}
+        run: |
+          docker create --name pg-qdrant-p0-helper-fault-pipes-run --memory=5g --cpus=2 --network=none \
+            pg-qdrant-p0-helper python3 crates/pg_qdrant-helper/tests/probe.py \
+            target/debug/pg_qdrant_p0_helper --faults --out /src/artifacts/helper-fault-pipes.json
+          docker start --attach pg-qdrant-p0-helper-fault-pipes-run
+      - name: Test private helper SQL behavior and PostgreSQL recovery
+        if: ${{ !cancelled() && steps.helper_fault_image.outcome == 'success' }}
         run: |
           docker create --name pg-qdrant-p0-helper-run --memory=5g --cpus=2 --network=none \
-            pg-qdrant-p0-helper bash -c \
-            'python3 crates/pg_qdrant-helper/tests/probe.py target/debug/pg_qdrant_p0_helper --faults --out /src/artifacts/helper-fault-pipes.json && bash crates/pg_qdrant/tests/run-faults.sh'
+            pg-qdrant-p0-helper bash crates/pg_qdrant/tests/run-faults.sh
           docker start --attach pg-qdrant-p0-helper-run
       - name: Collect managed-helper evidence
         if: always()
         run: |
           mkdir -p artifacts/helper
+          if docker inspect pg-qdrant-p0-helper-fault-pipes-run >/dev/null 2>&1; then
+            docker cp pg-qdrant-p0-helper-fault-pipes-run:/src/artifacts/. artifacts/helper/
+          fi
           if docker inspect pg-qdrant-p0-helper-run >/dev/null 2>&1; then
             docker cp pg-qdrant-p0-helper-run:/src/artifacts/. artifacts/helper/
           fi

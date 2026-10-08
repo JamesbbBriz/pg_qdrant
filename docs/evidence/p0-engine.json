@@ -530,5 +530,8 @@
     "unflushed_wal_replay_verified": false,
     "cross_version_migration_verified": false
   },
-  "positive_enospc_verification_scope": "No disk-filling experiment ran locally. The separate historical CI run in p0-regression-ci.json verified only the narrow vector/keyword configuration-save fixture."
+  "positive_enospc_verification_scope": "No disk-filling experiment ran locally. The separate historical CI run in p0-regression-ci.json verified only the narrow vector/keyword configuration-save fixture.",
+  "verified_source_commit": "77f9ecca11ede76e42ba197e294b177ea865d830",
+  "record_scope": "Historical 15-test local checkpoint and earlier standalone reports; later source changes are recorded separately.",
+  "superseding_local_evidence": "p0-engine-extended.json"
 }

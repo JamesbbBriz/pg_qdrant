@@ -124,11 +124,16 @@
         "tree": "1d7e4a6582eabb9d0e32cdb14ff2b22c7a3584e4"
       },
       {
-        "finding": "The current integrated local engine suite passes 15 tests. Both strict local standalone helper reruns fail live PID visibility before controller SIGKILL.",
+        "finding": "The earlier integrated local engine suite passed 15 tests. Both strict local standalone helper reruns fail live PID visibility before controller SIGKILL.",
         "effect": "Add scoped engine coverage and retain current container regression as pending.",
         "source": "docs/evidence/p0-engine.json",
         "additional_source": "docs/evidence/p0-helper-exit-local.json",
         "source_scope": "Exact source hashes are recorded separately; these current local results are not attributed to the historical CI4 commit."
+      },
+      {
+        "finding": "CI5 full-text 128 MiB writable reopen terminated with SIGBUS while the narrow profile passed. A subsequent ordinary-filesystem full-fixture reopen showed about 211 MiB mapped fixture RSS.",
+        "effect": "Keep the full-text recovery gate open; measure clean tmpfs control and post-exit space before changing capacity assumptions. All 70 primary work items and their estimate ranges remain unchanged.",
+        "source": "docs/evidence/p0-full-text-disk-ci.json"
       }
     ]
   },
@@ -10584,9 +10589,9 @@
     "observed_on": "2026-10-08",
     "starting_revision": "f3b4cff09e3abc2aaaa3c647028aef4942d89636",
     "report": "docs/p0-report.md",
-    "engine_evidence": "docs/evidence/p0-engine.json",
+    "engine_evidence": "docs/evidence/p0-engine-extended.json",
     "dependency_evidence": "docs/dependency-baseline.json",
-    "source_identity": "CI4 narrow ENOSPC and three SQL profiles apply only to 1f9d8bb and its recorded tree. Complete four-profile SQL evidence remains historical CI2; current-source regression is pending.",
+    "source_identity": "CI5 engine/base-image and narrow ENOSPC evidence apply only to 77f9ecca and its identical merge tree. All four SQL profiles were skipped; complete four-profile SQL evidence remains historical CI2.",
     "p0_exit_passed": false,
     "sql_runtime_verified": true,
     "product_completed": false,
@@ -10597,9 +10602,9 @@
     "container_runtime_verified": true,
     "postgres_fault_cdylib_and_schema_verified": true,
     "postgresql_ci_evidence": "docs/evidence/p0-postgresql-ci.json",
-    "verified_ci_head": "1f9d8bb9de82f07a6d9440d8461d86505abf21c2",
-    "verified_ci_checkout": "773889cdb1b6a840ae9a35fc9b3bb1dde798ccd5",
-    "verified_ci_tree": "1d7e4a6582eabb9d0e32cdb14ff2b22c7a3584e4",
+    "verified_ci_head": "77f9ecca11ede76e42ba197e294b177ea865d830",
+    "verified_ci_checkout": "69f8cf3b07d5219755f3cd2804320518cde2b83d",
+    "verified_ci_tree": "3f745e5b736ad73566352a6d1e48150528ed86fe",
     "diagnostic_sql_runtime_verified": true,
     "sql_runtime_scope": "Recorded direct-worker and managed-helper P0 diagnostics only; source-table indexing, source permissions and public search remain unimplemented.",
     "direct_worker_production_containment": "failed",
@@ -10610,10 +10615,10 @@
     "evidence_scope": "Every verification level applies only to its named probe. All product completion and release flags remain false.",
     "helper_initial_standalone_observation": "Historical local 7/8 pass records do not independently prove controller-SIGKILL cleanup without a live PID precondition; CI2 independently passed both suites. Current guarded local runs each pass six then fail live PID visibility before kill.",
     "helper_hard_stop_runtime_verified": true,
-    "latest_ci_evidence": "docs/evidence/p0-regression-ci.json",
-    "verified_ci_scope": "Narrow ENOSPC, direct SQL 10/12, normal-helper SQL 10 and normal pipes 7 passed; private pipes passed six then failed cleanup observation; private-helper SQL not reached.",
-    "latest_ci_run": 37725563600,
-    "latest_ci_job": 113142806882,
+    "latest_ci_evidence": "docs/evidence/p0-full-text-disk-ci.json",
+    "verified_ci_scope": "Base image, 15 engine tests, 2 child tests, 6 Python diagnostics and narrow 32 MiB ENOSPC passed; full-text 128 MiB SIGBUS at recovery_reopen; all PostgreSQL profiles skipped.",
+    "latest_ci_run": 37729282903,
+    "latest_ci_job": 113154495454,
     "latest_ci_workflow_conclusion": "failed",
     "helper_postgresql_containment": "passed_named_native_failures",
     "helper_hard_stop_limit_ms": 125000,
@@ -10623,7 +10628,7 @@
     "forced_postgresql_supervisor_sigkill_verified": false,
     "kernel_oom_runtime_verified": false,
     "positive_enospc_experiment_status": "passed_narrow_configuration_save_only",
-    "positive_enospc_child_exit_cause": "exit_0_in_ci4; initial_ci2_missing_report_cause_remains_unknown",
+    "positive_enospc_child_exit_cause": "exit 0 for narrow CI4/CI5; SIGBUS for full-text CI5; initial CI2 cause remains unknown",
     "preferred_topology_candidate": "managed_helper",
     "ci_history": [
       {
@@ -10657,10 +10662,18 @@
         "tree": "1d7e4a6582eabb9d0e32cdb14ff2b22c7a3584e4",
         "workflow_conclusion": "failed",
         "scope": "Narrow ENOSPC, direct SQL 10/12, normal-helper SQL 10 and normal pipes 7 passed; private pipes passed six then failed cleanup observation; private-helper SQL not reached."
+      },
+      {
+        "run": 37729282903,
+        "source": "docs/evidence/p0-full-text-disk-ci.json",
+        "head": "77f9ecca11ede76e42ba197e294b177ea865d830",
+        "tree": "3f745e5b736ad73566352a6d1e48150528ed86fe",
+        "workflow_conclusion": "failed",
+        "scope": "Base image, 15 engine tests, 2 child tests, 6 Python diagnostics and narrow 32 MiB ENOSPC passed; full-text 128 MiB SIGBUS at recovery_reopen; all PostgreSQL profiles skipped."
       }
     ],
-    "positive_enospc_scope": "32 MiB vector/keyword fixture only; mutable text indexes excluded. Full-text ENOSPC remains pending.",
-    "current_engine_tests_passed": 15,
+    "positive_enospc_scope": "32 MiB vector/keyword configuration-save recovery only; the full mutable-text 128 MiB experiment failed with SIGBUS in CI5.",
+    "current_engine_tests_passed": 20,
     "current_engine_tests_failed": 0,
     "current_engine_tests_ignored": 0,
     "current_source_postgres_regression_verified": false,
@@ -10676,6 +10689,35 @@
       "source": "crates/edge-probe/tests/advanced.rs",
       "requirement": "The SQL adapter must enforce result projections and strip all unrequested vectors; never expose upstream results unchanged.",
       "product_status": "pending"
+    },
+    "full_text_enospc_runtime_verified": false,
+    "public_lifecycle_observation": {
+      "source": "crates/edge-probe/tests/public_lifecycle.rs",
+      "read_only_with_test_supplied_manifest": "passed",
+      "snapshot_archive_or_restore": false,
+      "update_only_store_delete_bootstrap": "unimplemented_panics_observed",
+      "ordinary_edgeshard_updates": "separate_tested_path",
+      "product_status": "pending"
+    },
+    "prefix_query_followup": {
+      "capability_ids": [
+        "F04",
+        "F09",
+        "F11"
+      ],
+      "owner": "planner/lexical",
+      "source": "crates/edge-probe/tests/lexical.rs",
+      "finding": "Fixed Edge query prefix tokens truncate beyond the configured maximum.",
+      "requirement": "Reject a required predicate beyond proven analyzed scalar bounds, or use an explicitly permitted ready alternative preserving its full semantics; no silent truncation or post-top-k repair.",
+      "product_status": "pending"
+    },
+    "candidate_format_probe": {
+      "source": "docs/p0-input-formats.md",
+      "initial_compile_and_link": "passed",
+      "corrected_diagnostic_source_check": "passed_normal_pg17",
+      "sql_runtime_verified": false,
+      "public_api_frozen": false,
+      "local_evidence": "docs/evidence/p0-input-formats-local.json"
     }
   },
   "remaining_p0_estimate_review": {
@@ -10753,8 +10795,8 @@
     "superseding_evidence": "docs/p0-report.md"
   },
   "disk_fixture_correction": {
-    "evidence": "docs/evidence/p0-engine.json",
-    "engine_tests_passed": 15,
+    "evidence": "docs/evidence/p0-engine-extended.json",
+    "engine_tests_passed": 20,
     "engine_tests_failed": 0,
     "engine_tests_ignored": 0,
     "preserved_full_phrase_tests": [
@@ -10777,9 +10819,10 @@
     "product_scope_completed": false,
     "historical_failed_attempts": [
       "docs/evidence/p0-helper-ci.json",
-      "docs/evidence/p0-disk-ci.json"
+      "docs/evidence/p0-disk-ci.json",
+      "docs/evidence/p0-full-text-disk-ci.json"
     ],
-    "latest_failure": "CI4 private-helper pipe cleanup observation raised ESRCH after six checks; private-helper SQL was not reached. Earlier disk failures remain in their separate records.",
-    "current_correction": "Narrow 32 MiB configuration-save ENOSPC recovery passed in CI4. Separate 128 MiB full-text profile and corrected live-PID/ESRCH helper observer require current CI."
+    "latest_failure": "CI5 full-text 128 MiB SIGBUS at recovery_reopen; all four SQL profiles skipped. CI4 helper observer and earlier disk failures remain separate historical records.",
+    "current_correction": "Keep narrow 32 MiB and full-text 128 MiB experiments; add separate clean full-text tmpfs control, bounded stage/post-exit observations and independent failure-preserving SQL scheduling."
   }
 }

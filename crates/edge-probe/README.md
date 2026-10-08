@@ -40,15 +40,17 @@ On 2026-10-08, with Rust 1.96.0 on Linux x86_64 and the repository lockfile:
 | `cargo test --locked -p pg-qdrant-edge-probe --test advanced -- --nocapture --test-threads=1` | 7 passed, 0 failed or ignored: exact recommendation/discover/context/feedback scores, root MMR, Formula, OrderBy/Sample and wrong-dimension errors. |
 | `cargo test --locked -p pg-qdrant-edge-probe --test lifecycle -- --test-threads=1` | 2 passed, 0 failed or ignored: conditional and partial mutations with flush/reopen; selective reads, filtered scroll/facets and exact matrix scores. |
 | `cargo test --locked -p pg-qdrant-edge-probe --test schema -- --test-threads=1` | 2 passed, 0 failed or ignored: payload-index create/delete and named dense/sparse vector create/delete, including replay, rejected configuration changes and persisted queries. |
-| Current integrated `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | All 15 engine tests passed, with 0 failed or ignored, after the three additional test files and expanded API inventory were combined. This is local engine evidence; the new full-text ENOSPC profile and full PostgreSQL regression require their own runs. |
+| Current integrated `cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1` | All 20 engine tests passed, with 0 failed or ignored: the previous 15 plus three lexical tests, one bounded public-lifecycle test and a clean full-text reopen control. PostgreSQL and positive fault profiles require their own runs. |
 | `cargo check --locked -p pg-qdrant-edge-probe` after nested inventory expansion | Public nested enum mappings and typed scalar/product/binary, ACORN/search and LoadProfile inputs compiled without errors or warnings. Constructors do not execute an engine operation. |
 | `target/debug/pg-qdrant-edge-probe` after the locked test build | All 16 synthetic check groups passed; engine version `0.8.0`. |
 | `target/debug/pg-qdrant-edge-probe --corruption-probe` | Both malformed copied-metadata loads returned errors; intact-copy recovery, original preservation, representation equality and phrase/MaxSim queries passed. |
 | `target/debug/pg-qdrant-edge-probe --disk-fixture-probe` | Clean reopen of the disk-specific eight-row/four-representation fixture passed, including keyword/tenant filtering and exact MaxSim; no filler or ENOSPC injection. |
 | `target/debug/pg-qdrant-edge-probe --disk-full-probe` without `PG_QDRANT_ENOSPC_DIR` | `status: "not_run"`, no disk writes attempted; a dedicated tmpfs is required for positive ENOSPC evidence. |
 | Dedicated 32 MiB tmpfs configuration-save experiment | ENOSPC, unchanged persisted configuration, observed unchanged in-memory configuration, retry, flush, reopen and the vector/keyword fixture checks passed. See the [separate CI record](../../docs/evidence/p0-regression-ci.json); that overall workflow failed later in the private-helper process observer. |
+| Full-text 128 MiB tmpfs configuration-save experiment, CI5 | Failed with actual SIGBUS at `recovery_reopen`; no successful native report. The narrow profile passed again, but all PostgreSQL profiles were skipped. [Exact source and observations](../../docs/evidence/p0-full-text-disk-ci.json). |
 
-The original four tests and eleven additional focused cases comprise 15 tests;
+The original four tests, eleven advanced/lifecycle/schema cases and five
+additional lexical/public-lifecycle/clean-control cases comprise 20 tests;
 the 16-group executable smoke report is a different count. The focused runs
 above were recorded independently, followed by the actual integrated run.
 CI acceptance is still recorded against its own code version and commands.
@@ -73,6 +75,7 @@ with the 16-group normal smoke report.
 ```sh
 cargo run --locked -p pg-qdrant-edge-probe -- --corruption-probe
 cargo run --locked -p pg-qdrant-edge-probe -- --disk-fixture-probe
+cargo run --locked -p pg-qdrant-edge-probe -- --full-text-disk-fixture-probe
 cargo run --locked -p pg-qdrant-edge-probe -- --disk-full-probe
 cargo run --locked -p pg-qdrant-edge-probe -- --full-text-disk-full-probe
 ```
@@ -150,10 +153,27 @@ separate container with a dedicated 128 MiB tmpfs and invokes
 `python3 scripts/run_disk_probe.py --profile full-text`. It does not change the
 32 MiB narrow run or its 64 MiB guard. Its report must identify
 `profile: "full_text"`, preserve every retrieved representation, and pass both
-phrase and token-prefix queries after recovery. Its positive fault path is
-pending; source inspection and unsafe-environment refusal do not establish a pass.
+phrase and token-prefix queries after recovery. CI5 failed this path with
+SIGBUS at `recovery_reopen`, after the filler-release and recovery stages.
+No full-text recovery pass is recorded, and the exact native cause is not yet
+identified.
 The wrapper rejects a wrong-profile or `not_run` report even with exit code 0,
 and writes full-text evidence separately as `edge-full-text-enospc.json`.
+
+The separate `--full-text-disk-fixture-probe` mode performs a clean full-text
+reopen in an ordinary owned directory. The guarded
+`--full-text-tmpfs-fixture-probe` uses the same full-text fixture on its own
+validated mount without creating a filler. CI invokes that control with
+`python3 scripts/run_disk_probe.py --profile full-text --clean` in a separate
+128 MiB container mount and writes `edge-full-text-clean.json`. A clean-control
+report cannot satisfy the ENOSPC gate.
+
+Stage observations retain logical file length, allocated bytes, mapped fixture
+RSS and filesystem free/available bytes separately. The wrapper also reads
+bounded post-exit metadata, including after a signal, without reading contents
+or repairing/removing files. Observations survive timeout-output tail
+truncation. Independent CI experiments run after sibling failures when their
+image build succeeded; each failure still fails the workflow.
 
 After preparing and flushing the bounded fixture, the probe writes an owned
 filler until the OS returns ENOSPC (errno 28), with a hard total-byte limit no
@@ -200,6 +220,40 @@ The first CI attempt with the full fixture on a 32 MiB tmpfs failed before
 usable child diagnostics were captured; its terminating signal is unknown.
 The measurements identify a concrete fixture-sizing problem, but do not prove
 the exact cause of that historical process termination.
+
+The unchanged full fixture was subsequently measured directly on an ordinary
+filesystem: 85 files, 289,807,352 logical bytes and 331,776 allocated bytes.
+Its mapped fixture RSS was 34,080 KiB after creation and about 215,756 KiB after
+writable reopen. This larger result uses the original placement configuration;
+it must not be replaced by the earlier cold-storage/optimization measurements.
+It exceeds the failed profile's 128 MiB capacity and motivates a clean tmpfs
+control. Sparse-file logical size, filesystem allocation and mapped RSS have
+different meanings; the ordinary-filesystem measurement alone does not prove
+the cause of the CI5 SIGBUS.
+
+### Additional lexical and public-lifecycle findings
+
+`tests/lexical.rs` verifies AND/OR versus contiguous phrases across array and
+field boundaries, case-sensitive whole-value exact/prefix matching, Unicode
+scalar token limits, and separately configured BM25/text normalization.
+Default English BM25 stemming/stopword behavior differs from a literal text
+index until both policies are configured explicitly. The prefix tokenizer
+truncates long query tokens at its configured maximum in this release: a
+three-character limit can make `éclipse` match the token `éclair`. The future
+planner must reject or explicitly preserve the full predicate through a ready
+alternative; it cannot silently forward a truncated required prefix. These
+small fixtures are not relevance benchmarks or a complete analyzer-parity proof.
+
+`tests/public_lifecycle.rs` runs two bounded, single-CPU child processes.
+Read-only access retrieves all four fixture records and filtered score goldens
+when the test supplies a public `SegmentsManifest`; caller-driven manifest
+refresh is exercised. Snapshot-manifest segment IDs match the public enumerator,
+but no snapshot archive, restore or automatic manifest publication is tested.
+Update-only preview and no-write skip/missing replay pass. Actual Store, Delete
+and empty-bootstrap calls hit fixed-release unimplemented panics and are
+explicitly unavailable. Comparing unchanged copied records afterward is not a
+production panic-recovery or READY guarantee. Ordinary `EdgeShard` updates
+remain a separate tested path.
 
 This is a configuration-save failure/retry experiment. WAL growth, dirty vector
 ingestion, PostgreSQL outbox ACK semantics, power-loss durability, cgroup OOM and
@@ -367,10 +421,10 @@ PostgreSQL integration, or release evidence.
 | Q08, Q10 | `OrderByInterface`, `Direction`, `StartFrom`, `OrderValue`, `DecayKind`, `Sample`; `src/segment/data_types/order_by.rs`, `src/segment/index/query_optimization/rescore_formula/parsed_formula.rs`, `src/shard/query/mod.rs` | Nested enums are exhaustive. Integer OrderBy/start values and Sample execute; decay families, floating/datetime ordering and their edge cases do not. | `engine/read`, `planner/formula`: concrete decay/date/geo policies, nonfinite/range validation, stable pagination and precision boundaries. |
 | V04, V05, Q13 | `CompressionRatio`, `ScalarType`, quantization configs, `QuantizationSearchParams`, `AcornSearchParams`; `src/segment/types.rs`, `src/edge/config/vectors.rs` | Named nested enums are matched; scalar/product/binary and approximate/ACORN search inputs have typed constructors. No quantized fixture is built and no ACORN execution is observed. | `engine/quantization`, `engine/storage`, `engine/indexing`: actual indexed queries, rejected combinations, CPU/resource checks, optimization/reopen and storage-precision/rescore goldens. |
 | L02, Q12, Q14 | `UpdateMode` and partial vector/payload/delete/schema operations; `src/shard/operations/{point_ops,vector_ops,payload_ops,vector_name_ops}.rs` | UpdateMode is mapped and all three conditional modes run. `lifecycle.rs` and `schema.rs` check selected mutations, payload-index/vector-name lifecycle, identical-config replay, conflicts and explicit flush/reopen. Sync/raw operations and concurrent combinations remain outside those cases. | `engine/source`: remaining public-operation cases, transaction/incarnation/fingerprint integration, concurrent updates/DDL and durable ACK semantics. |
-| L04, V05, L10 | Read-only `open`, `refresh`, `refresh_with`, request `load_profile()` and LoadProfile constructors/merge; `src/edge/read_only/{lifecycle,refresh}.rs`, `src/segment/data_types/load_profile.rs` | `open_mmap` is a method reference. Public profiles and merge are typed compile-only constructions; no follower is opened and no memory placement is measured. SegmentManifestState is now exhaustively mapped. | `lifecycle/recovery`, `engine/storage`: public manifest/setup decision, actual follower counts/queries and refresh visibility, including skipped/unloadable segments and caller resource limits. |
-| L02, L04 | `UpdateOnlyEdgeShard::{open,preview_batch,apply_batch,segment_configs}`, `UpdateBatchPlan::build`, `PointAction`; `src/edge/update_only/{mod,lifecycle,apply,preview}.rs`, `src/edge/update_only/batch/plan.rs` | `open_mmap` is referenced and PointAction is exhaustively matched. Batch construction, preview and application remain unexecuted. | `engine/source`, `lifecycle/recovery`: existing-shard preview/apply/replay, invalid ordering and unsupported operations, safe empty-bootstrap observation and a distinct persistence contract. |
+| L04, V05, L10 | Read-only `open`, `refresh`, `refresh_with`, request `load_profile()` and LoadProfile constructors/merge; `src/edge/read_only/{lifecycle,refresh}.rs`, `src/segment/data_types/load_profile.rs` | A follower opens with a test-supplied manifest and checks four rows, filtered exact scores and manual Active/Retiring refresh. Missing-manifest loading fails. Public profile/merge constructors remain compile-only; placement is not measured. | `lifecycle/recovery`, `engine/storage`: production manifest publication, failed/unloadable segments, concurrent refresh and caller resource limits. The test does not establish an automatic follower or committed-change wait. |
+| L02, L04 | `UpdateOnlyEdgeShard::{open,preview_batch,apply_batch,segment_configs}`, `UpdateBatchPlan::build`, `PointAction`; `src/edge/update_only/{mod,lifecycle,apply,preview}.rs`, `src/edge/update_only/batch/plan.rs` | Existing-shard batch preview and no-write skip/missing apply/replay pass. Store, Delete and empty bootstrap reach fixed-release unimplemented panics and remain unavailable; three other unsupported operations are rejected. | `engine/source`, `lifecycle/recovery`: an accepted writable API and persistence contract. Ordinary `EdgeShard` mutations have separate evidence; passing negative update-only tests does not supply a working update-only writer. |
 | Q10, Q11 | `scroll`, `facet`, `search_matrix`, `info`; `src/edge/read_view/shard_read.rs` | Two lifecycle cases and two schema cases call these APIs. Matrix Dot scores, selected point counts/facets, bounded scroll and schema metadata are checked. | `engine/read`, `results/statistics`: remaining field/projection/matrix combinations, trusted authorization, sampling quality and declared point/document/statistical scope. |
-| L04 | Snapshot inspection, unpack and partial recovery; `src/edge/edge_shard/snapshots.rs` | Method-item references only; no archive creation, unpack, restore or rollback is exercised. | `lifecycle/recovery`: public-producer decision, concrete manifest checks and bounded disposable-target restore/reopen tests. A copied quiescent shard alone is not snapshot-API evidence. |
+| L04 | Snapshot inspection, unpack and partial recovery; `src/edge/edge_shard/snapshots.rs` | `snapshot_manifest` validates and returns the same two segment IDs as the enumerated fixture. Archive creation, unpack, restore and rollback remain unexecuted. | `lifecycle/recovery`: public archive-producer decision and bounded disposable-target restore/reopen tests. A copied quiescent shard does not establish archive or PostgreSQL restore support. |
 
 Read-only loading requires a manifest: `open_mmap` selects the manifest
 enumerator, while ordinary manifest writing defaults off in

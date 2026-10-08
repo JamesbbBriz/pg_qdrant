@@ -70,6 +70,8 @@ Compile that policy separately into `EdgeBm25Config`, `TextIndexParams`, and `Ke
 
 Persist the effective configuration hash. Incompatible policy changes require a new index generation, and affected representations must be re-encoded. Prefix representation and primary BM25 are separate when their scoring/tokenization contracts differ. A phrase constraint must be applied during retrieval to the declared fields, not just after a top-k result has been collected.
 
+The fixed-version [lexical probe](../crates/edge-probe/tests/lexical.rs) observes an additional F09 boundary: the prefix tokenizer truncates query tokens beyond `max_token_len`. The planner must reject a required prefix beyond the proven analyzed Unicode-scalar bound before calling Edge, or execute an explicitly permitted ready alternative that preserves the entire predicate. If the configured normalization/stemming parity cannot be established, reject the combination. Do not infer that bound from sparse IDs, silently truncate a query, substitute whole-value F11 semantics, or attempt to repair the predicate after top-k retrieval. The probe's word/phrase/array/Unicode cases are engine observations; the SQL compiler and complete multilingual parity remain work.
+
 ## Vector representations and storage
 
 | ID | Capability | Dependency / exposure | Required acceptance |
@@ -126,6 +128,8 @@ Grouping and search matrix require the Rust `EdgeShardRead` trait. Externally ra
 | L12 | Backup/PITR/replication/failover support boundaries | Recovery contract | Independently validated modes; unsupported cases documented |
 
 Evidence: [Edge lifecycle](https://qdrant.tech/documentation/edge/edge-api/shard-lifecycle/), [Edge vs Server](https://qdrant.tech/documentation/edge/edge-vs-qdrant-cluster/), [PG background workers](https://www.postgresql.org/docs/17/bgworker.html), [pgrx threading constraints](https://github.com/pgcentralfoundation/pgrx#caveats--known-issues).
+
+The [public-lifecycle probe](../crates/edge-probe/tests/public_lifecycle.rs) verifies read-only fixture coverage and manual manifest refresh, snapshot-manifest inspection, update-only preview, and no-write skip/missing replay. Edge 0.8.0 update-only Store, Delete and empty bootstrap instead trigger actual unimplemented panics; its flush body is also source-reviewed as unimplemented. These subpaths are unavailable, not supported mutation alternatives. Ordinary `EdgeShard` writes have separate tests. The read-only experiment supplies its own manifest and does not establish automatic publication, snapshot archive production/restoration, production panic recovery or a PostgreSQL timeline contract. L01–L04 and L12 retain those remaining requirements.
 
 ## Feature combinations and release gates
 

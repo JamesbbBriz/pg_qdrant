@@ -1,6 +1,6 @@
 # ADR 0001: Embedded retrieval and the PostgreSQL boundary
 
-Status: **accepted product boundaries; managed helper is the preferred candidate after scoped PostgreSQL fault tests; production topology and overall P0 decision remain open**. The direct-worker control has an inadequate native-failure domain. The helper contains the exercised native faults, but the positive disk experiment failed and forced PostgreSQL-supervisor SIGKILL, actual OOM and production durability remain unverified.
+Status: **accepted product boundaries; managed helper is the preferred candidate after scoped PostgreSQL fault tests; production topology and overall P0 decision remain open**. The direct-worker control has an inadequate native-failure domain. The helper contained the exercised native faults at its recorded revisions. Narrow configuration-save ENOSPC passed, while the latest full-text disk experiment failed with SIGBUS and skipped all four SQL profiles. Current SQL regression, forced PostgreSQL-supervisor SIGKILL, actual kernel OOM and production durability remain unverified.
 
 ## Context and decision scope
 
@@ -26,7 +26,7 @@ The first implemented experiment is a PostgreSQL-managed owner worker per databa
 
 The owner count, shard count, runtime thread count, request queue and per-stage budgets must be explicit. Limits include request/response bytes, candidate count, HasId count, token matrices, matrix cells, wall time, engine memory/RSS/mmap and worker concurrency. PostgreSQL `work_mem` alone does not bound the embedded engine.
 
-A PostgreSQL background worker is not an unconditional crash-isolation mechanism. The direct-worker experiments measured caught Rust panic, native abort and SIGKILL in a disposable cluster, including companion sessions and recovery. A Rust helper installed and managed with the extension package now preserves the supervisor and companion SQL session for the exercised native failures. Constrained-memory/OOM, a successful bounded disk-full experiment and complete dirty-index recovery remain required. The helper is an implementation boundary; applications still do not separately deploy a network Qdrant service.
+A PostgreSQL background worker is not an unconditional crash-isolation mechanism. The direct-worker experiments measured caught Rust panic, native abort and SIGKILL in a disposable cluster, including companion sessions and recovery. A Rust helper installed and managed with the extension package preserved the supervisor and companion SQL session in the recorded native-failure experiments. Constrained-memory/kernel OOM, full-text disk-failure recovery and complete dirty-index recovery remain required; the passing narrow vector/keyword configuration-save experiment does not close those gates. The helper is an implementation boundary; applications still do not separately deploy a network Qdrant service.
 
 IPC must carry request IDs, generation identity, caller-authorized retrieval domain, budgets, cancellation/deadline and owned source/model metadata. It cannot carry live PostgreSQL values or arbitrary engine DAGs. A cancellation must stop queued work or signal an active bounded operation; dropping only the SQL receiver is insufficient. A dead owner cannot leave its generation marked query-ready without startup validation.
 
@@ -43,7 +43,7 @@ The [initial CI evidence](../evidence/p0-postgresql-ci.json) identifies head `f5
 
 **Decision:** prefer the managed helper for further product integration, based on its measured containment of the exercised native failures. Retain the direct-worker implementation as the default P0 control profile; this ADR does not change the compiled default or accept a production topology. The helper ships beside the PostgreSQL executable. The PostgreSQL worker remains responsible for SQL authorization, queueing and signals; the helper owns Edge after exec, exchanges bounded owned frames, and performs no PostgreSQL calls. This remains one installed product with one application source-write path.
 
-The helper has explicit ready/build/process/request identity checks, a separate process-lifetime engine-owner lock, EOF-driven shutdown, reap-before-replacement behavior and three restart attempts after initial startup. The following outcomes now have actual PostgreSQL evidence:
+The helper has explicit ready/build/process/request identity checks, a separate process-lifetime engine-owner lock, EOF-driven shutdown, reap-before-replacement behavior and three restart attempts after initial startup. The following outcomes have actual PostgreSQL evidence at the CI2 source tree:
 
 - Helper SIGKILL and native abort preserve the companion SQL session, the same PostgreSQL supervisor and the committed marker, followed by a distinct ready helper.
 - With an active helper frozen by SIGSTOP, SQL caller cancellation retains that owner until the configured 125-second process-stop budget expires. The supervisor then kills that exact process with SIGKILL, records `execution_budget`, and starts a replacement. The supervisor and companion SQL query survive. This is process termination, not native Edge cancellation or graceful durable shutdown.
@@ -51,7 +51,38 @@ The helper has explicit ready/build/process/request identity checks, a separate 
 
 Standalone pipe tests remain separate evidence, including SIGKILL of a pure controller. They do not establish the effects of forced SIGKILL of the actual PostgreSQL supervisor.
 
-The normal SQL/diagnostic-ACL/concurrency/queue tests, native-helper containment, exclusive replacement, bounded restart exhaustion and actual operation-limit path have passed at the second recorded tree. Forced PostgreSQL-supervisor SIGKILL remains untested; such a supervisor can still cause PostgreSQL collateral failure. OOM victim selection, memory/storage budgets, generation readiness, dirty-data durability and recovery remain separate requirements. The provisioned 32 MiB tmpfs child returned no JSON and empty stderr; its return code was not recorded, so the exit cause is unknown. Corrected diagnostics and a successful positive ENOSPC run are required before closing that fault gate. The revised bounded fixture omits mutable text indexes after source review and an unsuccessful public-optimization workaround; its complete vector/keyword data and clean-reopen assertions pass. That narrower experiment cannot close the retained full mutable-text ENOSPC/reopen combination. The separate corruption and flushed-SIGKILL tests keep every phrase assertion.
+The normal SQL/diagnostic-ACL/concurrency/queue tests, native-helper containment,
+exclusive replacement, bounded restart exhaustion and actual operation-limit
+path passed at the second recorded tree. The [CI4 regression](../evidence/p0-regression-ci.json)
+passed narrow 32 MiB ENOSPC, direct SQL 10/12 and normal-helper SQL 10 checks,
+but failed in its private pipe observer before private-helper SQL. The
+[latest CI](../evidence/p0-full-text-disk-ci.json), run 37729282903 at head
+`77f9ecc`, built the normal extension and passed 15 engine, two child-bookkeeping
+and six Python tests plus narrow ENOSPC. The separate 128 MiB full-text profile
+terminated with SIGBUS at `recovery_reopen`; all four SQL profiles were skipped.
+Current helper changes and forced PostgreSQL-supervisor SIGKILL therefore still
+need SQL runtime evidence. Such a supervisor can itself cause PostgreSQL
+collateral failure.
+
+The earlier full-fixture 32 MiB attempt returned no JSON and had no recorded
+exit code; the later SIGBUS does not identify that older failure's cause. A
+separate clean full-text reopen on an ordinary filesystem now passes, with
+owned mapping RSS above 128 MiB. That is a diagnostic hypothesis for the tmpfs
+failure, not proof of its native cause. OOM victim selection, memory/storage
+budgets, generation readiness and dirty-data durability remain requirements.
+The independent corruption and flushed-SIGKILL tests retain their phrase
+assertions; the narrow disk pass cannot close full mutable-text recovery.
+
+The current local engine suite passes 20 tests and the Python runner suite nine.
+Public read-only loading/refresh with a test-supplied manifest, snapshot-manifest
+inspection and update-only preview/no-write branches now have bounded runtime
+evidence. Edge 0.8.0's `UpdateOnlyEdgeShard` Store, Delete and empty bootstrap
+paths remain explicitly unavailable after their unimplemented panics were
+observed. Its flush implementation is also unimplemented in the fixed source.
+Use of the ordinary `EdgeShard` mutation API is a separate tested candidate;
+the update-only type name is not evidence of a usable persistence path. Neither
+manifest inspection nor the supplied-manifest reader establishes archive
+production, restoration or automatic publication.
 
 The workload consequence is concrete: the required helper comparison now has scoped SQL and process evidence, reducing uncertainty about the preferred boundary. It does not eliminate resource isolation, production shutdown, packaging, recovery or upgrade work. Retained workload ranges are planning assumptions; remaining fault and lexical evidence must inform their allocation. No overall P0 go/no-go or production-topology acceptance follows from this ADR update.
 
@@ -122,12 +153,12 @@ The first recovery contract rebuilds from consistent PostgreSQL source data, ret
 | --- | --- | --- |
 | Direct Edge crate and Rust adapter | Accepted direction; executable engine and SQL diagnostic paths | Remaining complete public-call and product adapter acceptance |
 | Exact Edge/pgrx/tool/compiler combination | Recorded Linux/PG17 diagnostic build and runtime pass | Regression for changed sources/features; complete native/CPU/license and release matrix |
-| Owner background worker or packaged helper | Direct worker fails containment; helper is preferred after scoped SQL/native-fault/lifecycle passes | Forced PG-supervisor SIGKILL, bounded OOM, correction of the failed disk experiment, production lifecycle and topology acceptance |
-| Array/JSON SQL signatures and ticket shape | Candidate API | pgrx dimension/bound conversion, driver, transaction/savepoint and concurrency tests |
+| Owner background worker or packaged helper | Direct worker fails containment; helper is preferred after historical scoped SQL/native-fault/lifecycle passes | Current SQL regression, forced PG-supervisor SIGKILL, bounded kernel OOM, full-text disk recovery, production lifecycle and topology acceptance |
+| Array/JSON SQL signatures and ticket shape | Candidate-format probe linked in an earlier iteration; corrected source passes normal PG17 checking, while actual SQL assertions remain pending | pgrx dimension/bound conversion and current SQL execution; driver, transaction/savepoint and concurrency tests |
 | Engine persistence condition for ACK | Open, blocking P1 wait guarantee | Crash-before/after-flush and reopen/replay tests on selected Edge |
 | Analysis parity and richer lexical dependency | Open, blocking full FTS claims | Golden analysis/phrase/prefix/offset tests and F13–F20 quality/cost ADR |
 | Source recheck and supported authorization | Diagnostic ACL/runtime-superuser checks pass; product policy still proposed | Source SELECT/column/RLS and every-path leakage tests |
 | Upgrade/reopen/rollback compatibility | Unverified | Old/new generation fixtures and executed rollback procedure |
-| Package and platform support | All four Linux x86_64 / PG17 diagnostic container profiles build, install and execute | Complete declared product journey, native/CPU/license acceptance and release gates |
+| Package and platform support | All four Linux x86_64 / PG17 diagnostic profiles built/installed/executed at an earlier recorded tree; latest CI built only the normal profile and skipped SQL | Current full-profile regression, complete declared product journey, native/CPU/license acceptance and release gates |
 
 See [stage acceptance](../acceptance.md) for P0 exit conditions and [work items](../work-items.json) for remaining scope. Progress is recorded with reproducible evidence rather than by changing a candidate into an accepted claim in this ADR alone.
