@@ -71,6 +71,8 @@ See [declared dense models](docs/dense-representations.md),
 [candidate-stage lexical matching](docs/lexical-matching.md) for implemented
 development contracts. Broader native JSON and model workflows remain in the
 [proposed API](docs/design.md#proposed-sql-experience).
+See [bounded directional synonyms](docs/source-synonyms.md) for explicit
+versioned query policies and native contiguous phrase alternatives.
 See [bounded search pages](docs/search-pages.md) for immutable candidate pages
 with current source/version and permission rechecks.
 See [capability discovery](docs/capability-discovery.md) for current index and

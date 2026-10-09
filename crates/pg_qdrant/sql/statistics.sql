@@ -83,10 +83,10 @@ BEGIN
    IF p_matrix IS NOT NULL OR p_groups IS NOT NULL OR p_facet IS NOT NULL THEN
      RAISE EXCEPTION 'Lexical query cannot combine statistics operations' USING ERRCODE='22023'; END IF;
    IF jsonb_typeof(p_lexical) IS DISTINCT FROM 'object' OR NOT p_lexical ?& ARRAY['q','kind','slop','top_k']
-      OR p_lexical-ARRAY['q','kind','slop','top_k']<>'{}'
+      OR p_lexical-ARRAY['q','kind','slop','top_k','synonyms']<>'{}'
       OR jsonb_typeof(p_lexical->'q') IS DISTINCT FROM 'string'
       OR jsonb_typeof(p_lexical->'kind') IS DISTINCT FROM 'string'
-      OR p_lexical->>'kind' NOT IN ('fuzzy','proximity','syntax')
+      OR p_lexical->>'kind' NOT IN ('fuzzy','proximity','syntax','synonyms')
       OR jsonb_typeof(p_lexical->'slop') IS DISTINCT FROM 'number'
       OR p_lexical->>'slop' !~ '^[0-8]$'
       OR jsonb_typeof(p_lexical->'top_k') IS DISTINCT FROM 'number'
@@ -94,6 +94,13 @@ BEGIN
       OR (p_lexical->>'top_k')::integer NOT BETWEEN 1 AND 100
       OR octet_length(p_lexical->>'q')>256 THEN
      RAISE EXCEPTION 'Invalid bounded lexical query' USING ERRCODE='22023'; END IF;
+   IF p_lexical->>'kind'='synonyms' THEN
+     IF jsonb_typeof(p_lexical->'synonyms') IS DISTINCT FROM 'object'
+        OR octet_length((p_lexical->'synonyms')::text)>8192 THEN
+       RAISE EXCEPTION 'Synonyms require a bounded policy object' USING ERRCODE='22023'; END IF;
+   ELSIF p_lexical ? 'synonyms' THEN
+     RAISE EXCEPTION 'Synonym policy requires synonyms kind' USING ERRCODE='22023';
+   END IF;
  END IF;
  IF p_matrix IS NOT NULL THEN PERFORM qdrant_internal.admit_matrix(p_name,p_matrix); END IF;
  IF p_groups IS NOT NULL THEN
@@ -266,3 +273,15 @@ BEGIN
    'filtered_points',result->'points','matching',result->'matching','filter',result->'filter','release_supported',false);
 END $$;
 GRANT EXECUTE ON FUNCTION qdrant.search_lexical(text,text,text,integer,integer,jsonb) TO PUBLIC;
+
+CREATE FUNCTION qdrant.search_synonyms(index_name text,q text,policy jsonb,top_k integer DEFAULT 10,options jsonb DEFAULT '{}')
+RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+DECLARE result jsonb;
+BEGIN
+ result:=qdrant_internal.source_statistics(index_name,NULL,1,options,NULL,NULL,
+   jsonb_build_object('q',q,'kind','synonyms','slop',0,'top_k',top_k,'synonyms',policy));
+ RETURN (result->'lexical')||jsonb_build_object('index_name',index_name,'generation',result->'generation',
+   'storage_epoch',result->'storage_epoch','live_points',result->'live_points','max_live_points',1000,
+   'filtered_points',result->'points','matching',result->'matching','filter',result->'filter','release_supported',false);
+END $$;
+GRANT EXECUTE ON FUNCTION qdrant.search_synonyms(text,text,jsonb,integer,jsonb) TO PUBLIC;
