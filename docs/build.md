@@ -321,6 +321,15 @@ python3 scripts/dependency_report.py --comparison-output docs/dependency-profile
 
 ## Keeping evidence current
 
+Failed local product tests retain their stopped disposable PostgreSQL cluster
+inside the owned test container. `p1-failed-cluster.json` records its path and
+test/stop exit codes; a shutdown failure also fails the run. Successful runs
+remove their cluster. `p1-product-progress.json` records completed assertions,
+completed crash cuts and the current cut's observations, including a failed
+durability wait. An incomplete progress file cannot replace a successful
+product result or satisfy an acceptance gate. Retained clusters contain only
+synthetic fixtures and are diagnostic evidence, not backup or recovery proof.
+
 ```sh
 python3 scripts/check_contracts.py
 python3 scripts/dependency_report.py --check

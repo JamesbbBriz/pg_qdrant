@@ -1,5 +1,6 @@
 """Actual installed PostgreSQL -> embedded Edge -> flush -> exact ACK checks."""
 import json
+import atexit
 import hashlib
 import os
 import pathlib
@@ -10,7 +11,21 @@ import time
 
 checks = []
 crash_matrix = []
+fault_observation = None
+completed = False
 PSQL = ['psql','-X','-A','-t','-q','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose']
+
+def persist_progress():
+    directory = pathlib.Path(os.environ.get('PG_QDRANT_ARTIFACT_DIR','/src/artifacts'))
+    directory.mkdir(parents=True,exist_ok=True)
+    temporary = directory/'p1-product-progress.tmp'
+    temporary.write_text(json.dumps({'status':'completed' if completed else 'incomplete',
+        'checks':checks,'crash_matrix':crash_matrix,'fault_observation':fault_observation,
+        'source_revision':os.environ.get('PG_QDRANT_SOURCE_SHA','unrecorded'),
+        'release_supported':False},indent=2),encoding='utf-8')
+    os.replace(temporary,directory/'p1-product-progress.json')
+
+atexit.register(persist_progress)
 
 def spawn(query, name):
     env = dict(os.environ, PGAPPNAME=name)
@@ -439,12 +454,20 @@ if faults:
     marker=owner.with_suffix('.fault')
     for cut in ['before_apply','after_point_delete','before_flush','after_flush']:
         before=ready()
+        fault_observation={'cut':cut,'before':before,'phase':'before_fault'}
+        persist_progress()
         marker.write_text(cut)
         ticket_output=sql("BEGIN; UPDATE docs SET body='"+cut+" durable recovery' WHERE id=1; SELECT qdrant.track_changes('docs'); COMMIT")
         ticket=next(line for line in ticket_output.splitlines() if len(line)==36 and line.count('-')==4)
         pending=json.loads(sql("SELECT qdrant_internal.ticket_status('"+ticket+"')"))
+        fault_observation.update(phase='before_await',ticket=ticket,ticket_pending=pending)
+        persist_progress()
         assert not pending['durable'] and pending['pending_events']>0,pending
         result=json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))
+        fault_observation.update(phase='after_await',ticket_result=result,marker_exists=marker.exists(),
+            index_status=json.loads(sql("SELECT qdrant.index_status('docs')")),
+            consumers=json.loads(sql("SELECT jsonb_agg(to_jsonb(c)) FROM qdrant_internal.consumer_state c")))
+        persist_progress()
         assert result['durable'],result
         after=ready()
         assert not marker.exists(),'native crash marker was not consumed'
@@ -454,6 +477,8 @@ if faults:
         crash_matrix.append({'cut':cut,'before':before,'ticket_pending':pending,
             'after':after,'ticket_durable':result,'final_source_keys':json.loads(hits(cut))})
         checks.append('native crash '+cut+' / exact-set replay')
+        fault_observation=None
+        persist_progress()
 
 for fixture in ['p3_reservations.sql','p4_advanced.sql']:
     fixture_result=subprocess.run(PSQL+['-f','/src/crates/pg_qdrant/tests/'+fixture],text=True,capture_output=True,timeout=20)
@@ -515,3 +540,4 @@ print(json.dumps({'status':'passed','checks':checks,'fault_build':faults,
     'cargo_lock_sha256':hashlib.sha256(pathlib.Path('/src/Cargo.lock').read_bytes()).hexdigest(),
     'build_info':build_info, 'crash_matrix':crash_matrix,
     'postgres_version':sql('SHOW server_version'), 'release_supported':False},indent=2))
+completed=True
