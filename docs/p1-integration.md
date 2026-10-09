@@ -78,6 +78,9 @@ concurrent index deletion without blocking unrelated non-key source updates.
 Rows locked for management are skipped and retried; an in-flight receipt for
 such a row is left unacknowledged and may be replayed after rollback.
 Uninstalled consumers remain dormant; reinstalling creates new generations.
+After a [logical source restore](logical-source-restore.md), explicit text
+re-registration can replace a strictly recognized orphan capture pair under
+the source DDL lock. Private readiness and old tickets are never imported.
 
 Tickets seal previously unsealed events in the current transaction. Later
 writes require another ticket. Own uncommitted waits fail. Timeout returns

@@ -286,6 +286,8 @@ SET search_path = pg_catalog, qdrant_internal, pg_temp
 AS $p1$
 DECLARE
     v_source record;
+    v_capture_count integer;
+    v_capture_valid integer;
 BEGIN
     IF p_name IS NULL OR p_name !~ '^[a-z][a-z0-9_]{0,62}$'
        OR p_source IS NULL OR p_key_field IS NULL OR p_text_field IS NULL
@@ -293,7 +295,7 @@ BEGIN
         RAISE EXCEPTION 'invalid P1 index name or source fields' USING ERRCODE = '22023';
     END IF;
     EXECUTE format('LOCK TABLE %s IN SHARE ROW EXCLUSIVE MODE',p_source);
-    SELECT c.oid AS source_oid,n.nspname,c.relname,ka.atttypid AS key_oid
+    SELECT c.oid AS source_oid,c.relowner AS owner_oid,n.nspname,c.relname,ka.atttypid AS key_oid
       INTO v_source
     FROM pg_class c
     JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -329,11 +331,45 @@ BEGIN
         RAISE EXCEPTION 'unsupported P1 source: ordinary persistent table, single default btree PK, non-null text, no RLS/partition'
             USING ERRCODE = '0A000';
     END IF;
+    -- The public preflight precedes this lock and may have waited behind owner
+    -- DDL. Recheck the effective caller against the locked current relation.
+    IF NOT pg_has_role(qdrant_internal.actor_oid(),v_source.owner_oid,'USAGE') THEN
+        RAISE EXCEPTION 'Source owner access required' USING ERRCODE='42501';
+    END IF;
+    -- A logical restore recreates user-table triggers but not this extension's
+    -- private catalog data. Re-registration creates fresh identities/receipts;
+    -- it never imports old native readiness or treats those triggers as capture.
+    IF EXISTS (SELECT 1 FROM qdrant_internal.index_catalog
+               WHERE index_name=p_name OR source_oid=p_source::oid) THEN
+        RAISE EXCEPTION 'Index name or source is already registered' USING ERRCODE='23505';
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid=p_source::oid
+               AND tgfoid='qdrant_internal.model_output_guard()'::regprocedure) THEN
+        RAISE EXCEPTION 'Orphan model output triggers require explicit representation recovery'
+            USING ERRCODE='55000';
+    END IF;
+    SELECT count(*),count(*) FILTER (WHERE NOT t.tgisinternal AND t.tgenabled='O'
+      AND t.tgnargs=1 AND t.tgargs=convert_to(p_name,'UTF8')||decode('00','hex')
+      AND t.tgqual IS NULL AND t.tgconstraint=0 AND t.tgattr=''::int2vector
+      AND ((t.tgname='qdrant_p1_rows' AND t.tgtype=29
+            AND t.tgfoid='qdrant_internal.p1_capture_row()'::regprocedure)
+        OR (t.tgname='qdrant_p1_truncate' AND t.tgtype=32
+            AND t.tgfoid='qdrant_internal.p1_capture_truncate()'::regprocedure)))
+      INTO v_capture_count,v_capture_valid FROM pg_trigger t
+      WHERE t.tgrelid=p_source::oid AND t.tgname IN ('qdrant_p1_rows','qdrant_p1_truncate');
+    IF v_capture_count<>0 THEN
+        IF v_capture_count<>2 OR v_capture_valid<>2 THEN
+            RAISE EXCEPTION 'Incomplete or unrecognized source capture triggers'
+                USING ERRCODE='55000';
+        END IF;
+        EXECUTE format('DROP TRIGGER qdrant_p1_rows ON %s',p_source);
+        EXECUTE format('DROP TRIGGER qdrant_p1_truncate ON %s',p_source);
+    END IF;
     INSERT INTO qdrant_internal.index_catalog
       (index_name,source_oid,source_schema,source_name,key_field,text_field,key_type,owner_oid)
     VALUES (p_name,p_source::oid,v_source.nspname,v_source.relname,
             p_key_field,p_text_field,v_source.key_oid,
-            (SELECT relowner FROM pg_class WHERE oid=p_source));
+            v_source.owner_oid);
     EXECUTE format(
       'CREATE TRIGGER qdrant_p1_rows AFTER INSERT OR UPDATE OR DELETE ON %s
        FOR EACH ROW EXECUTE FUNCTION qdrant_internal.p1_capture_row(%L)',
