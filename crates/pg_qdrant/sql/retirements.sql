@@ -4,7 +4,7 @@ CREATE TABLE qdrant_internal.drop_tasks (
  index_name text NOT NULL, owner_oid oid NOT NULL, source_oid oid NOT NULL,
  requested_xid xid8 NOT NULL DEFAULT pg_current_xact_id(),
  state text NOT NULL DEFAULT 'queued' CHECK(state IN ('queued','running','succeeded','failed')),
- updated_at timestamptz NOT NULL DEFAULT clock_timestamp(), last_error text
+ updated_at timestamptz NOT NULL DEFAULT clock_timestamp(), last_error text, last_error_code text
 );
 CREATE TABLE qdrant_internal.drop_epochs (
  drop_task uuid NOT NULL REFERENCES qdrant_internal.drop_tasks ON DELETE CASCADE,
@@ -110,6 +110,7 @@ BEGIN
    RETURN jsonb_build_object('task_id',p_task,'kind','drop','state',d.state,'index_name',d.index_name,
      'committed',d.requested_xid<>pg_current_xact_id(),'completed',d.state IN ('succeeded','failed'),
      'succeeded',d.state='succeeded','pending_epochs',pending,'pending_events',0,'error',d.last_error,
+     'error_code',d.last_error_code,
      'logical_index_removed',true,'physical_cleanup_completed',d.state='succeeded');
  END IF;
  SELECT * INTO a FROM qdrant_internal.task_archive WHERE task_id=p_task;
@@ -154,12 +155,13 @@ BEGIN
    UPDATE qdrant_internal.drop_epochs SET state='failed',last_error='owner_changed; preserve uncertain storage'
      WHERE drop_task=d.task_id AND generation=e.generation AND storage_epoch=e.storage_epoch;
    UPDATE qdrant_internal.drop_tasks SET state='running',updated_at=clock_timestamp(),
-     last_error=coalesce(last_error,'owner_changed; preserve uncertain storage') WHERE task_id=d.task_id;
+     last_error=coalesce(last_error,'owner_changed; preserve uncertain storage'),
+     last_error_code=coalesce(last_error_code,'source_owner_changed') WHERE task_id=d.task_id;
    RETURN NULL;
  END IF;
  UPDATE qdrant_internal.drop_epochs SET state='running' WHERE drop_task=d.task_id AND generation=e.generation AND storage_epoch=e.storage_epoch;
  UPDATE qdrant_internal.drop_tasks SET state='running',updated_at=clock_timestamp() WHERE task_id=d.task_id;
- RETURN jsonb_build_object('source_contract_version',7,'task_id',e.native_task,'retire',true,'index_id',d.index_id,
+ RETURN jsonb_build_object('source_contract_version',8,'task_id',e.native_task,'retire',true,'index_id',d.index_id,
    'generation',e.generation,'storage_epoch',e.storage_epoch,'consumer_id',e.consumer_id,'representations','{}'::jsonb,'events','[]'::jsonb);
 END $$;
 
@@ -198,7 +200,8 @@ BEGIN
    RETURNING e.drop_task INTO t;
    IF FOUND THEN
      UPDATE qdrant_internal.drop_tasks SET state='running',updated_at=clock_timestamp(),
-       last_error=coalesce(last_error,left(p_error->>'error',4096)) WHERE task_id=t;
+       last_error=coalesce(last_error,left(p_error->>'error',4096)),
+       last_error_code=coalesce(last_error_code,left(p_error->>'error_code',128)) WHERE task_id=t;
      RETURN;
    END IF;
  END IF;

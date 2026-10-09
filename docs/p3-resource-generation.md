@@ -110,6 +110,10 @@ old task cannot remove its shard.
 If a helper has changed since an epoch was owned, cleanup fails closed and
 preserves its uncertain directory. The task explicitly reports failure and
 remaining epochs; it does not claim physical cleanup or reopen that storage.
+Drop status also retains the native failure's `error_code`. A changed ownership
+nonce reports `source_owner_changed`; a failed request write or closed response
+pipe reports `worker_unavailable`. These are failed cleanup outcomes, with
+pending epochs preserved, regardless of their timing or diagnostic wording.
 Consumer epoch rotations retain prior ownership records, so recovery cannot
 erase an old directory from subsequent cleanup accounting.
 Automatic orphan reclamation across helper replacement is still unsupported.

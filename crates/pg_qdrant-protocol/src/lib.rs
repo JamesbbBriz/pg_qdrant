@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 7;
+pub const SOURCE_CONTRACT_VERSION: u32 = 8;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;

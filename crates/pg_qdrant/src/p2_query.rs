@@ -248,6 +248,10 @@ BEGIN
        'text_fields',selected.settings #> '{text,fields}',
        'top_k',top_k,'candidate_limit',candidate_limit,
        'timeout_ms',timeout_ms,
+       'numeric_score_budgets',jsonb_build_object('conversion','float32',
+          'dense_squared_l2_max',1e16,'sparse_squared_l2_max',1e14,
+          'token_squared_l2_max','float32 maximum / (2 * declared max_tokens)',
+          'nonfinite_result_policy','reject complete response'),
        'permission_preflight','passed_for_registered_source',
        'matching',matching,
        'native_predicates_compiled',false,
@@ -303,6 +307,10 @@ BEGIN
       'fusion',plan->'fusion',
       'predicates',plan->'matching',
       'top_k',(plan->>'candidate_limit')::integer),(plan->>'timeout_ms')::integer);
+    IF jsonb_typeof(hits) IS DISTINCT FROM 'array' OR EXISTS(
+        SELECT 1 FROM jsonb_array_elements(hits) h WHERE jsonb_typeof(h->'score') IS DISTINCT FROM 'number') THEN
+      RAISE EXCEPTION 'Native query returned an invalid score' USING ERRCODE='XX000';
+    END IF;
     IF NOT EXISTS(SELECT 1 FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name
         AND cs.storage_epoch=c.storage_epoch AND cs.consumer_id=c.consumer_id AND cs.state='ready') THEN
       RAISE EXCEPTION 'Generation changed during search' USING ERRCODE='55000';

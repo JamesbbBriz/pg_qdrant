@@ -348,6 +348,8 @@ import verify_paging
 verify_paging_replay=verify_paging.run(sql,ready,ticket_from,checks,spawn,finish,wait_session)
 import verify_discovery
 verify_discovery_replay=verify_discovery.run(sql,ready,ticket_from,checks)
+import verify_numeric
+verify_numeric_replay=verify_numeric.run(sql,ready,ticket_from,checks)
 def verify_model_replay():
     verify_dense_replay()
     verify_sparse_replay()
@@ -355,6 +357,7 @@ def verify_model_replay():
     verify_lexical_replay()
     verify_paging_replay()
     verify_discovery_replay()
+    verify_numeric_replay()
 # PostgreSQL cancellation must not release an executing fused native query's owner.
 ready('model_docs')
 hybrid_vector=json.dumps({'dense':{'model_id':'fixture-model','model_version':'r1','vector':[1,0]}})
@@ -442,7 +445,7 @@ verify_retirements.run(sql,ready,checks,faults,crash_matrix)
 build_info=json.loads(sql('SELECT qdrant.build_info()'))
 worker=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['worker_pid']
 observer=spawn('SELECT pg_sleep(2)','pgq_extension_drop_observer')
-sql("SELECT qdrant.drop_index('discovery_docs'); SELECT qdrant.drop_index('page_docs'); SELECT qdrant.drop_index('lexical_docs'); SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
+sql("SELECT qdrant.drop_index('numeric_dense'); SELECT qdrant.drop_index('numeric_sparse'); SELECT qdrant.drop_index('discovery_docs'); SELECT qdrant.drop_index('page_docs'); SELECT qdrant.drop_index('lexical_docs'); SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
 assert sql("SELECT count(*) FROM pg_trigger WHERE tgrelid='model_docs'::regclass AND NOT tgisinternal")=='0'
 finish(observer)
 assert sql('SELECT count(*) FROM docs')=='1'

@@ -43,6 +43,9 @@ BEGIN
    values_real:=array_append(values_real,value_real);
    norm:=norm+value_real::double precision*value_real::double precision;
  END LOOP;
+ IF p_contract->>'kind'='dense' AND norm>1e16 THEN
+   RAISE EXCEPTION 'Dense squared norm exceeds native score budget 10000000000000000' USING ERRCODE='22023';
+ END IF;
  IF p_contract->>'normalization'='unit' AND abs(norm-1)>0.0001 THEN
    RAISE EXCEPTION 'Model contract requires a unit vector' USING ERRCODE='22023';
  END IF;
@@ -59,7 +62,7 @@ END $$;
 CREATE FUNCTION qdrant_internal.validate_sparse(p_vector jsonb,p_contract jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE n integer; k integer; entry jsonb; token bigint; previous bigint:=-1;
-        weight real; indices bigint[]:='{}'; weights real[]:='{}';
+        weight real; indices bigint[]:='{}'; weights real[]:='{}'; norm double precision:=0;
 BEGIN
  IF p_vector IS NULL OR jsonb_typeof(p_vector)<>'object'
     OR NOT p_vector ?& ARRAY['indices','values'] OR (SELECT count(*) FROM jsonb_object_keys(p_vector))<>2
@@ -88,7 +91,11 @@ BEGIN
      RAISE EXCEPTION 'Finite nonzero sparse float32 weights required' USING ERRCODE='22023';
    END IF;
    indices:=array_append(indices,token); weights:=array_append(weights,weight); previous:=token;
+   norm:=norm+weight::double precision*weight::double precision;
  END LOOP;
+ IF norm>1e14 THEN
+   RAISE EXCEPTION 'Sparse squared norm exceeds native score budget 100000000000000' USING ERRCODE='22023';
+ END IF;
  RETURN jsonb_build_object('indices',indices,'values',weights);
 END $$;
 
@@ -299,7 +306,12 @@ BEGIN
  END LOOP;
  EXECUTE format('SELECT coalesce(jsonb_agg(row_data),''[]''::jsonb) FROM
    (SELECT jsonb_build_object(''key'',s.tagged_key,''incarnation'',s.incarnation,''revision'',s.revision,
-    ''source_fingerprint'',s.fingerprint,''text'',t.%I,''model'', $2,''representation'',$3) AS row_data
+    ''source_fingerprint'',s.fingerprint,''text'',t.%I,''model'', $2,''representation'',$3,
+    ''numeric_score_budget'',jsonb_build_object(''conversion'',''float32'',
+       ''max_squared_l2'',CASE $2->>''kind'' WHEN ''dense'' THEN 1e16::double precision
+          WHEN ''learned_sparse'' THEN 1e14::double precision
+          WHEN ''token_vectors'' THEN 3.4028234663852886e38/(2*($2->>''max_tokens'')::double precision) END,
+       ''scope'',CASE WHEN $2->>''kind''=''token_vectors'' THEN ''each token'' ELSE ''complete vector'' END)) AS row_data
     FROM qdrant_internal.source_state s JOIN ONLY %s t ON t.%I=(s.tagged_key->>''value'')::%s
     JOIN qdrant_internal.representation_state r ON r.index_name=s.index_name AND r.tagged_key=s.tagged_key AND r.name=$3
     WHERE s.index_name=$1 AND NOT s.tombstone AND r.state<>''ready''
