@@ -51,7 +51,7 @@ changes. Cancellation retains the native owner until its operation finishes.
 Current-source admission is separate from durable change-ticket waiting.
 Unsupported RLS remains refused.
 
-Development source protocol 13 requires a matching extension, installation
+Development source protocol 14 requires a matching extension, installation
 SQL and helper with a fresh catalog. Upgrading earlier development catalogs
 is unsupported. Native regression uses independent score formulas for Dot,
 Cosine, Euclid and Manhattan. Installed tests cover multipair, equal and single

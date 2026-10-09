@@ -6,6 +6,8 @@ adapters now provide bounded [recommendations](source-recommendations.md),
 [Discover/Context](source-context-discovery.md) and [feedback](source-feedback.md).
 The [MMR adapter](source-mmr.md) and [score Formula](source-formula.md) have separate execution and verification scopes.
 These partial adapters do not complete P4 acceptance.
+Bounded [source-key retrieval](source-retrieve.md) executes native Edge reads
+with current SQL source/version rechecks; other Q10 read families remain open.
 
 ## Implemented in this slice
 

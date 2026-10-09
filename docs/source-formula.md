@@ -57,7 +57,7 @@ open, along with general Q08/P4-SCORING acceptance and quality evaluation.
 
 The whole expression binds the existing page request hash. Changing it
 invalidates a continuation. Cancellation retains the native owner until
-completion. Development source protocol 13 requires matching extension,
+completion. Development source protocol 14 requires matching extension,
 installation SQL and managed helper with a fresh catalog. Upgrades of earlier
 development catalogs remain unsupported. The retained regression cases cover
 the scoped adapter; they do not establish release support or full Q08.

@@ -12,8 +12,9 @@ use qdrant_edge::{
     EdgeSparseVectorParams, EdgeVectorParams, Expression, FeedbackItem, FeedbackNaiveQuery, Filter,
     Formula, Fusion, IdfCorpusParams, IdfParams, Mmr, Modifier, MultiVectorComparator,
     MultiVectorConfig, NaiveFeedbackStrategy, NamedQuery, PointId, PointInsertOperations,
-    PointOperations, PointStruct, Prefetch, QueryEnum, QueryRequest, RecommendQuery, ScoringQuery,
-    SearchParams, UpdateOperation, Vector, VectorInternal, Vectors, WithPayloadInterface,
+    PointOperations, PointStruct, Prefetch, QueryEnum, QueryRequest, RecommendQuery,
+    RetrieveRequest, ScoringQuery, SearchParams, UpdateOperation, Vector, VectorInternal, Vectors,
+    WithPayloadInterface,
 };
 use serde_json::{Value, json};
 use std::{
@@ -868,6 +869,59 @@ impl SourceOwner {
                 return Err(error("unexpected point identity"));
             };
             result.push(json!({"id":id,"score":hit.score,"payload":hit.payload.map(|p|p.0)}));
+        }
+        Ok(Value::Array(result))
+    }
+
+    pub fn retrieve(
+        &self,
+        index_id: u64,
+        generation: &str,
+        epoch: &str,
+        point_ids: Vec<u64>,
+    ) -> Result<Value, ProbeError> {
+        if point_ids.len() > 100
+            || point_ids.iter().any(|&id| id == 0 || id > i64::MAX as u64)
+            || point_ids
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len()
+                != point_ids.len()
+        {
+            return Err(ProbeError::invalid(
+                "retrieve requires at most 100 distinct positive bigint point IDs",
+            ));
+        }
+        let key = identity(index_id, generation, epoch)?;
+        let owned = self
+            .shards
+            .get(&key)
+            .ok_or_else(|| error("generation not owned by this helper"))?;
+        let mut request =
+            RetrieveRequest::new(point_ids.iter().copied().map(PointId::NumId).collect());
+        request.with_payload = Some(WithPayloadInterface::Fields(
+            ["source_key", "revision", "incarnation", "fingerprint"]
+                .map(|field| field.parse().expect("constant payload selector"))
+                .to_vec(),
+        ));
+        // RetrieveRequest defaults vectors to false. Explicitly strip all native
+        // fields beyond identity/version metadata from the owned IPC result.
+        let records = owned.shard.retrieve(request).map_err(error)?;
+        let mut result = Vec::with_capacity(records.len());
+        let mut previous = None;
+        for record in records {
+            let PointId::NumId(id) = record.id else {
+                return Err(error("unexpected point identity"));
+            };
+            let position = point_ids
+                .iter()
+                .position(|&requested| requested == id)
+                .ok_or_else(|| error("unexpected native retrieve point"))?;
+            if previous.is_some_and(|last| position <= last) {
+                return Err(error("native retrieve order or duplicate mismatch"));
+            }
+            previous = Some(position);
+            result.push(json!({"id":id,"payload":record.payload.map(|payload| payload.0)}));
         }
         Ok(Value::Array(result))
     }
@@ -2078,6 +2132,86 @@ mod tests {
         };
         owner.apply(batch).unwrap();
         (owner, root, generation, epoch, values)
+    }
+
+    #[test]
+    fn source_retrieve_uses_native_order_missing_deletion_and_metadata_projection() {
+        let (mut owner, root, generation, epoch, _) = dense_example_fixture();
+        let result = owner
+            .retrieve(1, &generation, &epoch, vec![7, 999, 3, 1])
+            .unwrap();
+        assert_eq!(
+            result
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v["id"].as_u64().unwrap())
+                .collect::<Vec<_>>(),
+            vec![7, 3, 1]
+        );
+        for record in result.as_array().unwrap() {
+            assert_eq!(record.as_object().unwrap().len(), 2);
+            assert_eq!(record["payload"].as_object().unwrap().len(), 4);
+            assert_eq!(record["payload"]["revision"], 1);
+            assert_eq!(record["payload"]["fingerprint"], "fixture");
+            assert!(record.get("score").is_none());
+            assert!(record.get("vectors").is_none());
+            assert!(record["payload"].get("body").is_none());
+        }
+        assert_eq!(
+            owner.retrieve(1, &generation, &epoch, vec![]).unwrap(),
+            json!([])
+        );
+        for ids in [
+            vec![0],
+            vec![1, 1],
+            vec![i64::MAX as u64 + 1],
+            (1..=101).collect(),
+        ] {
+            assert_eq!(
+                owner
+                    .retrieve(1, &generation, &epoch, ids)
+                    .unwrap_err()
+                    .code,
+                "invalid_parameter"
+            );
+        }
+        assert!(owner.retrieve(2, &generation, &epoch, vec![1]).is_err());
+        assert!(
+            owner
+                .retrieve(1, &generation, &generation, vec![1])
+                .is_err()
+        );
+        let representations = owner.shards[&identity(1, &generation, &epoch).unwrap()]
+            .representations
+            .clone();
+        owner
+            .apply(SourceBatch {
+                source_contract_version: SOURCE_CONTRACT_VERSION,
+                index_id: 1,
+                generation: generation.clone(),
+                storage_epoch: epoch.clone(),
+                consumer_id: epoch.clone(),
+                task_id: None,
+                retire: false,
+                representations,
+                events: vec![SourceEvent {
+                    event_id: 8,
+                    point_id: 3,
+                    revision: 2,
+                    incarnation: generation.clone(),
+                    fingerprint: Some("fixture".into()),
+                    key: json!({"type":"bigint","value":"3"}),
+                    body: None,
+                    vectors: BTreeMap::new(),
+                }],
+            })
+            .unwrap();
+        let after = owner.retrieve(1, &generation, &epoch, vec![3, 7]).unwrap();
+        assert_eq!(after.as_array().unwrap().len(), 1);
+        assert_eq!(after[0]["id"], 7);
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
