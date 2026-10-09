@@ -7,6 +7,8 @@ on:
       - "Dockerfile.p0"
       - "crates/**"
       - "Cargo.lock"
+      - "scripts/retry_snapshot_build.py"
+      - "scripts/tests/test_retry_snapshot_build.py"
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,9 +24,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Verify tracked dependency and product contracts
-        run: python3 scripts/check_contracts.py
+        run: |
+          python3 scripts/check_contracts.py
+          python3 -m unittest discover -s scripts/tests -p 'test_retry_snapshot_build.py'
       - name: Build exact P0 PostgreSQL 17 and embedded Edge dependencies
-        run: docker build -f Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} -t pg-qdrant-p1-base .
+        run: python3 scripts/retry_snapshot_build.py docker build -f Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} -t pg-qdrant-p1-base .
       - name: Run transactional capture, rollback and two-session tests
         run: |
           docker create --name pg-qdrant-p1-run --memory=5g --cpus=2 --network=none \

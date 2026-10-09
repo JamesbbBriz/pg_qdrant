@@ -34,6 +34,16 @@ profiles. The [native evidence](evidence/p0-native-ci.json) binds the exact 246
 installed entries, seven archive pins, compiler/PG/ELF observations and CPU
 reports. Bit-identical compiler output and full license review are not claimed.
 
+CI permits at most three identical Docker build attempts when the failing
+download is an Ubuntu Snapshot HTTP 500/502/503/504 transport error, with
+10- and 20-second delays. All failed-attempt output remains in the job log.
+The wrapper preserves every build argument, URL, version and checksum;
+persistent transport failure fails the step. Compilation, tests, checksum
+mismatches and signature failures are not retried or converted to success.
+This bounded retry policy does not establish upstream availability. Local
+builds can use `python3 scripts/retry_snapshot_build.py docker build ...`
+or invoke the identical Docker build directly.
+
 ## Standalone engine
 
 Install the exact Rust toolchain and a C compiler/linker. The engine build uses
