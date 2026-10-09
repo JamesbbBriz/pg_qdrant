@@ -411,6 +411,7 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                     Operation::AddressSpaceProbe => "address_space_probe",
                     Operation::SourceApply { .. } => "source_apply",
                     Operation::SourceSearch { .. } => "source_search",
+                    Operation::SourceRetrieve { .. } => "source_retrieve",
                 };
                 #[cfg(feature = "p0-managed-helper")]
                 let Some(connection) = supervisor.connection() else {
@@ -554,6 +555,7 @@ fn execute(operation: Operation) -> Result<Value, ProbeError> {
         Operation::Ping => Err(ProbeError::invalid("ping belongs on the owner main thread")),
         Operation::SourceApply { .. }
         | Operation::SourceSearch { .. }
+        | Operation::SourceRetrieve { .. }
         | Operation::AddressSpaceProbe => Err(ProbeError::invalid(
             "source indexing requires the managed helper build",
         )),

@@ -18,7 +18,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 13;
+pub const SOURCE_CONTRACT_VERSION: u32 = 14;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
@@ -290,6 +290,12 @@ pub enum Operation {
     SourceApply {
         batch: SourceBatch,
     },
+    SourceRetrieve {
+        index_id: u64,
+        generation: String,
+        storage_epoch: String,
+        point_ids: Vec<u64>,
+    },
     SourceSearch {
         index_id: u64,
         generation: String,
@@ -321,7 +327,7 @@ impl Operation {
     pub fn request_byte_limit(&self) -> usize {
         match self {
             Self::SourceApply { .. } => CONSUMER_REQUEST_BYTES,
-            Self::SourceSearch { .. } => SEARCH_REQUEST_BYTES,
+            Self::SourceSearch { .. } | Self::SourceRetrieve { .. } => SEARCH_REQUEST_BYTES,
             _ => REQUEST_BYTES,
         }
     }
@@ -424,6 +430,26 @@ pub fn encode_helper_response(
 #[cfg(test)]
 mod search_contract_tests {
     use super::*;
+
+    #[test]
+    fn retrieve_preserves_integer_ids_and_refuses_unowned_options() {
+        let value = json!({"operation":"source_retrieve","index_id":1,"generation":"g","storage_epoch":"e","point_ids":[7,3,1]});
+        let operation: Operation = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(operation.request_byte_limit(), SEARCH_REQUEST_BYTES);
+        assert!(
+            matches!(operation, Operation::SourceRetrieve { point_ids, .. } if point_ids == vec![7,3,1])
+        );
+        for replacement in [json!([-1]), json!([1.5]), json!(["1"]), json!([null])] {
+            let mut invalid = value.clone();
+            invalid["point_ids"] = replacement;
+            assert!(serde_json::from_value::<Operation>(invalid).is_err());
+        }
+        for name in ["with_vectors", "with_payload", "filter", "path", "q"] {
+            let mut invalid = value.clone();
+            invalid[name] = json!(true);
+            assert!(serde_json::from_value::<Operation>(invalid).is_err());
+        }
+    }
 
     #[test]
     fn mmr_source_target_and_lambda_refuse_unknown_fields() {

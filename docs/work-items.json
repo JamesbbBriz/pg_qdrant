@@ -5660,6 +5660,16 @@
           "source_paths": [
             "crates/edge-probe/src/api_inventory.rs"
           ]
+        },
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_source_retrieve",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_retrieve.py",
+          "scope": "Pinned native RetrieveRequest for bounded current source keys. Exact 100-key/request-order boundary, canonical bigint/uuid/quoted Unicode text keys, durable delete/reuse with new point/incarnation, metadata-only native IPC, current source/identity/revision/fingerprint recheck, malformed/private selector and permissions/RLS/drift/readiness refusals, actual escaped-source 256 KiB whole-response refusal, retained owner after cancellation and no old source exposure after concurrent commit. Native tests assert missing/deleted points, order, identity fences and zero/duplicate/over-budget IDs. Other Q10 read families, global pagination, quality and full read acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#query-execution-and-filtering",
@@ -5687,7 +5697,7 @@
         "support_status": "public primitive candidate; fixed-release call and runtime evidence required"
       },
       "input_config": "Typed order field/direction, supported offsets/cursors, sample seed policy and source keys.",
-      "sql_exposure": "proposed advanced read entries",
+      "sql_exposure": "qdrant.retrieve(index_name, source_keys, options) for 1..100 distinct normalized current source keys; native metadata plus authorized SQL excerpts",
       "execution": [
         "Validate supported input/configuration, caller permissions, required slots and generation.",
         "Compile project-owned request and mandatory predicates through the appropriate adapter.",
@@ -5721,14 +5731,16 @@
           "verified_scope": "Exhaustive enum/method sentinels or typed constructors only; full callable/negative-input coverage remains pending."
         },
         "engine_runtime": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "ENGINE-Q10",
-          "required": "Ordering/offset semantics, bounded samples, authorization and generation pinning"
+          "required": "Ordering/offset semantics, bounded samples, authorization and generation pinning",
+          "verified_scope": "Bounded source-key native retrieve; order-by, scroll, sample and complete original read acceptance remain open. See docs/source-retrieve.md."
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q10",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "verified_scope": "Bounded source-key native retrieve; order-by, scroll, sample and complete original read acceptance remain open. See docs/source-retrieve.md."
         },
         "release": {
           "status": "pending",
@@ -5758,7 +5770,7 @@
           "status": "pending"
         }
       ],
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {

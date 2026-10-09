@@ -40,7 +40,7 @@ an entire in-flight response or cached page after target mutation, including
 changes to the excluded target alone. Current source visibility is separate
 from durable change-ticket waiting. Cancellation retains native ownership.
 
-Development source protocol 13 requires matching extension, installation SQL
+Development source protocol 14 requires matching extension, installation SQL
 and managed helper with a fresh catalog. Earlier development-catalog upgrades
 remain unsupported. Native tests use independent greedy objectives and
 original score formulas for all four distances at lambda 0, 0.25 and 1.

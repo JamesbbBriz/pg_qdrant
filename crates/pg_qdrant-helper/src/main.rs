@@ -115,6 +115,12 @@ fn run() -> Result<(), ProbeError> {
         previous_id = request.request_id;
         let result = match request.operation {
             Operation::SourceApply { batch } => source_owner.apply(batch),
+            Operation::SourceRetrieve {
+                index_id,
+                generation,
+                storage_epoch,
+                point_ids,
+            } => source_owner.retrieve(index_id, &generation, &storage_epoch, point_ids),
             Operation::SourceSearch {
                 index_id,
                 generation,
