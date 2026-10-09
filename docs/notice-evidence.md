@@ -74,3 +74,34 @@ the act log SHA-256 is
 The same 44 missing Rust notice entries remain explicit. No native recompilation,
 complete regression, license clearance or release support is claimed by this
 packaging integration.
+
+## Supplemental upstream texts
+
+The checked-in `packaging/licenses/upstream/` bundle retains original texts from
+fixed repository commits associated with 34 locked crate packages. The original
+crate archive checksum, normalized Cargo manifest and `.cargo_vcs_info.json`
+hashes bind each association. Collection verifies the declared repository,
+commit, component path and clean VCS metadata against the original archive.
+Text SHA-256 and Git blob hashes must match the checked-in record. Raw source
+URLs include the full commit, and only notices in component ancestor directories
+are accepted. Collection works offline and performs no network lookup.
+
+The supplemental rows remain separate from notices present in published crates.
+They preserve repository-level license and attribution texts without asserting
+that the published source is reproducible or that nested materials are covered.
+The six upstream entries without this additional evidence remain explicit:
+`crc32c`, `enum-map`, `enum-map-derive`, `htmlescape`, `qdrant-edge` and `seahash`.
+The four workspace packages have the separately collected project root texts.
+This association does not complete license review or P5-LICENSE.
+
+Local act run `upstream-f8f3b75dc3468066` passed 27 refusal and byte-preservation
+tests and collected the actual frozen dependency inventory offline. The output
+contains 1,051 original texts totaling 8,192,707 bytes; all 39 frozen inputs,
+1,052 exported artifacts and the act log were hash checked. The collected
+manifest SHA-256 is
+`aa5fdc6ebaf55b93c1827003f4904e11115e5a361369b2946337a12f1014d2a5`;
+the act log SHA-256 is
+`45e1a5f8d33d6c1f8fdd70eb593c663f158972691a0a34b9bdc298473fe47c25`.
+This collection uses the unchanged clean `acfc885` native build above and a
+separately frozen supplemental collector and bundle on `119bbea`. It does not
+establish a new native build, package installation or full regression result.

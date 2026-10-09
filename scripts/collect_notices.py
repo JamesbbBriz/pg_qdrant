@@ -170,6 +170,95 @@ def collect_native(inventory,writer,doc_root):
     return rows
 
 
+def original_metadata(archive,name):
+    """Read one bounded regular metadata member without extracting archive paths."""
+    with tarfile.open(archive,'r:gz') as source:
+        found=[]
+        for index,member in enumerate(source):
+            if index>=20000:
+                raise ValueError('crate member inspection budget exceeded')
+            if member.name==name:
+                found.append(member)
+        if len(found)!=1 or not found[0].isfile() or not 0<=found[0].size<=128*1024:
+            raise ValueError('missing, duplicate or invalid original metadata member')
+        return source.extractfile(found[0]).read()
+
+
+def collect_upstream(metadata,lock_bytes,writer,cargo_home,bundle):
+    """Copy offline supplemental texts associated with exact published crate VCS metadata."""
+    manifest_path=confined(bundle,'manifest.json')
+    if manifest_path.stat().st_size>1024*1024:
+        raise ValueError('upstream notice manifest budget exceeded')
+    manifest=json.loads(manifest_path.read_bytes())
+    if (manifest.get('schema_version')!=1 or manifest.get('kind')!='pinned_upstream_notice_evidence'
+            or manifest.get('license_review_complete') is not False or manifest.get('release_supported') is not False):
+        raise ValueError('unsupported upstream notice evidence contract')
+    locked={(p['name']+'@'+p['version'],p.get('source')):p
+        for p in tomllib.loads(lock_bytes.decode())['package']}
+    nodes={p['id'] for p in metadata['resolve']['nodes']}
+    resolved={(p['name']+'@'+p['version'],p['source']):p
+        for p in metadata['packages'] if p['id'] in nodes}
+    rows=[];seen=set();copied={}
+    for row in manifest['packages']:
+        key=(row['package'],row['source'])
+        if key in seen or key not in resolved or key not in locked or not row['source'].startswith('registry+'):
+            raise ValueError('ambiguous or unresolved supplemental package')
+        seen.add(key)
+        package=resolved[key];entry=locked[key]
+        repository=row['repository'];revision=row['commit']
+        if (not re.fullmatch(r'https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository)
+                or not re.fullmatch(r'[a-f0-9]{40}',revision) or row['checksum']!=entry['checksum']
+                or row['license']!=package['license']):
+            raise ValueError('supplemental package contract differs from resolved dependency')
+        source=Path(package['manifest_path']).parent.resolve(strict=True)
+        registry=(cargo_home/'registry/src').resolve(strict=True)
+        if not source.is_relative_to(registry) or source.parent.parent!=registry:
+            raise ValueError('supplemental registry source required')
+        archive=cargo_home/'registry/cache'/source.parent.name/(package['name']+'-'+package['version']+'.crate')
+        if archive.is_symlink() or sha(archive)!=entry['checksum']:
+            raise ValueError('supplemental original crate differs from Cargo.lock')
+        prefix=package['name']+'-'+package['version']+'/'
+        values={name:original_metadata(archive,prefix+name) for name in ('Cargo.toml','.cargo_vcs_info.json')}
+        if {name:hashlib.sha256(value).hexdigest() for name,value in values.items()}!=row['crate_members']:
+            raise ValueError('supplemental original metadata hash mismatch')
+        vcs=json.loads(values['.cargo_vcs_info.json']);cargo=tomllib.loads(values['Cargo.toml'].decode())
+        actual_repository=cargo['package'].get('repository','').rstrip('/').removesuffix('.git')
+        if (actual_repository!=repository or vcs['git']['sha1']!=revision or vcs['git'].get('dirty',False)
+                or vcs.get('path_in_vcs','')!=row['path_in_vcs']):
+            raise ValueError('supplemental VCS association mismatch')
+        component=row['path_in_vcs'];ancestors={''}
+        if component:
+            relative(component)
+        while component:
+            ancestors.add(component);component=component.rpartition('/')[0]
+        notices=[]
+        if not row['notices']:
+            raise ValueError('empty supplemental notice set')
+        for notice in row['notices']:
+            path=relative(notice['path']);parent,_,name=path.rpartition('/')
+            if (parent not in ancestors or not NOTICE_NAME.fullmatch(name)
+                    or notice['url']!='https://raw.githubusercontent.com/'+repository.removeprefix('https://github.com/')+'/'+revision+'/'+path):
+                raise ValueError('supplemental notice outside associated ancestor scope')
+            source_text=confined(bundle,notice['file'])
+            if source_text.stat().st_size>MAX_FILE:
+                raise ValueError('oversized supplemental notice')
+            data=source_text.read_bytes();digest=hashlib.sha256(data).hexdigest()
+            blob=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+            if digest!=notice['sha256'] or blob!=notice['git_blob_sha1'] or len(data)!=notice['bytes']:
+                raise ValueError('supplemental original text hash mismatch')
+            destination='upstream/'+repository.removeprefix('https://github.com/').replace('/','_')+'/'+revision+'/'+path
+            if destination not in copied:
+                copied[destination]=writer.copy(source_text,destination,digest)
+            elif copied[destination]['sha256']!=digest:
+                raise ValueError('ambiguous supplemental output')
+            notices.append({**copied[destination],'upstream_url':notice['url'],'git_blob_sha1':blob})
+        rows.append({'package':row['package'],'source':row['source'],'crate_checksum':entry['checksum'],
+            'repository':repository,'commit':revision,'path_in_vcs':row['path_in_vcs'],'notices':notices,
+            'association':'checksum-verified original crate VCS metadata; ancestor notices only',
+            'license_review_complete':False})
+    return rows
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root',type=Path,default=Path('/src'))
@@ -197,6 +286,8 @@ def main():
         report['project_notices']=[writer.copy(confined(root,name),'project/'+name)
             for name in ['LICENSE','NOTICE']]
         report['rust']=collect_rust(metadata,lock,writer,Path(os.environ['CARGO_HOME']),root)
+        report['upstream']=collect_upstream(metadata,lock,writer,Path(os.environ['CARGO_HOME']),
+            root/'packaging/licenses/upstream')
         report['native']=collect_native(before,writer,Path('/usr/share/doc'))
         if (root/'Cargo.lock').read_bytes()!=lock:
             raise ValueError('lock changed during collection')
@@ -213,6 +304,7 @@ def main():
     print(json.dumps({'status':report['status'],'rust_packages':len(report['rust']),
         'native_packages':len(report['native']),'notice_files':len(writer.files),
         'rust_without_notice':[p['package'] for p in report['rust'] if not p['notices']],
+        'upstream_associated_packages':[p['package'] for p in report['upstream']],
         'native_without_copyright':[p['package'] for p in report['native'] if not p['copyright']]}))
 
 

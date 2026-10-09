@@ -4,6 +4,7 @@ FROM ${PRODUCT_IMAGE} AS archive
 USER root
 COPY scripts/preview_package.py /package-tools/preview_package.py
 COPY scripts/collect_notices.py /package-tools/collect_notices.py
+COPY packaging/licenses/upstream/ /src/packaging/licenses/upstream/
 COPY source-input.json /package-tools/source-input.json
 RUN mkdir /package-output \
     && python3 /package-tools/collect_notices.py --root /src --output /package-output/notices \
