@@ -349,7 +349,7 @@
       "development_quality_evidence": {
         "source": "docs/evidence/bounded-quality.json",
         "contract": "docs/bounded-quality.md",
-        "local_act_run": "quality-ad8182828a751a11",
+        "local_act_run": "quality-cd951b2e40028cb6",
         "product_code_commit": "6169bfddcefa67d0c846ef50d528c6cf9b86da12",
         "scope": "Actual installed native BM25 over two deterministic reduced-corpus datasets, 32 queries each with all their positive documents retained; fixed public input hashes, complete per-query metrics and failures. All64 metrics independently recomputed. No full-corpus benchmark, comparator, semantic-model, resource or full P2-QUALITY acceptance.",
         "full_capability_acceptance": false,

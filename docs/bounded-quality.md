@@ -89,7 +89,7 @@ recovery timings remain open. There is no quality threshold or claimed speedup.
 The complete acceptance contract and all comparator requirements remain in
 [acceptance.md](acceptance.md#quality-and-efficiency-evidence).
 
-The recorded local run `quality-ad8182828a751a11` measured all 64 queries with
+The recorded local run `quality-cd951b2e40028cb6` measured all 64 queries with
 zero errors and no zero-result queries. All fixture/input/log/result hashes
 were verified, and every per-query metric was independently recomputed. Its
 aggregate results and installed binary hashes are in
@@ -97,8 +97,8 @@ aggregate results and installed binary hashes are in
 
 | Dataset subset | Queries | Points | Recall@10 | NDCG@10 | MRR@10 | End-to-end p50 / p95 ms |
 |---|---:|---:|---:|---:|---:|---:|
-| SciFact | 32 | 500 | 0.906250 | 0.826365 | 0.805208 | 135.17 / 164.84 |
-| T2Retrieval | 32 | 470 | 0.898695 | 0.902885 | 0.953125 | 152.80 / 159.59 |
+| SciFact | 32 | 500 | 0.906250 | 0.826365 | 0.805208 | 136.14 / 168.28 |
+| T2Retrieval | 32 | 470 | 0.898695 | 0.902885 | 0.953125 | 144.87 / 156.16 |
 
 These are observations for the declared small corpus and single sequential
 run. They provide a reproducible starting point for ablations and regressions;

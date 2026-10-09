@@ -43,15 +43,15 @@
     "pg_qdrant.so": "7cbc4adfd8f1bd9d4d49ace58ea03c5f7d3d0a6cace4350e82ddba4f90fb21ef",
     "extension/pg_qdrant--0.0.1.sql": "bfe13dfb8524e7d7d24697c156fa06edfd204e073ffb481c8bedde0ef12ea59b"
   },
-  "local_act_run": "quality-ad8182828a751a11",
+  "local_act_run": "quality-cd951b2e40028cb6",
   "product_code_commit": "6169bfddcefa67d0c846ef50d528c6cf9b86da12",
   "product_image": "sha256:34ea6f0b4a404cdbed1322a4895e8b4bab23055c26d907a479416cac67fa2c03",
   "product_build_scope": "Locked matching helper, extension and SQL from suggestions-9a45b99873e068bd; seven changed executable inputs match product code commit on immutable15a8150 normal image; this measurement does not recompile the product.",
-  "act_log_sha256": "3e246a944f6d28b78d9e289d91405cd0179cf1cfc768d65f805bf95fb57e1cce",
-  "full_results_sha256": "468d95927858ce01d5a9def6d801c899ddd916e7d588e6b840f57cb221d331a0",
+  "act_log_sha256": "0e522ee5d67fccaa4face0bb77f864d4d76fa5092b570a066c6f3646c676c647",
+  "full_results_sha256": "8d34f6dab338593511a618b1f7e1d9a9c1e949086e2c9022c7dfb24f5907c74d",
   "harness_sha256": {
     "ci/Dockerfile.quality": "a1a1b515ba0576409b46eb9785a8ecb04feab68664f4eb032eb953c3f695b90e",
-    "ci/quality-sources.json": "38d529b9e83d41d27ce764e47df3061df5dc17efd960b97a73f1ea2042bd677e",
+    "ci/quality-sources.json": "ce290790c7dee25728e309508631afa853a7941564e971a1a0599b0ee776896f",
     "ci/quality.yml": "c4425d034543a49f5a3f406270224b3c127d1749b3ad71e26567a79247aa77a4",
     "crates/pg_qdrant/tests/run-p1.sh": "e5c45ccec1489b53c8d53f857c92c59de3ed1aca982b718923a312e50015b6a7",
     "scripts/local_quality.py": "6f6e4af9f43882369b3ea43587f623c30fe165b9bee1e9053dc4362f6a166bea",
@@ -67,15 +67,15 @@
       "original_corpus_points": 5183,
       "selected_points": 500,
       "source_bytes": 756155,
-      "registration_to_durable_seconds": 7.060191823999048,
+      "registration_to_durable_seconds": 7.032176848006202,
       "aggregate": {
         "recall_at_10": 0.90625,
         "ndcg_at_10": 0.8263649413822141,
         "mrr_at_10": 0.8052083333333333,
         "queries": 32,
         "zero_results": 0,
-        "latency_p50_seconds": 0.13516680050088326,
-        "latency_p95_seconds": 0.16483972199785057
+        "latency_p50_seconds": 0.13614132400107337,
+        "latency_p95_seconds": 0.16827530600130558
       },
       "status": "measured"
     },
@@ -87,15 +87,15 @@
       "original_corpus_points": 118605,
       "selected_points": 470,
       "source_bytes": 1048416,
-      "registration_to_durable_seconds": 8.645347447993117,
+      "registration_to_durable_seconds": 9.093599083003937,
       "aggregate": {
         "recall_at_10": 0.8986945346320346,
         "ndcg_at_10": 0.9028851971933058,
         "mrr_at_10": 0.953125,
         "queries": 32,
         "zero_results": 0,
-        "latency_p50_seconds": 0.15279578899935586,
-        "latency_p95_seconds": 0.15958636600407772
+        "latency_p50_seconds": 0.14487255249696318,
+        "latency_p95_seconds": 0.1561572760110721
       },
       "status": "measured"
     }
