@@ -1,0 +1,2 @@
+-P ubuntu-24.04=pg-qdrant-act-runner:29.8.0-node24
+--pull=false

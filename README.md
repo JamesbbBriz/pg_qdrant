@@ -1,5 +1,9 @@
 # pg_qdrant
 
+Development CI runs locally with `python scripts/local_ci.py` using act and
+Docker Linux containers. See the [CI execution policy](docs/ci-temporary-hold.md)
+for complete and scoped checks, input hashes, logs and evidence.
+
 **Qdrant-powered search and ranking for PostgreSQL.**
 
 Full-text, vector, and hybrid search over ordinary PostgreSQL tables, with optional local models and learning to rank.

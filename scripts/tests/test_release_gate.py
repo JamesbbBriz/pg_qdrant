@@ -21,14 +21,14 @@ class GateTest(unittest.TestCase):
             self.assertTrue(any("P1-DURABILITY" in s for s in report["blockers"]))
             self.assertTrue(any("workflow is missing" in s for s in report["blockers"]))
 
-    def test_manual_only_workflow_cannot_be_release_ready(self):
+    def test_hosted_workflow_is_not_local_ci_evidence(self):
         with tempfile.TemporaryDirectory() as d:
             root = pathlib.Path(d)
             (root / ".github/workflows").mkdir(parents=True)
             (root / ".github/workflows/p0.yml").write_text("on:\n  workflow_dispatch:\n")
             report = assess(root, root / "missing.json", root, "1" * 40)
-            self.assertIn("automatic CI triggers remain disabled; restore push and pull_request",
-                          report["blockers"])
+            self.assertIn("local act verification workflow is missing or incomplete", report["blockers"])
+            self.assertIn("verified revision-bound full CI attestation missing", report["blockers"])
 
     def test_integrity_checker_rejects_traversal_and_symlinks(self):
         with tempfile.TemporaryDirectory() as d:

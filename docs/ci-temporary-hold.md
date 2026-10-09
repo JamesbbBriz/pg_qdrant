@@ -1,31 +1,44 @@
-# Historical CI hold — unfinished draft branches
+# Local CI execution policy
 
-The integration branch restores automatic P0 push and pull-request triggers.
-Installed source-to-Edge tests run in the managed-helper fault build. The
-entries below record the earlier hold, rather than the current CI policy.
+CI runs locally through act. GitHub-hosted workflow execution is disabled; the
+workflow entry point lives in [ci/verify.yml](../ci/verify.yml), outside the
+GitHub workflow discovery directory. Historical hosted reports remain evidence
+only for their recorded revisions.
 
-As requested on 2026-10-08, the P0 GitHub Actions workflow retains all its
-jobs and test scripts. Its automatic push/pull_request events are temporarily
-removed. It remains runnable by workflow_dispatch.
+Run `python scripts/local_ci.py` for the complete engine, installed PostgreSQL,
+transaction ledger, crash, disk, kernel OOM and static checks. The step registry
+is `ci/steps.json`; both the act workflow and a prepared Linux snapshot call
+`scripts/verify.py`. `--profile static`, `engine`, or `ledger` selects a subset;
+subset success cannot satisfy full CI or product acceptance.
 
-This is NOT evidence of passing tests. The resulting missing or skipped checks
-must NOT be reported as green. PRs remain Draft until the phase acceptance
-criteria, new tests and original P0 regressions pass.
+The wrapper requires Python 3.11+, Git, Docker with Linux containers and act
+0.2.89. It builds the diagnostic runner, copies tracked and non-ignored input
+files into a separate snapshot, hashes every input and Cargo.lock, and runs act
+on an isolated bridge network. No environment or secret file is inherited.
+Product dependency and native build pins remain in Dockerfile.p0. The runner's
+resolved image ID, act/Docker/Python versions, commands, exit codes, complete
+step logs and snapshot manifest are exported under `artifacts/local-ci/<run>/`.
+A dirty snapshot is explicitly identified and cannot be used for a release.
 
-## Restore before any merge/release
+Each invocation has unique image tags, labeled test containers and a unique
+network. Existing containers and databases are untouched. Successful test
+containers are removed by inspected ID after evidence collection. Failed test
+containers are retained with their IDs and states in the report for diagnosis;
+remove only those inspected IDs after preserving any required evidence. The
+wrapper exports the runner's artifacts before removing its exact labeled ID.
+Export or cleanup failure fails the run. Automatic cancellation of superseded
+local runs is not implemented; avoid overlapping heavy builds on a small host.
 
-Edit .github/workflows/p0.yml and restore these exact triggers:
+The full pipeline includes actual 768 MiB kernel OOM experiments in isolated
+containers with no host mounts, swap, network or extra capabilities, as well as
+separate disk-exhaustion mounts. Existing strict victim-attribution checks and
+failure deadlines remain in force. These tests do not establish production
+memory isolation or PostgreSQL/Edge atomic WAL semantics.
 
-    on:
-      push:
-      pull_request:
-      workflow_dispatch:
-
-Run all configured P0 tests plus new P1–P5 compile/SQL, concurrency, security,
-crash/durability, quality, resource and migration tests against the final merge
-candidate. Record exact SHA, logs, artifacts, ignored/failed checks and the
-supported host/dependency matrix. Make these jobs required in branch protection
-before publication.
-
-A manually dispatched P0 workflow only proves P0 coverage. It is not a
-substitute for newly required phase-specific tests.
+Before merge or release, verify the exact final source with all applicable new
+P1-P5 tests and original regressions. Missing, skipped, cancelled and failed
+gates are not passing. The release checker requires checksum-verified full
+local act run/verification receipts plus every formal acceptance record and
+artifact; moving execution locally does not waive any of the 45 acceptance
+items, 54 capabilities, 70 work items or eight user journeys. Nothing in this
+policy authorizes a merge, tag or release.

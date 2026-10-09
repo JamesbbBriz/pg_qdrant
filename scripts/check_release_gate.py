@@ -2,7 +2,8 @@
 """Fail-closed, offline candidate-release gate. Not proof of genuine CI execution.
 
 A passing local attestation is a necessary review input, never sufficient proof
-of a real GitHub Actions result. Reviewers must check the cited run externally.
+of genuine execution. Reviewers must inspect the snapshot-bound act receipts,
+complete logs, native results and product acceptance evidence.
 """
 from __future__ import annotations
 
@@ -73,6 +74,42 @@ def verified_file(root: pathlib.Path, item: object) -> bool:
     return digest(absolute) == sha
 
 
+def local_ci_evidence(root: pathlib.Path, ci: object, git_sha: str) -> bool:
+    """Verify complete local act receipts; static-only and dirty runs cannot release."""
+    if not isinstance(ci, dict) or ci.get("runner") != "act-local" or \
+            ci.get("conclusion") != "success" or ci.get("checkout_sha") != git_sha:
+        return False
+    if not all(verified_file(root, ci.get(key)) for key in ["run_report", "verify_report"]):
+        return False
+    try:
+        run = json.loads((root / ci["run_report"]["path"]).read_text())
+        verification = json.loads((root / ci["verify_report"]["path"]).read_text())
+        snapshot = verification["snapshot"]
+        registry = json.loads((root / "ci/steps.json").read_text())
+        required = [step["id"] for steps in registry["profiles"].values() for step in steps]
+        actual = verification["steps"]
+        files = snapshot["files"]
+        manifest = json.dumps(files, sort_keys=True, separators=(",", ":")).encode()
+        clean_diff = hashlib.sha256(b"").hexdigest()
+        log_root = (root / ci["verify_report"]["path"]).parent
+        return (run["status"] == verification["status"] == "passed"
+                and run["profile"] == verification["profile"] == "full"
+                and run["act_exit_code"] == 0 and run["act_version"].startswith("act version ")
+                and run["run_id"] == verification["run_id"]
+                and run["snapshot"] == snapshot and snapshot["commit"] == git_sha
+                and snapshot["dirty_diff_sha256"] == clean_diff
+                and snapshot["untracked_inputs"] == []
+                and snapshot["source_sha256"] == hashlib.sha256(manifest).hexdigest()
+                and bool(files) and all(verified_file(root, item) for item in files)
+                and [item["id"] for item in actual] == required
+                and bool(required)
+                and all(item["status"] == "passed" and item.get("exit_code") == 0
+                        and verified_file(log_root, {"path": item.get("log"),
+                            "sha256": item.get("log_sha256")}) for item in actual))
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
 def assess(root: pathlib.Path, attestation: pathlib.Path,
            artifact_root: pathlib.Path, git_sha: str | None = None) -> dict:
     root = root.resolve()
@@ -91,13 +128,9 @@ def assess(root: pathlib.Path, attestation: pathlib.Path,
     if re.fullmatch(r"[0-9a-f]{40}", git_sha or "") is None:
         errors.append("source checkout Git SHA is unavailable")
 
-    try:
-        workflow = (root / ".github/workflows/p0.yml").read_text()
-        if not re.search(r"(?m)^  push:\s*$", workflow) or not re.search(
-                r"(?m)^  pull_request:\s*$", workflow):
-            errors.append("automatic CI triggers remain disabled; restore push and pull_request")
-    except OSError:
-        errors.append("P0 workflow is missing")
+    if not all((root / path).is_file() for path in
+               ["ci/verify.yml", "ci/steps.json", "scripts/verify.py", "scripts/local_ci.py"]):
+        errors.append("local act verification workflow is missing or incomplete")
 
     try:
         ledger = json.loads((root / "docs/work-items.json").read_text())
@@ -127,10 +160,7 @@ def assess(root: pathlib.Path, attestation: pathlib.Path,
     if att.get("schema_version") != 1 or att.get("checkout_sha") != git_sha:
         errors.append("attestation schema/checkout SHA mismatch")
     ci = att.get("ci", {})
-    if not isinstance(ci, dict) or ci.get("conclusion") != "success" or \
-            ci.get("checkout_sha") != git_sha or not re.fullmatch(
-                r"https://github\.com/JamesbbBriz/pg_qdrant/actions/runs/[0-9]+",
-                str(ci.get("url", ""))):
+    if not local_ci_evidence(root, ci, git_sha):
         errors.append("verified revision-bound full CI attestation missing")
 
     gates = att.get("gates", {})

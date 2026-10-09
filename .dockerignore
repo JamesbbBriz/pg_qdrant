@@ -7,6 +7,7 @@ progress.md
 target
 **/target
 artifacts
+ci-input.json
 *.log
 .DS_Store
 **/__pycache__
