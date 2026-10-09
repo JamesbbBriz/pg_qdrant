@@ -59,7 +59,7 @@ BEGIN
  events:=qdrant_internal.pack_source_events(events);
  UPDATE qdrant_internal.consumer_state SET state='dirty',updated_at=clock_timestamp()
  WHERE index_name=i.index_name;
- RETURN jsonb_build_object('source_contract_version',16,'index_id',i.index_id,'generation',i.generation,
+ RETURN jsonb_build_object('source_contract_version',17,'index_id',i.index_id,'generation',i.generation,
    'payload_contract',qdrant_internal.payload_contract(i.index_name),
    'representations',coalesce((SELECT jsonb_object_agg(name,contract) FROM qdrant_internal.representation_catalog WHERE index_name=i.index_name),'{}'::jsonb),
    'storage_epoch',c.storage_epoch,'consumer_id',c.consumer_id,'events',events);

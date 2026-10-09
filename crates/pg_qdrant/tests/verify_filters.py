@@ -57,7 +57,9 @@ def run(sql,ready,ticket_from,checks,spawn=None):
             options={} if fusion is None else dict(fusion=fusion)
             # The unrestricted token winner is key 3, outside this filter.
             assert keys(dict(field='key',eq=2),mode,request,options,index='token_docs')==['2'],(mode,fusion)
-        assert '22023' in statement(dict(field='key',eq=2),'hybrid',dict(dense=token_dense,learned=learned),index='token_docs',ok=False)
+        for fusion in ['rrf','dbsf']:
+            assert keys(dict(field='key',eq=2),'hybrid',dict(dense=token_dense,learned=learned),dict(fusion=fusion),index='token_docs')==['2']
+            assert keys(dict(field='key',eq=2),'precision',dict(tokens=token,dense=token_dense,learned=learned),dict(fusion=fusion),index='token_docs')==['2']
     replay()
     expression=dict(field='quantity',eq=4)
     settings=literal(json.dumps(dict(filter=expression)))
@@ -131,9 +133,10 @@ def run(sql,ready,ticket_from,checks,spawn=None):
                 sql('UPDATE recommendation_docs SET quantity=4 WHERE id=4')
             deadline=time.monotonic()+10
             while time.monotonic()<deadline:
-                if not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active'):break
+                completed=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+                if not completed.get('active'):break
                 time.sleep(.02)
-            assert not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active')
+            assert not completed.get('active'),completed
             replay()
         checks.append('filtered SQL cancellation retains the sole native operation until response and an in-flight payload update cannot return a stale matching hit')
     return replay

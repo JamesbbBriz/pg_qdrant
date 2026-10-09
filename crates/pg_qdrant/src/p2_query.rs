@@ -43,6 +43,9 @@ DECLARE
     mmr jsonb;
     formula jsonb;
     representation_kind text;
+    dense_query jsonb;
+    sparse_query jsonb;
+    additional_recall jsonb:='[]'::jsonb;
     rerank_query jsonb;
     named_input record;
     input_kind text;
@@ -202,27 +205,41 @@ BEGIN
         RAISE EXCEPTION 'Capture triggers or lifecycle are not safe'
           USING ERRCODE = '55000';
     END IF;
-    IF mode='precision' THEN
+    IF mode IN ('precision','hybrid') THEN
+        IF (SELECT count(*) FROM jsonb_object_keys(query_vectors)) NOT BETWEEN 1 AND 3 THEN
+            RAISE EXCEPTION 'Hybrid/precision query slot count outside bounds' USING ERRCODE='22023';
+        END IF;
         FOR named_input IN SELECT * FROM jsonb_each(query_vectors) LOOP
             SELECT contract->>'kind' INTO input_kind FROM qdrant_internal.representation_catalog
               WHERE representation_catalog.index_name=explain_search.index_name AND name=named_input.key;
-            IF input_kind='token_vectors' THEN
+            IF input_kind='token_vectors' AND mode='precision' THEN
                 token_queries:=token_queries+1;
                 rerank_query:=qdrant_internal.admit_representation(index_name,jsonb_build_object(named_input.key,named_input.value));
-            ELSIF input_kind IN ('dense','learned_sparse') THEN
+            ELSIF input_kind='dense' AND dense_query IS NULL THEN
                 recall_queries:=recall_queries+1;
-                representation_query:=qdrant_internal.admit_representation(index_name,jsonb_build_object(named_input.key,named_input.value));
-                representation_kind:=input_kind;
-            ELSE RAISE EXCEPTION 'Unknown precision representation' USING ERRCODE='22023';
+                dense_query:=qdrant_internal.admit_representation(index_name,jsonb_build_object(named_input.key,named_input.value));
+            ELSIF input_kind='learned_sparse' AND sparse_query IS NULL THEN
+                recall_queries:=recall_queries+1;
+                sparse_query:=qdrant_internal.admit_representation(index_name,jsonb_build_object(named_input.key,named_input.value));
+            ELSE RAISE EXCEPTION 'Unknown, duplicate-kind or incompatible recall representation' USING ERRCODE='22023';
             END IF;
         END LOOP;
-        IF token_queries<>1 OR recall_queries>1 THEN
-            RAISE EXCEPTION 'Precision requires one token slot and at most one recall slot' USING ERRCODE='22023';
+        IF (mode='precision' AND token_queries<>1) OR (mode='hybrid' AND (token_queries<>0 OR recall_queries=0)) THEN
+            RAISE EXCEPTION 'Hybrid needs model recall; precision needs one token slot' USING ERRCODE='22023';
         END IF;
-        IF recall_queries=0 THEN
-            IF options ? 'fusion' THEN RAISE EXCEPTION 'Fusion needs a recall-vector branch' USING ERRCODE='22023'; END IF;
-            fusion:=NULL; effective_plan:='precision_bm25_maxsim';
-        ELSE effective_plan:='precision_bm25_'||representation_kind||'_'||fusion||'_maxsim';
+        representation_query:=coalesce(dense_query,sparse_query);
+        representation_kind:=CASE WHEN dense_query IS NOT NULL THEN 'dense' ELSE 'learned_sparse' END;
+        IF dense_query IS NOT NULL AND sparse_query IS NOT NULL THEN
+            additional_recall:=jsonb_build_array(sparse_query);
+            representation_kind:='dense_learned_sparse';
+        END IF;
+        IF mode='precision' THEN
+            IF recall_queries=0 THEN
+                IF options ? 'fusion' THEN RAISE EXCEPTION 'Fusion needs a recall-vector branch' USING ERRCODE='22023'; END IF;
+                fusion:=NULL; effective_plan:='precision_bm25_maxsim';
+            ELSE effective_plan:='precision_bm25_'||representation_kind||'_'||fusion||'_maxsim';
+            END IF;
+        ELSE effective_plan:='hybrid_bm25_'||representation_kind||'_'||fusion;
         END IF;
     ELSIF mode='explore' THEN
         IF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1)='mmr' THEN
@@ -238,7 +255,7 @@ BEGIN
             recommendation:=qdrant_internal.admit_recommendation(index_name,query_vectors);
             effective_plan:='explore_dense_'||(recommendation #>> '{query,strategy}');
         END IF;
-    ELSIF mode IN ('semantic','sparse','hybrid','maxsim') THEN
+    ELSIF mode IN ('semantic','sparse','maxsim') THEN
         representation_query:=qdrant_internal.admit_representation(index_name,query_vectors);
         SELECT contract->>'kind' INTO representation_kind FROM qdrant_internal.representation_catalog
           WHERE representation_catalog.index_name=explain_search.index_name AND name=representation_query->>'representation';
@@ -274,7 +291,7 @@ BEGIN
        'index_name',index_name,'source_oid',selected.source_oid,
        'source_key_type',selected.key_type,
        'requested_mode',mode,'effective_plan',effective_plan,'representation_query',representation_query,'representation_kind',representation_kind,'fusion',fusion,
-       'rerank_query',rerank_query,
+       'rerank_query',rerank_query,'additional_recall',additional_recall,
        'recommendation_query',recommendation->'query',
        'discovery_query',discovery->'query',
        'feedback_query',feedback->'query',
@@ -319,7 +336,7 @@ BEGIN
          'candidate_budget_basis',CASE WHEN mode='precision' THEN 'native prefetch cap' ELSE 'native owned live point count checked at execution' END,
          'comparator','sum of per-query-token maximum dot product') END,
        'fusion_contract',CASE WHEN fusion IS NOT NULL THEN jsonb_build_object('engine','qdrant-edge 0.8.0',
-         'branches',jsonb_build_array('bm25',representation_query->>'representation'),'candidate_limit_per_branch',candidate_limit,
+         'branches',jsonb_build_array('bm25',representation_query->>'representation')||CASE WHEN jsonb_array_length(additional_recall)>0 THEN jsonb_build_array(additional_recall->0->>'representation') ELSE '[]'::jsonb END,'candidate_limit_per_branch',candidate_limit,
          'rrf_k',CASE WHEN fusion='rrf' THEN 2 END,'rrf_weights','equal',
          'idf_scope','live vectors in owned generation','normalization_scope','bounded prefetch distributions') END,
        'text_fields',selected.settings #> '{text,fields}',
@@ -389,6 +406,7 @@ BEGIN
       'discovery_query',plan->'discovery_query',
       'feedback_query',plan->'feedback_query',
       'mmr_query',plan->'mmr_query',
+      'additional_recall',plan->'additional_recall',
       'formula',plan->'formula',
       'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',

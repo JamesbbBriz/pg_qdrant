@@ -129,6 +129,7 @@ fn run() -> Result<(), ProbeError> {
                 q,
                 top_k,
                 representation_query,
+                additional_recall,
                 recommendation_query,
                 discovery_query,
                 feedback_query,
@@ -137,13 +138,14 @@ fn run() -> Result<(), ProbeError> {
                 rerank_query,
                 fusion,
                 predicates,
-            } => source_owner.search(
+            } => source_owner.search_multiple(
                 index_id,
                 &generation,
                 &storage_epoch,
                 &q,
                 top_k,
                 representation_query,
+                additional_recall,
                 recommendation_query,
                 discovery_query,
                 feedback_query,

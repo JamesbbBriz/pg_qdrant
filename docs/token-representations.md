@@ -47,10 +47,10 @@ SELECT * FROM qdrant.search('articles','example','precision',10,
 
 `maxsim` performs exact native nearest search over live named token vectors,
 subject to the work bound. `precision` recalls bounded BM25 candidates and
-performs exact native MaxSim within that candidate set. Supplying one additional
-dense or learned sparse query adds a bounded recall branch, fused using fixed
+performs exact native MaxSim within that candidate set. Supplying one dense,
+one learned sparse, or both adds bounded recall branches, fused using fixed
 Edge 0.8.0 RRF (k=2, equal weights) or DBSF before the outer MaxSim stage. Exactly
-one token query and at most one recall-vector query are admitted. A fusion option
+one token query and at most one query of each recall kind are admitted. A fusion option
 requires the additional branch. The candidate cap applies to each recall branch
 and the fused candidate set; it must be between top_k and 1000. A higher-scoring
 document outside this set does not enter reranking. Candidate-domain exactness

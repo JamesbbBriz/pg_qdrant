@@ -4484,6 +4484,16 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_three_branch_fusion",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_fusion.py",
+          "scope": "Bounded native BM25+dense+learned sparse RRF/DBSF and optional token MaxSim are compared to independent three-branch score math, including empty/singleton/declared scalar filters. Each model slot uses existing permission/readiness/model/vocabulary/IDF admission. Scoped installed regression passed; complete planner, quality, fault combination and release acceptance remain required.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "engine-runtime-verified",
           "status": "passed",
@@ -4603,7 +4613,7 @@
           "status": "pending"
         }
       ],
-      "product_status": "planned",
+      "product_status": "installed_implementation",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {
@@ -4626,6 +4636,16 @@
       "owner": "engine/fusion",
       "status": "partially_verified",
       "evidence": [
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_three_branch_fusion",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_fusion.py",
+          "scope": "Bounded native BM25+dense+learned sparse RRF/DBSF and optional token MaxSim are compared to independent three-branch score math, including empty/singleton/declared scalar filters. Each model slot uses existing permission/readiness/model/vocabulary/IDF admission. Scoped installed regression passed; complete planner, quality, fault combination and release acceptance remain required.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
         {
           "level": "SQL-integration-verified",
           "kind": "installed_finite_score_budgets",
@@ -4771,7 +4791,7 @@
           "status": "pending"
         }
       ],
-      "product_status": "planned",
+      "product_status": "installed_implementation",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {

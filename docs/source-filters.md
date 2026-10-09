@@ -1,6 +1,6 @@
 # Declared scalar source filters
 
-Source query contract 16 accepts an optional `filter` in SQL search options.
+Source query contract 17 accepts an optional `filter` in SQL search options.
 Expressions reference aliases declared in the index's `payload` configuration;
 they cannot choose native paths, source columns or tenant identities.
 
@@ -46,10 +46,10 @@ replace the source security contract. Explain returns the checked expression
 and its budget/scope. Paging binds the expression to the original request and
 rechecks source payload identity on reuse.
 
-Existing combination rules remain explicit: precision accepts a token slot and
-at most one model recall slot; Formula does not compose with explore strategies
-in this development implementation. Hybrid recall currently accepts one model
-slot alongside BM25; simultaneous dense and learned-sparse recall remains open.
+Existing combination rules remain explicit: precision accepts one token slot,
+one dense slot and one learned sparse slot; hybrid can fuse BM25 with both
+model recall kinds. The same scalar filter enters all three prefetch branches.
+Formula does not compose with explore strategies in this development implementation.
 General nested objects, arrays, geo/datetime
 filters, tenant policy integration, grouping, global facets/counts and full
 P2-PERMISSION/P3-FILTER acceptance remain open. This is a development contract;

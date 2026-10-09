@@ -143,9 +143,10 @@ def run(sql,ready,ticket_from,checks,spawn=None):
                 sql("UPDATE recommendation_docs SET v='[1,0]' WHERE id=1")
             end=time.monotonic()+10
             while time.monotonic()<end:
-                if not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active'): break
+                completed=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+                if not completed.get('active'):break
                 time.sleep(.02)
-            assert not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active')
+            assert not completed.get('active'),completed
             ready('recommendation_docs');replay()
         checks.append('actual context SQL cancellation retains the native owner; concurrent excluded context-seed mutation refuses complete in-flight results')
     return replay

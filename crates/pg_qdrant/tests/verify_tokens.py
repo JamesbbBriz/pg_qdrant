@@ -149,7 +149,7 @@ def run(sql, ready, ticket_from, checks):
         assert '22023' in hits(queries=vectors(vector=wrong), ok=False)
     assert '22023' in hits(mode='semantic', ok=False)
     assert '22023' in hits(mode='precision', queries=vectors('dense'), ok=False)
-    assert '22023' in hits(mode='precision', queries=dict(vectors(), **vectors('dense'), **vectors('learned')), ok=False)
+    assert len(json.loads(hits(mode='precision', queries=dict(vectors(), **vectors('dense'), **vectors('learned')), cap=2, top=2)))==2
     assert '22023' in hits(mode='precision', queries=dict(vectors(), **vectors('budget', [[1]+[0]*127])), ok=False)
     assert '22023' in hits(mode='precision', fusion='rrf', ok=False)
     bad = vectors(); bad['tokens']['model_version'] = 'r2'
