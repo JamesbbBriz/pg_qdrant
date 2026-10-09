@@ -23,6 +23,14 @@ rules apply. Each opened source shard requests two Edge search threads; this
 does not cap all process threads or optimization work.
 See the [Linux resource-limit contract](https://man7.org/linux/man-pages/man2/getrlimit.2.html).
 
+On the tested GNU libc build, helper startup also calls `mallopt(M_ARENA_MAX, 2)`
+before creating engine threads. A refused setting refuses startup. The ready
+handshake exposes `glibc_arena_max=2`; this policy applies only after exec and
+does not change PostgreSQL allocation. It limits allocator arenas, not live
+allocation bytes, file mappings, total threads or RSS. Other libc builds remain
+unverified. The 8 GiB address-space limit and tighter inherited limits remain
+unchanged. See the [GNU libc allocator contract](https://sourceware.org/glibc/manual/latest/html_node/Malloc-Tunable-Parameters.html).
+
 The private fault build probes a real oversized mmap without touching physical
 pages, requires ENOMEM and queries the same live native index afterward. This
 test proves address-space refusal and is separate from actual kernel OOM tests.
