@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "datasets": [
+    {
+      "dataset": "scifact",
+      "corpus": "corpus_corpus-00000-of-00001.parquet",
+      "queries": "queries_queries-00000-of-00001.parquet",
+      "qrels": "test.tsv",
+      "attribution": "https://huggingface.co/datasets/BeIR/scifact",
+      "manifest": {
+        "status": "input_preparation_only",
+        "license_declared": "CC-BY-SA-4.0",
+        "files": [
+          {
+            "repo": "BeIR/scifact",
+            "revision": "b3b5335604bf5ee3c4447671af975ea25143d4f5",
+            "path": "corpus/corpus-00000-of-00001.parquet",
+            "bytes": 4469916,
+            "lfs": {
+              "oid": "243324b35f03d82bd6d98a5f575966876e86cad7ce16e5333a35b1b793dc4f45",
+              "size": 4469916,
+              "pointerSize": 132
+            },
+            "local_name": "corpus_corpus-00000-of-00001.parquet",
+            "sha256": "243324b35f03d82bd6d98a5f575966876e86cad7ce16e5333a35b1b793dc4f45",
+            "origin": "https://huggingface.co/datasets/BeIR/scifact/resolve/b3b5335604bf5ee3c4447671af975ea25143d4f5/corpus/corpus-00000-of-00001.parquet"
+          },
+          {
+            "repo": "BeIR/scifact",
+            "revision": "b3b5335604bf5ee3c4447671af975ea25143d4f5",
+            "path": "queries/queries-00000-of-00001.parquet",
+            "bytes": 64982,
+            "lfs": {
+              "oid": "1c37956c5dc8b810b60302323c24d1a9e79e26411ba8f5ad9d0888642e2a9034",
+              "size": 64982,
+              "pointerSize": 130
+            },
+            "local_name": "queries_queries-00000-of-00001.parquet",
+            "sha256": "1c37956c5dc8b810b60302323c24d1a9e79e26411ba8f5ad9d0888642e2a9034",
+            "origin": "https://huggingface.co/datasets/BeIR/scifact/resolve/b3b5335604bf5ee3c4447671af975ea25143d4f5/queries/queries-00000-of-00001.parquet"
+          },
+          {
+            "repo": "BeIR/scifact-qrels",
+            "revision": "2938d17dc3b09882fdb8c12bbbe2e2dc0e75a029",
+            "path": "test.tsv",
+            "bytes": 5389,
+            "git_blob": "c62f58c75f10c0cee23483b7269bff2902ae4080",
+            "local_name": "test.tsv",
+            "sha256": "0864bb985e0ca2367ba217977e72004d549054b2b06666ed9d4825ac7c21284c",
+            "origin": "https://huggingface.co/datasets/BeIR/scifact-qrels/resolve/2938d17dc3b09882fdb8c12bbbe2e2dc0e75a029/test.tsv"
+          },
+          {
+            "repo": "BeIR/scifact-qrels",
+            "revision": "2938d17dc3b09882fdb8c12bbbe2e2dc0e75a029",
+            "path": "README.md",
+            "bytes": 13995,
+            "git_blob": "bc58b6940a415a26e38244f8c688ff5ef134abf0",
+            "local_name": "README.md",
+            "sha256": "fd34a2830e557f1e32d46d0b34a218d280c9800ee4071579610d4ff587b4fd45",
+            "origin": "https://huggingface.co/datasets/BeIR/scifact-qrels/resolve/2938d17dc3b09882fdb8c12bbbe2e2dc0e75a029/README.md"
+          }
+        ]
+      },
+      "fixture_sha256": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627"
+    },
+    {
+      "dataset": "t2retrieval",
+      "corpus": "corpus_dev-00000-of-00001.parquet",
+      "queries": "queries_dev-00000-of-00001.parquet",
+      "qrels": "data_dev-00000-of-00001.parquet",
+      "attribution": "https://github.com/THUIR/T2Ranking",
+      "manifest": {
+        "status": "input_preparation_only",
+        "license_declared": "Apache-2.0",
+        "files": [
+          {
+            "repo": "mteb/T2Retrieval",
+            "revision": "921dd3af6e78d1ae7ee0368aa8d7eaee02c8f08e",
+            "path": "corpus/dev-00000-of-00001.parquet",
+            "bytes": 156879982,
+            "lfs": {
+              "oid": "8f0400530c6ba664e580e2ae7bb5ed41a908b8abc17c3b3934f42cc65992ac1e",
+              "size": 156879982,
+              "pointerSize": 134
+            },
+            "local_name": "corpus_dev-00000-of-00001.parquet",
+            "sha256": "8f0400530c6ba664e580e2ae7bb5ed41a908b8abc17c3b3934f42cc65992ac1e",
+            "origin": "https://huggingface.co/datasets/mteb/T2Retrieval/resolve/921dd3af6e78d1ae7ee0368aa8d7eaee02c8f08e/corpus/dev-00000-of-00001.parquet"
+          },
+          {
+            "repo": "mteb/T2Retrieval",
+            "revision": "921dd3af6e78d1ae7ee0368aa8d7eaee02c8f08e",
+            "path": "queries/dev-00000-of-00001.parquet",
+            "bytes": 817540,
+            "lfs": {
+              "oid": "186b4d0a13cc4d8339eccfc6d465d1b2d4d1f6572defa8d39f3c8da3b66b0210",
+              "size": 817540,
+              "pointerSize": 131
+            },
+            "local_name": "queries_dev-00000-of-00001.parquet",
+            "sha256": "186b4d0a13cc4d8339eccfc6d465d1b2d4d1f6572defa8d39f3c8da3b66b0210",
+            "origin": "https://huggingface.co/datasets/mteb/T2Retrieval/resolve/921dd3af6e78d1ae7ee0368aa8d7eaee02c8f08e/queries/dev-00000-of-00001.parquet"
+          },
+          {
+            "repo": "mteb/T2Retrieval",
+            "revision": "921dd3af6e78d1ae7ee0368aa8d7eaee02c8f08e",
+            "path": "data/dev-00000-of-00001.parquet",
+            "bytes": 1149414,
+            "lfs": {
+              "oid": "c4c6ffd715faf151e0832a26dfcf2d7ec1edc17d9620a9aa99e721cc2436d7d2",
+              "size": 1149414,
+              "pointerSize": 132
+            },
+            "local_name": "data_dev-00000-of-00001.parquet",
+            "sha256": "c4c6ffd715faf151e0832a26dfcf2d7ec1edc17d9620a9aa99e721cc2436d7d2",
+            "origin": "https://huggingface.co/datasets/mteb/T2Retrieval/resolve/921dd3af6e78d1ae7ee0368aa8d7eaee02c8f08e/data/dev-00000-of-00001.parquet"
+          },
+          {
+            "repo": "mteb/T2Retrieval",
+            "revision": "921dd3af6e78d1ae7ee0368aa8d7eaee02c8f08e",
+            "path": "README.md",
+            "bytes": 7351,
+            "git_blob": "6839892da95bfbc30b667e8e6b1011a76ec29622",
+            "local_name": "README.md",
+            "sha256": "d6c81643950dcd3d548f3a308119feea49b9a6d7d1d2579733a1aba6671a3243",
+            "origin": "https://huggingface.co/datasets/mteb/T2Retrieval/resolve/921dd3af6e78d1ae7ee0368aa8d7eaee02c8f08e/README.md"
+          }
+        ]
+      },
+      "fixture_sha256": "a0f9dcc584a8c9db88548ad629e4ab64f112ae4a4ab9c6826643ce5f71c45e28"
+    }
+  ]
+}
