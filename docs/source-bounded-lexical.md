@@ -1,4 +1,4 @@
-# Bounded fuzzy and positional source queries
+# Bounded lexical source queries
 
 `qdrant.search_lexical(index_name, q, kind, top_k DEFAULT 10, slop DEFAULT 0,
 options DEFAULT '{}')` builds a query-local RAM Tantivy index from a complete,
@@ -19,6 +19,8 @@ SELECT qdrant.create_index('lexical_articles', 'lexical_articles', 'id',
 SELECT qdrant.index_status('lexical_articles'); -- require ready and zero pending
 SELECT qdrant.search_lexical('lexical_articles', 'transactoin', 'fuzzy');
 SELECT qdrant.search_lexical('lexical_articles', 'transaction recovery', 'proximity', 10, 1);
+SELECT qdrant.search_lexical('lexical_articles', 'body:transaction AND NOT durable', 'syntax');
+SELECT qdrant.search_lexical('lexical_articles', '"transaction recovery"~1', 'syntax');
 
 WITH result AS (
   SELECT qdrant.search_lexical('lexical_articles', 'transactoin', 'fuzzy') AS value
@@ -39,6 +41,27 @@ slop 0–8. Slop measures total term movement: adjacent reordering costs two.
 Slop zero requires contiguous positions. The analyzer uses Unicode simple
 word tokenization, lowercase and positions, without stemming or stopwords.
 It is distinct from the registered Edge BM25 analyzer.
+
+Syntax is explicit through `kind = 'syntax'`; existing text and fuzzy modes do
+not interpret operators. The pinned upstream strict parser and native query
+compiler support AND/OR/NOT, parentheses, default AND, the single `body` field,
+quoted phrases with native slop 0–8, escapes and finite boosts 0.1–10. Unicode
+literal words use the same simple tokenizer; this is not Chinese segmentation,
+stemming or multilingual typo tolerance. Syntax requires external `slop = 0`.
+Only body literals are admitted: internal fields, wildcards/prefixes, regexes,
+ranges, sets and match-all syntax are refused. Literal `*` and `?` are refused
+even when escaped. There is no lenient parser or silent unsupported fallback.
+
+Admission caps the parsed AST at depth eight, 32 nodes and 16 literal leaves;
+each literal has at most 128 bytes and eight whitespace-separated words. Native
+analysis must yield 1–32 term occurrences. Redundant syntax may be normalized
+by the upstream grammar; the 256-byte raw-input cap still applies. Negative-only
+subgroups receive a native positive universe after admission. That universe is
+the complete already authorized and filtered snapshot, so `NOT` cannot widen
+permissions or escape a mandatory source predicate. All-empty analysis errors
+rather than returning a match-all response. Syntax boosts affect native lexical
+scores only. This query-only addition changes no persisted generation or ACK
+format; helper and installed SQL must come from the same development build.
 
 The complete live source must have at most 1000 entirely durable points before
 filtering. The filtered snapshot permits at most 1 MiB of body bytes and 64 KiB

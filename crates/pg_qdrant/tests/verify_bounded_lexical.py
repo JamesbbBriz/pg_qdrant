@@ -1,4 +1,4 @@
-"""Actual mature fuzzy/proximity queries over durable, authorized Edge facts."""
+"""Actual mature lexical queries over durable, authorized Edge facts."""
 import json
 import os
 import signal
@@ -26,9 +26,35 @@ def run(sql,ready,ticket_from,checks,spawn=None):
         result=query(options={'filter':{'field':'category','eq':'Allow'}})
         assert keys(result)=={'1','2'} and result['filtered_points']==4,result
         assert query(q='unmatched')['matched_points']==0
+        for q,expected in [('body:transaction AND NOT durable',{'1','3'}),
+            ('(transaction OR diary) AND NOT durable',{'1','3','4'}),
+            ('transaction recovery',{'1','2','3'}),('body:"transaction recovery"',{'1'}),
+            ('"transaction recovery"~1',{'1','2'}),('NOT durable',{'1','3','4','ERR-0042'})]:
+            syntax=query(q=q,kind='syntax')
+            assert keys(syntax)==expected and syntax['matched_points']==len(expected),syntax
+            assert 'default AND' in syntax['syntax_policy'],syntax
+        boosted=query(q='diary^10 OR transaction',kind='syntax')
+        assert boosted['hits'][0]['source_key']['value']=='4',boosted
+        filtered=query(q='NOT durable',kind='syntax',options={'filter':{'field':'category','eq':'Allow'}})
+        assert keys(filtered)=={'1','4','ERR-0042'},filtered
         return result
     replay()
     checks.append('Tantivy fuzzy transposition and native total-movement proximity goldens execute through installed SQL with typed source keys and pre-candidate scalar filters')
+    checks.append('strict native syntax executes Boolean AND/OR/NOT, default AND, body scoping, quoted phrases/slop and boosts; complements stay inside the prefiltered authorized snapshot')
+    invalid_syntax=['*','body:*','point_id:1','other:word','body:[a TO z]','body:IN [a b]','/tr.*/',
+        'word*','"word phrase"*','word^0','word^11','"one two"~9','(word','word AND','"unterminated','"!!!"',
+        ' OR '.join('word'+chr(c) for c in range(ord('a'),ord('q')+1)),
+        ' OR '.join('"a b c'+chr(c)+'"' for c in range(ord('a'),ord('l')+1))]
+    nested='word'
+    for _ in range(12):nested='(word OR '+nested+')'
+    invalid_syntax.append(nested)
+    for q in invalid_syntax:assert '22023' in sql(statement(q=q,kind='syntax'),ok=False),q
+    assert '22023' in sql(statement(q='word',kind='syntax',slop=1),ok=False)
+    sql("UPDATE bounded_lexical SET body='数据库 恢复 foo bar' WHERE id='ERR-0042'");ready('bounded_lexical')
+    assert keys(query(q='恢复',kind='syntax'))=={'ERR-0042'}
+    assert keys(query(q=r'body:foo\:bar',kind='syntax'))=={'ERR-0042'}
+    sql("UPDATE bounded_lexical SET body='identifier only' WHERE id='ERR-0042'");replay()
+    checks.append('strict syntax refuses unsupported fields/expansions/range/regex/set/all, malformed syntax, empty analysis and structural/term budgets; literal Unicode and escapes use native analysis')
     for kw in [dict(q='ERR-0042'),dict(q='中文'),dict(q='a'),dict(q='two words'),dict(kind='unknown'),dict(slop=1),
                dict(q='transaction recovery',kind='proximity',slop=9),dict(k=101),dict(k=0),dict(options={'unknown':1})]:
         assert '22023' in sql(statement(**kw),ok=False),kw
@@ -37,11 +63,17 @@ def run(sql,ready,ticket_from,checks,spawn=None):
     assert '42501' in sql('SET ROLE pgq_writer; '+statement(),ok=False)
     sql('CREATE ROLE pgq_lexical_reader; GRANT SELECT ON bounded_lexical TO pgq_lexical_reader')
     assert '42501' in sql('SET ROLE pgq_lexical_reader; '+statement(),ok=False)
+    assert '42501' in sql('SET ROLE pgq_writer; '+statement(q='NOT durable',kind='syntax'),ok=False)
+    assert '42501' in sql('SET ROLE pgq_lexical_reader; '+statement(q='NOT durable',kind='syntax'),ok=False)
+    assert '55000' in sql("BEGIN; UPDATE bounded_lexical SET body='uncommitted' WHERE id='1'; "+statement(q='NOT durable',kind='syntax'),ok=False)
+    assert '0A000' in sql('BEGIN ISOLATION LEVEL REPEATABLE READ; '+statement(q='NOT durable',kind='syntax'),ok=False)
     sql('GRANT builder TO pgq_lexical_reader')
     assert keys(json.loads(sql('SET ROLE pgq_lexical_reader; '+statement())))=={'1','2','3'}
+    assert keys(json.loads(sql('SET ROLE pgq_lexical_reader; '+statement(q='NOT durable',kind='syntax'))))=={'1','3','4','ERR-0042'}
     sql('REVOKE builder FROM pgq_lexical_reader; REVOKE SELECT ON bounded_lexical FROM pgq_lexical_reader')
     sql('ALTER TABLE bounded_lexical ENABLE ROW LEVEL SECURITY')
     assert '0A000' in sql(statement(),ok=False)
+    assert '0A000' in sql(statement(q='NOT durable',kind='syntax'),ok=False)
     sql('ALTER TABLE bounded_lexical DISABLE ROW LEVEL SECURITY')
     # Conservative DDL invalidation requires a fresh trusted registration.
     task=json.loads(sql("SELECT qdrant.drop_index('bounded_lexical')"))
@@ -52,6 +84,7 @@ def run(sql,ready,ticket_from,checks,spawn=None):
     ticket=ticket_from(sql("BEGIN; DELETE FROM bounded_lexical WHERE id='1'; INSERT INTO bounded_lexical VALUES('1','replacement only','Allow'); SELECT qdrant.track_changes('bounded_lexical'); COMMIT"))
     assert json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))['durable']
     assert keys(query())=={'2','3'} and keys(query(q='replacement'))=={'1'}
+    assert keys(query(q='transaction',kind='syntax'))=={'2','3'} and keys(query(q='replacement',kind='syntax'))=={'1'}
     sql("UPDATE bounded_lexical SET body='transaction recovery' WHERE id='1'");replay()
     checks.append('ordinary DML, deletion/key reuse and exact durable tickets update query-local lexical facts without a second document write API')
     vocabulary=' '.join('abcdef'+chr(n)+' '+chr(n)+'abcdef' for n in range(ord('a'),ord('z')+1))
@@ -63,15 +96,17 @@ def run(sql,ready,ticket_from,checks,spawn=None):
     sql("INSERT INTO lexical_big SELECT n,repeat('transaction ',5000) FROM generate_series(1,18)n")
     sql("SELECT qdrant.create_index('lexical_big','lexical_big','id','{\"text\":{\"fields\":[\"body\"]}}')");ready('lexical_big')
     assert '54000' in sql(statement(index='lexical_big'),ok=False)
+    assert '54000' in sql(statement(q='NOT absent',kind='syntax',index='lexical_big'),ok=False)
     task=json.loads(sql("SELECT qdrant.drop_index('lexical_big')"))
     assert json.loads(sql("SELECT qdrant.await_task('"+task['task_id']+"',60000)"))['succeeded']
     checks.append('actual 1080000-byte durable source snapshot refuses before building the query-local lexical index')
     if spawn is not None:
-        for change in ['source','cancel']:
+        for kind,change in [('fuzzy','source'),('fuzzy','cancel'),('syntax','source'),('syntax','cancel')]:
             owner=json.loads(sql('SELECT qdrant_internal.p0_ping()'));pid=owner['engine_pid']
             os.kill(pid,signal.SIGSTOP)
             try:
-                application='pgq_lexical_'+change;waiting=spawn(statement(),application)
+                application='pgq_lexical_'+kind+'_'+change
+                waiting=spawn(statement(q='NOT durable' if kind=='syntax' else 'transactoin',kind=kind),application)
                 deadline=time.monotonic()+10
                 while time.monotonic()<deadline:
                     busy=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
@@ -97,5 +132,5 @@ def run(sql,ready,ticket_from,checks,spawn=None):
                 time.sleep(.02)
             assert not completed.get('active'),completed
             replay()
-        checks.append('in-flight lexical source mutation refuses the whole result; cancelled SQL retains native operation ownership until completion')
+        checks.append('in-flight fuzzy and syntax source mutation refuses the whole result; cancelled SQL retains native operation ownership until completion')
     return replay
