@@ -40,6 +40,7 @@ DECLARE
     recommendation jsonb;
     discovery jsonb;
     feedback jsonb;
+    mmr jsonb;
     representation_kind text;
     rerank_query jsonb;
     named_input record;
@@ -211,7 +212,10 @@ BEGIN
         ELSE effective_plan:='precision_bm25_'||representation_kind||'_'||fusion||'_maxsim';
         END IF;
     ELSIF mode='explore' THEN
-        IF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1)='feedback' THEN
+        IF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1)='mmr' THEN
+            mmr:=qdrant_internal.admit_mmr(index_name,query_vectors);
+            effective_plan:='explore_dense_mmr';
+        ELSIF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1)='feedback' THEN
             feedback:=qdrant_internal.admit_feedback(index_name,query_vectors);
             effective_plan:='explore_dense_feedback';
         ELSIF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1) IN ('discover','context') THEN
@@ -252,7 +256,16 @@ BEGIN
        'recommendation_query',recommendation->'query',
        'discovery_query',discovery->'query',
        'feedback_query',feedback->'query',
-       'seed_digest',coalesce(recommendation,discovery,feedback)->'seed_digest',
+       'mmr_query',mmr->'query',
+       'seed_digest',coalesce(recommendation,discovery,feedback,mmr)->'seed_digest',
+       'mmr_contract',CASE WHEN mmr IS NOT NULL THEN jsonb_build_object(
+         'seed_versions',mmr->'seed_versions','seed_digest',mmr->'seed_digest',
+         'seed_scope','current visible PostgreSQL source and ready representation snapshot; durability is a separate ticket',
+         'lambda',mmr #> '{query,lambda}','candidate_limit',candidate_limit,
+         'score_domain','original dense similarity; rank is native MMR selection order, not descending score',
+         'scalar_work_limit',20000000,'work_basis','(owned live points + min(candidate_limit, owned live points)^2) * dimensions; before filters',
+         'seed_exclusion','target excluded before nearest candidate truncation',
+         'text_query_used_for_scoring',false) END,
        'feedback_contract',CASE WHEN feedback IS NOT NULL THEN jsonb_build_object(
          'seed_versions',feedback->'seed_versions','seed_digest',feedback->'seed_digest',
          'seed_scope','current visible PostgreSQL source and ready representation snapshot; durability is a separate ticket',
@@ -349,6 +362,7 @@ BEGIN
       'recommendation_query',plan->'recommendation_query',
       'discovery_query',plan->'discovery_query',
       'feedback_query',plan->'feedback_query',
+      'mmr_query',plan->'mmr_query',
       'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',
       'predicates',plan->'matching',
@@ -401,6 +415,7 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
         "p2_mode_registry",
         "p2_recommendation_admission",
         "p2_context_discovery_admission",
-        "p2_feedback_admission"
+        "p2_feedback_admission",
+        "p2_mmr_admission"
     ]
 );

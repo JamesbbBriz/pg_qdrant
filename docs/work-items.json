@@ -5234,6 +5234,16 @@
           "source_paths": [
             "crates/edge-probe/src/api_inventory.rs"
           ]
+        },
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_dense_source_mmr",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_mmr.py",
+          "scope": "Installed dense source-target MMR with independent greedy Dot objective, nearest candidate-domain truncation, original scores and native selection rank, predicates/target exclusion before cap, UUID/quoted text targets, model/permissions/RLS/incarnation and lambda negatives, rank-preserving paging, excluded-target invalidation and retained-owner cancellation/concurrent target mutation. Native adapter goldens cover Dot/Cosine/Euclid/Manhattan at lambda 0/0.25/1 and strip forced native vector projection. General representations, quality, combinations and migrations remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#query-execution-and-filtering",
@@ -5260,7 +5270,7 @@
         "support_status": "public primitive candidate; fixed-release call and runtime evidence required"
       },
       "input_config": "Compatible dense/vector query, diversity parameter and bounded candidate pool.",
-      "sql_exposure": "explore MMR option",
+      "sql_exposure": "qdrant.search/explain_search/search_page explore with named dense source-key mmr strategy, explicit lambda and bounded candidate domain; matching development helper required",
       "execution": [
         "Validate supported input/configuration, caller permissions, required slots and generation.",
         "Compile project-owned request and mandatory predicates through the appropriate adapter.",
@@ -5293,14 +5303,16 @@
           "verified_scope": "Exhaustive enum/method sentinels or typed constructors only; full callable/negative-input coverage remains pending."
         },
         "engine_runtime": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "ENGINE-Q07",
-          "required": "Actual vector relevance/diversity behavior, candidate limits; no arbitrary external-score promise"
+          "required": "Actual vector relevance/diversity behavior, candidate limits; no arbitrary external-score promise",
+          "verified_scope": "Bounded dense current-source target and native candidate-domain MMR only; full original acceptance remains open. See docs/source-mmr.md."
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q07",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "verified_scope": "Bounded dense current-source target and native candidate-domain MMR only; full original acceptance remains open. See docs/source-mmr.md."
         },
         "release": {
           "status": "pending",
@@ -5329,7 +5341,7 @@
           "status": "pending"
         }
       ],
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {

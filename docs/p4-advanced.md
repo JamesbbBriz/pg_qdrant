@@ -1,8 +1,11 @@
 # P4 bounded advanced request shapes — incomplete product scope
 
-This reviewable P4 slice adds a strict typed parser and a PostgreSQL validator.
-It does not add recommendation, scoring, facet, matrix, visual or MMR execution
-against Qdrant Edge or any other engine.
+The original P4 slice adds a strict typed parser and a PostgreSQL validator.
+That parser does not execute engine queries. Separate installed development
+adapters now provide bounded [recommendations](source-recommendations.md),
+[Discover/Context](source-context-discovery.md) and [feedback](source-feedback.md).
+The [MMR adapter](source-mmr.md) has separate execution and verification scope.
+These partial adapters do not complete P4 acceptance.
 
 ## Implemented in this slice
 
@@ -16,15 +19,15 @@ against Qdrant Edge or any other engine.
   validation requests at 16 KiB.
 - qdrant.validate_advanced_request returns source_authorization_checked=false,
   search_executable=false and native_implementation_available=false.
-- Rust unit tests and a disposable PostgreSQL SQL validation fixture exist;
-  these new tests have NOT been run.
+- The disposable PostgreSQL SQL shape fixture runs in the installed source
+  regression; it does not prove the corresponding engine capabilities.
 
 ## Explicitly not satisfied
 
-Q01–Q14 real server/Edge query semantics, document/chunk grouping, filtered
-prefetch, authenticated example reads, generation pinning, scoring formulas,
-facet counts, visual vector compatibility, MMR stability and authorized
-ordering are not implemented.
+The full Q01–Q14 contracts, document/chunk grouping, general filter/prefetch
+combinations, formula execution, facet counts, visual vector compatibility,
+quality and complete authorized ordering remain open. Individual installed
+adapter tests cover only the explicit scopes in their respective documents.
 
 F13–F20 rich lexical behavior also remains open: prefix typo correction,
 slop/proximity, query grammar, synonyms, Unicode-offset highlights, instant
@@ -35,5 +38,5 @@ source identities/authorization/recovery or explicitly reject unsupported
 public subfeatures with their consequences. The existing 54 ID ledger must not
 be marked release-supported merely because request syntax parses.
 
-This is a draft contract, not a completed phase or release. Its tests need a
-real PG17/pgrx build after the temporary CI hold is lifted.
+This remains an incomplete phase and release contract. Automatic CI is
+restored; failures or unavailable dependency downloads are not passing evidence.
