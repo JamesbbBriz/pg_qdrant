@@ -42,6 +42,15 @@ BEGIN
  result:=qdrant_internal.p1_register(index_name,source,key_field::text,settings #>> '{text,fields,0}');
  PERFORM qdrant_internal.register_payload(index_name,coalesce(settings->'payload','{}'));
  PERFORM qdrant_internal.register_representations(index_name,coalesce(settings->'representations','{}'));
+ -- Every declared guard was just installed or strictly matched/reused.
+ -- A remaining guard belongs to an omitted or unknown old representation.
+ IF EXISTS (SELECT 1 FROM pg_trigger t WHERE t.tgrelid=source::oid
+       AND t.tgfoid='qdrant_internal.model_output_guard()'::regprocedure
+       AND NOT EXISTS (SELECT 1 FROM qdrant_internal.representation_catalog r
+         WHERE r.index_name=create_index.index_name AND t.tgname='qdrant_model_'||r.name)) THEN
+   RAISE EXCEPTION 'Orphan model output triggers require explicit representation recovery'
+     USING ERRCODE='55000';
+ END IF;
  UPDATE qdrant_internal.index_catalog i SET settings=create_index.settings WHERE i.index_name=create_index.index_name;
  PERFORM qdrant_internal.p1_start_consumer();
  RETURN result;

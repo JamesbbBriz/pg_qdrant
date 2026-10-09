@@ -9098,6 +9098,17 @@
           "scope": "Matching-build PG17 custom pg_dump/pg_restore of ordinary text source facts with explicit fresh registration. Complete orphan capture pair replacement is atomic and owner-protected under the source DDL lock; altered triggers/configuration and rollback preserve state. Fresh generation/incarnation, real Edge search, restored DML/key reuse and new exact durable tickets are verified. Automatic declaration/metadata restoration, BYOV migration, ACL/role migration, base backup, PITR, replication, failover and full local act evidence remain open.",
           "full_capability_acceptance": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-09",
+          "level": "SQL-integration-verified",
+          "kind": "installed_logical_byov_restore",
+          "status": "passed",
+          "source": "docs/logical-source-restore.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_model_restore.py",
+          "scope": "Matching-build PG17 actual custom-format source dump/restore with explicitly retained dense, learned sparse and token-vector declarations. Restored model guards are matched by function/event/arguments/output-column set under the source DDL lock and reused; omitted or eight altered guards fail closed, and invalid later slots/rollback preserve trigger identities. Fresh incarnations make retained outputs stale; old identity submissions and model queries are refused. Current encoding inputs plus ordinary source UPDATE rebuild all three native representations through exact durable tickets and actual dense/sparse/MaxSim results. A later model-guard drop still invalidates capture and native reads. Automatic metadata/declaration restoration, ACL/roles, changed configuration, cross-version upgrades, base backup, PITR, replication/failover and full local act evidence remain open.",
+          "full_capability_acceptance": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -11590,6 +11601,17 @@
           "source": "docs/logical-source-restore.md",
           "test_entry": "crates/pg_qdrant/tests/verify_logical_restore.py",
           "scope": "Matching-build PG17 custom pg_dump/pg_restore of ordinary text source facts with explicit fresh registration. Complete orphan capture pair replacement is atomic and owner-protected under the source DDL lock; altered triggers/configuration and rollback preserve state. Fresh generation/incarnation, real Edge search, restored DML/key reuse and new exact durable tickets are verified. Automatic declaration/metadata restoration, BYOV migration, ACL/role migration, base backup, PITR, replication, failover and full local act evidence remain open.",
+          "full_capability_acceptance": false,
+          "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-09",
+          "level": "SQL-integration-verified",
+          "kind": "installed_logical_byov_restore",
+          "status": "passed",
+          "source": "docs/logical-source-restore.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_model_restore.py",
+          "scope": "Matching-build PG17 actual custom-format source dump/restore with explicitly retained dense, learned sparse and token-vector declarations. Restored model guards are matched by function/event/arguments/output-column set under the source DDL lock and reused; omitted or eight altered guards fail closed, and invalid later slots/rollback preserve trigger identities. Fresh incarnations make retained outputs stale; old identity submissions and model queries are refused. Current encoding inputs plus ordinary source UPDATE rebuild all three native representations through exact durable tickets and actual dense/sparse/MaxSim results. A later model-guard drop still invalidates capture and native reads. Automatic metadata/declaration restoration, ACL/roles, changed configuration, cross-version upgrades, base backup, PITR, replication/failover and full local act evidence remain open.",
           "full_capability_acceptance": false,
           "release_supported": false
         }

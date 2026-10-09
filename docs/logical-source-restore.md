@@ -1,9 +1,10 @@
-# Logical source restore and fresh text registration
+# Logical source restore and fresh index registration
 
 Status: development recovery slice; full L12, P3-RECOVERY and release support
 remain open. The installed test uses matching Linux PG17 extension/helper
 binaries, a custom-format source database dump and a fresh database in the same
-disposable cluster. It rebuilds a text-only index from restored ordinary tables.
+disposable cluster. It rebuilds text and explicitly declared BYOV indexes from
+restored ordinary tables.
 
 ## What the dump retains
 
@@ -55,8 +56,8 @@ complete pair of enabled, unconditional triggers with the exact names,
 functions, event types and index-name arguments. Partial, disabled, altered or
 foreign trigger pairs are rejected with `55000`; an already registered source
 or index name is rejected with `23505`. Other user triggers are preserved.
-Orphan model-output guards are also rejected with `55000`; this text-only
-recovery path does not silently remove or reinterpret their contracts.
+Model-output guards require the retained representation declarations described
+below; omitting a guarded representation is rejected with `55000`.
 
 Replacement, catalog creation and new capture installation share one
 transaction. Invalid later configuration or explicit rollback restores the
@@ -69,6 +70,37 @@ readiness. Old backup tickets are unknown (`22023`) and never imply durability
 in the target. Ordinary target DML and newly committed fixed-membership tickets
 then use the normal source-to-Edge pipeline.
 
+## Restored model outputs
+
+Retain each named dense, learned sparse and token-vector declaration, including
+model/tokenizer/version, vocabulary/IDF, dimensions and the five output-column
+names. Pass these explicit `representations` to the same `create_index` call.
+Before retaining an existing model guard, registration checks its exact name,
+function, source/index/slot arguments, enabled state, unconditional BEFORE ROW
+UPDATE event and complete output-column set. Altered guards and undeclared old
+guards fail with `55000`. Matching guards keep their identities and use the new
+catalog binding; missing declared guards are installed normally. Validation
+shares the source lock and transaction with registration: an invalid later slot
+or rollback preserves all original trigger identities. The normal source-DDL
+invalidation remains active, including for a later guard drop or alteration.
+
+The restored columns retain their values, but fresh source incarnations make
+those old model outputs **stale**. Text retrieval can become ready while model
+queries still fail with `55000`. For every slot, request current encoding inputs:
+
+```sql
+SELECT qdrant.encoding_inputs('articles', 'dense');
+```
+
+The application must verify or regenerate outputs against the returned source
+text and complete model contract. Submit each output through ordinary source
+UPDATE using the returned source fingerprint and **new incarnation**, together
+with the declared model ID/version. See the [dense BYOV SQL example](../crates/pg_qdrant/tests/verify_models.py)
+for the output-column and committed-ticket flow. Wait for the new ticket to be
+durable before relying on native model results. Late output carrying a backup
+incarnation is rejected; keeping an old vector column is insufficient evidence
+of its model or source freshness. No model inference is performed by restore.
+
 ## Boundaries and verification
 
 `verify_logical_restore.py` executes real `pg_dump` and `pg_restore`, checks
@@ -78,9 +110,15 @@ delete/key reuse and updates through new durable tickets. The complete local
 act product gate invokes this test; a scoped development run does not replace
 full exact-revision CI.
 
-Model-output trigger/representation migration, automatic declaration export or
-restore, changed analyzers/configuration, cross-version/cluster upgrades, base
+`verify_model_restore.py` adds all three BYOV kinds to the actual dump, rejects
+omitted and altered model guards, checks transactional cleanup rollback, proves
+stale restored values and rejected old identities, then resubmits current
+outputs and queries real native dense, sparse and MaxSim results after durable
+tickets.
+
+Automatic declaration export or restore, changed analyzers/configuration,
+cross-version/cluster upgrades, base
 backup, PITR, physical replication and failover remain unsupported pending
 their own implementation and end-to-end evidence. Retained BYOV columns alone
 do not establish readiness under new incarnations. No full L12 or stage
-acceptance is promoted by this text-only recovery slice.
+acceptance is promoted by this recovery slice.

@@ -343,11 +343,6 @@ BEGIN
                WHERE index_name=p_name OR source_oid=p_source::oid) THEN
         RAISE EXCEPTION 'Index name or source is already registered' USING ERRCODE='23505';
     END IF;
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid=p_source::oid
-               AND tgfoid='qdrant_internal.model_output_guard()'::regprocedure) THEN
-        RAISE EXCEPTION 'Orphan model output triggers require explicit representation recovery'
-            USING ERRCODE='55000';
-    END IF;
     SELECT count(*),count(*) FILTER (WHERE NOT t.tgisinternal AND t.tgenabled='O'
       AND t.tgnargs=1 AND t.tgargs=convert_to(p_name,'UTF8')||decode('00','hex')
       AND t.tgqual IS NULL AND t.tgconstraint=0 AND t.tgattr=''::int2vector
