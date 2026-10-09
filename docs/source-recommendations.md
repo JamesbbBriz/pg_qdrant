@@ -84,6 +84,6 @@ refusal. SQL ranking goldens currently cover Dot. These synthetic fixtures do
 not establish relevance quality or the complete recommendation capability
 across every supported combination.
 
-Source protocol ABI 10 and the added development snapshot metadata require a
+Source protocol ABI 11 and the added development snapshot metadata require a
 matching helper and fresh installation. Existing development-catalog upgrades
 and disk-format/model migrations remain unsupported until separately tested.
