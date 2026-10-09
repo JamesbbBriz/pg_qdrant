@@ -79,6 +79,8 @@ assert sql("SELECT xmax::text FROM qdrant_internal.consumer_state WHERE index_na
 assert sql("SELECT count(*) FROM qdrant_internal.source_state WHERE index_name='docs'")=='1100'
 assert hits('recovery')!='[]'
 checks += ['CREATE EXTENSION install','online backfill beyond 1000','real offline Edge BM25','narrow field capture','idle consumer does not rewrite tuple locks']
+import verify_dispatch
+verify_dispatch.run(sql,ready,checks)
 
 guard_before = json.loads(sql('SELECT qdrant_internal.p0_ping()'))
 guard_pid = guard_before['engine_pid']
