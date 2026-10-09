@@ -103,8 +103,9 @@ def main():
                 raise ValueError("installed preview is incomplete")
             if installed["source_commit"] != compiled["commit"]:
                 raise ValueError("installed source revision mismatch")
-            report["evidence_sha256"] = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-                for path in (directory / "evidence").iterdir() if path.is_file()}
+            evidence = directory / "evidence"
+            report["evidence_sha256"] = {path.relative_to(evidence).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in evidence.rglob("*") if path.is_file()}
         for item in report["snapshot"]["files"]:
             if hashlib.sha256((source / item["path"]).read_bytes()).hexdigest() != item["sha256"]:
                 raise ValueError("frozen packaging input changed")

@@ -3,8 +3,11 @@ ARG RUNTIME_IMAGE
 FROM ${PRODUCT_IMAGE} AS archive
 USER root
 COPY scripts/preview_package.py /package-tools/preview_package.py
+COPY scripts/collect_notices.py /package-tools/collect_notices.py
 COPY source-input.json /package-tools/source-input.json
-RUN mkdir /package-output && chown builder:builder /package-output
+RUN mkdir /package-output \
+    && python3 /package-tools/collect_notices.py --root /src --output /package-output/notices \
+    && chown builder:builder /package-output
 USER builder
 RUN python3 /package-tools/preview_package.py build --snapshot /package-tools/source-input.json --output /package-output/preview.tar.gz \
     && python3 /package-tools/preview_package.py build --snapshot /package-tools/source-input.json --output /package-output/repeat.tar.gz \
