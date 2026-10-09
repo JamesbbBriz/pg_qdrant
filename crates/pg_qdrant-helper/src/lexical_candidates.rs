@@ -115,7 +115,23 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
     } else {
         None
     };
+    let synonyms = if request.kind == "synonyms" {
+        Some(crate::lexical_synonyms::expand(
+            &request.q,
+            request
+                .synonyms
+                .as_ref()
+                .ok_or_else(|| ProbeError::invalid("synonym policy required"))?,
+            request.slop,
+        )?)
+    } else {
+        if request.synonyms.is_some() {
+            return Err(ProbeError::invalid("synonym policy requires synonyms kind"));
+        }
+        None
+    };
     if syntax.is_none()
+        && synonyms.is_none()
         && (words.is_empty()
             || words.len() > 8
             || words
@@ -164,7 +180,9 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
     let reader: tantivy::IndexReader = reader;
     let searcher = reader.searcher();
     let mut highlight_query: Option<Box<dyn Query>> = None;
-    let query: Box<dyn Query> = if let Some(ast) = syntax {
+    let query: Box<dyn Query> = if let Some(expansion) = &synonyms {
+        expansion.query(body)
+    } else if let Some(ast) = syntax {
         let mut parser = QueryParser::for_index(&index, vec![body]);
         parser.set_conjunction_by_default();
         if let Some(positive) = crate::lexical_syntax::highlight_ast(&ast) {
@@ -237,7 +255,8 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
     Ok(
         json!({"hits":output,"matched_points":count,"matched_count_exact":true,"top_k":request.top_k,
         "kind":request.kind,"q":request.q,"slop":request.slop,"engine":"tantivy-0.26.2",
-        "analyzer":"simple_lower_v1; Unicode simple words, lowercase, positions; ASCII fuzzy/proximity words; syntax literals use this analyzer",
+        "synonym_policy":synonyms.as_ref().map(|s|&s.evidence),
+        "analyzer":"simple_lower_v1; Unicode simple words, lowercase, positions; ASCII fuzzy/proximity words; syntax/synonym literals use this analyzer",
         "syntax_policy":if request.kind=="syntax"{Some("strict body-only grammar; default AND; literals/Boolean/quotes/escapes/boosts; 32 nodes/16 literals/depth8/32 analyzed terms; no expansion/range/regex/set/all")}else{None},
         "score_semantics":"native Tantivy query score; no cross-engine normalization",
         "fuzzy_distance":if request.kind=="fuzzy"{Some(1)}else{None},"transpositions":request.kind=="fuzzy","max_fuzzy_expansions":32,
@@ -252,6 +271,50 @@ mod tests {
     use super::*;
 
     #[test]
+    fn directional_synonyms_execute_exact_native_phrases_and_original_highlights() {
+        let documents = vec![
+            (1, "new york hotel".into()),
+            (2, "nyc hotel".into()),
+            (3, "nyc cheap hotel".into()),
+            (4, "metropolis hotel".into()),
+            (5, "数据库 恢复".into()),
+        ];
+        let policy = serde_json::from_value(json!({"id":"cities","revision":1,"rules":[
+            {"from":["new","york"],"to":[["nyc"]]},
+            {"from":["nyc"],"to":[["metropolis"]]},
+            {"from":["database"],"to":[["数据库"]]}]}))
+        .unwrap();
+        let mut request = SourceLexical {
+            q: "new york hotel".into(),
+            kind: "synonyms".into(),
+            slop: 0,
+            top_k: 100,
+            synonyms: Some(policy),
+        };
+        let result = search(&documents, &request).unwrap();
+        let ids: std::collections::BTreeSet<_> = result["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|h| h["id"].as_u64().unwrap())
+            .collect();
+        assert_eq!(ids, std::collections::BTreeSet::from([1, 2]));
+        let hit = result["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|h| h["id"] == 2)
+            .unwrap();
+        assert_eq!(hit["snippet"]["status"], "ready");
+        assert!(hit["snippet"]["text"].as_str().unwrap().contains("nyc"));
+        assert_eq!(result["synonym_policy"]["applied_rules"], 1);
+        request.q = "database 恢复".into();
+        assert_eq!(search(&documents, &request).unwrap()["hits"][0]["id"], 5);
+        request.kind = "syntax".into();
+        assert!(search(&documents, &request).is_err());
+    }
+
+    #[test]
     fn snippets_use_expanded_native_terms_and_conservative_positive_syntax() {
         let documents = vec![
             (1, "transaction durable recovery".into()),
@@ -262,6 +325,7 @@ mod tests {
             kind: kind.into(),
             slop: 0,
             top_k: 10,
+            synonyms: None,
         };
         let fuzzy = search(&documents, &request("transactoin", "fuzzy")).unwrap();
         let snippet = &fuzzy["hits"][0]["snippet"];
@@ -316,6 +380,7 @@ mod tests {
             kind: "syntax".into(),
             slop: 0,
             top_k: 100,
+            synonyms: None,
         };
         for (q, expected) in [
             ("body:transaction AND NOT durable", vec![1, 3]),
@@ -368,6 +433,7 @@ mod tests {
             kind: kind.into(),
             slop,
             top_k: 100,
+            synonyms: None,
         };
         for (q, kind, slop, expected) in [
             ("transactoin", "fuzzy", 0, 3),

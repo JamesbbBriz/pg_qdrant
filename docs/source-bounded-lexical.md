@@ -119,3 +119,9 @@ Source permissions, current source fingerprints and generation/receipt fences
 cover snippets before exposure and after native execution. Helper and SQL must
 come from the same build. General search-mode snippets, configurable analysis,
 normalization mappings and full F17 acceptance remain open.
+
+[Directional synonym queries](source-synonyms.md) use the same complete durable
+authorized snapshot and original-source snippet path through
+`qdrant.search_synonyms`. Their explicit versioned policies permit bounded
+Unicode literal words and complete single-pass phrase expansion; they remain
+separate from this API's fuzzy/proximity/syntax grammar.

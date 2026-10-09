@@ -289,6 +289,51 @@ pub struct SourceLexical {
     pub kind: String,
     pub slop: u32,
     pub top_k: usize,
+    #[serde(default)]
+    pub synonyms: Option<SynonymPolicy>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SynonymPolicy {
+    pub id: String,
+    pub revision: u32,
+    pub rules: Vec<SynonymRule>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SynonymRule {
+    pub from: Vec<String>,
+    pub to: Vec<Vec<String>>,
+}
+
+impl<'de> Deserialize<'de> for SynonymPolicy {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = Value::deserialize(deserializer)?;
+        if !value.is_object()
+            || !value
+                .get("rules")
+                .and_then(Value::as_array)
+                .is_some_and(|rules| rules.iter().all(Value::is_object))
+        {
+            return Err(serde::de::Error::custom(
+                "synonym policy and rules must be JSON objects",
+            ));
+        }
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Fields {
+            id: String,
+            revision: u32,
+            rules: Vec<SynonymRule>,
+        }
+        let fields: Fields = serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+        Ok(Self {
+            id: fields.id,
+            revision: fields.revision,
+            rules: fields.rules,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -729,5 +774,29 @@ mod search_contract_tests {
         ] {
             assert!(serde_json::from_value::<RepresentationVector>(wrong).is_err());
         }
+    }
+
+    #[test]
+    fn synonym_policy_refuses_sequence_struct_coercion_and_unknown_fields() {
+        let value = json!({"id":"transport","revision":1,"rules":[
+            {"from":["car"],"to":[["automobile"]]}]});
+        assert!(serde_json::from_value::<SynonymPolicy>(value.clone()).is_ok());
+        for wrong in [
+            json!(["transport", 1, [[["car"], [["automobile"]]]]]),
+            json!({"id":"transport","revision":1,"rules":[[["car"],[["automobile"]]]]}),
+            json!({"id":"transport","revision":1,"rules":{}}),
+            json!({"id":"transport","revision":1,"rules":[null]}),
+            json!({"id":"transport","revision":1,"rules":[{"from":["car"],"to":[["automobile"]],"unknown":true}]}),
+            json!({"id":"transport","revision":1,"rules":[],"unknown":true}),
+        ] {
+            assert!(serde_json::from_value::<SynonymPolicy>(wrong).is_err());
+        }
+        let old = json!({"q":"word","kind":"syntax","slop":0,"top_k":10});
+        assert!(
+            serde_json::from_value::<SourceLexical>(old)
+                .unwrap()
+                .synonyms
+                .is_none()
+        );
     }
 }

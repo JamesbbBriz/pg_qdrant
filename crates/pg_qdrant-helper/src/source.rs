@@ -1749,6 +1749,7 @@ mod tests {
                     kind: "syntax".into(),
                     slop: 0,
                     top_k: 1,
+                    synonyms: None,
                 }),
                 SourcePredicates::default(),
             )
