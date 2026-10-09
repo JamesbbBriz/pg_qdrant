@@ -26,6 +26,7 @@ mod worker;
 mod qdrant {
     use pgrx::JsonB;
     use pgrx::prelude::*;
+
     use serde_json::json;
 
     /// Build facts only. A compiled probe is not a supported indexing API.
@@ -154,6 +155,28 @@ mod qdrant_internal {
     use super::{formats, identity, ipc, recheck, worker};
     use pgrx::JsonB;
     use pgrx::prelude::*;
+
+    #[pg_extern(immutable, parallel_safe)]
+    fn admit_payload_filter(expression: JsonB, contract: JsonB) -> JsonB {
+        let contract = serde_json::from_value(contract.0)
+            .unwrap_or_else(|_| ipc::raise(ipc::ProbeError::invalid("invalid payload contract")));
+        let filter = pg_qdrant_protocol::payload_filter::PayloadFilter(expression.0);
+        filter
+            .validate(&contract)
+            .unwrap_or_else(|error| ipc::raise(error));
+        JsonB(filter.0)
+    }
+
+    #[pg_extern(immutable, parallel_safe)]
+    fn payload_matches(expression: JsonB, projection: JsonB, contract: JsonB) -> bool {
+        let contract = serde_json::from_value(contract.0)
+            .unwrap_or_else(|_| ipc::raise(ipc::ProbeError::invalid("invalid payload contract")));
+        let filter = pg_qdrant_protocol::payload_filter::PayloadFilter(expression.0);
+        filter
+            .validate(&contract)
+            .unwrap_or_else(|error| ipc::raise(error));
+        filter.matches(&projection.0)
+    }
 
     #[pg_extern(immutable, parallel_safe)]
     fn admit_score_formula(expression: JsonB) -> JsonB {

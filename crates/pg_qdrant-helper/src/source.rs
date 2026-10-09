@@ -424,6 +424,19 @@ impl SourceOwner {
         }
         let mut request = QueryRequest::new(top_k);
         let mut filter = crate::lexical::compile(&predicates, &self.encoder)?;
+        if let Some(expression) = &predicates.payload_filter {
+            if !owned.payload_ready {
+                return Err(error("owned payload indexes are not ready"));
+            }
+            let condition: qdrant_edge::Condition =
+                serde_json::from_value(expression.native(&owned.payload_contract)?)
+                    .map_err(|_| ProbeError::invalid("invalid compiled scalar filter"))?;
+            filter
+                .get_or_insert_with(Filter::default)
+                .must
+                .get_or_insert_with(Vec::new)
+                .push(condition);
+        }
         request.filter = filter.clone();
         let (scoring, uses_idf) = if let Some(mmr) = mmr_query {
             if recommendation_query.is_some()
@@ -2213,7 +2226,103 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[test]
+    fn scalar_filters_enter_dense_lexical_and_fusion_before_candidate_limits() {
+        use pg_qdrant_protocol::payload_filter::PayloadFilter;
+        let (owner, root, generation, epoch, _) = dense_payload_fixture(true);
+        let dense = RepresentationQuery {
+            representation: "dot".into(),
+            model_id: "fixture".into(),
+            model_version: "r1".into(),
+            vector: RepresentationVector::Dense(vec![1., 0.]),
+        };
+        let search = |expression: Value, fusion: Option<SourceFusion>, lexical: bool| {
+            let predicates = SourcePredicates {
+                payload_filter: Some(PayloadFilter(expression)),
+                ..Default::default()
+            };
+            owner
+                .search(
+                    1,
+                    &generation,
+                    &epoch,
+                    "anchor",
+                    1,
+                    if lexical { None } else { Some(dense.clone()) },
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    fusion,
+                    predicates,
+                )
+                .unwrap()
+        };
+        // The unfiltered nearest point is 1; the best admissible point is 4.
+        // A post-top-k predicate would return zero rather than this filled result.
+        let result = search(json!({"field":"category","eq":"Allow"}), None, false);
+        assert_eq!(result[0]["id"], 4);
+        for expression in [
+            json!({"field":"quantity","eq":4}),
+            json!({"field":"price","eq":0.4}),
+            json!({"all":[{"field":"category","prefix":"All"},{"field":"quantity","range":{"gte":4,"lt":5}}]}),
+            json!({"any":[{"field":"quantity","eq":4},{"all":[{"field":"available","eq":true},{"not":{"field":"quantity","eq":2}}]}]}),
+        ] {
+            for fusion in [None, Some(SourceFusion::Rrf), Some(SourceFusion::Dbsf)] {
+                assert_eq!(search(expression.clone(), fusion, false)[0]["id"], 4);
+            }
+            assert_eq!(search(expression, None, true)[0]["id"], 4);
+        }
+        assert_eq!(
+            search(json!({"field":"available","eq":true}), None, false)[0]["id"],
+            2
+        );
+        assert_eq!(
+            search(json!({"field":"quantity","is_null":true}), None, false),
+            json!([])
+        );
+        assert_eq!(
+            search(json!({"field":"category","prefix":"all"}), None, false),
+            json!([])
+        );
+        assert!(
+            owner
+                .search(
+                    1,
+                    &generation,
+                    &epoch,
+                    "anchor",
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    SourcePredicates {
+                        payload_filter: Some(PayloadFilter(
+                            json!({"field":"fingerprint","eq":"fixture"})
+                        )),
+                        ..Default::default()
+                    }
+                )
+                .is_err()
+        );
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     fn dense_example_fixture() -> (SourceOwner, PathBuf, String, String, [[f32; 2]; 7]) {
+        dense_payload_fixture(false)
+    }
+
+    fn dense_payload_fixture(
+        payload: bool,
+    ) -> (SourceOwner, PathBuf, String, String, [[f32; 2]; 7]) {
         let root = std::env::temp_dir().join(format!(
             "pgq-recommend-{}-{}",
             std::process::id(),
@@ -2243,7 +2352,16 @@ mod tests {
             consumer_id: epoch.clone(),
             task_id: None,
             retire: false,
-            payload_contract: BTreeMap::new(),
+            payload_contract: if payload {
+                BTreeMap::from([
+                    ("category".into(), PayloadKind::Keyword),
+                    ("quantity".into(), PayloadKind::Integer),
+                    ("price".into(), PayloadKind::Float),
+                    ("available".into(), PayloadKind::Bool),
+                ])
+            } else {
+                BTreeMap::new()
+            },
             representations: ["dot", "cosine", "euclid", "manhattan"]
                 .into_iter()
                 .map(|distance| {
@@ -2268,7 +2386,19 @@ mod tests {
                         fingerprint: Some("fixture".into()),
                         key: json!({"type":"bigint","value":id.to_string()}),
                         body: Some("anchor".into()),
-                        payload: Some(BTreeMap::new()),
+                        payload: Some(if payload {
+                            BTreeMap::from([
+                                (
+                                    "category".into(),
+                                    json!(if id % 2 == 0 { "Allow" } else { "Denied" }),
+                                ),
+                                ("quantity".into(), json!(id as i64)),
+                                ("price".into(), json!(id as f64 / 10.0)),
+                                ("available".into(), json!(id == 2)),
+                            ])
+                        } else {
+                            BTreeMap::new()
+                        }),
                         payload_fingerprint: Some("0".repeat(64)),
                         vectors: ["dot", "cosine", "euclid", "manhattan"]
                             .into_iter()

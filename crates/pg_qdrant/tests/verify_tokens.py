@@ -17,7 +17,7 @@ def run(sql, ready, ticket_from, checks):
             c.update(vocabulary='fixture-vocabulary-r1', idf_policy='none', idf_revision='not-applied')
         slots[name] = c
         fields += [name+'_vector jsonb', name+'_source text', name+'_inc uuid', name+'_model text', name+'_version text']
-    sql('CREATE TABLE token_docs(id bigint PRIMARY KEY,body text NOT NULL,'+','.join(fields)+')')
+    sql('CREATE TABLE token_docs(id bigint PRIMARY KEY,body text NOT NULL,filter_key bigint,'+','.join(fields)+')')
     sql("INSERT INTO token_docs(id,body) VALUES(1,'alpha alpha'),(2,'alpha beta'),(3,'outsider'),(4,'separate')")
     sql("INSERT INTO token_docs(id,body) SELECT n,'unrelated '||n FROM generate_series(5,10)n")
     for field, value in [('distance', 'cosine'), ('max_tokens', 0), ('max_tokens', 129),
@@ -27,7 +27,8 @@ def run(sql, ready, ticket_from, checks):
         code = '22023' if field == 'max_tokens' else '0A000'
         assert code in sql("SELECT qdrant.create_index('bad_token','token_docs','id','"+settings+"')", ok=False)
     assert sql("SELECT count(*) FROM qdrant_internal.index_catalog WHERE index_name='bad_token'") == '0'
-    settings = json.dumps({'text': {'fields': ['body']}, 'representations': slots})
+    sql('UPDATE token_docs SET filter_key=id')
+    settings = json.dumps({'text': {'fields': ['body']}, 'representations': slots, 'payload': {'key': {'field': 'filter_key', 'kind': 'integer'}}})
     sql("SELECT qdrant.create_index('token_docs','token_docs','id','"+settings+"')")
     ready('token_docs')
 

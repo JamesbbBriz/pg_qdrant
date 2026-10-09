@@ -31,7 +31,7 @@ DECLARE
     relation_info record;
     text_field text;
     request_plan text;
-    allowed_options text[] := ARRAY['plan','candidate_limit','timeout_ms','fallback','fusion','matching','formula'];
+    allowed_options text[] := ARRAY['plan','candidate_limit','timeout_ms','fallback','fusion','matching','formula','filter'];
     option_key text;
     candidate_limit integer;
     timeout_ms integer;
@@ -55,6 +55,7 @@ DECLARE
     matching jsonb;
     matching_entry record;
     matching_bytes integer:=0;
+    payload_filter jsonb;
 BEGIN
     IF index_name IS NULL OR q IS NULL OR octet_length(q)>8192
        OR (mode IS DISTINCT FROM 'explore' AND btrim(q) = '') THEN
@@ -145,6 +146,11 @@ BEGIN
     SELECT * INTO STRICT selected FROM qdrant_internal.index_catalog
     WHERE qdrant_internal.index_catalog.index_name = explain_search.index_name;
     PERFORM qdrant_internal.require_index(index_name);
+    IF options ? 'filter' THEN
+        IF octet_length((options->'filter')::text)>8192 THEN
+            RAISE EXCEPTION 'Payload filter exceeds 8 KiB' USING ERRCODE='22023'; END IF;
+        payload_filter:=qdrant_internal.admit_payload_filter(options->'filter',qdrant_internal.payload_contract(index_name));
+    END IF;
     IF EXISTS(SELECT 1 FROM pg_class WHERE oid=selected.source_oid AND (relrowsecurity OR relforcerowsecurity)) THEN
         RAISE EXCEPTION 'RLS search sources are unsupported' USING ERRCODE='0A000';
     END IF;
@@ -325,6 +331,10 @@ BEGIN
           'nonfinite_result_policy','reject complete response'),
        'permission_preflight','passed_for_registered_source',
        'matching',matching,
+       'payload_filter',payload_filter,
+       'payload_filter_contract',jsonb_build_object('scope','before candidate truncation in every native branch and current SQL recheck',
+         'budget','8 KiB, depth 4, 32 nodes, 16 children per Boolean clause',
+         'domain','declared scalar aliases; existing owner domain; caller filter is not an authorization grant'),
        'native_predicates_compiled',false,
        'native_predicates_available',true,
        'matching_contract',jsonb_build_object('scope','before candidate truncation in every native branch',
@@ -382,7 +392,8 @@ BEGIN
       'formula',plan->'formula',
       'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',
-      'predicates',plan->'matching',
+      'predicates',(plan->'matching')||CASE WHEN plan->'payload_filter'<>'null'::jsonb
+        THEN jsonb_build_object('payload_filter',plan->'payload_filter') ELSE '{}'::jsonb END,
       'top_k',(plan->>'candidate_limit')::integer),(plan->>'timeout_ms')::integer);
     IF jsonb_typeof(hits) IS DISTINCT FROM 'array' OR EXISTS(
         SELECT 1 FROM jsonb_array_elements(hits) h WHERE jsonb_typeof(h->'score') IS DISTINCT FROM 'number') THEN
@@ -404,7 +415,7 @@ BEGIN
     RETURN QUERY EXECUTE format(
       'SELECT t.%I::text,row_number() OVER(ORDER BY v.ordinality)::integer,(v.hit->>''score'')::double precision,
        t.%I::text,left(t.%I,240),jsonb_build_object(''generation'',$2,''storage_epoch'',$3,''plan'',$6,
-       ''matching'',$7,''seed_digest'',$8,''point_id'',v.hit->''id'',
+       ''matching'',$7,''seed_digest'',$8,''payload_filter'',$9,''point_id'',v.hit->''id'',
        ''incarnation'',v.hit #>> ''{payload,incarnation}'',
        ''revision'',v.hit #>> ''{payload,revision}'',
        ''source_fingerprint'',v.hit #>> ''{payload,fingerprint}'',
@@ -417,10 +428,11 @@ BEGIN
          AND s.revision=(v.hit #>> ''{payload,revision}'')::bigint
          AND s.payload_fingerprint=v.hit #>> ''{payload,payload_fingerprint}''
          AND encode(sha256(convert_to(qdrant_internal.payload_projection($4,t)::text,''UTF8'')),''hex'')=s.payload_fingerprint
+         AND ($9 IS NULL OR $9=''null''::jsonb OR qdrant_internal.payload_matches($9,qdrant_internal.payload_projection($4,t),qdrant_internal.payload_contract($4)))
          AND encode(sha256(convert_to(t.%I,''UTF8'')),''hex'')=v.hit #>> ''{payload,fingerprint}''
        ORDER BY v.ordinality LIMIT $5',
        i.key_field,i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.text_field)
-       USING hits,i.generation,c.storage_epoch,i.index_name,top_k,plan->>'effective_plan',plan->'matching',admitted_seed_digest;
+       USING hits,i.generation,c.storage_epoch,i.index_name,top_k,plan->>'effective_plan',plan->'matching',admitted_seed_digest,plan->'payload_filter';
 END;
 $pgq$;
 
@@ -428,6 +440,7 @@ $pgq$;
 -- The underlying capture tables remain private.
 GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jsonb),
     qdrant.search(text,text,text,integer,jsonb,jsonb) TO PUBLIC;
+REVOKE ALL ON FUNCTION qdrant_internal.admit_payload_filter(jsonb,jsonb),qdrant_internal.payload_matches(jsonb,jsonb,jsonb) FROM PUBLIC;
 "###,
     name = "p2_query_admission",
     requires = [
@@ -437,6 +450,8 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
         "p2_context_discovery_admission",
         "p2_feedback_admission",
         "p2_mmr_admission",
-        qdrant_internal::admit_score_formula
+        qdrant_internal::admit_score_formula,
+        qdrant_internal::admit_payload_filter,
+        qdrant_internal::payload_matches
     ]
 );

@@ -5934,6 +5934,16 @@
       "evidence": [
         {
           "level": "SQL-integration-verified",
+          "kind": "installed_declared_scalar_filters",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_filters.py",
+          "scope": "Declared keyword/int64/finite float64/Boolean equality, keyword prefix, explicit null, exact-bound numeric range and bounded Boolean AST enter each supported native branch before cap; installed scalar extrema, fusion/precision/explore, source-column permission, RLS refusal, private ACL, durable payload updates, immutable paging, cancellation and in-flight source rechecks passed in scoped SQL regression. Full capability, complete filter types, tenant integration and release acceptance remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
+          "level": "SQL-integration-verified",
           "kind": "installed_native_candidate_matching",
           "status": "passed",
           "source": "crates/pg_qdrant/tests/verify_lexical.py",
@@ -6059,9 +6069,11 @@
           ]
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q12",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "evidence": "crates/pg_qdrant/tests/verify_filters.py",
+          "verified_scope": "Bounded declared scalar filters and supported query combinations; all original required types, combinations and release gates remain required."
         },
         "release": {
           "status": "pending",
@@ -6088,10 +6100,12 @@
         {
           "phase": "P2",
           "deliverable": "Exhaustive payload schema/condition adapter including typed ranges/geo/null/arrays/nesting/HasId/HasVector.",
-          "status": "pending"
+          "status": "partially_verified",
+          "evidence": "docs/source-filters.md",
+          "remaining": "General nested objects, arrays, geo/datetime, HasId/HasVector, tenant policy and exhaustive field-kind acceptance remain required."
         }
       ],
-      "product_status": "planned",
+      "product_status": "installed_implementation",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {

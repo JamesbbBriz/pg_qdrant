@@ -367,6 +367,8 @@ import verify_retrieve
 verify_retrieve_replay=verify_retrieve.run(sql,ready,ticket_from,checks,spawn)
 import verify_payload
 verify_payload_replay=verify_payload.run(sql,ready,ticket_from,checks)
+import verify_filters
+verify_filters_replay=verify_filters.run(sql,ready,ticket_from,checks,spawn)
 def verify_model_replay():
     verify_dense_replay()
     verify_sparse_replay()
@@ -382,6 +384,7 @@ def verify_model_replay():
     verify_formula_replay()
     verify_retrieve_replay()
     verify_payload_replay()
+    verify_filters_replay()
 # PostgreSQL cancellation must not release an executing fused native query's owner.
 ready('model_docs')
 hybrid_vector=json.dumps({'dense':{'model_id':'fixture-model','model_version':'r1','vector':[1,0]}})
