@@ -15,6 +15,7 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_preview_package.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_collect_notices.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_upstream_notices.py' -v
       - name: Compile the clean frozen normal product when requested
         if: env.PGQ_BUILD_PRODUCT == '1'
         run: |
