@@ -122,6 +122,23 @@ fn run() -> Result<(), ProbeError> {
                 storage_epoch,
                 point_ids,
             } => source_owner.retrieve(index_id, &generation, &storage_epoch, point_ids),
+            Operation::SourceStatistics {
+                index_id,
+                generation,
+                storage_epoch,
+                point_ids,
+                facet,
+                facet_limit,
+                predicates,
+            } => source_owner.statistics(
+                index_id,
+                &generation,
+                &storage_epoch,
+                point_ids,
+                facet,
+                facet_limit,
+                predicates,
+            ),
             Operation::SourceSearch {
                 index_id,
                 generation,
