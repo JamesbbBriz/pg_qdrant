@@ -105,9 +105,33 @@ def inspect_container(value, image_id, nonce):
             "cap_drop": host["CapDrop"], "no_new_privileges": True, "host_mounts": False}
 
 
-def host_mapping(container_id, target):
+def observe(image, operation, payload):
+    """Use a separate read-only observer; the fault container stays unprivileged."""
+    source = Path(__file__).with_name("oom_observer.py").read_text()
+    name = "pgq-oom-observer-" + secrets.token_hex(16)
+    try:
+        return command(["docker", "run", "--rm", "--name", name,
+            "--label", "io.pg_qdrant.p0.oom.observer=" + name,
+            "--network=none", "--read-only", "--memory=256m", "--memory-swap=256m",
+            "--pids-limit=16", "--cpus=0.25", "--cap-drop=ALL", "--cap-add=SYSLOG",
+            "--security-opt=no-new-privileges", "--pid=host", "--cgroupns=host", "--user=0:0",
+            "--entrypoint=python3", image, "-c", source, operation, json.dumps(payload)], timeout=15)
+    finally:
+        result = command(["docker", "inspect", name], check=False)
+        if result.returncode == 0:
+            value = json.loads(result.stdout)[0]
+            assert value["Config"].get("Labels", {}).get("io.pg_qdrant.p0.oom.observer") == name
+            removed = command(["docker", "rm", "-f", value["Id"]], check=False)
+            if removed.returncode and command(["docker", "inspect", value["Id"]], check=False).returncode == 0:
+                raise RuntimeError("owned read-only observer cleanup did not complete")
+
+
+def host_mapping(container_id, target, observer_image=None):
     rows = command(["docker", "top", container_id, "-eo", "pid"]).stdout.splitlines()[1:]
     assert len(rows) <= 128
+    if observer_image:
+        return json.loads(observe(observer_image, "mapping", {"container_id": container_id,
+            "target": target, "pids": [int(row.strip()) for row in rows]}).stdout)
     found = []
     for row in rows:
         pid = int(row.strip())
@@ -155,7 +179,8 @@ def kernel_victim_records(lines, mapping, container_id):
                     and fields.get("pid") == str(pid))
         victim = re.search(rf"Memory cgroup out of memory: Killed process {pid}\b", message)
         if selector or victim:
-            narrowed = {"timestamp_us": item.get("__REALTIME_TIMESTAMP"), "message": message[:16384]}
+            narrowed = {"timestamp_us": item.get("__REALTIME_TIMESTAMP"),
+                        "monotonic_timestamp": item.get("__MONOTONIC_TIMESTAMP"), "message": message[:16384]}
             candidates.append(narrowed)
             (selectors if selector else victims).append(narrowed)
     return candidates, len(selectors) == 1 and len(victims) == 1
@@ -213,6 +238,7 @@ def execute(args):
     mapping = None
     ready = None
     creation_requested = False
+    observer_image = None
     started_wall = time.time()
     try:
         values = {line.split(':', 1)[0]: line.split(':', 1)[1].strip()
@@ -223,6 +249,10 @@ def execute(args):
         image = json.loads(command(["docker", "image", "inspect", args.image]).stdout)[0]
         image_id = image["Id"]
         assert re.fullmatch(r"sha256:[a-f0-9]{64}", image_id)
+        if args.observer_image:
+            observer_image = json.loads(command(["docker", "image", "inspect", args.observer_image]).stdout)[0]["Id"]
+            assert re.fullmatch(r"sha256:[a-f0-9]{64}", observer_image)
+            report["observer_image_id"] = observer_image
         create = ["docker", "create", "--name", name, "--memory=768m", "--memory-swap=768m",
                   "--cpus=2", "--pids-limit=128", "--cgroupns=private", "--ipc=private", "--network=none",
                   "--cap-drop=ALL", "--security-opt=no-new-privileges", "--user=10001:10001", "--ulimit=core=0",
@@ -247,7 +277,7 @@ def execute(args):
                 if result.returncode == 0:
                     ready = json.loads(result.stdout)
                     assert ready["nonce"] == nonce and ready["profile"] == args.profile
-                    mapping = host_mapping(container_id, ready["target"])
+                    mapping = host_mapping(container_id, ready["target"], observer_image)
                     report["target_mapping"] = mapping
                     report["stage"] = "allocation_and_recovery"
                     go = {"nonce": nonce, "target": ready["target"], "container_inspection_verified": True,
@@ -292,8 +322,14 @@ def execute(args):
                 command(["docker", "rm", container_id], check=False)
             if mapping:
                 try:
-                    journal = command(["journalctl", "-k", "--no-pager", "-n", "2000", "-o", "json",
-                                       "--since", "@" + str(int(started_wall))], check=False)
+                    if observer_image:
+                        journal = observe(observer_image, "kernel", {"container_id": container_id,
+                            "mapping": mapping, "since": started_wall})
+                        report["kernel_record_source"] = "daemon_host_read_only_observer"
+                    else:
+                        journal = command(["journalctl", "-k", "--no-pager", "-n", "2000", "-o", "json",
+                                           "--since", "@" + str(int(started_wall))], check=False)
+                        report["kernel_record_source"] = "host_kernel_journal"
                     report["kernel_journal_returncode"] = journal.returncode
                     if journal.returncode == 0:
                         records, verified = kernel_victim_records(journal.stdout, mapping, container_id)
@@ -339,9 +375,12 @@ def main():
     parser.add_argument("--image", required=True, help="Already built local private-fault image")
     parser.add_argument("--profile", choices=["direct_worker", "managed_helper"], required=True)
     parser.add_argument("--artifacts", type=Path, required=True, help="New, non-existing evidence directory")
+    parser.add_argument("--observer-image", help="Already built image for a separate read-only daemon-host observer")
     args = parser.parse_args()
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:@-]*", args.image):
         parser.error("invalid local image reference")
+    if args.observer_image and not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:@-]*", args.observer_image):
+        parser.error("invalid observer image reference")
     return execute(args)
 
 
