@@ -1,0 +1,275 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "engine": [
+      {
+        "id": "engine_contracts",
+        "name": "Validate locked product contracts",
+        "requires": [],
+        "command": "python3 scripts/check_contracts.py\npython3 -m unittest discover -s scripts/tests -p 'test_*.py'\n"
+      },
+      {
+        "id": "engine_base_image",
+        "name": "Build exact Rust, Edge, pgrx and PostgreSQL prototype",
+        "requires": [],
+        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --tag pg-qdrant-p0-${PGQ_RUN_ID} ."
+      },
+      {
+        "id": "engine_lexical_image",
+        "name": "Build the independent lexical candidate experiment",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0-lexical --build-arg PG_QDRANT_BASE_IMAGE=pg-qdrant-p0-${PGQ_RUN_ID} --tag pg-qdrant-p0-lexical-${PGQ_RUN_ID} ."
+      },
+      {
+        "id": "engine_4",
+        "name": "Characterize isolated Tantivy lexical primitives",
+        "requires": [
+          "engine_lexical_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-tantivy-run-${PGQ_RUN_ID} --memory=512m --memory-swap=512m \\\n  --pids-limit=64 --cpus=1 --network=none pg-qdrant-p0-lexical-${PGQ_RUN_ID} bash -c '\n    set -euo pipefail\n    ulimit -c 0\n    timeout --kill-after=5s 45s target/tantivy-probe/debug/pg-qdrant-tantivy-feasibility \\\n      > /src/artifacts/tantivy-probe.json\n    cat /src/artifacts/tantivy-probe.json\n  '\ndocker start --attach pg-qdrant-p0-tantivy-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_5",
+        "name": "Collect isolated lexical evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/tantivy\nif docker inspect pg-qdrant-p0-tantivy-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-tantivy-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/tantivy/\nfi\n"
+      },
+      {
+        "id": "engine_6",
+        "name": "Test Edge ENOSPC on a dedicated 32 MiB tmpfs",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-disk-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py\ndocker start --attach pg-qdrant-p0-disk-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_7",
+        "name": "Collect bounded disk-failure evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/enospc\nif docker inspect pg-qdrant-p0-disk-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-disk-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/enospc/\nfi\n"
+      },
+      {
+        "id": "engine_8",
+        "name": "Test full-text ENOSPC recovery on an exact 384 MiB tmpfs",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-disk-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text\ndocker start --attach pg-qdrant-p0-full-text-disk-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_9",
+        "name": "Observe a clean full-text reopen on a separate exact 384 MiB tmpfs",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-clean-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text --clean\ndocker start --attach pg-qdrant-p0-full-text-clean-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_10",
+        "name": "Require zero-write refusal of the unsupported 128 MiB full-text budget",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-capacity-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text --characterize-128-capacity-refusal\ndocker start --attach pg-qdrant-p0-full-text-capacity-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_11",
+        "name": "Collect full-text disk-failure evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/enospc-full-text\nif docker inspect pg-qdrant-p0-full-text-disk-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-full-text-disk-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/enospc-full-text/\nfi\nif docker inspect pg-qdrant-p0-full-text-clean-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-full-text-clean-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/enospc-full-text/\nfi\nif docker inspect pg-qdrant-p0-full-text-capacity-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-full-text-capacity-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/enospc-full-text/\nfi\n"
+      },
+      {
+        "id": "engine_12",
+        "name": "Run PostgreSQL integration probes as a non-root user",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none pg-qdrant-p0-${PGQ_RUN_ID}\ndocker start --attach pg-qdrant-p0-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_13",
+        "name": "Collect integration evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/normal\nif docker inspect pg-qdrant-p0-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/normal/\nfi\n"
+      },
+      {
+        "id": "engine_fault_image",
+        "name": "Build explicitly enabled disposable fault-test image",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults-${PGQ_RUN_ID} ."
+      },
+      {
+        "id": "engine_15",
+        "name": "Measure worker crash and PostgreSQL collateral recovery",
+        "requires": [
+          "engine_fault_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-fault-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none pg-qdrant-p0-faults-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-faults.sh\ndocker start --attach pg-qdrant-p0-fault-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_16",
+        "name": "Collect fault-test evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/faults\nif docker inspect pg-qdrant-p0-fault-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-fault-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/faults/\nfi\n"
+      },
+      {
+        "id": "engine_helper_normal_image",
+        "name": "Build the managed-helper comparison without fault injection",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} ."
+      },
+      {
+        "id": "engine_18",
+        "name": "Test the normal helper protocol",
+        "requires": [
+          "engine_helper_normal_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-normal-pipes-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} python3 crates/pg_qdrant-helper/tests/probe.py \\\n  target/debug/pg_qdrant_p0_helper --out /src/artifacts/helper-pipes.json\ndocker start --attach pg-qdrant-p0-helper-normal-pipes-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_19",
+        "name": "Test the normal helper SQL profile",
+        "requires": [
+          "engine_helper_normal_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-normal-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p0.sh\ndocker start --attach pg-qdrant-p0-helper-normal-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_20",
+        "name": "Collect normal managed-helper evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/helper-normal\nif docker inspect pg-qdrant-p0-helper-normal-pipes-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-helper-normal-pipes-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/helper-normal/\nfi\nif docker inspect pg-qdrant-p0-helper-normal-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-helper-normal-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/helper-normal/\nfi\n"
+      },
+      {
+        "id": "engine_helper_fault_image",
+        "name": "Build the explicit managed-helper fault comparison",
+        "requires": [
+          "engine_base_image"
+        ],
+        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper-${PGQ_RUN_ID} ."
+      },
+      {
+        "id": "engine_22",
+        "name": "Test private helper protocol and process isolation",
+        "requires": [
+          "engine_helper_fault_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-fault-pipes-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} python3 crates/pg_qdrant-helper/tests/probe.py \\\n  target/debug/pg_qdrant_p0_helper --faults --out /src/artifacts/helper-fault-pipes.json\ndocker start --attach pg-qdrant-p0-helper-fault-pipes-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_23",
+        "name": "Test private helper SQL behavior and PostgreSQL recovery",
+        "requires": [
+          "engine_helper_fault_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-faults.sh\ndocker start --attach pg-qdrant-p0-helper-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_24",
+        "name": "Collect managed-helper evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/helper\nif docker inspect pg-qdrant-p0-helper-fault-pipes-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-helper-fault-pipes-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/helper/\nfi\nif docker inspect pg-qdrant-p0-helper-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p0-helper-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/helper/\nfi\n"
+      },
+      {
+        "id": "engine_25",
+        "name": "Test installed source-to-Edge flush and exact ACK",
+        "requires": [
+          "engine_helper_fault_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-product-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p1.sh\ndocker start --attach pg-qdrant-p1-product-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_26",
+        "name": "Collect installed P1 and crash-replay evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/p1-product\nif docker inspect pg-qdrant-p1-product-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p1-product-${PGQ_RUN_ID}:/src/artifacts/. artifacts/p1-product/\nfi\n"
+      },
+      {
+        "id": "engine_27",
+        "name": "Test installed exact ACK under actual Edge storage exhaustion",
+        "requires": [
+          "engine_helper_fault_image"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-storage-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p1-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_P1_STORAGE_TEST=1 --env PG_QDRANT_P1_DISK_DIR=/pgq-p1-faults \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p1.sh\ndocker start --attach pg-qdrant-p1-storage-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "engine_28",
+        "name": "Collect installed storage-failure evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/p1-storage\nif docker inspect pg-qdrant-p1-storage-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p1-storage-${PGQ_RUN_ID}:/src/artifacts/. artifacts/p1-storage/\nfi\n"
+      },
+      {
+        "id": "engine_29",
+        "name": "Observe kernel OOM and direct-worker PostgreSQL recovery",
+        "requires": [
+          "engine_fault_image",
+          "engine_helper_fault_image"
+        ],
+        "command": "python3 scripts/run_oom_container.py --image pg-qdrant-p0-faults-${PGQ_RUN_ID} --profile direct_worker --artifacts artifacts/oom-direct"
+      },
+      {
+        "id": "engine_30",
+        "name": "Observe kernel OOM and managed-helper containment",
+        "requires": [
+          "engine_fault_image",
+          "engine_helper_fault_image"
+        ],
+        "command": "python3 scripts/run_oom_container.py --image pg-qdrant-p0-helper-${PGQ_RUN_ID} --profile managed_helper --artifacts artifacts/oom-helper"
+      }
+    ],
+    "ledger": [
+      {
+        "id": "ledger_1",
+        "name": "Verify tracked dependency and product contracts",
+        "requires": [],
+        "command": "python3 scripts/check_contracts.py\npython3 -m unittest discover -s scripts/tests -p 'test_retry_snapshot_build.py'\n"
+      },
+      {
+        "id": "ledger_2",
+        "name": "Build exact P0 PostgreSQL 17 and embedded Edge dependencies",
+        "requires": [],
+        "command": "python3 scripts/retry_snapshot_build.py docker build -f Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} -t pg-qdrant-p1-base-${PGQ_RUN_ID} ."
+      },
+      {
+        "id": "ledger_3",
+        "name": "Run transactional capture, rollback and two-session tests",
+        "requires": [
+          "ledger_2"
+        ],
+        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p1-base-${PGQ_RUN_ID} bash experiments/p1-ledger/run.sh\ndocker start --attach pg-qdrant-p1-run-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "ledger_4",
+        "name": "Collect SQL and concurrency evidence",
+        "requires": [],
+        "command": "mkdir -p artifacts/p1\nif docker inspect pg-qdrant-p1-run-${PGQ_RUN_ID} >/dev/null 2>&1; then\n  docker cp pg-qdrant-p1-run-${PGQ_RUN_ID}:/src/artifacts/. artifacts/p1/\nfi\n"
+      }
+    ],
+    "static": [
+      {
+        "id": "static_1",
+        "name": "Verify existing source/contract ledgers",
+        "requires": [],
+        "command": "python3 scripts/check_contracts.py"
+      },
+      {
+        "id": "static_2",
+        "name": "Run Python regressions and syntax checks",
+        "requires": [],
+        "command": "python3 -m unittest discover -s scripts/tests -p 'test_*.py'\npython3 -m compileall -q scripts\n"
+      },
+      {
+        "id": "static_3",
+        "name": "Ensure an unverified preview cannot be released",
+        "requires": [],
+        "command": "if python3 scripts/check_release_gate.py \\\n      --attestation packaging/release-attestation.example.json; then\n  echo 'Release gate incorrectly allowed draft release' >&2\n  exit 1\nfi\necho 'Expected: incomplete P0-P5 draft release rejected'\n"
+      }
+    ]
+  }
+}

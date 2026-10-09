@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Run one explicitly selected, bounded OOM comparison in a fresh CI container.
 
-Never run positive OOM locally. Image builds are separate; this command requires
-an already built local image and never requests extra privileges or host mounts.
+Run positive OOM only in its guarded disposable container, including local act
+CI. Image builds are separate; this command requires an already built local
+image and never requests extra privileges or host mounts.
 """
 from __future__ import annotations
 

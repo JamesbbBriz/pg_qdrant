@@ -1,0 +1,23 @@
+name: Local verification
+on:
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: /tmp/pgq-ci-source
+    steps:
+      - name: Copy read-only input to Linux workspace
+        working-directory: /tmp
+        run: |
+          mkdir -p /tmp/pgq-ci-source
+          cp -a /pgq-input/. /tmp/pgq-ci-source/
+      - name: Verify selected snapshot
+        run: python3 scripts/verify.py --profile "$PGQ_PROFILE"
+      - name: Print verification evidence
+        if: always()
+        run: |
+          mkdir -p /tmp/pgq-ci-evidence
+          cp -a artifacts/. /tmp/pgq-ci-evidence/
+          python3 -c 'import json; r=json.load(open("artifacts/verify-report.json")); r["snapshot"].pop("files"); print(json.dumps(r,indent=2))'

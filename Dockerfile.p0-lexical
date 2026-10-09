@@ -1,6 +1,7 @@
 # Independent P0 candidate experiment, after the core image has built.
 # A lexical build failure must not prevent the core SQL/fault comparisons.
-FROM pg-qdrant-p0
+ARG PG_QDRANT_BASE_IMAGE=pg-qdrant-p0
+FROM ${PG_QDRANT_BASE_IMAGE}
 USER root
 RUN cargo fmt --manifest-path experiments/tantivy-probe/Cargo.toml -- --check \
     && python3 experiments/tantivy-probe/inventory.py --check \

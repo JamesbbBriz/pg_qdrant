@@ -5,7 +5,9 @@
   "ci": {
     "checkout_sha": null,
     "conclusion": "not_run",
-    "url": null
+    "runner": "act-local",
+    "run_report": {"path": null, "sha256": null},
+    "verify_report": {"path": null, "sha256": null}
   },
   "gates": {},
   "capabilities": {},
