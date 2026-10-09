@@ -23,6 +23,7 @@ tantivy-fst = "=0.5.0"
 pg-qdrant-protocol = { path = "../pg_qdrant-protocol" }
 pg-qdrant-edge-probe = { path = "../edge-probe" }
 serde_json = "=1.0.151"
+sha2 = "=0.11.0"
 libc = "=0.2.189"
 
 [lints.rust]

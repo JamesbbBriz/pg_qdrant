@@ -100,6 +100,22 @@ def run(sql,ready,ticket_from,checks,spawn=None):
     assert limited['matched_points']==1 and limited['hits'][0]['snippet']['status']=='fragment_budget_exceeded',limited
     sql("UPDATE bounded_lexical SET body='identifier only' WHERE id='ERR-0042'");replay()
     checks.append('native positive-term snippets preserve original UTF8 bytes/case/markup without HTML, bind current source fingerprint, omit ambiguous absolute offsets and explicitly bound fragments/ranges')
+    # Deliberately corrupt the private derived projection in this disposable
+    # superuser fixture, preserving its trusted source fingerprint and identity.
+    # The real consumer writes those bytes into Edge; no native response is mocked.
+    sql("UPDATE qdrant_internal.source_state SET body='forged native secret',revision=revision+1 "
+        "WHERE index_name='bounded_lexical' AND tagged_key->>'value'='ERR-0042'; "
+        "INSERT INTO qdrant_internal.outbox(index_name,source_xid,tagged_key,point_id,incarnation,revision,operation,fingerprint,projection,origin) "
+        "SELECT index_name,pg_current_xact_id(),tagged_key,point_id,incarnation,revision,'upsert',fingerprint,jsonb_build_object('body',body),'source_write' "
+        "FROM qdrant_internal.source_state WHERE index_name='bounded_lexical' AND tagged_key->>'value'='ERR-0042'")
+    ready('bounded_lexical')
+    for q in ['transaction','forged']:
+        failure=sql(statement(q=q,kind='syntax'),ok=False)
+        assert 'XX000' in failure and 'lexical source body fingerprint mismatch' in failure,failure
+    sql("UPDATE bounded_lexical SET body='identifier repaired' WHERE id='ERR-0042'");ready('bounded_lexical')
+    assert keys(query(q='repaired',kind='syntax'))=={'ERR-0042'}
+    sql("UPDATE bounded_lexical SET body='identifier only' WHERE id='ERR-0042'");replay()
+    checks.append('actual committed derived-body corruption with intact identity/fingerprint rejects the whole lexical result before candidate truncation; ordinary source DML repairs it')
     for kw in [dict(q='ERR-0042'),dict(q='中文'),dict(q='a'),dict(q='two words'),dict(kind='unknown'),dict(slop=1),
                dict(q='transaction recovery',kind='proximity',slop=9),dict(k=101),dict(k=0),dict(options={'unknown':1})]:
         assert '22023' in sql(statement(**kw),ok=False),kw
