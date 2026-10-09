@@ -2765,6 +2765,7 @@ dependencies = [
  "pg-qdrant-protocol",
  "qdrant-edge",
  "serde_json",
+ "sha2",
  "tantivy",
  "tantivy-fst",
 ]

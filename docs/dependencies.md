@@ -12,6 +12,7 @@ Status: active dependency and upgrade contract. The [machine-readable baseline](
 | Tokenization used by Edge | Edge-owned dependency graph and analyzer configuration | Engine adapter and lexical policy |
 | Application vector generation | Optional application/model integration, outside the core build | Model contract |
 | Rich lexical gaps | Direct Tantivy `=0.26.2` for bounded query-local RAM fuzzy/proximity; [ADR 0006](adr/0006-query-local-lexical.md); full lexical acceptance open | Lexical adapter decision |
+| Lexical body integrity | Direct `sha2 =0.11.0`, already present in the locked registry graph; actual native body bytes are checked before lexical indexing | Query/source proof |
 | SQL schema and migrations | Versioned project-owned API | Extension lifecycle |
 
 The core integration should use published Edge types and methods. The `qdrant-client` REST/gRPC SDK is not the embedded engine dependency. FastEmbed/ONNX and model downloads are not mandatory dependencies for local BM25 or BYOV retrieval.

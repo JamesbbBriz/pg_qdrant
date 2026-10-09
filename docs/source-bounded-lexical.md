@@ -79,6 +79,10 @@ PostgreSQL. RLS, non-READ-COMMITTED snapshots and uncommitted source changes are
 refused. Generation, epoch, identity, incarnation, revision, text/payload
 fingerprints and durable receipts are rechecked before any result is exposed.
 Concurrent source changes invalidate the whole response.
+Before lexical indexing, the helper recomputes SHA-256 over every filtered
+native body, including bodies outside the final top-k, and compares it with
+the same identity proof later checked against PostgreSQL. Damaged body bytes
+with an intact stored fingerprint reject the whole query with `XX000`.
 
 Results include typed source keys, rank, native scores, exact matched-point
 count within the filtered snapshot, snapshot scope, generation, epoch and

@@ -3,7 +3,7 @@
   "evidence_kind": "cargo_locked_profile_resolution_comparison",
   "target": "x86_64-unknown-linux-gnu",
   "baseline_profile": "direct-normal",
-  "cargo_lock_sha256": "492e34e2852978c8587cd605e1ce52cca448bfe2fa92e2dc0d7149e380639c7a",
+  "cargo_lock_sha256": "79666ddb27e6f87bc84f1711bef5667bfe23422617d08c6f9131057f3f074e9c",
   "manifest_inputs": [
     {
       "path": "Cargo.toml",
@@ -19,7 +19,7 @@
     },
     {
       "path": "crates/pg_qdrant-helper/Cargo.toml",
-      "sha256": "44fa12a60c5f25946eaa41f60b30068fe00ff5c8e7358408510d4c4fee08522a"
+      "sha256": "d62c0a6eb4d50448e7949b2c9e7f7fd42e925fe32549dab695434618b7d30ff6"
     },
     {
       "path": "crates/pg_qdrant-protocol/Cargo.toml",
@@ -40,7 +40,7 @@
         "pg_qdrant/pg17",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "c96be75258f769f86d5bf33e77977fa06cd7fe60561d4a7653056c31778184ea",
+      "full_inventory_sha256": "217c721d8bd824a2bcce75438d2363a2a154984b6818e530b24352fc0ed3861b",
       "package_count": 482,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
@@ -73,6 +73,7 @@
             "pg-qdrant-protocol@0.0.1",
             "qdrant-edge@0.8.0",
             "serde_json@1.0.151",
+            "sha2@0.11.0",
             "tantivy-fst@0.5.0",
             "tantivy@0.26.2"
           ]
@@ -125,7 +126,7 @@
         "pg_qdrant/p0-fault-injection",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "3695622d1101df4cbf2670c63c2b6e04c69496f21e6fd256aeacbad37ec20a83",
+      "full_inventory_sha256": "b3435ea170d49496307c1791ffcc65b2624fa9e810f65aeb14d27a5c89cc95a1",
       "package_count": 482,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
@@ -160,6 +161,7 @@
             "pg-qdrant-protocol@0.0.1",
             "qdrant-edge@0.8.0",
             "serde_json@1.0.151",
+            "sha2@0.11.0",
             "tantivy-fst@0.5.0",
             "tantivy@0.26.2"
           ]
@@ -234,7 +236,7 @@
         "pg_qdrant/p0-managed-helper",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "40471e8f6785fcf074543a54c54c2e9147c9f490296b89695fe345f8786641c1",
+      "full_inventory_sha256": "2d6bcfa55c798953eb8695172e62f8903fe08cd7eac80a359707531c4bb76e3b",
       "package_count": 482,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
@@ -267,6 +269,7 @@
             "pg-qdrant-protocol@0.0.1",
             "qdrant-edge@0.8.0",
             "serde_json@1.0.151",
+            "sha2@0.11.0",
             "tantivy-fst@0.5.0",
             "tantivy@0.26.2"
           ]
@@ -334,7 +337,7 @@
         "pg-qdrant-helper/p0-fault-injection",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "33b46b20d015e09a3054b9f56278b95e3179c7b354085015da3b820fb044ec05",
+      "full_inventory_sha256": "d4cf61563edc1a8d72a77b479a92cce7d0795942f412b26686ff9db32547221b",
       "package_count": 482,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
@@ -371,6 +374,7 @@
             "pg-qdrant-protocol@0.0.1",
             "qdrant-edge@0.8.0",
             "serde_json@1.0.151",
+            "sha2@0.11.0",
             "tantivy-fst@0.5.0",
             "tantivy@0.26.2"
           ]

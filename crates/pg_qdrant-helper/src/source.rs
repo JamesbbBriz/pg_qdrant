@@ -18,6 +18,7 @@ use qdrant_edge::{
     WithPayloadInterface,
 };
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, HashMap},
     path::PathBuf,
@@ -1094,6 +1095,18 @@ impl SourceOwner {
                     "lexical candidates cannot combine statistics operations",
                 ));
             }
+            let fingerprints: HashMap<_, _> = proof
+                .iter()
+                .map(|record| {
+                    let id = record["id"]
+                        .as_u64()
+                        .ok_or_else(|| error("invalid lexical proof ID"))?;
+                    let fingerprint = record["payload"]["fingerprint"]
+                        .as_str()
+                        .ok_or_else(|| error("missing lexical proof fingerprint"))?;
+                    Ok((id, fingerprint))
+                })
+                .collect::<Result<_, ProbeError>>()?;
             let mut request = qdrant_edge::ScrollRequest::new();
             request.limit = Some(32);
             request.filter = Some(filter.clone());
@@ -1128,6 +1141,16 @@ impl SourceOwner {
                             "lexical source snapshot exceeds 1 MiB or 1000 points",
                             "No partial lexical result is returned.",
                         ));
+                    }
+                    // The metadata proof alone cannot detect damaged native body
+                    // bytes. Bind the actual lexical input to that same proof;
+                    // PostgreSQL then compares it with the authoritative source.
+                    let actual = Sha256::digest(body.as_bytes())
+                        .iter()
+                        .map(|byte| format!("{byte:02x}"))
+                        .collect::<String>();
+                    if fingerprints.get(&id).copied() != Some(actual.as_str()) {
+                        return Err(error("lexical source body fingerprint mismatch"));
                     }
                     documents.push((id, body.to_owned()));
                 }
@@ -1659,6 +1682,108 @@ mod tests {
     }
 
     use pg_qdrant_protocol::{SourceEvent, SparseValues};
+
+    #[test]
+    fn lexical_body_bytes_must_match_the_same_identity_proof_before_top_k() {
+        let root = std::env::temp_dir().join(format!(
+            "pgq-lexical-integrity-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let mut owner = SourceOwner::new(root.clone()).unwrap();
+        let generation = "00000000-0000-0000-0000-000000000001".to_owned();
+        let epoch = "00000000-0000-0000-0000-000000000002".to_owned();
+        let events = ["checksum Caf\u{e9}", "checksum second"]
+            .into_iter()
+            .enumerate()
+            .map(|(n, body)| SourceEvent {
+                event_id: n as u64 + 1,
+                point_id: n as u64 + 1,
+                revision: 1,
+                incarnation: generation.clone(),
+                fingerprint: Some(
+                    Sha256::digest(body.as_bytes())
+                        .iter()
+                        .map(|byte| format!("{byte:02x}"))
+                        .collect::<String>(),
+                ),
+                key: json!({"type":"bigint","value":(n+1).to_string()}),
+                body: Some(body.into()),
+                payload: Some(BTreeMap::new()),
+                payload_fingerprint: Some("0".repeat(64)),
+                vectors: BTreeMap::new(),
+            })
+            .collect();
+        let batch = SourceBatch {
+            source_contract_version: SOURCE_CONTRACT_VERSION,
+            index_id: 1,
+            generation: generation.clone(),
+            storage_epoch: epoch.clone(),
+            consumer_id: epoch.clone(),
+            task_id: None,
+            retire: false,
+            representations: BTreeMap::new(),
+            payload_contract: BTreeMap::new(),
+            events,
+        };
+        assert_eq!(
+            owner.apply(batch.clone()).unwrap()["event_ids"],
+            json!([1, 2])
+        );
+        let query = |owner: &SourceOwner, q: &str| {
+            owner.statistics_with_lexical(
+                1,
+                &generation,
+                &epoch,
+                vec![1, 2],
+                None,
+                1,
+                None,
+                None,
+                Some(SourceLexical {
+                    q: q.into(),
+                    kind: "syntax".into(),
+                    slop: 0,
+                    top_k: 1,
+                }),
+                SourcePredicates::default(),
+            )
+        };
+        assert_eq!(
+            query(&owner, "checksum").unwrap()["lexical"]["matched_points"],
+            2
+        );
+        let mut corrupt = batch.clone();
+        corrupt.events = vec![batch.events[1].clone()];
+        corrupt.events[0].event_id = 3;
+        corrupt.events[0].body = Some("forged native secret".into());
+        owner.apply(corrupt).unwrap();
+        let proof = owner.retrieve(1, &generation, &epoch, vec![2]).unwrap();
+        assert_eq!(
+            proof[0]["payload"]["fingerprint"],
+            batch.events[1].fingerprint.clone().unwrap()
+        );
+        for q in ["checksum", "forged"] {
+            let failure = query(&owner, q).unwrap_err();
+            assert_eq!(failure.code, "source_engine_error");
+            assert!(
+                failure
+                    .message
+                    .contains("lexical source body fingerprint mismatch")
+            );
+        }
+        owner.apply(batch).unwrap();
+        assert_eq!(
+            query(&owner, "checksum").unwrap()["lexical"]["matched_points"],
+            2
+        );
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn typed_payload_is_indexed_replaced_and_guarded_by_generation() {
