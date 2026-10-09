@@ -29,13 +29,13 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Build exact Rust, Edge, pgrx and PostgreSQL prototype
         id: base_image
-        run: docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --tag pg-qdrant-p0 .
+        run: python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --tag pg-qdrant-p0 .
       # Each experiment depends on its image, not unrelated earlier experiments.
       # A failed experiment still fails the job; no continue-on-error is used.
       - name: Build the independent lexical candidate experiment
         id: lexical_image
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
-        run: docker build --file Dockerfile.p0-lexical --tag pg-qdrant-p0-lexical .
+        run: python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0-lexical --tag pg-qdrant-p0-lexical .
       - name: Characterize isolated Tantivy lexical primitives
         if: ${{ !cancelled() && steps.lexical_image.outcome == 'success' }}
         run: |
@@ -122,7 +122,7 @@ jobs:
       - name: Build explicitly enabled disposable fault-test image
         id: fault_image
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
-        run: docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .
+        run: python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults .
       - name: Measure worker crash and PostgreSQL collateral recovery
         if: ${{ !cancelled() && steps.fault_image.outcome == 'success' }}
         run: |
@@ -138,7 +138,7 @@ jobs:
       - name: Build the managed-helper comparison without fault injection
         id: helper_normal_image
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
-        run: docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal .
+        run: python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal .
       - name: Test the normal helper protocol
         if: ${{ !cancelled() && steps.helper_normal_image.outcome == 'success' }}
         run: |
@@ -165,7 +165,7 @@ jobs:
       - name: Build the explicit managed-helper fault comparison
         id: helper_fault_image
         if: ${{ !cancelled() && steps.base_image.outcome == 'success' }}
-        run: docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper .
+        run: python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${{ github.sha }} --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper .
       - name: Test private helper protocol and process isolation
         if: ${{ !cancelled() && steps.helper_fault_image.outcome == 'success' }}
         run: |
