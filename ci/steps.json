@@ -211,7 +211,7 @@
           "engine_fault_image",
           "engine_helper_fault_image"
         ],
-        "command": "python3 scripts/run_oom_container.py --image pg-qdrant-p0-faults-${PGQ_RUN_ID} --profile direct_worker --artifacts artifacts/oom-direct --observer-image pg-qdrant-p0-faults-${PGQ_RUN_ID}"
+        "command": "python3 scripts/run_oom_container.py --image pg-qdrant-p0-faults-${PGQ_RUN_ID} --profile direct_worker --artifacts artifacts/oom-direct --observer-image pg-qdrant-p0-faults-${PGQ_RUN_ID} --kernel-task-observer"
       },
       {
         "id": "engine_30",
@@ -220,7 +220,7 @@
           "engine_fault_image",
           "engine_helper_fault_image"
         ],
-        "command": "python3 scripts/run_oom_container.py --image pg-qdrant-p0-helper-${PGQ_RUN_ID} --profile managed_helper --artifacts artifacts/oom-helper --observer-image pg-qdrant-p0-faults-${PGQ_RUN_ID}"
+        "command": "python3 scripts/run_oom_container.py --image pg-qdrant-p0-helper-${PGQ_RUN_ID} --profile managed_helper --artifacts artifacts/oom-helper --observer-image pg-qdrant-p0-faults-${PGQ_RUN_ID} --kernel-task-observer"
       }
     ],
     "ledger": [
