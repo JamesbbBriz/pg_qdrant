@@ -134,3 +134,10 @@ Index removal returns a committed cleanup task rather than equating catalog
 deletion with native storage deletion. Rollback performs no native retirement;
 owner changes preserve uncertain epochs and report failure. Await the returned
 task before uninstalling. See the generation lifecycle for the full boundary.
+
+After a native transport failure, the supervisor checks its current connection
+before claiming another source batch. A cleared connection cannot receive work
+based on an earlier readiness snapshot. The installed fault regression queues
+two indexes, verifies that the PostgreSQL supervisor survives native owner
+replacement, and checks both exact durable tickets and current-only search.
+Old storage epochs retain their explicit incomplete-cleanup outcome.
