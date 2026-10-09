@@ -24,11 +24,13 @@ point IDs, payload selectors, paths, vectors and filters are not public inputs.
 Malformed or over-budget input raises `22023`.
 
 Items preserve normalized request order. `found` includes `source_key`,
-`point_id`, `incarnation`, `revision`, `source_fingerprint` and `excerpt`.
+`point_id`, `incarnation`, `revision`, `source_fingerprint`, `excerpt`,
+`attributes` and `payload_fingerprint`. Attributes are the current authorized
+[declared scalar projection](source-payload.md), or an empty object.
 `source_missing` means the current source/ledger has no live identity;
 `native_missing` means no record for its current point ID was retrieved;
 `native_stale` means native metadata does not match the current incarnation,
-revision, key or fingerprint. Non-found items contain only the requested
+revision, key, text fingerprint or payload fingerprint. Non-found items contain only the requested
 key and status. They are not successful durability receipts. A newly reused
 primary key cannot expose the old incarnation's point or text.
 
@@ -39,7 +41,7 @@ reported independently; there is no claim of global search coverage, count,
 pagination, ordering by payload, scroll or sampling.
 
 The current owner-domain policy checks index ownership and source/key/text
-SELECT before native work and again before exposure. Unsupported RLS raises
+and declared payload column SELECT before native work and again before exposure. Unsupported RLS raises
 `0A000`; capture/source drift, dirty or unavailable generations, and a changed
 generation/epoch/consumer/helper identity raise `55000`. Catalog and source
 binding locks use `NOWAIT` (`55P03` on a conflict); they span native execution
@@ -54,7 +56,7 @@ retains ownership until the native operation actually completes. Callers must
 not interpret cancellation as completion or start a second owner. Normal and
 private-fault builds use the same retrieval route; faults remain opt-in.
 
-Development source protocol 14 requires matching extension/helper/install SQL
+Development source protocol 15 requires matching extension/helper/install SQL
 and a fresh development catalog. Direct dependencies and lockfile are unchanged.
 This implements the retrieve portion of Q10. Order-by, scroll, sampling,
 complete P4-READ combinations, quality, actual upgrade/rollback and public

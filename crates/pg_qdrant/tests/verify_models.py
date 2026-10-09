@@ -9,13 +9,14 @@ def run(sql, ready, ticket_from, checks):
                     normalization='unit', storage_precision='float32', vector_field='embedding',
                     fingerprint_field='embedding_source', incarnation_field='embedding_incarnation',
                     model_id_field='embedding_model', model_version_field='embedding_version')
-    settings = {'text': {'fields': ['body']}, 'representations': {'dense': contract}}
+    settings = {'text': {'fields': ['body']}, 'representations': {'dense': contract},
+                'payload': {'quantity': {'field': 'quantity', 'kind': 'integer'}}}
     second = dict(contract, model_version='r2', vector_field='embedding2',fingerprint_field='embedding_source2',
                   incarnation_field='embedding_incarnation2',model_id_field='embedding_model2',model_version_field='embedding_version2')
     settings['representations']['second']=second
     sql('CREATE TABLE model_docs(id bigint PRIMARY KEY,body text NOT NULL,embedding jsonb,'
         'embedding_source text,embedding_incarnation uuid,embedding_model text,embedding_version text,ignored text,'
-        'embedding2 jsonb,embedding_source2 text,embedding_incarnation2 uuid,embedding_model2 text,embedding_version2 text)')
+        'embedding2 jsonb,embedding_source2 text,embedding_incarnation2 uuid,embedding_model2 text,embedding_version2 text,quantity bigint DEFAULT 0)')
     sql("INSERT INTO model_docs(id,body,ignored) VALUES(1,'blue whale','private unrelated value'),(2,'orange tree',NULL)")
     bad = json.loads(json.dumps(settings))
     bad['representations']['dense']['dimensions'] = 5000
@@ -50,6 +51,14 @@ def run(sql, ready, ticket_from, checks):
     assert sql("SELECT count(*) FROM qdrant_internal.representation_state WHERE index_name='model_docs' AND representation_fingerprint ~ '^[0-9a-f]{64}$'")=='2'
     assert sql("SELECT count(*) FROM qdrant_internal.outbox WHERE index_name='model_docs' AND projection::text LIKE '%private unrelated value%'")=='0'
     checks += ['declared dense contracts, failed registration rollback, encoding inputs and real Edge semantic SQL']
+    before=json.loads(sql("SELECT qdrant.retrieve('model_docs','[\"1\"]')"))['items'][0]
+    ticket=ticket_from(sql("BEGIN; UPDATE model_docs SET quantity=7 WHERE id=1; SELECT qdrant.track_changes('model_docs'); COMMIT"))
+    assert json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',30000)"))['durable']
+    after=json.loads(sql("SELECT qdrant.retrieve('model_docs','[\"1\"]')"))['items'][0]
+    assert after['source_fingerprint']==before['source_fingerprint'] and after['payload_fingerprint']!=before['payload_fingerprint'] and after['attributes']['quantity']==7
+    assert semantic()=='["1", "2"]'
+    assert json.loads(sql("SELECT qdrant.index_status('model_docs')"))['representations']['dense']['rows']['ready']==2
+    checks.append('payload-only source update preserves ready model output and actual native semantic results')
 
     def hybrid_goldens(q='blue'):
         branches=[]

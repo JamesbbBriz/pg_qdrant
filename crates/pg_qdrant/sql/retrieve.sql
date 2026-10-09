@@ -74,10 +74,13 @@ BEGIN
      OR s.revision IS DISTINCT FROM (h.hit #>> ''{payload,revision}'')::bigint
      OR s.tagged_key IS DISTINCT FROM h.hit #> ''{payload,source_key}''
      OR s.fingerprint IS DISTINCT FROM h.hit #>> ''{payload,fingerprint}''
+     OR s.payload_fingerprint IS DISTINCT FROM h.hit #>> ''{payload,payload_fingerprint}''
+     OR encode(sha256(convert_to(qdrant_internal.payload_projection($2,t)::text,''UTF8'')),''hex'') IS DISTINCT FROM s.payload_fingerprint
      OR encode(sha256(convert_to(t.%I,''UTF8'')),''hex'') IS DISTINCT FROM s.fingerprint THEN
        jsonb_build_object(''source_key'',k.value,''status'',''native_stale'')
    ELSE jsonb_build_object(''source_key'',k.value,''status'',''found'',''excerpt'',left(t.%I,240),
-     ''point_id'',s.point_id,''revision'',s.revision,''incarnation'',s.incarnation,''source_fingerprint'',s.fingerprint) END
+     ''point_id'',s.point_id,''revision'',s.revision,''incarnation'',s.incarnation,''source_fingerprint'',s.fingerprint,
+     ''attributes'',qdrant_internal.payload_projection($2,t),''payload_fingerprint'',s.payload_fingerprint) END
    ORDER BY k.ordinality)
    FROM jsonb_array_elements_text($1) WITH ORDINALITY k(value,ordinality)
    LEFT JOIN ONLY %s t ON t.%I=k.value::%s

@@ -408,12 +408,15 @@ BEGIN
        ''incarnation'',v.hit #>> ''{payload,incarnation}'',
        ''revision'',v.hit #>> ''{payload,revision}'',
        ''source_fingerprint'',v.hit #>> ''{payload,fingerprint}'',
+       ''payload_fingerprint'',v.hit #>> ''{payload,payload_fingerprint}'',
        ''statistics_scope'',''bounded_candidates'',''release_supported'',false)
        FROM jsonb_array_elements($1) WITH ORDINALITY v(hit,ordinality)
        JOIN ONLY %s t ON t.%I=(v.hit #>> ''{payload,source_key,value}'')::%s
        JOIN qdrant_internal.source_state s ON s.index_name=$4 AND s.point_id=(v.hit->>''id'')::bigint
        WHERE NOT s.tombstone AND s.incarnation::text=v.hit #>> ''{payload,incarnation}''
          AND s.revision=(v.hit #>> ''{payload,revision}'')::bigint
+         AND s.payload_fingerprint=v.hit #>> ''{payload,payload_fingerprint}''
+         AND encode(sha256(convert_to(qdrant_internal.payload_projection($4,t)::text,''UTF8'')),''hex'')=s.payload_fingerprint
          AND encode(sha256(convert_to(t.%I,''UTF8'')),''hex'')=v.hit #>> ''{payload,fingerprint}''
        ORDER BY v.ordinality LIMIT $5',
        i.key_field,i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.text_field)

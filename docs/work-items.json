@@ -7274,6 +7274,22 @@
           "sql_product_integration_verified": false,
           "release_supported": false,
           "verified_source_commit": "88885db08d17c074af097ddca14bc85d6978980c"
+        },
+        {
+          "observed_on": "2026-10-09",
+          "level": "SQL-integration-verified",
+          "status": "passed",
+          "source": "docs/source-payload.md",
+          "scope": "Declared keyword/int64/finite-float/bool source columns join the installed transaction ledger and native typed field indexes with an independent payload fingerprint. Actual installed scoped tests cover payload-only model freshness, exact durable ticket ACK, bounded multi-envelope delivery, registration rollback, permissions, DDL invalidation, deletion/key reuse and shadow generation rebuilding. Native tests inspect real schemas, filtered counts, replacement and deletion. Full synchronization, fault matrix, configuration/upgrade, generic payload query and release acceptance remain open.",
+          "source_paths": [
+            "crates/pg_qdrant/sql/payload.sql",
+            "crates/pg_qdrant-helper/src/payload.rs",
+            "crates/pg_qdrant/tests/verify_payload.py",
+            "crates/pg_qdrant/tests/verify_models.py"
+          ],
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",

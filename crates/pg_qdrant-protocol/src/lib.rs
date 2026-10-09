@@ -18,7 +18,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 14;
+pub const SOURCE_CONTRACT_VERSION: u32 = 15;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
@@ -256,6 +256,8 @@ pub struct SourceEvent {
     pub fingerprint: Option<String>,
     pub key: Value,
     pub body: Option<String>,
+    pub payload: Option<BTreeMap<String, Value>>,
+    pub payload_fingerprint: Option<String>,
     pub vectors: BTreeMap<String, RepresentationVector>,
 }
 
@@ -273,6 +275,16 @@ pub struct SourceBatch {
     pub retire: bool,
     pub events: Vec<SourceEvent>,
     pub representations: BTreeMap<String, RepresentationContract>,
+    pub payload_contract: BTreeMap<String, PayloadKind>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PayloadKind {
+    Keyword,
+    Integer,
+    Float,
+    Bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -608,6 +620,26 @@ mod search_contract_tests {
         let value = json!({"operation":"source_search","index_id":1,
             "generation":"g","storage_epoch":"e","q":"word","top_k":10,"fusion":"sum"});
         assert!(serde_json::from_value::<Operation>(value).is_err());
+    }
+
+    #[test]
+    fn source_payload_contract_is_typed_and_cannot_be_omitted() {
+        let value = json!({"source_contract_version":SOURCE_CONTRACT_VERSION,"index_id":1,
+            "generation":"g","storage_epoch":"e","consumer_id":"c","events":[],
+            "representations":{},"payload_contract":{"class":"keyword","qty":"integer","price":"float","active":"bool"}});
+        let parsed: SourceBatch = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(parsed.payload_contract["qty"], PayloadKind::Integer);
+        for kind in ["array", "geo", "text", "uuid", "datetime"] {
+            let mut bad = value.clone();
+            bad["payload_contract"]["class"] = json!(kind);
+            assert!(serde_json::from_value::<SourceBatch>(bad).is_err());
+        }
+        let mut missing = value.clone();
+        missing.as_object_mut().unwrap().remove("payload_contract");
+        assert!(serde_json::from_value::<SourceBatch>(missing).is_err());
+        let mut extra = value;
+        extra["path"] = json!("/tmp");
+        assert!(serde_json::from_value::<SourceBatch>(extra).is_err());
     }
 
     #[test]

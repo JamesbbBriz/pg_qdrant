@@ -17,6 +17,7 @@ BEGIN
      OR NOT has_column_privilege(actor,i.source_oid,i.text_field,'SELECT')) THEN
    RAISE EXCEPTION 'Source and indexed column SELECT required' USING ERRCODE='42501';
  END IF;
+ IF NOT p_owner THEN PERFORM qdrant_internal.require_payload_select(p_name,actor); END IF;
 END $$;
 
 CREATE FUNCTION qdrant.create_index(index_name text, source regclass, key_field name, settings jsonb)
@@ -30,7 +31,7 @@ BEGIN
  END IF;
  IF jsonb_array_length(settings #> '{text,fields}')<>1
     OR jsonb_typeof(settings #> '{text,fields,0}')<>'string'
-    OR settings-'representations'<>jsonb_build_object('text',jsonb_build_object('fields',settings #> '{text,fields}')) THEN
+    OR settings-ARRAY['representations','payload']<>jsonb_build_object('text',jsonb_build_object('fields',settings #> '{text,fields}')) THEN
    RAISE EXCEPTION 'This implementation admits one text field and declared dense representations'
      USING ERRCODE='0A000';
  END IF;
@@ -39,6 +40,7 @@ BEGIN
    RAISE EXCEPTION 'Source owner access required' USING ERRCODE='42501';
  END IF;
  result:=qdrant_internal.p1_register(index_name,source,key_field::text,settings #>> '{text,fields,0}');
+ PERFORM qdrant_internal.register_payload(index_name,coalesce(settings->'payload','{}'));
  PERFORM qdrant_internal.register_representations(index_name,coalesce(settings->'representations','{}'));
  UPDATE qdrant_internal.index_catalog i SET settings=create_index.settings WHERE i.index_name=create_index.index_name;
  PERFORM qdrant_internal.p1_start_consumer();
@@ -61,12 +63,12 @@ BEGIN
  BEGIN
  EXECUTE format('LOCK TABLE ONLY %s IN ROW SHARE MODE NOWAIT',i.source_oid::regclass);
  FOR row_data IN EXECUTE format(
-   'SELECT t.%I::text AS key,t.%I AS body,qdrant_internal.model_projection($2,t) AS models FROM ONLY %s t WHERE ($1 IS NULL OR %I > $1::%s) ORDER BY %I LIMIT 32 FOR UPDATE NOWAIT',
+   'SELECT t.%I::text AS key,t.%I AS body,qdrant_internal.model_projection($2,t) AS models,qdrant_internal.payload_projection($2,t) AS payload FROM ONLY %s t WHERE ($1 IS NULL OR %I > $1::%s) ORDER BY %I LIMIT 32 FOR UPDATE NOWAIT',
    i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.key_field)
    USING i.backfill_cursor,i.index_name LOOP
    IF NOT EXISTS (SELECT 1 FROM qdrant_internal.source_state WHERE index_name=p_name
                   AND tagged_key->>'value'=row_data.key) THEN
-     PERFORM qdrant_internal.p1_record(p_name,'upsert',row_data.key,row_data.body,'backfill',row_data.models);
+     PERFORM qdrant_internal.p1_record(p_name,'upsert',row_data.key,row_data.body,'backfill',row_data.models,row_data.payload);
    END IF;
    UPDATE qdrant_internal.index_catalog SET backfill_cursor=row_data.key WHERE index_name=p_name;
    n:=n+1;
