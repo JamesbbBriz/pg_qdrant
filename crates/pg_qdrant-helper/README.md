@@ -1,12 +1,18 @@
-# P0 managed engine helper
+# Managed embedded engine helper
 
-This executable is the managed-helper diagnostic profile for the PostgreSQL
-P0 prototype. The [feasibility decision](../../docs/evidence/p0-feasibility.json)
-selects this same-package process topology for product implementation; the
-current executable remains a bounded diagnostic, not a source-index service.
-It calls the sibling Edge adapter directly and contains no
+This executable owns embedded Edge for the installed development source-index
+pipeline and also retains the P0 diagnostic profile. The
+[feasibility decision](../../docs/evidence/p0-feasibility.json) selects this
+same-package process topology. Source operations call the published Edge Rust
+library directly; diagnostic operations use the sibling Edge adapter. It has no
 PostgreSQL dependency or network-service API. The PostgreSQL supervisor selects
 the installed binary and supplies its private engine-owner path.
+
+The development owner applies committed source events, flushes before exact
+receipt acknowledgement, and executes bounded native BM25, dense, sparse,
+MaxSim, fusion and [source-example recommendations](../../docs/source-recommendations.md).
+These installed paths remain partial product integration; complete reliability,
+resource, upgrade and release acceptance is still open.
 
 It holds an OS ownership lock until process exit, uses bounded stdin/stdout
 messages with process and request identities, and exits all native work when
@@ -14,7 +20,7 @@ the supervisor's stdin writer closes. Private panic/abort operations require
 the explicit `p0-fault-injection` build feature. Parent-death cleanup, native
 failure containment and production durability are distinct acceptance gates.
 
-The [current CI record](../../docs/evidence/p0-current-ci.json) passes both
+The [P0 CI record](../../docs/evidence/p0-current-ci.json) passes both
 standalone protocol suites (seven normal and eight private assertion groups),
 the two real-child bookkeeping tests, both helper SQL profiles and the separate
 helper kernel-OOM experiment. Native-helper abort/SIGKILL/OOM preserve the

@@ -121,12 +121,14 @@ mod qdrant {
                 let lexical_sql = cfg!(feature = "p0-managed-helper")
                     && ((prefix == "F" && (4..=11).contains(&number))
                         || (prefix == "Q" && number == 12));
+                let recommendation_sql =
+                    cfg!(feature = "p0-managed-helper") && prefix == "Q" && number == 4;
                 ids.push(json!({
                     "id": format!("{prefix}{number:02}"),
-                    "product_status": if bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql || lexical_sql {"partial_sql_integration"} else {"planned"},
+                    "product_status": if bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql || lexical_sql || recommendation_sql {"partial_sql_integration"} else {"planned"},
                     "release_supported": false,
-                    "sql_product_interface": bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql || lexical_sql,
-                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else if dense_sql {Some("fixed-generation named dense BYOV; owner domain; full live-row readiness; migrations open")} else if sparse_sql {Some("declared learned sparse BYOV; none/external/engine live-corpus IDF; owner domain; scope/model migrations open")} else if token_sql {Some("declared token BYOV; bounded native exact MaxSim and candidate-domain precision; owner domain; full acceptance open")} else if fusion_sql {Some("bounded BM25/dense-or-sparse prefetch; native RRF k=2 or DBSF; optional token rerank; general planner open")} else if lexical_sql {Some("fixed shared native body analysis; bounded AND/OR/exclude/phrase and distinct token/whole-key prefixes before every candidate cap; owner domain; configurable analysis/general filters/quality open")} else {None}
+                    "sql_product_interface": bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql || lexical_sql || recommendation_sql,
+                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else if dense_sql {Some("fixed-generation named dense BYOV; owner domain; full live-row readiness; migrations open")} else if sparse_sql {Some("declared learned sparse BYOV; none/external/engine live-corpus IDF; owner domain; scope/model migrations open")} else if token_sql {Some("declared token BYOV; bounded native exact MaxSim and candidate-domain precision; owner domain; full acceptance open")} else if fusion_sql {Some("bounded BM25/dense-or-sparse prefetch; native RRF k=2 or DBSF; optional token rerank; general planner open")} else if lexical_sql {Some("fixed shared native body analysis; bounded AND/OR/exclude/phrase and distinct token/whole-key prefixes before every candidate cap; owner domain; configurable analysis/general filters/quality open")} else if recommendation_sql {Some("fixed native dense source-example best_score/sum_scores; excluded seeds and source predicates before cap; owner domain; general recommendation and full acceptance open")} else {None}
                 }));
             }
         }

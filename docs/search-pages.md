@@ -34,6 +34,10 @@ the cursor instead of mixing different result versions. Other uncaptured rows
 can change: the snapshot is a bounded historical candidate domain, not a
 transactionally frozen global ranking.
 
+Source-example recommendations also capture the resolved seed digest. Changing
+only an excluded example invalidates the cursor with 55000, even when cached
+hits are unchanged. See [source recommendations](source-recommendations.md).
+
 Source binding and catalog locks span page admission and rechecking. They use
 NOWAIT to avoid unbounded DDL/management waits. Initial snapshot quota admission
 uses a transaction advisory lock with immediate refusal. Cancellation or an
@@ -61,7 +65,7 @@ domain is reported as such. Results retain `release_supported=false`.
 Error contracts: 22023 for invalid cursor/query arguments; 42501 for permissions
 or a different actor; 55000 for stale/expired/absent snapshots, source drift or
 unready generations; 55P03 for lock/admission contention; 54000 for live cache or
-byte limits; 57014 for PostgreSQL cancellation. Restart with a null cursor after
+byte limits; 0A000 for unsupported RLS; 57014 for PostgreSQL cancellation. Restart with a null cursor after
 freshness failure. `crates/pg_qdrant/tests/verify_paging.py` exercises installed
 SQL, native search, negative permissions, resource admission and replay.
 

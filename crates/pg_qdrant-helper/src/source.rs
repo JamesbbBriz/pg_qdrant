@@ -1,15 +1,16 @@
 //! Embedded Edge mutation owner. No SQL values select a filesystem path.
 use pg_qdrant_protocol::{
-    ProbeError, RepresentationContract, RepresentationQuery, RepresentationVector,
-    SOURCE_CONTRACT_VERSION, SourceBatch, SourceFusion, SourcePredicates,
+    ProbeError, RecommendationStrategy, RepresentationContract, RepresentationQuery,
+    RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch, SourceFusion, SourcePredicates,
+    SourceRecommendation,
 };
 use qdrant_edge::bm25_embed::EdgeBm25;
 use qdrant_edge::{
     Distance, EdgeConfig, EdgeShard, EdgeSparseVectorParams, EdgeVectorParams, Filter, Fusion,
     IdfCorpusParams, IdfParams, Modifier, MultiVectorComparator, MultiVectorConfig, NamedQuery,
     PointId, PointInsertOperations, PointOperations, PointStruct, Prefetch, QueryEnum,
-    QueryRequest, ScoringQuery, SearchParams, UpdateOperation, Vector, VectorInternal, Vectors,
-    WithPayloadInterface,
+    QueryRequest, RecommendQuery, ScoringQuery, SearchParams, UpdateOperation, Vector,
+    VectorInternal, Vectors, WithPayloadInterface,
 };
 use serde_json::{Value, json};
 use std::{
@@ -356,11 +357,15 @@ impl SourceOwner {
         q: &str,
         top_k: usize,
         representation_query: Option<RepresentationQuery>,
+        recommendation_query: Option<SourceRecommendation>,
         rerank_query: Option<RepresentationQuery>,
         fusion: Option<SourceFusion>,
         predicates: SourcePredicates,
     ) -> Result<Value, ProbeError> {
-        if q.is_empty() || q.len() > 8192 || !(1..=1000).contains(&top_k) {
+        if (recommendation_query.is_none() && q.is_empty())
+            || q.len() > 8192
+            || !(1..=1000).contains(&top_k)
+        {
             return Err(ProbeError::invalid("search outside bounds"));
         }
         let key = identity(index_id, generation, epoch)?;
@@ -378,49 +383,126 @@ impl SourceOwner {
             ));
         }
         let mut request = QueryRequest::new(top_k);
-        let filter = crate::lexical::compile(&predicates, &self.encoder)?;
+        let mut filter = crate::lexical::compile(&predicates, &self.encoder)?;
         request.filter = filter.clone();
-        let (using, query) = if let Some(dense) = representation_query {
-            let contract = owned
-                .representations
-                .get(&dense.representation)
-                .ok_or_else(|| {
-                    ProbeError::invalid("representation slot is not owned by this generation")
-                })?;
-            if dense.model_id != contract.model_id || dense.model_version != contract.model_version
-            {
+        let (scoring, uses_idf) = if let Some(recommendation) = recommendation_query {
+            if representation_query.is_some() || rerank_query.is_some() || fusion.is_some() {
                 return Err(ProbeError::invalid(
-                    "query model does not match the generation",
+                    "recommendation cannot be fused or reranked",
                 ));
             }
-            validate_representation(&dense.vector, contract)?;
-            if let RepresentationVector::Tokens(tokens) = &dense.vector {
-                if fusion.is_some() || rerank_query.is_some() {
+            let contract = owned
+                .representations
+                .get(&recommendation.representation)
+                .ok_or_else(|| ProbeError::invalid("recommendation slot is not owned"))?;
+            let count = recommendation
+                .positive
+                .len()
+                .saturating_add(recommendation.negative.len());
+            if contract.kind != "dense"
+                || recommendation.model_id != contract.model_id
+                || recommendation.model_version != contract.model_version
+                || recommendation.positive.is_empty()
+                || count > 32
+                || recommendation.exclude_ids.len() != count
+                || recommendation.exclude_ids.iter().any(|id| *id == 0)
+                || recommendation
+                    .exclude_ids
+                    .iter()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len()
+                    != count
+            {
+                return Err(ProbeError::invalid(
+                    "invalid recommendation examples or model contract",
+                ));
+            }
+            admit_recommendation_work(
+                count,
+                contract.dimensions,
+                shard.info().map_err(error)?.points_count,
+            )?;
+            for vector in recommendation
+                .positive
+                .iter()
+                .chain(&recommendation.negative)
+            {
+                validate_representation(&RepresentationVector::Dense(vector.clone()), contract)?;
+            }
+            let exclusion: Filter =
+                serde_json::from_value(json!({"must_not":[{"has_id":recommendation.exclude_ids}]}))
+                    .map_err(error)?;
+            let combined = filter.get_or_insert_with(Filter::default);
+            combined
+                .must_not
+                .get_or_insert_with(Vec::new)
+                .extend(exclusion.must_not.unwrap());
+            request.filter = filter.clone();
+            let query = NamedQuery {
+                using: Some(recommendation.representation),
+                query: RecommendQuery::new(
+                    recommendation
+                        .positive
+                        .into_iter()
+                        .map(VectorInternal::Dense)
+                        .collect(),
+                    recommendation
+                        .negative
+                        .into_iter()
+                        .map(VectorInternal::Dense)
+                        .collect(),
+                ),
+            };
+            let query = match recommendation.strategy {
+                RecommendationStrategy::BestScore => QueryEnum::RecommendBestScore(query),
+                RecommendationStrategy::SumScores => QueryEnum::RecommendSumScores(query),
+            };
+            (ScoringQuery::Vector(query), false)
+        } else {
+            let (using, query) = if let Some(dense) = representation_query {
+                let contract = owned
+                    .representations
+                    .get(&dense.representation)
+                    .ok_or_else(|| {
+                        ProbeError::invalid("representation slot is not owned by this generation")
+                    })?;
+                if dense.model_id != contract.model_id
+                    || dense.model_version != contract.model_version
+                {
                     return Err(ProbeError::invalid(
-                        "token recall cannot be fused or reranked again",
+                        "query model does not match the generation",
                     ));
                 }
-                admit_maxsim(
-                    tokens.len(),
-                    contract,
-                    shard.info().map_err(error)?.points_count,
-                )?;
-            }
-            (dense.representation, native_vector(&dense.vector)?.into())
-        } else {
-            (
-                "bm25".to_owned(),
-                VectorInternal::Sparse(self.encoder.embed_query(q)),
-            )
+                validate_representation(&dense.vector, contract)?;
+                if let RepresentationVector::Tokens(tokens) = &dense.vector {
+                    if fusion.is_some() || rerank_query.is_some() {
+                        return Err(ProbeError::invalid(
+                            "token recall cannot be fused or reranked again",
+                        ));
+                    }
+                    admit_maxsim(
+                        tokens.len(),
+                        contract,
+                        shard.info().map_err(error)?.points_count,
+                    )?;
+                }
+                (dense.representation, native_vector(&dense.vector)?.into())
+            } else {
+                (
+                    "bm25".to_owned(),
+                    VectorInternal::Sparse(self.encoder.embed_query(q)),
+                )
+            };
+            let uses_idf = using == "bm25"
+                || owned.representations.get(&using).is_some_and(|c| {
+                    c.kind == "learned_sparse" && c.idf_policy.as_deref() == Some("engine")
+                });
+            let scoring = ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
+                using: Some(using),
+                query,
+            }));
+            (scoring, uses_idf)
         };
-        let uses_idf = using == "bm25"
-            || owned.representations.get(&using).is_some_and(|c| {
-                c.kind == "learned_sparse" && c.idf_policy.as_deref() == Some("engine")
-            });
-        let scoring = ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
-            using: Some(using),
-            query,
-        }));
         if let Some(fusion) = fusion {
             let bm25 = ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
                 using: Some("bm25".to_owned()),
@@ -532,9 +614,24 @@ impl SourceOwner {
     }
 }
 
-// Bound the dot-product scalar work before entering a native exact MaxSim query.
-// Standalone searches use the owner's live point count, not PostgreSQL's
-// potentially lagging source count. Prefetch reranking uses its candidate cap.
+// Recommendation exact work uses the owned corpus before applying filters.
+fn admit_recommendation_work(
+    examples: usize,
+    dimensions: usize,
+    owned_points: usize,
+) -> Result<(), ProbeError> {
+    let work = examples
+        .saturating_mul(dimensions)
+        .saturating_mul(owned_points);
+    if work > 20_000_000 {
+        return Err(ProbeError::invalid(
+            "recommendation scalar-work budget exceeds 20000000",
+        ));
+    }
+    Ok(())
+}
+
+// Standalone MaxSim uses the owner's live corpus; prefetch uses its candidate cap.
 fn admit_maxsim(
     query_tokens: usize,
     contract: &RepresentationContract,
@@ -655,6 +752,14 @@ fn validate_dense_values(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recommendation_work_uses_owned_corpus_and_cannot_overflow() {
+        assert!(admit_recommendation_work(32, 125, 5000).is_ok());
+        assert!(admit_recommendation_work(32, 125, 5001).is_err());
+        assert!(admit_recommendation_work(32, 4096, 153).is_err());
+        assert!(admit_recommendation_work(32, 4096, usize::MAX).is_err());
+    }
     use pg_qdrant_protocol::{SourceEvent, SparseValues};
 
     fn numeric_contract() -> RepresentationContract {
@@ -775,6 +880,7 @@ mod tests {
                 Some(query.clone()),
                 None,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap_err();
@@ -789,6 +895,7 @@ mod tests {
                 "anchor",
                 10,
                 Some(query.clone()),
+                None,
                 None,
                 None,
                 SourcePredicates::default(),
@@ -818,6 +925,7 @@ mod tests {
                 Some(query.clone()),
                 None,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap();
@@ -838,12 +946,232 @@ mod tests {
                 10,
                 Some(query),
                 None,
+                None,
                 Some(SourceFusion::Dbsf),
                 SourcePredicates::default(),
             )
             .unwrap_err();
         assert_eq!(failure.code, "source_engine_error");
         assert!(failure.message.contains("non-finite score"));
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn recommendation_adapter_pinned_best_and_sum() {
+        let root = std::env::temp_dir().join(format!(
+            "pgq-recommend-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let mut owner = SourceOwner::new(root.clone()).unwrap();
+        let generation = "00000000-0000-0000-0000-000000000001".to_owned();
+        let epoch = "00000000-0000-0000-0000-000000000002".to_owned();
+        let values: [[f32; 2]; 7] = [
+            [1., 0.],
+            [0., 1.],
+            [0.9, 0.1],
+            [0.1, 0.9],
+            [0.5, 0.5],
+            [-1., 0.],
+            [0., 0.],
+        ];
+        let batch = SourceBatch {
+            source_contract_version: SOURCE_CONTRACT_VERSION,
+            index_id: 1,
+            generation: generation.clone(),
+            storage_epoch: epoch.clone(),
+            consumer_id: epoch.clone(),
+            task_id: None,
+            retire: false,
+            representations: ["dot", "cosine", "euclid", "manhattan"]
+                .into_iter()
+                .map(|distance| {
+                    let mut contract = numeric_contract();
+                    contract.distance = distance.into();
+                    if distance == "cosine" {
+                        contract.normalization = "unit".into();
+                    }
+                    (distance.to_owned(), contract)
+                })
+                .collect(),
+            events: values
+                .into_iter()
+                .enumerate()
+                .map(|(offset, v)| {
+                    let id = offset as u64 + 1;
+                    SourceEvent {
+                        event_id: id,
+                        point_id: id,
+                        revision: 1,
+                        incarnation: generation.clone(),
+                        fingerprint: Some("fixture".into()),
+                        key: json!({"type":"bigint","value":id.to_string()}),
+                        body: Some("anchor".into()),
+                        vectors: ["dot", "cosine", "euclid", "manhattan"]
+                            .into_iter()
+                            .map(|distance| {
+                                (
+                                    distance.to_owned(),
+                                    RepresentationVector::Dense(if distance == "cosine" {
+                                        let norm = (v[0] * v[0] + v[1] * v[1]).sqrt();
+                                        if norm == 0.0 {
+                                            vec![0.5f32.sqrt(), 0.5f32.sqrt()]
+                                        } else {
+                                            vec![v[0] / norm, v[1] / norm]
+                                        }
+                                    } else {
+                                        v.to_vec()
+                                    }),
+                                )
+                            })
+                            .collect(),
+                    }
+                })
+                .collect(),
+        };
+        owner.apply(batch).unwrap();
+        for distance in ["dot", "cosine", "euclid", "manhattan"] {
+            for best in [false, true] {
+                let recommendation = SourceRecommendation {
+                    representation: distance.into(),
+                    model_id: "fixture".into(),
+                    model_version: "r1".into(),
+                    strategy: if best {
+                        RecommendationStrategy::BestScore
+                    } else {
+                        RecommendationStrategy::SumScores
+                    },
+                    positive: vec![vec![1., 0.]],
+                    negative: vec![vec![0., 1.]],
+                    exclude_ids: vec![1, 2],
+                };
+                let hits = owner
+                    .search(
+                        1,
+                        &generation,
+                        &epoch,
+                        "anchor",
+                        100,
+                        None,
+                        Some(recommendation.clone()),
+                        None,
+                        None,
+                        SourcePredicates::default(),
+                    )
+                    .unwrap();
+                let hits = hits.as_array().unwrap();
+                assert_eq!(hits.len(), 5);
+                let constrained = owner
+                    .search(
+                        1,
+                        &generation,
+                        &epoch,
+                        "anchor",
+                        1,
+                        None,
+                        Some(recommendation.clone()),
+                        None,
+                        None,
+                        SourcePredicates {
+                            key_exact: Some("4".into()),
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                assert_eq!(constrained[0]["id"], 4);
+                let excluded = owner
+                    .search(
+                        1,
+                        &generation,
+                        &epoch,
+                        "anchor",
+                        1,
+                        None,
+                        Some(recommendation.clone()),
+                        None,
+                        None,
+                        SourcePredicates {
+                            key_exact: Some("1".into()),
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                assert_eq!(excluded.as_array().unwrap().len(), 0);
+                for invalid in [
+                    SourceRecommendation {
+                        positive: vec![],
+                        ..recommendation.clone()
+                    },
+                    SourceRecommendation {
+                        exclude_ids: vec![1, 1],
+                        ..recommendation.clone()
+                    },
+                    SourceRecommendation {
+                        model_version: "r2".into(),
+                        ..recommendation.clone()
+                    },
+                    SourceRecommendation {
+                        positive: vec![vec![1e30, 0.]],
+                        ..recommendation.clone()
+                    },
+                ] {
+                    assert!(
+                        owner
+                            .search(
+                                1,
+                                &generation,
+                                &epoch,
+                                "anchor",
+                                100,
+                                None,
+                                Some(invalid),
+                                None,
+                                None,
+                                SourcePredicates::default()
+                            )
+                            .is_err()
+                    );
+                }
+                for (offset, value) in values.iter().enumerate().skip(2) {
+                    let id = offset as u64 + 1;
+                    let [x, y] = value.map(f64::from);
+                    let (positive, negative) = match distance {
+                        "dot" => (x, y),
+                        "cosine" => {
+                            let norm = (x * x + y * y).sqrt();
+                            if norm == 0.0 {
+                                (0.5f64.sqrt(), 0.5f64.sqrt())
+                            } else {
+                                (x / norm, y / norm)
+                            }
+                        }
+                        "euclid" => (-((x - 1.0).powi(2) + y * y), -(x * x + (y - 1.0).powi(2))),
+                        "manhattan" => (-((x - 1.0).abs() + y.abs()), -(x.abs() + (y - 1.0).abs())),
+                        _ => unreachable!(),
+                    };
+                    let sigmoid = |v: f64| 0.5 * (1.0 + v / (1.0 + v.abs()));
+                    let score = if !best {
+                        positive - negative
+                    } else if positive > negative {
+                        sigmoid(positive)
+                    } else {
+                        -sigmoid(negative)
+                    };
+                    let hit = hits.iter().find(|h| h["id"] == id).unwrap();
+                    assert!(
+                        (hit["score"].as_f64().unwrap() - score).abs() < 1e-6,
+                        "distance={distance} best={best} id={id} native={} expected={score}",
+                        hit["score"]
+                    );
+                }
+                assert_eq!(hits[0]["id"], 3);
+            }
+        }
         drop(owner);
         std::fs::remove_dir_all(root).unwrap();
     }
@@ -922,6 +1250,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates::default()
                     )
                     .is_err()
@@ -969,6 +1298,7 @@ mod tests {
                     &epoch,
                     "retired",
                     10,
+                    None,
                     None,
                     None,
                     None,

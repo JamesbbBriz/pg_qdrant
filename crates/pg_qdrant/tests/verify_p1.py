@@ -67,7 +67,7 @@ faults=sql('SELECT (qdrant.build_info()->\'features\'->>\'p0_fault_injection\'):
 capabilities=json.loads(sql('SELECT qdrant.capabilities()'))
 assert capabilities['index_catalog_available']
 assert capabilities['bounded_search_page_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','V01','V02','V03','Q02','Q03','Q12']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','V01','V02','V03','Q02','Q03','Q04','Q12']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)')
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
@@ -228,7 +228,7 @@ finally:
     os.kill(pid,signal.SIGCONT)
 assert finish(query)=='1'
 finish(ddl)
-assert '55000' in sql("SELECT * FROM qdrant.search('query_binding','querybinding')",ok=False)
+assert '0A000' in sql("SELECT * FROM qdrant.search('query_binding','querybinding')",ok=False)
 sql("SELECT qdrant.drop_index('query_binding')")
 checks += ['source binding lock spans native search and concurrent RLS change']
 
@@ -350,6 +350,8 @@ import verify_discovery
 verify_discovery_replay=verify_discovery.run(sql,ready,ticket_from,checks)
 import verify_numeric
 verify_numeric_replay=verify_numeric.run(sql,ready,ticket_from,checks)
+import verify_recommendations
+verify_recommendations_replay=verify_recommendations.run(sql,ready,ticket_from,checks,spawn)
 def verify_model_replay():
     verify_dense_replay()
     verify_sparse_replay()
@@ -358,6 +360,7 @@ def verify_model_replay():
     verify_paging_replay()
     verify_discovery_replay()
     verify_numeric_replay()
+    verify_recommendations_replay()
 # PostgreSQL cancellation must not release an executing fused native query's owner.
 ready('model_docs')
 hybrid_vector=json.dumps({'dense':{'model_id':'fixture-model','model_version':'r1','vector':[1,0]}})
@@ -445,7 +448,7 @@ verify_retirements.run(sql,ready,checks,faults,crash_matrix)
 build_info=json.loads(sql('SELECT qdrant.build_info()'))
 worker=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['worker_pid']
 observer=spawn('SELECT pg_sleep(2)','pgq_extension_drop_observer')
-sql("SELECT qdrant.drop_index('numeric_dense'); SELECT qdrant.drop_index('numeric_sparse'); SELECT qdrant.drop_index('discovery_docs'); SELECT qdrant.drop_index('page_docs'); SELECT qdrant.drop_index('lexical_docs'); SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
+sql("SELECT qdrant.drop_index('recommendation_docs'); SELECT qdrant.drop_index('numeric_dense'); SELECT qdrant.drop_index('numeric_sparse'); SELECT qdrant.drop_index('discovery_docs'); SELECT qdrant.drop_index('page_docs'); SELECT qdrant.drop_index('lexical_docs'); SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
 assert sql("SELECT count(*) FROM pg_trigger WHERE tgrelid='model_docs'::regclass AND NOT tgisinternal")=='0'
 finish(observer)
 assert sql('SELECT count(*) FROM docs')=='1'

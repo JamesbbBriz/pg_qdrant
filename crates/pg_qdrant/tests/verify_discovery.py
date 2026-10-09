@@ -5,7 +5,7 @@ import json
 def run(sql, ready, ticket_from, checks):
     global_registry = json.loads(sql('SELECT qdrant.capabilities()'))
     assert global_registry['registry_schema_version'] == 2
-    expected = {'text', 'semantic', 'sparse', 'hybrid', 'maxsim', 'precision'}
+    expected = {'text', 'semantic', 'sparse', 'hybrid', 'maxsim', 'precision', 'explore'}
     assert {m['mode'] for m in global_registry['query_modes']} == expected
     assert len(global_registry['capabilities']) == 54
     assert all(m['adapter_available'] and m['admission_ready'] is None and not m['release_validation_passed']
@@ -64,8 +64,8 @@ def run(sql, ready, ticket_from, checks):
             assert json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))['durable']
         ready('discovery_docs')
 
-    fill('dense'); expect(['text', 'semantic', 'hybrid'])
-    fill('sparse'); expect(['text', 'semantic', 'sparse', 'hybrid'])
+    fill('dense'); expect(['text', 'semantic', 'hybrid', 'explore'])
+    fill('sparse'); expect(['text', 'semantic', 'sparse', 'hybrid', 'explore'])
     fill('tokens'); expect(expected)
     ticket = ticket_from(sql("BEGIN; UPDATE discovery_docs SET body='changed' WHERE id=1; SELECT qdrant.track_changes('discovery_docs'); COMMIT"))
     assert json.loads(sql("SELECT qdrant.await_changes('"+ticket+"',60000)"))['durable']
@@ -87,7 +87,7 @@ def run(sql, ready, ticket_from, checks):
     ready('discovery_docs')
     expect(expected)
     checks.append('global and index-specific discovery separates retained requirements, adapter modes, release validation and actual representation freshness with owner/source permissions')
-    checks.append('one private mode registry governs public search admission and capability discovery; rollback restores its exact six-mode membership')
+    checks.append('one private mode registry governs public search admission and capability discovery; rollback restores its exact seven-mode membership')
 
     def replay():
         ready('discovery_docs')

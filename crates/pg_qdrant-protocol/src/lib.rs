@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 8;
+pub const SOURCE_CONTRACT_VERSION: u32 = 9;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
@@ -162,6 +162,25 @@ pub struct RepresentationQuery {
     pub vector: RepresentationVector,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecommendationStrategy {
+    BestScore,
+    SumScores,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceRecommendation {
+    pub representation: String,
+    pub model_id: String,
+    pub model_version: String,
+    pub strategy: RecommendationStrategy,
+    pub positive: Vec<Vec<f32>>,
+    pub negative: Vec<Vec<f32>>,
+    pub exclude_ids: Vec<u64>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct SourceEvent {
@@ -214,6 +233,8 @@ pub enum Operation {
         top_k: usize,
         #[serde(default)]
         representation_query: Option<RepresentationQuery>,
+        #[serde(default)]
+        recommendation_query: Option<SourceRecommendation>,
         #[serde(default)]
         rerank_query: Option<RepresentationQuery>,
         #[serde(default)]
@@ -330,6 +351,33 @@ pub fn encode_helper_response(
 #[cfg(test)]
 mod search_contract_tests {
     use super::*;
+
+    #[test]
+    fn recommendation_model_strategy_and_resolved_examples_are_typed() {
+        let seed = json!({"representation":"dense","model_id":"fixture","model_version":"r1",
+            "strategy":"sum_scores","positive":[[1,0]],"negative":[],"exclude_ids":[1]});
+        let value = json!({"operation":"source_search","index_id":1,"generation":"g",
+            "storage_epoch":"e","q":"","top_k":1,"recommendation_query":seed});
+        assert!(matches!(
+            serde_json::from_value::<Operation>(value.clone()).unwrap(),
+            Operation::SourceSearch {
+                recommendation_query: Some(SourceRecommendation {
+                    strategy: RecommendationStrategy::SumScores,
+                    ..
+                }),
+                ..
+            }
+        ));
+        let mut invalid = value.clone();
+        invalid["recommendation_query"]["strategy"] = json!("average_vector");
+        assert!(serde_json::from_value::<Operation>(invalid).is_err());
+        let mut invalid = value.clone();
+        invalid["recommendation_query"]["positive"] = json!(["caller-point-id"]);
+        assert!(serde_json::from_value::<Operation>(invalid).is_err());
+        let mut invalid = value;
+        invalid["recommendation_query"]["tenant_id"] = json!("caller-domain");
+        assert!(serde_json::from_value::<Operation>(invalid).is_err());
+    }
 
     #[test]
     fn token_matrix_and_reranking_preserve_distinct_shapes() {

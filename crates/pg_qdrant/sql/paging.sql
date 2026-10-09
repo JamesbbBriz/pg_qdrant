@@ -7,6 +7,7 @@ CREATE TABLE qdrant_internal.search_snapshots (
  storage_epoch uuid NOT NULL,
  consumer_id uuid NOT NULL,
  arguments_hash text NOT NULL,
+ seed_digest text,
  results jsonb NOT NULL CHECK(jsonb_typeof(results)='array' AND jsonb_array_length(results)<=100),
  candidate_limit integer NOT NULL CHECK(candidate_limit BETWEEN 1 AND 1000),
  captured_limit integer NOT NULL CHECK(captured_limit BETWEEN 1 AND 100),
@@ -44,7 +45,7 @@ BEGIN
  actor:=qdrant_internal.actor_oid();
  SELECT * INTO STRICT c FROM qdrant_internal.consumer_state x WHERE x.index_name=i.index_name;
  arguments_hash:=encode(sha256(convert_to(jsonb_build_object('index_name',index_name,'q',q,'mode',mode,
-   'query_vectors',query_vectors,'options',options)::text,'UTF8')),'hex');
+   'query_vectors',query_vectors,'options',options,'seed_digest',plan->'seed_digest')::text,'UTF8')),'hex');
  IF page_cursor IS NULL THEN
    -- Serialize quota admission without an unbounded lock wait. A cancelled
    -- initial query rolls back its entire snapshot transaction.
@@ -60,10 +61,14 @@ BEGIN
    IF octet_length(s.results::text)>262144 THEN
      RAISE EXCEPTION 'Paging snapshot exceeds 256 KiB' USING ERRCODE='54000';
    END IF;
+   IF EXISTS(SELECT 1 FROM jsonb_array_elements(s.results) h
+       WHERE (h #>> '{provenance,seed_digest}') IS DISTINCT FROM (plan->>'seed_digest')) THEN
+     RAISE EXCEPTION 'Recommendation examples changed during snapshot capture' USING ERRCODE='55000';
+   END IF;
    INSERT INTO qdrant_internal.search_snapshots(actor_oid,index_name,index_id,generation,storage_epoch,consumer_id,
-     arguments_hash,results,candidate_limit,captured_limit)
+     arguments_hash,seed_digest,results,candidate_limit,captured_limit)
    VALUES(actor,i.index_name,i.index_id,i.generation,c.storage_epoch,c.consumer_id,
-     arguments_hash,s.results,(plan->>'candidate_limit')::integer,captured_limit)
+     arguments_hash,plan->>'seed_digest',s.results,(plan->>'candidate_limit')::integer,captured_limit)
    RETURNING * INTO s;
  ELSE
    IF jsonb_typeof(page_cursor)<>'object' OR page_cursor-'snapshot'-'offset'<>'{}'::jsonb
@@ -84,6 +89,9 @@ BEGIN
    IF s.expires_at<=clock_timestamp() OR s.index_id<>i.index_id OR s.generation<>i.generation
       OR s.storage_epoch<>c.storage_epoch OR s.consumer_id<>c.consumer_id THEN
      RAISE EXCEPTION 'Paging snapshot expired or generation changed' USING ERRCODE='55000';
+   END IF;
+   IF s.seed_digest IS DISTINCT FROM (plan->>'seed_digest') THEN
+     RAISE EXCEPTION 'Recommendation examples changed since snapshot capture; restart search' USING ERRCODE='55000';
    END IF;
    IF s.arguments_hash<>arguments_hash OR offset_value>jsonb_array_length(s.results) THEN
      RAISE EXCEPTION 'Cursor query or offset differs from its captured domain' USING ERRCODE='22023';
@@ -106,6 +114,10 @@ BEGIN
  plan:=qdrant.explain_search(index_name,q,mode,captured_limit,query_vectors,options);
  IF NOT coalesce((plan->>'search_executable')::boolean,false) THEN
    RAISE EXCEPTION 'Index readiness changed during paging' USING ERRCODE='55000';
+ END IF;
+ IF encode(sha256(convert_to(jsonb_build_object('index_name',index_name,'q',q,'mode',mode,
+   'query_vectors',query_vectors,'options',options,'seed_digest',plan->'seed_digest')::text,'UTF8')),'hex')<>arguments_hash THEN
+   RAISE EXCEPTION 'Recommendation examples changed during paging; restart search' USING ERRCODE='55000';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM qdrant_internal.consumer_state x WHERE x.index_name=i.index_name
    AND x.storage_epoch=s.storage_epoch AND x.consumer_id=s.consumer_id AND x.state='ready') THEN

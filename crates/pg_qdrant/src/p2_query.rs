@@ -37,6 +37,7 @@ DECLARE
     timeout_ms integer;
     matched_triggers integer;
     representation_query jsonb;
+    recommendation jsonb;
     representation_kind text;
     rerank_query jsonb;
     named_input record;
@@ -51,8 +52,8 @@ DECLARE
     matching_entry record;
     matching_bytes integer:=0;
 BEGIN
-    IF index_name IS NULL OR q IS NULL
-       OR octet_length(q) NOT BETWEEN 1 AND 8192 OR btrim(q) = '' THEN
+    IF index_name IS NULL OR q IS NULL OR octet_length(q)>8192
+       OR (mode IS DISTINCT FROM 'explore' AND btrim(q) = '') THEN
         RAISE EXCEPTION 'Query and index name are required; query at most 8192 bytes'
           USING ERRCODE = '22023';
     END IF;
@@ -134,6 +135,9 @@ BEGIN
     SELECT * INTO STRICT selected FROM qdrant_internal.index_catalog
     WHERE qdrant_internal.index_catalog.index_name = explain_search.index_name;
     PERFORM qdrant_internal.require_index(index_name);
+    IF EXISTS(SELECT 1 FROM pg_class WHERE oid=selected.source_oid AND (relrowsecurity OR relforcerowsecurity)) THEN
+        RAISE EXCEPTION 'RLS search sources are unsupported' USING ERRCODE='0A000';
+    END IF;
     IF qdrant_internal.p1_index_status(index_name)->>'capture_state'<>'capturing' THEN
         RAISE EXCEPTION 'Source binding changed; rebuild required' USING ERRCODE='55000';
     END IF;
@@ -204,6 +208,9 @@ BEGIN
             fusion:=NULL; effective_plan:='precision_bm25_maxsim';
         ELSE effective_plan:='precision_bm25_'||representation_kind||'_'||fusion||'_maxsim';
         END IF;
+    ELSIF mode='explore' THEN
+        recommendation:=qdrant_internal.admit_recommendation(index_name,query_vectors);
+        effective_plan:='explore_dense_'||(recommendation #>> '{query,strategy}');
     ELSIF mode IN ('semantic','sparse','hybrid','maxsim') THEN
         representation_query:=qdrant_internal.admit_representation(index_name,query_vectors);
         SELECT contract->>'kind' INTO representation_kind FROM qdrant_internal.representation_catalog
@@ -232,6 +239,15 @@ BEGIN
        'source_key_type',selected.key_type,
        'requested_mode',mode,'effective_plan',effective_plan,'representation_query',representation_query,'representation_kind',representation_kind,'fusion',fusion,
        'rerank_query',rerank_query,
+       'recommendation_query',recommendation->'query',
+       'seed_digest',recommendation->'seed_digest',
+       'recommendation_contract',CASE WHEN recommendation IS NOT NULL THEN jsonb_build_object(
+         'seed_versions',recommendation->'seed_versions','seed_digest',recommendation->'seed_digest',
+         'seed_scope','current visible PostgreSQL source and ready representation snapshot; durability is a separate ticket',
+         'strategy',recommendation #>> '{query,strategy}','scalar_work_limit',20000000,
+         'work_basis','example count * dimensions * native owned live points; checked before execution',
+         'seed_exclusion','all source examples excluded before candidate truncation',
+         'text_query_used_for_scoring',false) END,
        'maxsim_contract',CASE WHEN mode IN ('maxsim','precision') THEN jsonb_build_object(
          'scope',CASE WHEN mode='precision' THEN 'exact within bounded native prefetch candidates' ELSE 'exact over live named token vectors' END,
          'token_width',(SELECT contract->'dimensions' FROM qdrant_internal.representation_catalog
@@ -284,7 +300,7 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
 AS $pgq$
 DECLARE plan jsonb; i qdrant_internal.index_catalog%ROWTYPE;
-        c qdrant_internal.consumer_state%ROWTYPE; hits jsonb;
+        c qdrant_internal.consumer_state%ROWTYPE; hits jsonb; admitted_seed_digest text;
 BEGIN
     plan:=qdrant.explain_search(index_name,q,mode,top_k,query_vectors,options);
     IF NOT coalesce((plan->>'search_executable')::boolean,false) THEN
@@ -300,9 +316,11 @@ BEGIN
       RAISE EXCEPTION 'Index changed during search admission' USING ERRCODE='55000';
     END IF;
     SELECT * INTO STRICT c FROM qdrant_internal.consumer_state cs WHERE cs.index_name=i.index_name;
+    admitted_seed_digest:=plan->>'seed_digest';
     hits:=qdrant_internal.p1_search(jsonb_build_object('operation','source_search','index_id',i.index_id,
       'generation',i.generation,'storage_epoch',c.storage_epoch,'q',q,
       'representation_query',plan->'representation_query',
+      'recommendation_query',plan->'recommendation_query',
       'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',
       'predicates',plan->'matching',
@@ -321,10 +339,13 @@ BEGIN
     IF NOT coalesce((plan->>'search_executable')::boolean,false) THEN
       RAISE EXCEPTION 'Index readiness changed during search' USING ERRCODE='55000';
     END IF;
+    IF (plan->>'seed_digest') IS DISTINCT FROM admitted_seed_digest THEN
+      RAISE EXCEPTION 'Recommendation examples changed during native query; restart search' USING ERRCODE='55000';
+    END IF;
     RETURN QUERY EXECUTE format(
       'SELECT t.%I::text,row_number() OVER(ORDER BY v.ordinality)::integer,(v.hit->>''score'')::double precision,
        t.%I::text,left(t.%I,240),jsonb_build_object(''generation'',$2,''storage_epoch'',$3,''plan'',$6,
-       ''matching'',$7,''point_id'',v.hit->''id'',
+       ''matching'',$7,''seed_digest'',$8,''point_id'',v.hit->''id'',
        ''incarnation'',v.hit #>> ''{payload,incarnation}'',
        ''revision'',v.hit #>> ''{payload,revision}'',
        ''source_fingerprint'',v.hit #>> ''{payload,fingerprint}'',
@@ -337,7 +358,7 @@ BEGIN
          AND encode(sha256(convert_to(t.%I,''UTF8'')),''hex'')=v.hit #>> ''{payload,fingerprint}''
        ORDER BY v.ordinality LIMIT $5',
        i.key_field,i.key_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype,i.text_field)
-       USING hits,i.generation,c.storage_epoch,i.index_name,top_k,plan->>'effective_plan',plan->'matching';
+       USING hits,i.generation,c.storage_epoch,i.index_name,top_k,plan->>'effective_plan',plan->'matching',admitted_seed_digest;
 END;
 $pgq$;
 
@@ -347,5 +368,9 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
     qdrant.search(text,text,text,integer,jsonb,jsonb) TO PUBLIC;
 "###,
     name = "p2_query_admission",
-    requires = ["p1_representations", "p2_mode_registry"]
+    requires = [
+        "p1_representations",
+        "p2_mode_registry",
+        "p2_recommendation_admission"
+    ]
 );
