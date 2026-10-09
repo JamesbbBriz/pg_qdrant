@@ -161,7 +161,9 @@ mod qdrant_internal {
         let contract = serde_json::from_value(contract.0)
             .unwrap_or_else(|_| ipc::raise(ipc::ProbeError::invalid("invalid payload contract")));
         let filter = pg_qdrant_protocol::payload_filter::PayloadFilter(expression.0);
-        filter.validate(&contract).unwrap_or_else(|error| ipc::raise(error));
+        filter
+            .validate(&contract)
+            .unwrap_or_else(|error| ipc::raise(error));
         JsonB(filter.0)
     }
 
@@ -170,7 +172,9 @@ mod qdrant_internal {
         let contract = serde_json::from_value(contract.0)
             .unwrap_or_else(|_| ipc::raise(ipc::ProbeError::invalid("invalid payload contract")));
         let filter = pg_qdrant_protocol::payload_filter::PayloadFilter(expression.0);
-        filter.validate(&contract).unwrap_or_else(|error| ipc::raise(error));
+        filter
+            .validate(&contract)
+            .unwrap_or_else(|error| ipc::raise(error));
         filter.matches(&projection.0)
     }
 
