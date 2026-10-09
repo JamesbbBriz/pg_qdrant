@@ -89,8 +89,8 @@ count within the filtered snapshot, snapshot scope, generation, epoch and
 execution budgets. They expose no native point IDs; source text is limited to
 authorized bounded snippets. Scores
 use the query-local filtered corpus statistics and are not combined with Edge
-BM25, cosine or MaxSim scores. No cross-engine fusion, suggestion,
-pagination or release-support claim is made. Budget overflow returns `54000`;
+BM25, cosine or MaxSim scores. This search API makes no cross-engine fusion,
+pagination or release-support claim. Budget overflow returns `54000`;
 invalid input returns `22023`; stale/uncommitted source returns `55000`.
 
 Each lexical hit includes a `snippet` from pinned Tantivy's `SnippetGenerator`
@@ -125,3 +125,8 @@ authorized snapshot and original-source snippet path through
 `qdrant.search_synonyms`. Their explicit versioned policies permit bounded
 Unicode literal words and complete single-pass phrase expansion; they remain
 separate from this API's fuzzy/proximity/syntax grammar.
+
+[Source-word suggestions](source-suggestions.md) expose a separate
+`qdrant.suggest` interface over the same complete durable authorized snapshot.
+They enumerate literal prefix words before applying a returned-item limit;
+they do not execute this API's fuzzy/proximity/syntax grammar.

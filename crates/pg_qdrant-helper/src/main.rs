@@ -11,6 +11,7 @@ use std::time::Duration;
 mod lexical;
 mod lexical_candidates;
 mod lexical_snippets;
+mod lexical_suggestions;
 mod lexical_synonyms;
 mod lexical_syntax;
 mod payload;
