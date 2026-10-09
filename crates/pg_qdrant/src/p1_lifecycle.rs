@@ -26,6 +26,11 @@ pgrx::extension_sql_file!(
     requires = ["p2_recommendation_admission"]
 );
 pgrx::extension_sql_file!(
+    "../sql/mmr.sql",
+    name = "p2_mmr_admission",
+    requires = ["p2_recommendation_admission"]
+);
+pgrx::extension_sql_file!(
     "../sql/generations.sql",
     name = "p1_native_generations",
     requires = ["p1_consumer_contract", "p3_generation_reservations"]

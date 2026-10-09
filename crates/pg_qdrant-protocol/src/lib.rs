@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 11;
+pub const SOURCE_CONTRACT_VERSION: u32 = 12;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
@@ -236,6 +236,17 @@ pub struct SourceFeedback {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
+pub struct SourceMmr {
+    pub representation: String,
+    pub model_id: String,
+    pub model_version: String,
+    pub target: Vec<f32>,
+    pub lambda: f32,
+    pub exclude_id: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct SourceEvent {
     pub event_id: u64,
     pub point_id: u64,
@@ -292,6 +303,8 @@ pub enum Operation {
         discovery_query: Option<SourceDiscovery>,
         #[serde(default)]
         feedback_query: Option<SourceFeedback>,
+        #[serde(default)]
+        mmr_query: Option<SourceMmr>,
         #[serde(default)]
         rerank_query: Option<RepresentationQuery>,
         #[serde(default)]
@@ -408,6 +421,21 @@ pub fn encode_helper_response(
 #[cfg(test)]
 mod search_contract_tests {
     use super::*;
+
+    #[test]
+    fn mmr_source_target_and_lambda_refuse_unknown_fields() {
+        let input = json!({"representation":"dense","model_id":"fixture","model_version":"r1","target":[1,0],"lambda":0.25,"exclude_id":3});
+        assert!(serde_json::from_value::<SourceMmr>(input.clone()).is_ok());
+        for (field, value) in [
+            ("target", json!("raw-id")),
+            ("lambda", json!("NaN")),
+            ("tenant_id", json!("caller")),
+        ] {
+            let mut invalid = input.clone();
+            invalid[field] = value;
+            assert!(serde_json::from_value::<SourceMmr>(invalid).is_err());
+        }
+    }
 
     #[test]
     fn feedback_vectors_scores_and_coefficients_refuse_unknown_fields() {

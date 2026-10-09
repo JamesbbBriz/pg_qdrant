@@ -37,4 +37,4 @@ BEGIN
  END;
 END
 $t$;
-SELECT 'P4 shape tests complete; no advanced Edge execution exists' AS result;
+SELECT 'P4 shape tests complete; this fixture does not execute advanced Edge queries' AS result;
