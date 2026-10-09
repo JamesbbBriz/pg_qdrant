@@ -39,6 +39,7 @@ DECLARE
     representation_query jsonb;
     recommendation jsonb;
     discovery jsonb;
+    feedback jsonb;
     representation_kind text;
     rerank_query jsonb;
     named_input record;
@@ -210,7 +211,10 @@ BEGIN
         ELSE effective_plan:='precision_bm25_'||representation_kind||'_'||fusion||'_maxsim';
         END IF;
     ELSIF mode='explore' THEN
-        IF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1) IN ('discover','context') THEN
+        IF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1)='feedback' THEN
+            feedback:=qdrant_internal.admit_feedback(index_name,query_vectors);
+            effective_plan:='explore_dense_feedback';
+        ELSIF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1) IN ('discover','context') THEN
             discovery:=qdrant_internal.admit_discovery(index_name,query_vectors);
             effective_plan:='explore_dense_'||(discovery #>> '{query,strategy}');
         ELSE
@@ -247,7 +251,15 @@ BEGIN
        'rerank_query',rerank_query,
        'recommendation_query',recommendation->'query',
        'discovery_query',discovery->'query',
-       'seed_digest',coalesce(recommendation,discovery)->'seed_digest',
+       'feedback_query',feedback->'query',
+       'seed_digest',coalesce(recommendation,discovery,feedback)->'seed_digest',
+       'feedback_contract',CASE WHEN feedback IS NOT NULL THEN jsonb_build_object(
+         'seed_versions',feedback->'seed_versions','seed_digest',feedback->'seed_digest',
+         'seed_scope','current visible PostgreSQL source and ready representation snapshot; durability is a separate ticket',
+         'coefficients',feedback #> '{query,coefficients}','scalar_work_limit',20000000,
+         'work_basis','(1 + n*(n-1)) * dimensions * native owned live points; worst-case feedback pairs before execution',
+         'seed_exclusion','target and every feedback example excluded before candidate truncation',
+         'text_query_used_for_scoring',false) END,
        'discovery_contract',CASE WHEN discovery IS NOT NULL THEN jsonb_build_object(
          'seed_versions',discovery->'seed_versions','seed_digest',discovery->'seed_digest',
          'seed_scope','current visible PostgreSQL source and ready representation snapshot; durability is a separate ticket',
@@ -336,6 +348,7 @@ BEGIN
       'representation_query',plan->'representation_query',
       'recommendation_query',plan->'recommendation_query',
       'discovery_query',plan->'discovery_query',
+      'feedback_query',plan->'feedback_query',
       'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',
       'predicates',plan->'matching',
@@ -387,6 +400,7 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
         "p1_representations",
         "p2_mode_registry",
         "p2_recommendation_admission",
-        "p2_context_discovery_admission"
+        "p2_context_discovery_admission",
+        "p2_feedback_admission"
     ]
 );

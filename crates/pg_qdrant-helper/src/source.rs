@@ -2,15 +2,16 @@
 use pg_qdrant_protocol::{
     DiscoveryStrategy, ProbeError, RecommendationStrategy, RepresentationContract,
     RepresentationQuery, RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch,
-    SourceDiscovery, SourceFusion, SourcePredicates, SourceRecommendation,
+    SourceDiscovery, SourceFeedback, SourceFusion, SourcePredicates, SourceRecommendation,
 };
 use qdrant_edge::bm25_embed::EdgeBm25;
 use qdrant_edge::{
     ContextPair, ContextQuery, DiscoverQuery, Distance, EdgeConfig, EdgeShard,
-    EdgeSparseVectorParams, EdgeVectorParams, Filter, Fusion, IdfCorpusParams, IdfParams, Modifier,
-    MultiVectorComparator, MultiVectorConfig, NamedQuery, PointId, PointInsertOperations,
-    PointOperations, PointStruct, Prefetch, QueryEnum, QueryRequest, RecommendQuery, ScoringQuery,
-    SearchParams, UpdateOperation, Vector, VectorInternal, Vectors, WithPayloadInterface,
+    EdgeSparseVectorParams, EdgeVectorParams, FeedbackItem, FeedbackNaiveQuery, Filter, Fusion,
+    IdfCorpusParams, IdfParams, Modifier, MultiVectorComparator, MultiVectorConfig,
+    NaiveFeedbackStrategy, NamedQuery, PointId, PointInsertOperations, PointOperations,
+    PointStruct, Prefetch, QueryEnum, QueryRequest, RecommendQuery, ScoringQuery, SearchParams,
+    UpdateOperation, Vector, VectorInternal, Vectors, WithPayloadInterface,
 };
 use serde_json::{Value, json};
 use std::{
@@ -359,11 +360,15 @@ impl SourceOwner {
         representation_query: Option<RepresentationQuery>,
         recommendation_query: Option<SourceRecommendation>,
         discovery_query: Option<SourceDiscovery>,
+        feedback_query: Option<SourceFeedback>,
         rerank_query: Option<RepresentationQuery>,
         fusion: Option<SourceFusion>,
         predicates: SourcePredicates,
     ) -> Result<Value, ProbeError> {
-        if (recommendation_query.is_none() && discovery_query.is_none() && q.is_empty())
+        if (recommendation_query.is_none()
+            && discovery_query.is_none()
+            && feedback_query.is_none()
+            && q.is_empty())
             || q.len() > 8192
             || !(1..=1000).contains(&top_k)
         {
@@ -386,7 +391,94 @@ impl SourceOwner {
         let mut request = QueryRequest::new(top_k);
         let mut filter = crate::lexical::compile(&predicates, &self.encoder)?;
         request.filter = filter.clone();
-        let (scoring, uses_idf) = if let Some(discovery) = discovery_query {
+        let (scoring, uses_idf) = if let Some(feedback) = feedback_query {
+            if recommendation_query.is_some()
+                || discovery_query.is_some()
+                || representation_query.is_some()
+                || rerank_query.is_some()
+                || fusion.is_some()
+            {
+                return Err(ProbeError::invalid(
+                    "feedback cannot be combined, fused or reranked",
+                ));
+            }
+            let contract = owned
+                .representations
+                .get(&feedback.representation)
+                .ok_or_else(|| ProbeError::invalid("feedback slot is not owned"))?;
+            let count = feedback.feedback.len().saturating_add(1);
+            let c = &feedback.coefficients;
+            if contract.kind != "dense"
+                || feedback.model_id != contract.model_id
+                || feedback.model_version != contract.model_version
+                || feedback.feedback.is_empty()
+                || count > 32
+                || feedback.exclude_ids.len() != count
+                || feedback.exclude_ids.iter().any(|id| *id == 0)
+                || feedback
+                    .exclude_ids
+                    .iter()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len()
+                    != count
+                || !feedback_coefficients_valid(c.a, c.b, c.c)
+                || feedback
+                    .feedback
+                    .iter()
+                    .any(|item| !item.score.is_finite() || item.score.abs() > 16.0)
+            {
+                return Err(ProbeError::invalid(
+                    "invalid feedback examples, scores, coefficients or model",
+                ));
+            }
+            // Native extraction can form n*(n-1)/2 pairs and score both vectors
+            // in each pair. Admit the worst case even for equal feedback scores.
+            let n = feedback.feedback.len();
+            let work_vectors = n.saturating_mul(n.saturating_sub(1)).saturating_add(1);
+            admit_example_work(
+                work_vectors,
+                contract.dimensions,
+                shard.info().map_err(error)?.points_count,
+            )?;
+            for vector in std::iter::once(&feedback.target)
+                .chain(feedback.feedback.iter().map(|item| &item.vector))
+            {
+                validate_representation(&RepresentationVector::Dense(vector.clone()), contract)?;
+            }
+            let exclusion: Filter =
+                serde_json::from_value(json!({"must_not":[{"has_id":feedback.exclude_ids}]}))
+                    .map_err(error)?;
+            filter
+                .get_or_insert_with(Filter::default)
+                .must_not
+                .get_or_insert_with(Vec::new)
+                .extend(exclusion.must_not.unwrap());
+            request.filter = filter.clone();
+            use qdrant_edge::external::ordered_float::OrderedFloat;
+            let query = FeedbackNaiveQuery {
+                target: VectorInternal::Dense(feedback.target),
+                feedback: feedback
+                    .feedback
+                    .into_iter()
+                    .map(|item| FeedbackItem {
+                        vector: VectorInternal::Dense(item.vector),
+                        score: OrderedFloat(item.score),
+                    })
+                    .collect(),
+                coefficients: NaiveFeedbackStrategy {
+                    a: OrderedFloat(c.a),
+                    b: OrderedFloat(c.b),
+                    c: OrderedFloat(c.c),
+                },
+            };
+            (
+                ScoringQuery::Vector(QueryEnum::FeedbackNaive(NamedQuery {
+                    using: Some(feedback.representation),
+                    query,
+                })),
+                false,
+            )
+        } else if let Some(discovery) = discovery_query {
             if recommendation_query.is_some()
                 || representation_query.is_some()
                 || rerank_query.is_some()
@@ -699,7 +791,16 @@ impl SourceOwner {
     }
 }
 
-// Recommendation exact work uses the owned corpus before applying filters.
+fn feedback_coefficients_valid(a: f32, b: f32, c: f32) -> bool {
+    a.is_finite()
+        && a.abs() <= 16.0
+        && b.is_finite()
+        && (0.0..=4.0).contains(&b)
+        && c.is_finite()
+        && c.abs() <= 16.0
+}
+
+// Exact source-example work uses the owned corpus before applying filters.
 fn admit_example_work(
     examples: usize,
     dimensions: usize,
@@ -844,6 +945,8 @@ mod tests {
         assert!(admit_example_work(32, 125, 5001).is_err());
         assert!(admit_example_work(32, 4096, 153).is_err());
         assert!(admit_example_work(32, 4096, usize::MAX).is_err());
+        assert!(admit_example_work(931, 125, 171).is_ok());
+        assert!(admit_example_work(931, 125, 172).is_err());
     }
     use pg_qdrant_protocol::{SourceEvent, SparseValues};
 
@@ -967,6 +1070,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap_err();
@@ -981,6 +1085,7 @@ mod tests {
                 "anchor",
                 10,
                 Some(query.clone()),
+                None,
                 None,
                 None,
                 None,
@@ -1014,6 +1119,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap();
@@ -1033,6 +1139,7 @@ mod tests {
                 "anchor",
                 10,
                 Some(query),
+                None,
                 None,
                 None,
                 None,
@@ -1113,6 +1220,7 @@ mod tests {
                         Some(input.clone()),
                         None,
                         None,
+                        None,
                         SourcePredicates::default(),
                     )
                     .unwrap();
@@ -1155,6 +1263,7 @@ mod tests {
                         Some(input.clone()),
                         None,
                         None,
+                        None,
                         SourcePredicates {
                             key_exact: Some("4".into()),
                             ..Default::default()
@@ -1172,6 +1281,7 @@ mod tests {
                         None,
                         None,
                         Some(input.clone()),
+                        None,
                         None,
                         None,
                         SourcePredicates {
@@ -1212,6 +1322,7 @@ mod tests {
                                 Some(invalid),
                                 None,
                                 None,
+                                None,
                                 SourcePredicates::default()
                             )
                             .is_err()
@@ -1219,6 +1330,201 @@ mod tests {
                 }
             }
         }
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn source_feedback_native_scores_equal_boundary_and_numeric_admission() {
+        use pg_qdrant_protocol::{FeedbackCoefficients, SourceFeedbackItem};
+        let (owner, root, generation, epoch, values) = dense_example_fixture();
+        for distance in ["dot", "cosine", "euclid", "manhattan"] {
+            let vector = |raw: [f32; 2]| -> Vec<f32> {
+                if distance != "cosine" {
+                    return raw.to_vec();
+                }
+                let norm = (raw[0] * raw[0] + raw[1] * raw[1]).sqrt();
+                if norm == 0.0 {
+                    vec![0.5f32.sqrt(), 0.5f32.sqrt()]
+                } else {
+                    vec![raw[0] / norm, raw[1] / norm]
+                }
+            };
+            let similarity = |a: &[f32], b: &[f32]| -> f64 {
+                match distance {
+                    "dot" | "cosine" => a
+                        .iter()
+                        .zip(b)
+                        .map(|(x, y)| f64::from(*x) * f64::from(*y))
+                        .sum(),
+                    "euclid" => -a
+                        .iter()
+                        .zip(b)
+                        .map(|(x, y)| (f64::from(*x) - f64::from(*y)).powi(2))
+                        .sum::<f64>(),
+                    "manhattan" => -a
+                        .iter()
+                        .zip(b)
+                        .map(|(x, y)| (f64::from(*x) - f64::from(*y)).abs())
+                        .sum::<f64>(),
+                    _ => unreachable!(),
+                }
+            };
+            for scores in [[2.0, 0.0, -1.0], [1.0, 1.0, 1.0]] {
+                let input = SourceFeedback {
+                    representation: distance.into(),
+                    model_id: "fixture".into(),
+                    model_version: "r1".into(),
+                    target: vector(values[2]),
+                    feedback: [0, 1, 4]
+                        .into_iter()
+                        .zip(scores)
+                        .map(|(id, score)| SourceFeedbackItem {
+                            vector: vector(values[id]),
+                            score,
+                        })
+                        .collect(),
+                    coefficients: FeedbackCoefficients {
+                        a: 1.0,
+                        b: 2.0,
+                        c: 0.25,
+                    },
+                    exclude_ids: vec![3, 1, 2, 5],
+                };
+                let hits = owner
+                    .search(
+                        1,
+                        &generation,
+                        &epoch,
+                        "",
+                        100,
+                        None,
+                        None,
+                        None,
+                        Some(input.clone()),
+                        None,
+                        None,
+                        SourcePredicates::default(),
+                    )
+                    .unwrap();
+                assert_eq!(hits.as_array().unwrap().len(), 3);
+                for hit in hits.as_array().unwrap() {
+                    let id = hit["id"].as_u64().unwrap();
+                    assert!(!input.exclude_ids.contains(&id));
+                    let v = vector(values[id as usize - 1]);
+                    let mut expected = similarity(&v, &input.target);
+                    for p in &input.feedback {
+                        for n in &input.feedback {
+                            let confidence = f64::from(p.score) - f64::from(n.score);
+                            if confidence > 0.0 {
+                                expected += confidence.powi(2)
+                                    * 0.25
+                                    * (similarity(&v, &p.vector) - similarity(&v, &n.vector));
+                            }
+                        }
+                    }
+                    assert!(
+                        (hit["score"].as_f64().unwrap() - expected).abs() < 1e-5,
+                        "{distance} id={id}: {hit} != {expected}"
+                    );
+                }
+                let hits = owner
+                    .search(
+                        1,
+                        &generation,
+                        &epoch,
+                        "",
+                        1,
+                        None,
+                        None,
+                        None,
+                        Some(input.clone()),
+                        None,
+                        None,
+                        SourcePredicates {
+                            key_exact: Some("4".into()),
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                assert_eq!(hits[0]["id"], 4);
+                assert_eq!(
+                    owner
+                        .search(
+                            1,
+                            &generation,
+                            &epoch,
+                            "",
+                            1,
+                            None,
+                            None,
+                            None,
+                            Some(input.clone()),
+                            None,
+                            None,
+                            SourcePredicates {
+                                key_exact: Some("1".into()),
+                                ..Default::default()
+                            }
+                        )
+                        .unwrap(),
+                    json!([])
+                );
+                for (a, b, c) in [
+                    (f32::NAN, 1.0, 1.0),
+                    (1.0, f32::INFINITY, 1.0),
+                    (1.0, -1.0, 1.0),
+                    (1.0, 4.01, 1.0),
+                    (16.01, 1.0, 1.0),
+                    (1.0, 1.0, -16.01),
+                ] {
+                    let mut invalid = input.clone();
+                    invalid.coefficients = FeedbackCoefficients { a, b, c };
+                    assert!(
+                        owner
+                            .search(
+                                1,
+                                &generation,
+                                &epoch,
+                                "",
+                                1,
+                                None,
+                                None,
+                                None,
+                                Some(invalid),
+                                None,
+                                None,
+                                SourcePredicates::default()
+                            )
+                            .is_err()
+                    );
+                }
+                for score in [f32::NAN, f32::INFINITY, 16.01, -16.01] {
+                    let mut invalid = input.clone();
+                    invalid.feedback[0].score = score;
+                    assert!(
+                        owner
+                            .search(
+                                1,
+                                &generation,
+                                &epoch,
+                                "",
+                                1,
+                                None,
+                                None,
+                                None,
+                                Some(invalid),
+                                None,
+                                None,
+                                SourcePredicates::default()
+                            )
+                            .is_err()
+                    );
+                }
+            }
+        }
+        assert!(feedback_coefficients_valid(-16.0, 0.0, 16.0));
+        assert!(feedback_coefficients_valid(16.0, 4.0, -16.0));
         drop(owner);
         std::fs::remove_dir_all(root).unwrap();
     }
@@ -1333,6 +1639,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates::default(),
                     )
                     .unwrap();
@@ -1347,6 +1654,7 @@ mod tests {
                         1,
                         None,
                         Some(recommendation.clone()),
+                        None,
                         None,
                         None,
                         None,
@@ -1366,6 +1674,7 @@ mod tests {
                         1,
                         None,
                         Some(recommendation.clone()),
+                        None,
                         None,
                         None,
                         None,
@@ -1404,6 +1713,7 @@ mod tests {
                                 100,
                                 None,
                                 Some(invalid),
+                                None,
                                 None,
                                 None,
                                 None,
@@ -1527,6 +1837,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates::default()
                     )
                     .is_err()
@@ -1574,6 +1885,7 @@ mod tests {
                     &epoch,
                     "retired",
                     10,
+                    None,
                     None,
                     None,
                     None,

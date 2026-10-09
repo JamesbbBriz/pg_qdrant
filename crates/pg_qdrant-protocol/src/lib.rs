@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 10;
+pub const SOURCE_CONTRACT_VERSION: u32 = 11;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
@@ -209,6 +209,33 @@ pub struct SourceDiscovery {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
+pub struct FeedbackCoefficients {
+    pub a: f32,
+    pub b: f32,
+    pub c: f32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceFeedbackItem {
+    pub vector: Vec<f32>,
+    pub score: f32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceFeedback {
+    pub representation: String,
+    pub model_id: String,
+    pub model_version: String,
+    pub target: Vec<f32>,
+    pub feedback: Vec<SourceFeedbackItem>,
+    pub coefficients: FeedbackCoefficients,
+    pub exclude_ids: Vec<u64>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct SourceEvent {
     pub event_id: u64,
     pub point_id: u64,
@@ -263,6 +290,8 @@ pub enum Operation {
         recommendation_query: Option<SourceRecommendation>,
         #[serde(default)]
         discovery_query: Option<SourceDiscovery>,
+        #[serde(default)]
+        feedback_query: Option<SourceFeedback>,
         #[serde(default)]
         rerank_query: Option<RepresentationQuery>,
         #[serde(default)]
@@ -379,6 +408,30 @@ pub fn encode_helper_response(
 #[cfg(test)]
 mod search_contract_tests {
     use super::*;
+
+    #[test]
+    fn feedback_vectors_scores_and_coefficients_refuse_unknown_fields() {
+        let input = json!({"representation":"dense","model_id":"fixture","model_version":"r1",
+            "target":[1,0],"feedback":[{"vector":[0,1],"score":2}],
+            "coefficients":{"a":1,"b":2,"c":0.25},"exclude_ids":[1,2]});
+        assert!(serde_json::from_value::<SourceFeedback>(input.clone()).is_ok());
+        for (field, value) in [
+            ("target", json!("raw-id")),
+            (
+                "feedback",
+                json!([{"vector":[0,1],"score":2,"tenant_id":"caller"}]),
+            ),
+            (
+                "coefficients",
+                json!({"a":1,"b":2,"c":0.25,"strategy":"caller"}),
+            ),
+            ("tenant_id", json!("caller")),
+        ] {
+            let mut invalid = input.clone();
+            invalid[field] = value;
+            assert!(serde_json::from_value::<SourceFeedback>(invalid).is_err());
+        }
+    }
 
     #[test]
     fn discovery_context_pairs_are_typed_and_refuse_unknown_fields() {
