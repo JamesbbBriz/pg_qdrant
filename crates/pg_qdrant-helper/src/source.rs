@@ -2916,42 +2916,105 @@ mod tests {
 
     #[test]
     fn source_groups_native_fill_and_independent_dense_scores() {
-        let (owner,root,generation,epoch,values)=dense_payload_fixture(true);
-        for alias in ["dot","euclid"] {
-            for field in ["category","quantity"] {
-                let groups=SourceGroups {field:field.into(),q:"anchor".into(),groups:2,group_size:2,
-                    representation_query:Some(RepresentationQuery {representation:alias.into(),model_id:"fixture".into(),
-                        model_version:"r1".into(),vector:RepresentationVector::Dense(vec![1.,0.])})};
-                let result=owner.statistics(1,&generation,&epoch,(1..=7).collect(),None,1,None,Some(groups.clone()),SourcePredicates::default()).unwrap();
-                let rows=result["grouped"]["groups"].as_array().unwrap();
-                assert_eq!(rows.len(),2);
-                assert_eq!(result["grouped"]["groups_complete"],false);
-                let mut best=Vec::new();
+        let (owner, root, generation, epoch, values) = dense_payload_fixture(true);
+        for alias in ["dot", "euclid"] {
+            for field in ["category", "quantity"] {
+                let groups = SourceGroups {
+                    field: field.into(),
+                    q: "anchor".into(),
+                    groups: 2,
+                    group_size: 2,
+                    representation_query: Some(RepresentationQuery {
+                        representation: alias.into(),
+                        model_id: "fixture".into(),
+                        model_version: "r1".into(),
+                        vector: RepresentationVector::Dense(vec![1., 0.]),
+                    }),
+                };
+                let result = owner
+                    .statistics(
+                        1,
+                        &generation,
+                        &epoch,
+                        (1..=7).collect(),
+                        None,
+                        1,
+                        None,
+                        Some(groups.clone()),
+                        SourcePredicates::default(),
+                    )
+                    .unwrap();
+                let rows = result["grouped"]["groups"].as_array().unwrap();
+                assert_eq!(rows.len(), 2);
+                assert_eq!(result["grouped"]["groups_complete"], false);
+                let mut best = Vec::new();
                 for group in rows {
-                    let actual=group["hits"].as_array().unwrap();
-                    let score=|n:usize|if alias=="dot" {values[n][0] as f64} else {(1.-values[n][0] as f64).hypot(values[n][1] as f64)};
-                    let mut expected:Vec<_>=(0..7).filter(|n|if field=="category" {
-                        group["value"]==json!(if (n+1)%2==0 {"Allow"}else{"Denied"})
-                    }else {group["value"]==json!(n+1)}).map(score).collect();
-                    expected.sort_by(|a,b|if alias=="dot" {b.total_cmp(a)}else{a.total_cmp(b)});
+                    let actual = group["hits"].as_array().unwrap();
+                    let score = |n: usize| {
+                        if alias == "dot" {
+                            values[n][0] as f64
+                        } else {
+                            (1. - values[n][0] as f64).hypot(values[n][1] as f64)
+                        }
+                    };
+                    let mut expected: Vec<_> = (0..7)
+                        .filter(|n| {
+                            if field == "category" {
+                                group["value"]
+                                    == json!(if (n + 1) % 2 == 0 { "Allow" } else { "Denied" })
+                            } else {
+                                group["value"] == json!(n + 1)
+                            }
+                        })
+                        .map(score)
+                        .collect();
+                    expected.sort_by(|a, b| {
+                        if alias == "dot" {
+                            b.total_cmp(a)
+                        } else {
+                            a.total_cmp(b)
+                        }
+                    });
                     expected.truncate(2);
-                    assert_eq!(actual.len(),expected.len());
-                    for (hit,expected) in actual.iter().zip(expected) {
-                        let n=hit["id"].as_u64().unwrap() as usize-1;
-                        assert!((hit["score"].as_f64().unwrap()-expected).abs()<1e-6);
-                        assert!((score(n)-expected).abs()<1e-6);
+                    assert_eq!(actual.len(), expected.len());
+                    for (hit, expected) in actual.iter().zip(expected) {
+                        let n = hit["id"].as_u64().unwrap() as usize - 1;
+                        assert!((hit["score"].as_f64().unwrap() - expected).abs() < 1e-6);
+                        assert!((score(n) - expected).abs() < 1e-6);
                     }
                     best.push(actual[0]["score"].as_f64().unwrap());
                 }
-                assert!(if alias=="dot" {best[0]>=best[1]}else{best[0]<=best[1]});
-                let predicates=serde_json::from_value(json!({"payload_filter":{"field":"category","eq":"Allow"}})).unwrap();
-                let filtered=owner.statistics(1,&generation,&epoch,(1..=7).collect(),None,1,None,Some(groups),predicates).unwrap();
+                assert!(if alias == "dot" {
+                    best[0] >= best[1]
+                } else {
+                    best[0] <= best[1]
+                });
+                let predicates = serde_json::from_value(
+                    json!({"payload_filter":{"field":"category","eq":"Allow"}}),
+                )
+                .unwrap();
+                let filtered = owner
+                    .statistics(
+                        1,
+                        &generation,
+                        &epoch,
+                        (1..=7).collect(),
+                        None,
+                        1,
+                        None,
+                        Some(groups),
+                        predicates,
+                    )
+                    .unwrap();
                 for group in filtered["grouped"]["groups"].as_array().unwrap() {
-                    for hit in group["hits"].as_array().unwrap() {assert_eq!(hit["id"].as_u64().unwrap()%2,0);}
+                    for hit in group["hits"].as_array().unwrap() {
+                        assert_eq!(hit["id"].as_u64().unwrap() % 2, 0);
+                    }
                 }
             }
         }
-        drop(owner);std::fs::remove_dir_all(root).unwrap();
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
