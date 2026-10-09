@@ -113,11 +113,17 @@ def cgroup_identity():
 
 
 def write_owned(path, value):
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(fd, "w") as stream:
-        stream.write(json.dumps(value) + "\n")
-        stream.flush()
-        os.fsync(stream.fileno())
+    path = Path(path)
+    pending = path.with_name(path.name + ".pending")
+    fd = os.open(pending, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    try:
+        with os.fdopen(fd, "w") as stream:
+            stream.write(json.dumps(value) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(pending, path, follow_symlinks=False)
+    finally:
+        pending.unlink()
 
 
 def native_lines():

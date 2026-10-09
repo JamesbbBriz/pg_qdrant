@@ -73,8 +73,10 @@ Only the target process temporarily raises its own `oom_score_adj` to 1000.
 The prior nonnegative value is restored and checked if execution returns. This
 is a victim preference, not a guarantee. The outer runner maps the target to a
 host PID/start/cgroup identity before releasing a bounded barrier. Native code
-then retains at most 768 MiB in 1 MiB chunks and touches every native page. The
-10-second loop limit is cooperative; a blocked allocation or page fault is not
+then reserves at most 768 MiB in one private anonymous mapping and writes one
+byte in every native page. Linux initializes anonymous pages; no second bulk
+initialization is needed. The 10-second loop limit is cooperative; a blocked
+allocation or page fault is not
 native cancellation. The independent outer container watchdog remains active,
 and any watchdog, supervisor kill request, cleanup intervention, returned
 allocation error, or reached allocation cap prevents a positive verdict.
@@ -139,10 +141,11 @@ intervention, optimized-interpreter refusal, and real bounded observer subproces
 continue running the normal helper protocol suite, which refuses `oom` without
 the private feature. PostgreSQL profile compilation is required separately.
 
-The P0 workflow now wires two sequential positive OOM steps after successful
+The local act registry wires two sequential positive OOM steps after successful
 private image builds. Independent failure conditions keep a failed direct
 comparison from hiding the helper comparison; the experiments do not run
-concurrently. A final always-run artifact upload retains both directories.
+concurrently. Local evidence export retains both directories. Hosted workflows
+are disabled.
 The [recorded CI7 execution](evidence/p0-source-capacity-oom-ci.json) passed
 both comparisons. The regenerated
 [normal dependency graph](dependency-graph.json),
@@ -192,7 +195,7 @@ recovery interval includes waiting for the already running companion `pg_sleep`;
 it is not a restart-latency measurement. The deliberate positive OOM preference
 and tiny fixture do not establish general memory isolation or index durability.
 
-## Bounded debug initialization
+## Historical bounded debug initialization
 
 The private native allocator initializes each successfully reserved 1 MiB buffer
 with a bulk byte write before publishing its length. The pointer covers the
@@ -252,3 +255,37 @@ start tick, refused loading without the two BPF capabilities, and retained the
 same open-descriptor count after every success and failure. Its direct-worker
 comparison again failed without an OOM kill; both failed comparisons remain
 failures in their receipts.
+
+## Private mapping and atomic observation publication
+
+The fault allocator owns one private anonymous Linux mapping, checks its fixed
+length and each page offset, and releases the exact mapping on returned failure.
+It does not request a fixed address, locked pages or eager population. See the
+[Linux mmap interface](https://man7.org/linux/man-pages/man2/mmap.2.html).
+The 768 MiB cap, 10-second cooperative deadline, identity checks, score restore,
+outer watchdog and strict kernel victim/cgroup attribution remain unchanged.
+
+Scoped local act `oommap-9e588b001fba09e5` rebuilt both fault profiles on immutable
+prior full-run images with the hashed mapping change. Five native guard tests
+passed. Both directed comparisons passed strict kernel attribution without
+external termination: direct-worker collateral interruption and helper session
+survival/replacement were observed. This scope predates the publication fix
+below and does not establish full-current-revision CI or production isolation.
+
+The earlier full act `f40ec9039a2f4fbc` direct-worker failure occurred before
+allocation: native evidence reports `allocation_started=false` and JSON EOF at
+the observation barrier. The writer had created the public path before writing
+its body. This was not evidence of reaching the allocation deadline. The failed
+receipt remains failed and retained. The release and ready publishers now write
+and sync a private exclusive pending inode, then publish it with an exclusive
+hard link. Existing paths are never replaced; incomplete input is never visible
+under the release name. Native JSON and identity validation still fail closed.
+
+Scoped local act `oomatomic-d639d8adc9019247` repeated both strict comparisons
+with atomic release and ready publication. Five frozen executable/observer
+inputs and the complete act log were hash-verified. Direct kernel task 5277 and
+helper task 7916 matched their exact limiting cgroups; no external termination
+occurred. The helper retained PostgreSQL and companion sessions and replayed
+source data under a replacement owner. All 84 Python tests passed in the
+separate three-gate static scope `5ca30ddc729b7039`, including staged-input and
+invalid/reused publication checks. A full current-revision run remains required.
