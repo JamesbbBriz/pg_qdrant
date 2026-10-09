@@ -58,10 +58,14 @@ can proceed. These checks establish a current-source validation point, not a
 cross-engine historical MVCC snapshot. Cancellation retains the sole native
 owner until the actual operation completes and discards the canceled response.
 
-Source protocol 18 requires matching extension, helper and install SQL with a
+Source protocol 19 requires matching extension, helper and install SQL with a
 fresh development catalog. No direct dependency or lockfile changes are made.
 Installed SQL tests compare native facets to independent PostgreSQL GROUP BY,
 exercise integer extrema, nulls, filtering, permission refusals, stale output
 and in-flight cancellation/source changes. F19 and Q11 remain partial: large
-domains, document counts, matrix, comprehensive lexical analysis, quality,
+domains, document counts, general matrix representations, comprehensive lexical analysis, quality,
 upgrade/rollback and release acceptance are still required.
+
+Bounded named-dense sampled-set matrices reuse this complete proof through
+[search_matrix](source-matrix.md); their neighbor scores retain an explicit
+non-exact native-default scope, separately from the exact filtered point count.

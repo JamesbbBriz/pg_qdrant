@@ -3,9 +3,10 @@ use pg_qdrant_protocol::formula::ScoreFormula;
 use pg_qdrant_protocol::{
     DiscoveryStrategy, PayloadKind, ProbeError, RecommendationStrategy, RepresentationContract,
     RepresentationQuery, RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch,
-    SourceDiscovery, SourceFeedback, SourceFusion, SourceMmr, SourcePredicates,
+    SourceDiscovery, SourceFeedback, SourceFusion, SourceMatrix, SourceMmr, SourcePredicates,
     SourceRecommendation,
 };
+use qdrant_edge::EdgeShardRead;
 use qdrant_edge::bm25_embed::EdgeBm25;
 use qdrant_edge::{
     ContextPair, ContextQuery, DiscoverQuery, Distance, EdgeConfig, EdgeShard,
@@ -993,6 +994,7 @@ impl SourceOwner {
         point_ids: Vec<u64>,
         facet: Option<String>,
         facet_limit: usize,
+        matrix: Option<SourceMatrix>,
         predicates: SourcePredicates,
     ) -> Result<Value, ProbeError> {
         if point_ids.len() > 1000
@@ -1043,11 +1045,96 @@ impl SourceOwner {
                     .map_err(|_| ProbeError::invalid("invalid compiled statistics filter"))?;
             filter.must.get_or_insert_with(Vec::new).push(condition);
         }
-        filter = filter.with_point_ids(point_ids.into_iter().map(PointId::NumId));
+        filter = filter.with_point_ids(point_ids.iter().copied().map(PointId::NumId));
         let mut request = qdrant_edge::CountRequest::new();
         request.exact = true;
         request.filter = Some(filter.clone());
         let points = owned.shard.count(request).map_err(error)?;
+        let mut matrix_result = Value::Null;
+        if let Some(matrix) = matrix {
+            let contract = owned
+                .representations
+                .get(&matrix.representation)
+                .filter(|c| c.kind == "dense")
+                .ok_or_else(|| {
+                    ProbeError::invalid("matrix requires a declared dense representation")
+                })?;
+            let work = point_ids
+                .len()
+                .checked_mul(matrix.sample_size)
+                .and_then(|n| n.checked_mul(contract.dimensions));
+            if !(1..=64).contains(&matrix.sample_size)
+                || !(1..=32).contains(&matrix.neighbors)
+                || work.is_none_or(|n| n > 20_000_000)
+                || facet.is_some()
+            {
+                return Err(ProbeError::invalid(
+                    "matrix sample/neighbor/scalar budget exceeded",
+                ));
+            }
+            let mut complete = qdrant_edge::CountRequest::new();
+            complete.exact = true;
+            complete.filter = Some(Filter::new_must(
+                serde_json::from_value(json!({
+                    "has_vector": matrix.representation
+                }))
+                .map_err(error)?,
+            ));
+            if owned.shard.count(complete).map_err(error)? != point_ids.len() {
+                return Err(error(
+                    "matrix representation is incomplete in the owned generation",
+                ));
+            }
+            let mut request = qdrant_edge::SearchMatrixRequest::new(
+                matrix.sample_size,
+                matrix.neighbors,
+                matrix.representation.clone(),
+            );
+            request.filter = Some(filter.clone());
+            let response = owned.shard.search_matrix(request).map_err(error)?;
+            let sample_ids: Vec<u64> = response
+                .sample_ids
+                .into_iter()
+                .map(|id| match id {
+                    PointId::NumId(id) if point_ids.contains(&id) => Ok(id),
+                    _ => Err(error("matrix sampled an unexpected identity")),
+                })
+                .collect::<Result<_, _>>()?;
+            if sample_ids.len() > matrix.sample_size
+                || response.nearests.len() != sample_ids.len()
+                || sample_ids.windows(2).any(|ids| ids[0] >= ids[1])
+            {
+                return Err(error("invalid native matrix sample domain"));
+            }
+            let mut rows = Vec::with_capacity(sample_ids.len());
+            for (&from, nearests) in sample_ids.iter().zip(response.nearests) {
+                let mut seen = std::collections::HashSet::new();
+                if nearests.len() > matrix.neighbors {
+                    return Err(error("matrix neighbor bound exceeded"));
+                }
+                let mut neighbors = Vec::with_capacity(nearests.len());
+                for hit in nearests {
+                    let PointId::NumId(to) = hit.id else {
+                        return Err(error("unexpected matrix neighbor identity"));
+                    };
+                    if from == to
+                        || !sample_ids.contains(&to)
+                        || !seen.insert(to)
+                        || !hit.score.is_finite()
+                    {
+                        return Err(error("invalid native matrix neighbor or non-finite score"));
+                    }
+                    neighbors.push(json!({"id":to,"score":hit.score}));
+                }
+                rows.push(json!({"id":from,"neighbors":neighbors}));
+            }
+            matrix_result = json!({"representation":matrix.representation,"model_id":contract.model_id,
+                "model_version":contract.model_version,"distance":contract.distance,"sample_size":matrix.sample_size,
+                "neighbor_limit":matrix.neighbors,"sample_ids":sample_ids,"rows":rows,
+                "sampling":"native random; fewer than two matches returns an empty matrix",
+                "neighbor_domain":"sampled set only","exact":false,"search_params":"native defaults",
+                "scalar_work_limit":20_000_000});
+        }
         let mut facet_result = Value::Null;
         if let Some(name) = facet {
             match owned.payload_contract.get(&name) {
@@ -1088,7 +1175,7 @@ impl SourceOwner {
             }
             facet_result = json!({"field":name,"hits":hits,"values_complete":complete,"nulls":"omitted","ordering":"count descending; typed value ascending for ties"});
         }
-        Ok(json!({"points":points,"proof":proof,"facet":facet_result}))
+        Ok(json!({"points":points,"proof":proof,"facet":facet_result,"matrix":matrix_result}))
     }
 
     pub fn retrieve(
@@ -2622,6 +2709,7 @@ mod tests {
                 (1..=7).collect(),
                 Some("category".into()),
                 1,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap();
@@ -2643,6 +2731,7 @@ mod tests {
                 (1..=7).collect(),
                 Some("available".into()),
                 100,
+                None,
                 predicates,
             )
             .unwrap();
@@ -2670,6 +2759,7 @@ mod tests {
                         ids,
                         None,
                         1,
+                        None,
                         SourcePredicates::default()
                     )
                     .is_err()
@@ -2685,6 +2775,151 @@ mod tests {
                         (1..=7).collect(),
                         Some(alias.into()),
                         100,
+                        None,
+                        SourcePredicates::default()
+                    )
+                    .is_err()
+            );
+        }
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn source_matrix_sample_domain_and_independent_dense_scores() {
+        let (owner, root, generation, epoch, values) = dense_payload_fixture(true);
+        let request = || {
+            Some(SourceMatrix {
+                representation: "dot".into(),
+                sample_size: 7,
+                neighbors: 6,
+            })
+        };
+        let result = owner
+            .statistics(
+                1,
+                &generation,
+                &epoch,
+                (1..=7).collect(),
+                None,
+                1,
+                request(),
+                SourcePredicates::default(),
+            )
+            .unwrap();
+        let rows = result["matrix"]["rows"].as_array().unwrap();
+        assert_eq!(rows.len(), 7);
+        assert_eq!(result["matrix"]["exact"], false);
+        for row in rows {
+            let from = row["id"].as_u64().unwrap() as usize - 1;
+            assert_eq!(row["neighbors"].as_array().unwrap().len(), 6);
+            for hit in row["neighbors"].as_array().unwrap() {
+                let to = hit["id"].as_u64().unwrap() as usize - 1;
+                assert_ne!(from, to);
+                let expected: f64 = values[from]
+                    .iter()
+                    .zip(&values[to])
+                    .map(|(&a, &b)| a as f64 * b as f64)
+                    .sum();
+                assert!((hit["score"].as_f64().unwrap() - expected).abs() < 1e-6);
+            }
+        }
+        for distance in ["cosine", "euclid", "manhattan"] {
+            let result = owner
+                .statistics(
+                    1,
+                    &generation,
+                    &epoch,
+                    (1..=7).collect(),
+                    None,
+                    1,
+                    Some(SourceMatrix {
+                        representation: distance.into(),
+                        sample_size: 7,
+                        neighbors: 6,
+                    }),
+                    SourcePredicates::default(),
+                )
+                .unwrap();
+            assert_eq!(result["matrix"]["distance"], distance);
+            for row in result["matrix"]["rows"].as_array().unwrap() {
+                let from = row["id"].as_u64().unwrap() as usize - 1;
+                for hit in row["neighbors"].as_array().unwrap() {
+                    let to = hit["id"].as_u64().unwrap() as usize - 1;
+                    let a = values[from].map(f64::from);
+                    let b = values[to].map(f64::from);
+                    let expected = match distance {
+                        "euclid" => (a[0] - b[0]).hypot(a[1] - b[1]),
+                        "manhattan" => (a[0] - b[0]).abs() + (a[1] - b[1]).abs(),
+                        _ => {
+                            let normalize = |v: [f64; 2]| {
+                                let norm = v[0].hypot(v[1]);
+                                if norm == 0.0 {
+                                    [0.5f64.sqrt(); 2]
+                                } else {
+                                    v.map(|x| x / norm)
+                                }
+                            };
+                            let a = normalize(a);
+                            let b = normalize(b);
+                            a[0] * b[0] + a[1] * b[1]
+                        }
+                    };
+                    assert!(
+                        (hit["score"].as_f64().unwrap() - expected).abs() < 1e-6,
+                        "{distance}: {hit} expected {expected}"
+                    );
+                }
+            }
+        }
+        let predicates =
+            serde_json::from_value(json!({"payload_filter":{"field":"category","eq":"Allow"}}))
+                .unwrap();
+        let filtered = owner
+            .statistics(
+                1,
+                &generation,
+                &epoch,
+                (1..=7).collect(),
+                None,
+                1,
+                request(),
+                predicates,
+            )
+            .unwrap();
+        assert_eq!(filtered["matrix"]["sample_ids"], json!([2, 4, 6]));
+        for bad in [
+            SourceMatrix {
+                representation: "dot".into(),
+                sample_size: 0,
+                neighbors: 1,
+            },
+            SourceMatrix {
+                representation: "dot".into(),
+                sample_size: 65,
+                neighbors: 1,
+            },
+            SourceMatrix {
+                representation: "dot".into(),
+                sample_size: 7,
+                neighbors: 33,
+            },
+            SourceMatrix {
+                representation: "unknown".into(),
+                sample_size: 7,
+                neighbors: 1,
+            },
+        ] {
+            assert!(
+                owner
+                    .statistics(
+                        1,
+                        &generation,
+                        &epoch,
+                        (1..=7).collect(),
+                        None,
+                        1,
+                        Some(bad),
                         SourcePredicates::default()
                     )
                     .is_err()
