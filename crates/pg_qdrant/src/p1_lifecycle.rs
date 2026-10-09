@@ -44,3 +44,8 @@ pgrx::extension_sql_file!(
     name = "p2_search_pages",
     requires = ["p2_query_admission"]
 );
+pgrx::extension_sql_file!(
+    "../sql/query_modes.sql",
+    name = "p2_mode_registry",
+    requires = ["p1_representations"]
+);

@@ -90,7 +90,13 @@ mod qdrant {
         }))
     }
 
-    /// Preserve all 54 product requirements without promoting a probe to support.
+    pgrx::extension_sql_file!(
+        "../sql/capabilities.sql",
+        name = "p2_capability_discovery",
+        requires = [capabilities, "p2_search_pages", "p2_mode_registry"]
+    );
+
+    /// Private build registry underlying permissioned SQL capability discovery.
     #[pg_extern(volatile, parallel_unsafe)]
     fn capabilities(index_name: default!(Option<&str>, "NULL")) -> JsonB {
         if index_name.is_some() {

@@ -60,7 +60,7 @@ BEGIN
         RAISE EXCEPTION 'top_k outside permitted 1..100 range'
           USING ERRCODE = '22023';
     END IF;
-    IF mode IS NULL OR mode NOT IN ('text','semantic','sparse','hybrid','maxsim','precision') THEN
+    IF mode IS NULL OR NOT EXISTS(SELECT 1 FROM qdrant_internal.query_modes m WHERE m.mode=explain_search.mode) THEN
         RAISE EXCEPTION 'Unknown search mode'
           USING ERRCODE = '22023';
     END IF;
@@ -339,5 +339,5 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
     qdrant.search(text,text,text,integer,jsonb,jsonb) TO PUBLIC;
 "###,
     name = "p2_query_admission",
-    requires = ["p1_representations"]
+    requires = ["p1_representations", "p2_mode_registry"]
 );

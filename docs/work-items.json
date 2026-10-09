@@ -7409,6 +7409,16 @@
       "evidence": [
         {
           "level": "SQL-integration-verified",
+          "kind": "installed_index_capability_discovery",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_discovery.py",
+          "scope": "One private six-mode registry governs search mode admission and global/index-specific discovery. Registered-owner/source SELECT and RLS gates precede private metadata; current live incarnation/source fingerprint and complete named-slot state govern mode readiness. Actual installed SQL tests cover missing/stale/re-encoded dense/sparse/token slots, identity/fingerprint mismatches, role revocation, registry rollback, real same-contract rebuild and owner/PostgreSQL replay. Private native-owner diagnostics are omitted and no native search runs during discovery. Query-specific input/budget admission, durability, broader advanced/configuration planning and full P2-DISCOVERY remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
+          "level": "SQL-integration-verified",
           "kind": "installed_owned_abandoned_generation_retirement",
           "status": "passed",
           "source": "crates/pg_qdrant/tests/verify_abandoned.py",
