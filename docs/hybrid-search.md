@@ -1,8 +1,9 @@
 # Bounded native BM25 and model fusion
 
-The managed-helper development build executes `mode => 'hybrid'` using two
-native Edge prefetch branches: the registered text field's offline BM25 and one
-declared dense or [learned sparse BYOV](sparse-representations.md) representation.
+The managed-helper development build executes `mode => 'hybrid'` using two or
+three native Edge prefetch branches: the registered text field's offline BM25,
+one declared dense or [learned sparse BYOV](sparse-representations.md) slot,
+or both distinct kinds together. Each participating slot is admitted independently.
 It requires the same current model contract
 and whole-source representation readiness as [semantic search](dense-representations.md).
 Missing, stale or incompatible vectors cause an error. No implicit fallback is
@@ -32,14 +33,16 @@ The small vectors in the example describe an integration fixture rather than a
 recommended production model.
 
 `fusion` accepts `rrf` (default) or `dbsf` only for hybrid mode. The pinned engine
-is `qdrant-edge =0.8.0`. Both branches execute exact nearest queries with a
+is `qdrant-edge =0.8.0`. Every branch executes an exact nearest query with a
 candidate limit between `top_k` and 1000. The outer fused candidate list has the
 same limit; the source JOIN can return fewer than `top_k` if concurrent source
 changes invalidate candidates. There is no unbounded refill or exact whole-corpus
 hybrid ranking claim. The adapter explicitly selects native live-corpus IDF for
 BM25 and engine-IDF learned sparse, excluding deleted posting history. Learned
 sparse has separate none/external/engine IDF contracts. Tenant-filtered IDF and
-user-selected corpus filters remain unimplemented.
+user-selected IDF corpus filters remain unimplemented. Declared scalar query
+filters constrain candidates in every branch while IDF retains its explicit
+whole-live-generation scope.
 
 RRF uses equal weights and `k=2`. A point at zero-based branch position `r`
 contributes `1/(r+2)`; contributions from participating branches are added.
@@ -53,11 +56,19 @@ SQL key-order guarantee.
 `explain_search` exposes branch names, budgets, pinned fusion contract and the
 effective plan. Result provenance identifies `hybrid_bm25_dense_rrf` or
 `hybrid_bm25_dense_dbsf`, or the corresponding `learned_sparse` plan, and the
-bounded-candidate statistics scope.
+bounded-candidate statistics scope. Three-branch plans use
+`hybrid_bm25_dense_learned_sparse_rrf` or the corresponding `dbsf` name.
+`precision` can supply those same two model queries together with one token slot.
+Duplicate model kinds, missing/stale slots and incompatible model/vocabulary/IDF
+contracts fail closed. The bounded three-branch installed regression compares
+RRF/DBSF against independently calculated scores, including empty/singleton
+branches and filters, then compares MaxSim against standalone token scores.
+Source protocol 17 requires matched extension/helper binaries; no upgrade
+compatibility is established by this development change.
 Both source and query vectors obey the [numeric score budgets](finite-scores.md)
 before entering native fusion; finite components alone do not prevent DBSF
 variance overflow. Non-finite final native scores reject the entire response.
-The registered owner domain is shared by both branches because each owned index
+The registered owner domain is shared by all branches because each owned index
 contains only that registered source. Index/source/model-column authorization and
 RLS rejection occur before native admission. Catalog/source locks and post-query
 identity, revision, incarnation, source SHA-256 and permission rechecks are the

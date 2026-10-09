@@ -367,6 +367,7 @@ impl SourceOwner {
         )
     }
 
+    #[cfg(test)]
     pub fn search(
         &self,
         index_id: u64,
@@ -375,6 +376,43 @@ impl SourceOwner {
         q: &str,
         top_k: usize,
         representation_query: Option<RepresentationQuery>,
+        recommendation_query: Option<SourceRecommendation>,
+        discovery_query: Option<SourceDiscovery>,
+        feedback_query: Option<SourceFeedback>,
+        mmr_query: Option<SourceMmr>,
+        formula: Option<ScoreFormula>,
+        rerank_query: Option<RepresentationQuery>,
+        fusion: Option<SourceFusion>,
+        predicates: SourcePredicates,
+    ) -> Result<Value, ProbeError> {
+        self.search_multiple(
+            index_id,
+            generation,
+            epoch,
+            q,
+            top_k,
+            representation_query,
+            Vec::new(),
+            recommendation_query,
+            discovery_query,
+            feedback_query,
+            mmr_query,
+            formula,
+            rerank_query,
+            fusion,
+            predicates,
+        )
+    }
+
+    pub fn search_multiple(
+        &self,
+        index_id: u64,
+        generation: &str,
+        epoch: &str,
+        q: &str,
+        top_k: usize,
+        representation_query: Option<RepresentationQuery>,
+        additional_recall: Vec<RepresentationQuery>,
         recommendation_query: Option<SourceRecommendation>,
         discovery_query: Option<SourceDiscovery>,
         feedback_query: Option<SourceFeedback>,
@@ -420,6 +458,46 @@ impl SourceOwner {
         if fusion.is_some() && representation_query.is_none() {
             return Err(ProbeError::invalid(
                 "hybrid fusion requires a named representation query",
+            ));
+        }
+        if additional_recall.len() > 1
+            || (!additional_recall.is_empty()
+                && (fusion.is_none()
+                    || recommendation_query.is_some()
+                    || discovery_query.is_some()
+                    || feedback_query.is_some()
+                    || mmr_query.is_some()))
+        {
+            return Err(ProbeError::invalid(
+                "additional recall requires bounded dense/sparse fusion",
+            ));
+        }
+        let mut extra = None;
+        if let Some(input) = additional_recall.first() {
+            let primary = representation_query
+                .as_ref()
+                .and_then(|query| owned.representations.get(&query.representation))
+                .ok_or_else(|| ProbeError::invalid("primary recall slot absent"))?;
+            let contract = owned
+                .representations
+                .get(&input.representation)
+                .ok_or_else(|| ProbeError::invalid("additional recall slot absent"))?;
+            if primary.kind != "dense"
+                || contract.kind != "learned_sparse"
+                || input.model_id != contract.model_id
+                || input.model_version != contract.model_version
+            {
+                return Err(ProbeError::invalid(
+                    "additional recall requires a distinct declared learned sparse model after dense",
+                ));
+            }
+            validate_representation(&input.vector, contract)?;
+            extra = Some((
+                ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
+                    using: Some(input.representation.clone()),
+                    query: native_vector(&input.vector)?.into(),
+                })),
+                contract.idf_policy.as_deref() == Some("engine"),
             ));
         }
         let mut request = QueryRequest::new(top_k);
@@ -779,17 +857,18 @@ impl SourceOwner {
                 using: Some("bm25".to_owned()),
                 query: VectorInternal::Sparse(self.encoder.embed_query(q)),
             }));
-            request.prefetches = [bm25, scoring]
+            let mut branches = vec![(bm25, true), (scoring, uses_idf)];
+            branches.extend(extra);
+            request.prefetches = branches
                 .into_iter()
-                .enumerate()
-                .map(|(branch, query)| {
+                .map(|(query, branch_idf)| {
                     let mut stage = Prefetch::new(top_k);
                     stage.query = Some(query);
                     stage.filter = filter.clone();
                     stage.params = Some(SearchParams {
                         exact: true,
                         indexed_only: false,
-                        idf: (branch == 0 || uses_idf).then(|| {
+                        idf: branch_idf.then(|| {
                             IdfParams::Corpus(IdfCorpusParams {
                                 corpus: Filter::default(),
                             })
