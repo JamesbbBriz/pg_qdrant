@@ -302,7 +302,7 @@ impl SourceOwner {
             &self.root,
             "before_apply",
             batch.index_id,
-            batch.task_id.is_some(),
+            batch.task_id.as_deref(),
         );
         for event in &batch.events {
             let operation = if let Some(body) = &event.body {
@@ -320,7 +320,7 @@ impl SourceOwner {
                     &self.root,
                     "after_point_delete",
                     batch.index_id,
-                    batch.task_id.is_some(),
+                    batch.task_id.as_deref(),
                 );
                 let mut vectors = vec![(
                     "bm25".to_owned(),
@@ -359,7 +359,7 @@ impl SourceOwner {
             &self.root,
             "before_flush",
             batch.index_id,
-            batch.task_id.is_some(),
+            batch.task_id.as_deref(),
         );
         shard.flush().map_err(error)?;
         #[cfg(feature = "p0-fault-injection")]
@@ -367,7 +367,7 @@ impl SourceOwner {
             &self.root,
             "after_flush",
             batch.index_id,
-            batch.task_id.is_some(),
+            batch.task_id.as_deref(),
         );
         Ok(
             json!({"source_contract_version":SOURCE_CONTRACT_VERSION,"generation":batch.generation,"storage_epoch":batch.storage_epoch,
@@ -3564,10 +3564,50 @@ mod tests {
 }
 
 #[cfg(feature = "p0-fault-injection")]
-fn fault(root: &std::path::Path, cut: &str, index: u64, shadow: bool) {
-    if take_fault_marker(root, cut, index, shadow) {
+fn fault(root: &std::path::Path, cut: &str, index: u64, task: Option<&str>) {
+    if take_scoped_fault_marker(root, cut, index, task) {
         std::process::abort();
     }
+}
+
+#[cfg(feature = "p0-fault-injection")]
+fn take_scoped_fault_marker(
+    root: &std::path::Path,
+    cut: &str,
+    index: u64,
+    task: Option<&str>,
+) -> bool {
+    task.is_some_and(|id| take_fault_marker(root, &format!("task:{id}:{cut}"), index, false))
+        || take_fault_marker(root, cut, index, task.is_some())
+}
+
+#[cfg(all(test, feature = "p0-fault-injection"))]
+#[test]
+fn task_fault_cannot_be_consumed_by_another_shadow_or_serving_batch() {
+    let root = std::env::temp_dir().join(format!("pgq-task-fault-{}.indexes", std::process::id()));
+    let marker = root.with_extension("fault");
+    std::fs::write(&marker, "task:target:before_flush").unwrap();
+    assert!(!take_scoped_fault_marker(
+        &root,
+        "before_flush",
+        1,
+        Some("cancelled")
+    ));
+    assert!(!take_scoped_fault_marker(&root, "before_flush", 1, None));
+    assert!(!take_scoped_fault_marker(
+        &root,
+        "after_flush",
+        1,
+        Some("target")
+    ));
+    assert!(marker.exists());
+    assert!(take_scoped_fault_marker(
+        &root,
+        "before_flush",
+        1,
+        Some("target")
+    ));
+    assert!(!marker.exists());
 }
 
 #[cfg(feature = "p0-fault-injection")]

@@ -2,6 +2,7 @@
 import json
 import os
 import pathlib
+import signal
 import time
 
 
@@ -78,9 +79,13 @@ def run(sql, ready, spawn, finish, wait_session, ticket_from, native_hits, model
         marker=next(pathlib.Path(os.environ['PG_QDRANT_DISPOSABLE_DATA']).rglob('db-*.engine-owner')).with_suffix('.fault')
         for cut in ['before_flush','after_flush']:
             before_failure=ready('generation_docs')
-            index_id=sql("SELECT index_id FROM qdrant_internal.index_catalog WHERE index_name='generation_docs'")
-            marker.write_text('shadow:'+index_id+':'+cut)
-            failed_task=json.loads(sql("SELECT qdrant.rebuild_index('generation_docs')"))['task_id']
+            pid=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
+            os.kill(pid,signal.SIGSTOP)
+            try:
+                failed_task=json.loads(sql("SELECT qdrant.rebuild_index('generation_docs')"))['task_id']
+                marker.write_text('task:'+failed_task+':'+cut)
+            finally:
+                os.kill(pid,signal.SIGCONT)
             failed=json.loads(sql("SELECT qdrant.await_task('"+failed_task+"',60000)"))
             assert failed['state']=='failed' and not failed['succeeded'] and failed['pending_events']>0,failed
             assert not marker.exists(),'shadow did not reach the actual native fault'
