@@ -28,7 +28,14 @@ def ready():
 
 def failure():
     value = status()
-    return value if value['state'] == 'failed' or value['owner_status']['helper_restart_exhausted'] else None
+    if value['state'] not in ('failed', 'degraded') and not value['owner_status']['helper_restart_exhausted']:
+        return None
+    # The consumer can persist a transport failure before the supervisor's
+    # next nonblocking wait publishes the native exit. Observe that exit for
+    # this helper, or the actual storage error, within the existing deadline.
+    native_exit = value['owner_status'].get('helper_last_exit') or {}
+    storage_error = 'space' in (value['last_error'] or '').lower()
+    return value if storage_error or native_exit.get('engine_pid') == pid else None
 
 def wait_for(predicate, timeout=60):
     deadline = time.monotonic() + timeout
@@ -96,7 +103,8 @@ try:
     # A full tmpfs can fault a mapped native page with SIGBUS instead of
     # returning an I/O error. Require the actual error/exit, never only timeout.
     native_exit = failed['owner_status'].get('helper_last_exit') or {}
-    assert 'space' in (failed['last_error'] or '').lower() or native_exit.get('signal') == signal.SIGBUS, failed
+    assert 'space' in (failed['last_error'] or '').lower() or (
+        native_exit.get('engine_pid') == pid and native_exit.get('signal') == signal.SIGBUS), failed
     refused = json.loads(sql("SELECT qdrant.await_changes('" + ticket + "',100)"))
     assert refused['committed'] and not refused['durable'] and refused['pending_events'] > 0, refused
     assert sql("SELECT body LIKE 'diskchanged %' FROM disk WHERE id=1") == 't'
