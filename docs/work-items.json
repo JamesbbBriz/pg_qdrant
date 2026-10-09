@@ -2146,7 +2146,7 @@
         }
       ],
       "missing_upstream_plan": "I-07 compares extension policy, released Tantivy and pg_search; adopt a mature lexical path with quality/license/lifecycle evidence. I-08 becomes mandatory if a second engine is selected.",
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {
@@ -2157,6 +2157,14 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
+      },
+      "development_sql_evidence": {
+        "interface": "qdrant.search_lexical",
+        "contract": "docs/adr/0006-query-local-lexical.md",
+        "test": "crates/pg_qdrant/tests/verify_bounded_lexical.py",
+        "scope": "Bounded query-local RAM Tantivy over complete durable Edge source snapshot; ASCII fuzzy distance one with complete expansion refusal, or phrase slop 0..8; source permission/version proof and whole-query budget rejection.",
+        "full_capability_acceptance": false,
+        "release_supported": false
       }
     },
     {
@@ -2288,7 +2296,7 @@
         }
       ],
       "missing_upstream_plan": "I-07 compares extension policy, released Tantivy and pg_search; adopt a mature lexical path with quality/license/lifecycle evidence. I-08 becomes mandatory if a second engine is selected.",
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {
@@ -2299,6 +2307,14 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
+      },
+      "development_sql_evidence": {
+        "interface": "qdrant.search_lexical",
+        "contract": "docs/adr/0006-query-local-lexical.md",
+        "test": "crates/pg_qdrant/tests/verify_bounded_lexical.py",
+        "scope": "Bounded query-local RAM Tantivy over complete durable Edge source snapshot; ASCII fuzzy distance one with complete expansion refusal, or phrase slop 0..8; source permission/version proof and whole-query budget rejection.",
+        "full_capability_acceptance": false,
+        "release_supported": false
       }
     },
     {

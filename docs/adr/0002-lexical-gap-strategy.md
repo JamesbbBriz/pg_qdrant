@@ -1,14 +1,14 @@
 # ADR 0002: Evaluate richer lexical search without weakening the source contract
 
-Status: **initial isolated semantic experiments passed; dependency adoption pending**.
+Status: **historical isolated comparison; bounded query-local adoption in [ADR 0006](0006-query-local-lexical.md)**.
 
 Reviewed: 2026-10-08. Owners: lexical adapter, query planner, results, source/lifecycle, PostgreSQL integration, quality, and distribution maintainers.
 
 ## Decision
 
-Keep published Qdrant Edge as the core retrieval dependency. Continue the isolated **direct Tantivy 0.26.2 experiment** selected for fuzzy and positional matching. Its first five synthetic semantic cases now pass. The comparison against extension-owned query/presentation policy and a separately installed **pg_search 0.26.0** remains required. No additional production dependency is selected.
+Keep published Qdrant Edge as the core retrieval dependency. Continue the isolated **direct Tantivy 0.26.2 experiment** selected for fuzzy and positional matching. Its first five synthetic semantic cases now pass. The comparison against extension-owned query/presentation policy and a separately installed **pg_search 0.26.0** remains required. The initial decision below predates the bounded query-local integration in ADR 0006; persistent two-engine adoption remains pending.
 
-No Tantivy or pg_search dependency is adopted into the core extension by this ADR. Tantivy has compiled and run only in the [separate evaluation workspace](../../experiments/tantivy-probe/README.md); pg_search remains source-reviewed only. Neither a combined Edge/PostgreSQL build nor held-out relevance quality has been verified for either candidate. Adoption requires the semantic, resource, authorization, synchronization, lifecycle, quality, and distribution gates below. F13–F20 remain formal requirements with individual owners; an unsuccessful experiment does not remove them from the product.
+This ADR initially adopted no Tantivy or pg_search dependency. ADR 0006 adopts Tantivy for bounded query-local RAM execution; the historical experiment evidence below does not establish that integration. At the time of these historical experiments, Tantivy had compiled and run only in the [separate evaluation workspace](../../experiments/tantivy-probe/README.md); pg_search remains source-reviewed only. Those historical experiments verified neither a combined Edge/PostgreSQL build nor held-out relevance quality for either candidate. Adoption requires the semantic, resource, authorization, synchronization, lifecycle, quality, and distribution gates below. F13–F20 remain formal requirements with individual owners; an unsuccessful experiment does not remove them from the product.
 
 The [capability contract](../capabilities.md), [dependency policy](../dependencies.md), [baseline](../dependency-baseline.json), and [work ledger](../work-items.json) remain authoritative. This ADR refines the lexical decision in [ADR 0001](0001-embedded-engine-boundary.md). It does not complete P0 or authorize a full-FTS product claim.
 

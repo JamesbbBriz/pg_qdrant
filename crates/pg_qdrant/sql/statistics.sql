@@ -64,7 +64,7 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION qdrant_internal.admit_groups(text,jsonb) FROM PUBLIC;
 
-CREATE FUNCTION qdrant_internal.source_statistics(p_name text,p_facet text,p_limit integer,p_options jsonb,p_matrix jsonb DEFAULT NULL,p_groups jsonb DEFAULT NULL)
+CREATE FUNCTION qdrant_internal.source_statistics(p_name text,p_facet text,p_limit integer,p_options jsonb,p_matrix jsonb DEFAULT NULL,p_groups jsonb DEFAULT NULL,p_lexical jsonb DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; c qdrant_internal.consumer_state%ROWTYPE;
  plan jsonb; ids jsonb; result jsonb; proof jsonb; current_ids jsonb; valid boolean; facet_kind text; group_request jsonb;
@@ -79,6 +79,22 @@ BEGIN
  SELECT * INTO STRICT i FROM qdrant_internal.index_catalog WHERE index_name=p_name FOR KEY SHARE NOWAIT;
  EXECUTE format('LOCK TABLE ONLY %s IN ACCESS SHARE MODE NOWAIT',i.source_oid::regclass);
  PERFORM qdrant_internal.require_readable_source(p_name);
+ IF p_lexical IS NOT NULL THEN
+   IF p_matrix IS NOT NULL OR p_groups IS NOT NULL OR p_facet IS NOT NULL THEN
+     RAISE EXCEPTION 'Lexical query cannot combine statistics operations' USING ERRCODE='22023'; END IF;
+   IF jsonb_typeof(p_lexical) IS DISTINCT FROM 'object' OR NOT p_lexical ?& ARRAY['q','kind','slop','top_k']
+      OR p_lexical-ARRAY['q','kind','slop','top_k']<>'{}'
+      OR jsonb_typeof(p_lexical->'q') IS DISTINCT FROM 'string'
+      OR jsonb_typeof(p_lexical->'kind') IS DISTINCT FROM 'string'
+      OR p_lexical->>'kind' NOT IN ('fuzzy','proximity')
+      OR jsonb_typeof(p_lexical->'slop') IS DISTINCT FROM 'number'
+      OR p_lexical->>'slop' !~ '^[0-8]$'
+      OR jsonb_typeof(p_lexical->'top_k') IS DISTINCT FROM 'number'
+      OR p_lexical->>'top_k' !~ '^[0-9]{1,3}$'
+      OR (p_lexical->>'top_k')::integer NOT BETWEEN 1 AND 100
+      OR octet_length(p_lexical->>'q')>256 THEN
+     RAISE EXCEPTION 'Invalid bounded lexical query' USING ERRCODE='22023'; END IF;
+ END IF;
  IF p_matrix IS NOT NULL THEN PERFORM qdrant_internal.admit_matrix(p_name,p_matrix); END IF;
  IF p_groups IS NOT NULL THEN
    IF p_matrix IS NOT NULL OR p_facet IS NOT NULL THEN RAISE EXCEPTION 'Grouping cannot combine statistics operations' USING ERRCODE='22023'; END IF;
@@ -105,7 +121,7 @@ BEGIN
    (SELECT point_id FROM qdrant_internal.source_state WHERE index_name=p_name AND NOT tombstone ORDER BY point_id LIMIT 1001) s;
  IF jsonb_array_length(ids)>1000 THEN RAISE EXCEPTION 'Statistics source-domain budget exceeds 1000 live points' USING ERRCODE='54000'; END IF;
  result:=qdrant_internal.p1_statistics(jsonb_build_object('operation','source_statistics','index_id',i.index_id,
-   'generation',i.generation,'storage_epoch',c.storage_epoch,'point_ids',ids,'facet',p_facet,'facet_limit',p_limit,'matrix',p_matrix,'groups',group_request,
+   'generation',i.generation,'storage_epoch',c.storage_epoch,'point_ids',ids,'facet',p_facet,'facet_limit',p_limit,'matrix',p_matrix,'groups',group_request,'lexical',p_lexical,
    'predicates',(plan->'matching')||CASE WHEN plan->'payload_filter'<>'null'::jsonb
       THEN jsonb_build_object('payload_filter',plan->'payload_filter') ELSE '{}'::jsonb END),(plan->>'timeout_ms')::integer);
  proof:=result->'proof';
@@ -140,6 +156,17 @@ BEGIN
    i.text_field,i.source_oid::regclass,i.key_field)
  INTO valid USING ids,p_name,proof;
  IF valid IS DISTINCT FROM true THEN RAISE EXCEPTION 'Current source statistics proof failed' USING ERRCODE='55000'; END IF;
+ IF p_lexical IS NOT NULL THEN
+   IF jsonb_typeof(result #> '{lexical,hits}') IS DISTINCT FROM 'array'
+      OR jsonb_array_length(result #> '{lexical,hits}')>(p_lexical->>'top_k')::integer
+      OR EXISTS(SELECT 1 FROM jsonb_array_elements(result #> '{lexical,hits}') h WHERE NOT ids @> jsonb_build_array(h->'id'))
+      OR (SELECT count(DISTINCT h->'id') FROM jsonb_array_elements(result #> '{lexical,hits}') h)<>jsonb_array_length(result #> '{lexical,hits}') THEN
+     RAISE EXCEPTION 'Invalid lexical source membership' USING ERRCODE='XX000'; END IF;
+   result:=jsonb_set(result,'{lexical,hits}',(SELECT coalesce(jsonb_agg(jsonb_build_object(
+     'source_key',h #> '{payload,source_key}','score',hit->'score','rank',rank) ORDER BY rank),'[]')
+     FROM jsonb_array_elements(result #> '{lexical,hits}') WITH ORDINALITY members(hit,rank)
+     JOIN jsonb_array_elements(proof) h ON h->'id'=hit->'id'));
+ END IF;
  IF p_groups IS NOT NULL THEN
    PERFORM qdrant_internal.admit_groups(p_name,p_groups);
    plan:=qdrant.explain_search(p_name,p_groups->>'q',p_groups->>'mode',1,p_groups->'vectors',p_options);
@@ -178,7 +205,7 @@ BEGIN
  IF octet_length(result::text)>262144 THEN RAISE EXCEPTION 'Statistics result exceeds 256 KiB' USING ERRCODE='54000'; END IF;
  RETURN result;
 END $$;
-REVOKE ALL ON FUNCTION qdrant_internal.source_statistics(text,text,integer,jsonb,jsonb,jsonb),qdrant_internal.p1_statistics(jsonb,integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION qdrant_internal.source_statistics(text,text,integer,jsonb,jsonb,jsonb,jsonb),qdrant_internal.p1_statistics(jsonb,integer) FROM PUBLIC;
 
 CREATE FUNCTION qdrant.count(index_name text,options jsonb DEFAULT '{}') RETURNS jsonb
 LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
@@ -218,3 +245,15 @@ BEGIN
    'release_supported',false);
 END $$;
 GRANT EXECUTE ON FUNCTION qdrant.search_groups(text,text,text,integer,integer,text,jsonb,jsonb) TO PUBLIC;
+
+CREATE FUNCTION qdrant.search_lexical(index_name text,q text,kind text,top_k integer DEFAULT 10,slop integer DEFAULT 0,options jsonb DEFAULT '{}')
+RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+DECLARE result jsonb;
+BEGIN
+ result:=qdrant_internal.source_statistics(index_name,NULL,1,options,NULL,NULL,
+   jsonb_build_object('q',q,'kind',kind,'slop',slop,'top_k',top_k));
+ RETURN (result->'lexical')||jsonb_build_object('index_name',index_name,'generation',result->'generation',
+   'storage_epoch',result->'storage_epoch','live_points',result->'live_points','max_live_points',1000,
+   'filtered_points',result->'points','matching',result->'matching','filter',result->'filter','release_supported',false);
+END $$;
+GRANT EXECUTE ON FUNCTION qdrant.search_lexical(text,text,text,integer,integer,jsonb) TO PUBLIC;

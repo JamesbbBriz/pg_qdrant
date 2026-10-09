@@ -9,6 +9,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 mod lexical;
+mod lexical_candidates;
 mod payload;
 mod resources;
 mod source;
@@ -131,8 +132,9 @@ fn run() -> Result<(), ProbeError> {
                 facet_limit,
                 matrix,
                 groups,
+                lexical,
                 predicates,
-            } => source_owner.statistics(
+            } => source_owner.statistics_with_lexical(
                 index_id,
                 &generation,
                 &storage_epoch,
@@ -141,6 +143,7 @@ fn run() -> Result<(), ProbeError> {
                 facet_limit,
                 matrix,
                 groups,
+                lexical,
                 predicates,
             ),
             Operation::SourceSearch {
