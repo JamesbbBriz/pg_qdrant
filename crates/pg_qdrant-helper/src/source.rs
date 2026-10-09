@@ -290,6 +290,14 @@ impl SourceOwner {
         }
         let shard = &self.shards[&key].shard;
         #[cfg(feature = "p0-fault-injection")]
+        if take_fault_marker(&self.root, "transport_error", batch.index_id, false) {
+            return Err(ProbeError::new(
+                "worker_unavailable",
+                "injected native transport error before apply",
+                "The supervisor must stop the owned helper and fence subsequent source dispatch.",
+            ));
+        }
+        #[cfg(feature = "p0-fault-injection")]
         fault(
             &self.root,
             "before_apply",

@@ -442,13 +442,16 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
         }
 
         #[cfg(feature = "p0-managed-helper")]
-        if active.is_none() && process_status["engine_ready"] == true {
+        // Completion can clear the channel after process_status was captured.
+        // Recheck the owned connection before claiming another source batch.
+        if active.is_none()
+            && let Some(connection) = supervisor.connection()
+        {
             if let Some(batch) = crate::consumer::next(
                 process_status["engine_instance"]
                     .as_str()
                     .expect("ready owner identity"),
             ) {
-                let connection = supervisor.connection().expect("ready helper");
                 let operation = crate::consumer::operation(batch.clone());
                 let handle = thread::Builder::new()
                     .name("pg_qdrant_source_io".into())
