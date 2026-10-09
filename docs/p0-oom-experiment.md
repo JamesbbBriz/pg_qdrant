@@ -211,3 +211,44 @@ strict outer gate passed: the daemon-visible PID did not establish the kernel
 victim PID. These remain correlated observations, not strict attribution,
 production isolation or full-revision CI evidence. The failed receipts are
 retained and the checker continues to fail closed.
+
+## Initial-namespace PID observation
+
+Nested container runtimes can expose a daemon PID which differs from the PID in
+the kernel's OOM record. The local OOM steps use `--kernel-task-observer` to bind
+the initial-namespace task PID before releasing the allocation barrier. A
+separate read-only observer loads a bounded BPF task iterator. It accepts exactly
+one leader matching the native guard's innermost PID, PID namespace inode and
+start tick; it then rechecks the daemon-visible process start and cgroup. The
+kernel selector and killed-process records must still match this bound PID and
+the exact limiting cgroup after the pre-barrier monotonic cursor.
+
+The iterator follows the running kernel's
+[BTF layout](https://docs.kernel.org/bpf/btf.html) and uses the documented
+[iterator lifecycle](https://docs.kernel.org/bpf/bpf_iterators.html): load, link,
+read, close. It reads at most 32 MiB of BTF, emits a single 32-byte identity and
+refuses missing, ambiguous or unsupported identities. The current implementation
+requires x86_64 Linux, task-iterator BTF and `CAP_BPF`/`CAP_PERFMON`; unavailable
+interfaces fail the gate. It creates no pinned objects or tracepoint hooks and
+does not signal tasks or write kernel memory. All descriptors close on success
+and failure. Kernel-log collection remains a separate `CAP_SYSLOG` observation.
+
+These capabilities belong only to the separate observation process. The native
+fault container retains its private namespaces, non-root user, dropped
+capabilities, fixed memory/CPU/PID bounds and allocation deadline. No ptrace
+capability or privileged container is required.
+
+Scoped local act `oomidentity-68a41dacbe39c74b` passed strict managed-helper
+attribution: one OOM kill, both exact kernel records, surviving PostgreSQL and
+companion, and source replay reaching a durable ticket under a fresh owner.
+Its direct-worker comparison failed: memory reclaim reached the native
+cooperative deadline without an OOM kill. That failed result remains retained;
+this slice does not establish a full-revision CI pass, production memory
+isolation or completion of P1 recovery acceptance.
+
+Scoped local act `oomidentity-781315b5b943e90d` repeated the strict helper pass.
+Separate live iterator checks rejected an incorrect PID, namespace inode and
+start tick, refused loading without the two BPF capabilities, and retained the
+same open-descriptor count after every success and failure. Its direct-worker
+comparison again failed without an OOM kill; both failed comparisons remain
+failures in their receipts.

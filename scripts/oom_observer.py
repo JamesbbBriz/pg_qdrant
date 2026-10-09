@@ -8,10 +8,22 @@ if not __debug__:
 import argparse
 import ctypes
 import json
+import os
 from pathlib import Path
 import re
 
 KERNEL_BYTES = 2 * 1024 * 1024
+
+
+def victim_pid(mapping):
+    if 'kernel_identity' not in mapping:
+        return mapping['host_pid']
+    identity = mapping['kernel_identity']
+    assert identity['inner_pid'] == mapping['container_pid']
+    assert identity['kernel_pid'] == identity['kernel_tgid'] > 0
+    assert identity['start_boottime_ns'] // (1000000000 // mapping['clock_ticks']) == mapping['start_ticks']
+    assert identity['namespace_inode'] == mapping['namespace_inode']
+    return identity['kernel_pid']
 
 
 def read_kernel():
@@ -73,6 +85,7 @@ def narrow_kernel(records, mapping, container_id):
     assert isinstance(mapping["host_pid"], int) and mapping["host_pid"] > 0
     assert container_id in mapping["host_cgroup"]
     cursor = mapping["kernel_log_cursor_us"]
+    pid = victim_pid(mapping)
     assert isinstance(cursor, int) and cursor >= 0
     narrowed = []
     for item in records:
@@ -82,7 +95,7 @@ def narrow_kernel(records, mapping, container_id):
         if not isinstance(message, str):
             continue
         if (message.startswith("oom-kill:") and container_id in message) or re.search(
-                rf"Memory cgroup out of memory: Killed process {mapping['host_pid']}\b", message):
+                rf"Memory cgroup out of memory: Killed process {pid}\b", message):
             assert len(message.encode()) <= 16384 and len(narrowed) < 32
             narrowed.append({"MESSAGE": message, "__MONOTONIC_TIMESTAMP": item.get("time")})
     return narrowed
@@ -96,6 +109,22 @@ def main():
     request = json.loads(args.payload)
     if args.operation == "mapping":
         mapping = read_mapping(request["pids"], request["target"], request["container_id"])
+        if request.get('kernel_task_identity'):
+            from kernel_task_identity import read_kernel_identity
+            target = request['target']
+            # The native guard reads its own namespace before the barrier. Reading
+            # another UID's /proc/PID/ns link would require ptrace privileges;
+            # instead the iterator proves this inode against the live kernel task.
+            namespace = re.fullmatch(r'pid:\[(\d+)\]', target['pid_namespace'])
+            assert namespace is not None
+            mapping.update(namespace_inode=int(namespace[1]), clock_ticks=os.sysconf('SC_CLK_TCK'))
+            mapping['kernel_identity'] = read_kernel_identity(dict(
+                inner_pid=target['pid'], namespace_inode=mapping['namespace_inode'],
+                start_ticks=target['start_ticks'], clock_ticks=mapping['clock_ticks']))
+            # Recheck the same live proc identity after iteration and before the barrier.
+            again = read_mapping(request['pids'], target, request['container_id'])
+            assert all(mapping[key] == value for key, value in again.items())
+            victim_pid(mapping)
         # Snapshot the kernel's own clock before releasing the native barrier.
         # Wall time and process start ticks are not interchangeable with it.
         mapping["kernel_log_cursor_us"] = max((r["time_us"] for r in read_kernel()), default=0)

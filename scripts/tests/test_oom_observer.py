@@ -5,10 +5,27 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts.oom_observer import KERNEL_BYTES, narrow_kernel, parse_kernel, read_kernel, read_mapping
+from scripts.oom_observer import KERNEL_BYTES, narrow_kernel, parse_kernel, read_kernel, read_mapping, victim_pid
 
 
 class Observer(unittest.TestCase):
+    def test_kernel_namespace_pid_requires_the_exact_prebound_identity(self):
+        mapping = {'host_pid': 77, 'container_pid': 9, 'start_ticks': 123,
+                   'namespace_inode': 1234, 'clock_ticks': 100,
+                   'kernel_identity': {'inner_pid': 9, 'kernel_pid': 88, 'kernel_tgid': 88,
+                                       'namespace_inode': 1234, 'start_boottime_ns': 1230000000}}
+        self.assertEqual(victim_pid(mapping), 88)
+        for key, value in [('inner_pid', 10), ('kernel_tgid', 89), ('kernel_pid', 0),
+                           ('namespace_inode', 999), ('start_boottime_ns', 1240000000)]:
+            with self.subTest(key=key), self.assertRaises(AssertionError):
+                victim_pid(dict(mapping, kernel_identity=dict(mapping['kernel_identity'], **{key: value})))
+        container = 'a' * 64
+        mapping.update(host_cgroup='/docker/' + container, kernel_log_cursor_us=0)
+        rows = parse_kernel(b'<3>[1.000001] Memory cgroup out of memory: Killed process 88 (native)\n'
+                            b'<3>[1.000002] Memory cgroup out of memory: Killed process 77 (daemon PID)\n')
+        self.assertEqual([r['MESSAGE'] for r in narrow_kernel(rows, mapping, container)],
+                         ['Memory cgroup out of memory: Killed process 88 (native)'])
+
     def test_no_kernel_messages_stays_empty_and_malformed_data_refuses(self):
         self.assertEqual(parse_kernel(b""), [])
         for data in [b"invalid\n", b"<6>[1.000000] truncated", b"x" * KERNEL_BYTES,

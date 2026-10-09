@@ -108,12 +108,20 @@ def inspect_container(value, image_id, nonce):
 def observe(image, operation, payload):
     """Use a separate read-only observer; the fault container stays unprivileged."""
     source = Path(__file__).with_name("oom_observer.py").read_text()
+    extra_caps = []
+    if operation == 'mapping' and payload.get('kernel_task_identity'):
+        module = Path(__file__).with_name('kernel_task_identity.py').read_text()
+        source = ('import types,sys\n_module=types.ModuleType("kernel_task_identity")\nexec(' +
+                  repr(module) + ',_module.__dict__)\nsys.modules["kernel_task_identity"]=_module\nexec(compile(' +
+                  repr(source) + ',"<oom-observer>","exec"))')
+        extra_caps = ['--cap-add=BPF', '--cap-add=PERFMON']
     name = "pgq-oom-observer-" + secrets.token_hex(16)
     try:
         return command(["docker", "run", "--rm", "--name", name,
             "--label", "io.pg_qdrant.p0.oom.observer=" + name,
             "--network=none", "--read-only", "--memory=256m", "--memory-swap=256m",
             "--pids-limit=16", "--cpus=0.25", "--cap-drop=ALL", "--cap-add=SYSLOG",
+            *extra_caps,
             "--security-opt=no-new-privileges", "--pid=host", "--cgroupns=host", "--user=0:0",
             "--entrypoint=python3", image, "-c", source, operation, json.dumps(payload)], timeout=15)
     finally:
@@ -126,12 +134,14 @@ def observe(image, operation, payload):
                 raise RuntimeError("owned read-only observer cleanup did not complete")
 
 
-def host_mapping(container_id, target, observer_image=None):
+def host_mapping(container_id, target, observer_image=None, kernel_task_identity=False):
     rows = command(["docker", "top", container_id, "-eo", "pid"]).stdout.splitlines()[1:]
     assert len(rows) <= 128
     if observer_image:
         return json.loads(observe(observer_image, "mapping", {"container_id": container_id,
-            "target": target, "pids": [int(row.strip()) for row in rows]}).stdout)
+            "target": target, "pids": [int(row.strip()) for row in rows],
+            'kernel_task_identity': kernel_task_identity}).stdout)
+    assert not kernel_task_identity, 'kernel task observation requires a separate observer image'
     found = []
     for row in rows:
         pid = int(row.strip())
@@ -156,7 +166,11 @@ def host_mapping(container_id, target, observer_image=None):
 def kernel_victim_records(lines, mapping, container_id):
     # Require both a memcg constraint/victim selector and an actual killed-victim
     # line. A generic SIGKILL or global OOM line is not direct memcg attribution.
-    pid = mapping["host_pid"]
+    try:
+        from scripts.oom_observer import victim_pid
+    except ModuleNotFoundError:
+        from oom_observer import victim_pid
+    pid = victim_pid(mapping)
     expected_cgroup = mapping["host_cgroup"]
     assert expected_cgroup.startswith("/") and container_id in expected_cgroup
     candidates = []
@@ -277,7 +291,7 @@ def execute(args):
                 if result.returncode == 0:
                     ready = json.loads(result.stdout)
                     assert ready["nonce"] == nonce and ready["profile"] == args.profile
-                    mapping = host_mapping(container_id, ready["target"], observer_image)
+                    mapping = host_mapping(container_id, ready["target"], observer_image, args.kernel_task_observer)
                     report["target_mapping"] = mapping
                     report["stage"] = "allocation_and_recovery"
                     go = {"nonce": nonce, "target": ready["target"], "container_inspection_verified": True,
@@ -376,7 +390,11 @@ def main():
     parser.add_argument("--profile", choices=["direct_worker", "managed_helper"], required=True)
     parser.add_argument("--artifacts", type=Path, required=True, help="New, non-existing evidence directory")
     parser.add_argument("--observer-image", help="Already built image for a separate read-only daemon-host observer")
+    parser.add_argument('--kernel-task-observer', action='store_true',
+                        help='Bind the initial-namespace kernel PID with a separate bounded BPF task iterator')
     args = parser.parse_args()
+    if args.kernel_task_observer and not args.observer_image:
+        parser.error("kernel task observation requires a separate observer image")
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:@-]*", args.image):
         parser.error("invalid local image reference")
     if args.observer_image and not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:@-]*", args.observer_image):

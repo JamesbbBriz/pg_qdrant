@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 SOURCE = Path(__file__).resolve().parents[1] / "run_oom_container.py"
 SPEC = importlib.util.spec_from_file_location("oom_container", SOURCE)
@@ -35,6 +36,41 @@ def observation():
 
 
 class OomEvidenceTests(unittest.TestCase):
+    def test_mapping_wrapper_compiles_with_future_import_and_limits_observer_capabilities(self):
+        calls = []
+        def command(args, **kwargs):
+            calls.append(args)
+            if args[1] == 'run':
+                compile(args[args.index('-c') + 1], '<observer-wrapper>', 'exec')
+                return subprocess.CompletedProcess(args, 0, stdout='{}', stderr='')
+            return subprocess.CompletedProcess(args, 1, stdout='', stderr='')
+        with patch.object(MODULE, 'command', side_effect=command):
+            MODULE.observe('local-image', 'mapping', {'kernel_task_identity': True})
+            MODULE.observe('local-image', 'kernel', {})
+        runs = [args for args in calls if args[1] == 'run']
+        self.assertIn('--cap-add=BPF', runs[0])
+        self.assertIn('--cap-add=PERFMON', runs[0])
+        for args in runs:
+            self.assertNotIn('--privileged', args)
+            self.assertNotIn('--cap-add=SYS_PTRACE', args)
+            self.assertIn('--read-only', args)
+        self.assertNotIn('--cap-add=BPF', runs[1])
+        self.assertNotIn('--cap-add=PERFMON', runs[1])
+
+    def test_kernel_victim_uses_prebound_initial_namespace_pid(self):
+        container = 'a' * 64
+        mapping = {'host_pid': 77, 'container_pid': 9, 'start_ticks': 123,
+                   'namespace_inode': 1234, 'clock_ticks': 100,
+                   'host_cgroup': '/docker/' + container,
+                   'kernel_identity': {'inner_pid': 9, 'kernel_pid': 88, 'kernel_tgid': 88,
+                                       'namespace_inode': 1234, 'start_boottime_ns': 1230000000}}
+        def records(pid):
+            return '\n'.join(json.dumps({'MESSAGE': message}) for message in [
+                f'oom-kill:constraint=CONSTRAINT_MEMCG,oom_memcg=/docker/{container},pid={pid}',
+                f'Memory cgroup out of memory: Killed process {pid} (native)'])
+        self.assertTrue(MODULE.kernel_victim_records(records(88), mapping, container)[1])
+        self.assertFalse(MODULE.kernel_victim_records(records(77), mapping, container)[1])
+
     def test_positive_drivers_refuse_optimized_python_before_external_actions(self):
         inner = SOURCE.parents[1] / "crates/pg_qdrant/tests/verify_oom.py"
         for script in [SOURCE, inner]:
