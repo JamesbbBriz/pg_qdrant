@@ -3147,6 +3147,16 @@
       "status": "partially_verified",
       "evidence": [
         {
+          "level": "SQL-integration-verified",
+          "kind": "installed_finite_score_budgets",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_numeric.py",
+          "scope": "Post-conversion squared norm budgets for dense and learned sparse source output and queries; atomic source rejection; final whole-response non-finite native score rejection. Actual installed four-distance/three-IDF nearest/RRF/DBSF boundary fixtures and independent Dot DBSF goldens are repeated after owner loss and generation replacement. encoding_inputs/explain_search expose the same admission contract. Source ABI8 requires matched builds and fresh development catalogs. Full model/configuration migration, quality, resource and release acceptance remain open; successful replay is not a recovery-time guarantee.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
+        {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
           "status": "passed",
@@ -3313,6 +3323,16 @@
       "owner": "engine/vectors",
       "status": "partially_verified",
       "evidence": [
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_finite_score_budgets",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_numeric.py",
+          "scope": "Post-conversion squared norm budgets for dense and learned sparse source output and queries; atomic source rejection; final whole-response non-finite native score rejection. Actual installed four-distance/three-IDF nearest/RRF/DBSF boundary fixtures and independent Dot DBSF goldens are repeated after owner loss and generation replacement. encoding_inputs/explain_search expose the same admission contract. Source ABI8 requires matched builds and fresh development catalogs. Full model/configuration migration, quality, resource and release acceptance remain open; successful replay is not a recovery-time guarantee.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
         {
           "observed_on": "2026-10-08",
           "level": "compile-verified",
@@ -4606,6 +4626,16 @@
       "owner": "engine/fusion",
       "status": "partially_verified",
       "evidence": [
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_finite_score_budgets",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_numeric.py",
+          "scope": "Post-conversion squared norm budgets for dense and learned sparse source output and queries; atomic source rejection; final whole-response non-finite native score rejection. Actual installed four-distance/three-IDF nearest/RRF/DBSF boundary fixtures and independent Dot DBSF goldens are repeated after owner loss and generation replacement. encoding_inputs/explain_search expose the same admission contract. Source ABI8 requires matched builds and fresh development catalogs. Full model/configuration migration, quality, resource and release acceptance remain open; successful replay is not a recovery-time guarantee.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
+        },
         {
           "observed_on": "2026-10-08",
           "level": "compile-verified",

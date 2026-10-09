@@ -77,7 +77,8 @@ pub fn complete(batch: SourceBatch, result: &Result<Value, ProbeError>) {
         } else {
             let message = JsonB(
                 json!({"index_id":batch.index_id,"epoch":batch.storage_epoch,"task_id":batch.task_id,"retire":batch.retire,
-                "error":result.as_ref().err().map(|e|e.message.as_str()).unwrap_or("invalid flush receipt")}),
+                "error":result.as_ref().err().map(|e|e.message.as_str()).unwrap_or("invalid flush receipt"),
+                "error_code":result.as_ref().err().map(|e|e.code.as_str()).unwrap_or("invalid_flush_receipt")}),
             );
             Spi::run_with_args("SELECT qdrant_internal.fail_batch($1)", &[message.into()])
                 .expect("persist consumer failure");

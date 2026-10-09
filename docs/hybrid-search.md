@@ -54,6 +54,9 @@ SQL key-order guarantee.
 effective plan. Result provenance identifies `hybrid_bm25_dense_rrf` or
 `hybrid_bm25_dense_dbsf`, or the corresponding `learned_sparse` plan, and the
 bounded-candidate statistics scope.
+Both source and query vectors obey the [numeric score budgets](finite-scores.md)
+before entering native fusion; finite components alone do not prevent DBSF
+variance overflow. Non-finite final native scores reject the entire response.
 The registered owner domain is shared by both branches because each owned index
 contains only that registered source. Index/source/model-column authorization and
 RLS rejection occur before native admission. Catalog/source locks and post-query

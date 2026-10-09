@@ -516,6 +516,13 @@ impl SourceOwner {
         let hits = shard.query(request).map_err(error)?;
         let mut result = Vec::with_capacity(hits.len());
         for hit in hits {
+            if !hit.score.is_finite() {
+                return Err(ProbeError::new(
+                    "source_engine_error",
+                    "native query produced a non-finite score",
+                    "No search results are returned; inspect the model contract and rebuild uncertain storage.",
+                ));
+            }
             let PointId::NumId(id) = hit.id else {
                 return Err(error("unexpected point identity"));
             };
@@ -591,6 +598,16 @@ fn validate_representation(
                 "sparse vocabulary, ordering, finite nonzero weights or nonzero count invalid",
             ));
         }
+        let norm: f64 = sparse
+            .values
+            .iter()
+            .map(|value| f64::from(*value).powi(2))
+            .sum();
+        if norm > 1e14 {
+            return Err(ProbeError::invalid(
+                "sparse squared norm exceeds native score budget 100000000000000",
+            ));
+        }
         return Ok(());
     };
     if contract.kind != "dense" {
@@ -611,6 +628,13 @@ fn validate_dense_values(
         ));
     }
     let norm: f64 = vector.iter().map(|value| f64::from(*value).powi(2)).sum();
+    // Leave headroom for squared differences and the pinned DBSF f32 variance
+    // over at most 1000 candidates. Finite input components alone are insufficient.
+    if contract.kind == "dense" && norm > 1e16 {
+        return Err(ProbeError::invalid(
+            "dense squared norm exceeds native score budget 10000000000000000",
+        ));
+    }
     if contract.kind == "token_vectors"
         && norm > f64::from(f32::MAX) / (2.0 * contract.max_tokens.unwrap_or(0) as f64)
     {
@@ -631,7 +655,198 @@ fn validate_dense_values(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pg_qdrant_protocol::SourceEvent;
+    use pg_qdrant_protocol::{SourceEvent, SparseValues};
+
+    fn numeric_contract() -> RepresentationContract {
+        serde_json::from_value(json!({
+            "kind":"dense","model_id":"fixture","model_version":"r1","tokenizer":"fixture",
+            "dimensions":2,"distance":"dot","normalization":"none","storage_precision":"float32",
+            "vector_field":"v","fingerprint_field":"f","incarnation_field":"i",
+            "model_id_field":"m","model_version_field":"r"
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn score_budgets_cover_joint_component_norms_and_all_dense_distances() {
+        let mut contract = numeric_contract();
+        for distance in ["dot", "cosine", "euclid", "manhattan"] {
+            contract.distance = distance.into();
+            assert!(validate_dense_values(&[1e8, 0.0], &contract).is_ok());
+            assert!(validate_dense_values(&[1e8, 1e8], &contract).is_err());
+            assert!(validate_dense_values(&[1e30, 0.0], &contract).is_err());
+        }
+        contract.kind = "learned_sparse".into();
+        contract.dimensions = 100;
+        for values in [vec![1e7], vec![-1e7]] {
+            assert!(
+                validate_representation(
+                    &RepresentationVector::Sparse(SparseValues {
+                        indices: vec![7],
+                        values
+                    }),
+                    &contract
+                )
+                .is_ok()
+            );
+        }
+        for values in [vec![1e7, 1e7], vec![1e30, 1.0]] {
+            assert!(
+                validate_representation(
+                    &RepresentationVector::Sparse(SparseValues {
+                        indices: vec![7, 8],
+                        values
+                    }),
+                    &contract
+                )
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn out_of_contract_native_storage_cannot_serialize_infinite_scores_as_null() {
+        let root = std::env::temp_dir().join(format!(
+            "pgq-numeric-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let mut owner = SourceOwner::new(root.clone()).unwrap();
+        let generation = "00000000-0000-0000-0000-000000000001".to_owned();
+        let epoch = "00000000-0000-0000-0000-000000000002".to_owned();
+        let contract = numeric_contract();
+        let batch = SourceBatch {
+            source_contract_version: SOURCE_CONTRACT_VERSION,
+            index_id: 1,
+            generation: generation.clone(),
+            storage_epoch: epoch.clone(),
+            consumer_id: epoch.clone(),
+            task_id: None,
+            retire: false,
+            representations: BTreeMap::from([("dense".into(), contract.clone())]),
+            events: vec![SourceEvent {
+                event_id: 1,
+                point_id: 1,
+                revision: 1,
+                incarnation: generation.clone(),
+                fingerprint: Some("fixture".into()),
+                key: json!({"type":"bigint","value":"1"}),
+                body: Some("anchor".into()),
+                vectors: BTreeMap::from([(
+                    "dense".into(),
+                    RepresentationVector::Dense(vec![1.0, 0.0]),
+                )]),
+            }],
+        };
+        owner.apply(batch.clone()).unwrap();
+        let key = identity(1, &generation, &epoch).unwrap();
+        // Bypass the adapter deliberately to represent corrupted/out-of-contract
+        // persisted vectors. The query itself remains within its admitted budget.
+        let point = PointStruct::new(
+            1,
+            Vectors::new_named(vec![("dense", Vector::new_dense(vec![1e31, 0.0]))]),
+            json!({"source_key":{"type":"bigint","value":"1"},"revision":1,"incarnation":generation,"fingerprint":"fixture","body":"anchor","body_prefix":"anchor"}),
+        );
+        owner.shards[&key]
+            .shard
+            .update(UpdateOperation::PointOperation(
+                PointOperations::UpsertPoints(PointInsertOperations::PointsList(vec![
+                    point.into(),
+                ])),
+            ))
+            .unwrap();
+        let query = RepresentationQuery {
+            representation: "dense".into(),
+            model_id: contract.model_id,
+            model_version: contract.model_version,
+            vector: RepresentationVector::Dense(vec![1e8, 0.0]),
+        };
+        let failure = owner
+            .search(
+                1,
+                &generation,
+                &epoch,
+                "anchor",
+                10,
+                Some(query.clone()),
+                None,
+                None,
+                SourcePredicates::default(),
+            )
+            .unwrap_err();
+        assert_eq!(failure.code, "source_engine_error");
+        assert!(failure.message.contains("non-finite score"));
+        owner.apply(batch).unwrap();
+        let hits = owner
+            .search(
+                1,
+                &generation,
+                &epoch,
+                "anchor",
+                10,
+                Some(query.clone()),
+                None,
+                None,
+                SourcePredicates::default(),
+            )
+            .unwrap();
+        assert_eq!(hits[0]["score"], 1e8);
+        let points = [(1, vec![1e15, 0.0]), (2, vec![0.0, 1.0])].map(|(id, values)| {
+            PointStruct::new(id, Vectors::new_named(vec![
+                ("dense", Vector::new_dense(values)),
+                ("bm25", Vector::from(owner.encoder.embed_document("anchor"))),
+            ]), json!({"source_key":{"type":"bigint","value":id.to_string()},"revision":1,
+                "incarnation":generation,"fingerprint":"fixture","body":"anchor","body_prefix":"anchor"})).into()
+        });
+        owner.shards[&key]
+            .shard
+            .update(UpdateOperation::PointOperation(
+                PointOperations::UpsertPoints(PointInsertOperations::PointsList(points.into())),
+            ))
+            .unwrap();
+        let nearest = owner
+            .search(
+                1,
+                &generation,
+                &epoch,
+                "anchor",
+                10,
+                Some(query.clone()),
+                None,
+                None,
+                SourcePredicates::default(),
+            )
+            .unwrap();
+        assert_eq!(nearest.as_array().unwrap().len(), 2);
+        assert!(
+            nearest
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|hit| hit["score"].as_f64().unwrap().is_finite())
+        );
+        let failure = owner
+            .search(
+                1,
+                &generation,
+                &epoch,
+                "anchor",
+                10,
+                Some(query),
+                None,
+                Some(SourceFusion::Dbsf),
+                SourcePredicates::default(),
+            )
+            .unwrap_err();
+        assert_eq!(failure.code, "source_engine_error");
+        assert!(failure.message.contains("non-finite score"));
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn maxsim_work_cap_rejects_overflow_and_large_exact_corpora() {

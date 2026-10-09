@@ -62,7 +62,8 @@ the canonical float32 input, source identity and full model contract.
 Output UPDATEs are checked even if the assigned value equals its previous value.
 An old fingerprint, old incarnation or incompatible model revision raises
 SQLSTATE 55000 and rolls back the entire source mutation. Invalid dimensions,
-normalization or float32 range raise 22023. NULL vectors clear a slot. Text-only
+normalization, float32 range or the [numeric score budget](finite-scores.md)
+raise 22023. NULL vectors clear a slot. Text-only
 updates retain source columns but mark their old vectors stale, and remove those
 vectors from the actual Edge point. DELETE/reuse assigns a new incarnation and
 cannot reuse an old model completion. Named slots can complete independently.
@@ -75,7 +76,7 @@ epoch. Source text and vectors together have a 448 KiB serialized projection
 budget; over-budget mutations fail with 54000 before committing a partial event.
 Native search frames have a separate 128 KiB bound, supporting 4096 float32
 dimensions without changing the 16 KiB diagnostic-probe budget. Helper startup
-and flush receipts both check source contract version 7; mismatched builds fail
+and flush receipts both check source contract version 8; mismatched builds fail
 closed. This development SQL requires a fresh installation; no upgrade script
 from earlier 0.0.1 development catalogs is claimed.
 

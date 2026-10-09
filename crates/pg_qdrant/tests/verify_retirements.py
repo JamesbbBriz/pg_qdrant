@@ -32,6 +32,8 @@ def run(sql, ready, checks, faults, crash_matrix):
         result = json.loads(sql("SELECT qdrant.await_task('"+task+"',60000)"))
         assert result['completed'] and result['succeeded'] is success, result
         assert result['physical_cleanup_completed'] is success, result
+        if success:
+            assert result['error_code'] is None, result
         return result
 
     index_id, old_path = create()
@@ -104,9 +106,13 @@ def run(sql, ready, checks, faults, crash_matrix):
     task = drop()
     os.kill(pid, signal.SIGKILL)
     failure = wait(task, success=False)
-    # If dispatch races SIGKILL, the exact native request can observe EPIPE
-    # before the next dispatch observes a different ownership nonce.
-    assert any(reason in failure['error'] for reason in ['owner_changed', 'transport: Broken pipe']) and failure['pending_epochs'] > 0, failure
+    # SIGKILL can precede dispatch, break its write, or close its response pipe.
+    # All are actual failed ownership/transport outcomes, never cleanup receipts.
+    reasons = {'source_owner_changed':['owner_changed'],
+               'worker_unavailable':['transport: Broken pipe', 'managed helper disconnected']}
+    assert failure['error_code'] in reasons and any(reason in failure['error'] for reason in reasons[failure['error_code']]), failure
+    assert failure['state']=='failed' and failure['pending_epochs']==1, failure
+    assert sql("SELECT count(*) FROM qdrant_internal.drop_epochs WHERE drop_task='"+task+"' AND state='cleaned'")=='0'
     assert uncertain_path.is_dir() and (sentinel/'preserve').is_file()
     # A fresh index remains usable despite the explicit failed cleanup task.
     _, path = create()
@@ -137,7 +143,7 @@ def run(sql, ready, checks, faults, crash_matrix):
     assert current_path.is_dir()
     assert sql("SELECT source_key FROM qdrant.search('retirement_docs','replacement')") == '1'
     failure = wait(drop(), success=False)
-    assert 'owner_changed' in failure['error'] and failure['pending_epochs'] == 1, failure
+    assert failure['error_code']=='source_owner_changed' and 'owner_changed' in failure['error'] and failure['pending_epochs'] == 1, failure
     assert prior_path.is_dir() and not current_path.exists(), (prior_path, current_path, failure)
     sql('DROP TABLE retirement_docs')
     crash_matrix.append({'cut': 'drop_prior_owner_history', 'before': before, 'after': after,
