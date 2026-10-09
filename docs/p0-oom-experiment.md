@@ -19,6 +19,21 @@ allocation limits. The existing schema and superuser checks
 remain in force. This is a synthetic process-allocation fault, not an Edge index
 write or an unflushed-index recovery test.
 
+## Local act observation
+
+Local act runs the same two directed comparisons. The act runner cannot read
+sibling container PIDs from its private PID namespace. With `--observer-image`,
+the outer harness resolves the observer image ID and starts a separate bounded
+read-only observer for native PID/start/cgroup mapping and kernel records. This
+observer has host PID/cgroup visibility, SYSLOG only, no network, 256 MiB with
+no swap, 16 PIDs and a read-only root filesystem. It reads `/proc` and uses
+`dmesg --syslog --json` without clearing the kernel buffer or changing logging.
+Only matching OOM messages are retained; monotonic timestamps are labeled as
+such. The observer does not allocate fault memory, signal test processes or
+change cgroups. Test containers retain every isolation guard below. Missing
+records still fail strict attribution. Historical hosted evidence above does
+not establish that this local observer has passed a current complete run.
+
 ## Execution bounds
 
 Positive execution belongs only to the separately reviewed CI container runner,

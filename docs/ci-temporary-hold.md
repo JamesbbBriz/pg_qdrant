@@ -31,7 +31,12 @@ local runs is not implemented; avoid overlapping heavy builds on a small host.
 
 The full pipeline includes actual 768 MiB kernel OOM experiments in isolated
 containers with no host mounts, swap, network or extra capabilities, as well as
-separate disk-exhaustion mounts. Existing strict victim-attribution checks and
+separate disk-exhaustion mounts. A separate observer uses a read-only root
+filesystem, 256 MiB with no swap, 16 PIDs, no network, host PID/cgroup visibility
+and only SYSLOG capability to read the Docker daemon host kernel. This does not
+change the fault container namespace, capability or mount guards. Unavailable
+kernel records fail strict attribution; no correlated-only result passes.
+Existing strict victim-attribution checks and
 failure deadlines remain in force. These tests do not establish production
 memory isolation or PostgreSQL/Edge atomic WAL semantics.
 
