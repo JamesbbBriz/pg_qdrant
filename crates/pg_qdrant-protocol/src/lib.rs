@@ -17,7 +17,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 9;
+pub const SOURCE_CONTRACT_VERSION: u32 = 10;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
@@ -181,6 +181,32 @@ pub struct SourceRecommendation {
     pub exclude_ids: Vec<u64>,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DiscoveryStrategy {
+    Discover,
+    Context,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceContextPair {
+    pub positive: Vec<f32>,
+    pub negative: Vec<f32>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceDiscovery {
+    pub representation: String,
+    pub model_id: String,
+    pub model_version: String,
+    pub strategy: DiscoveryStrategy,
+    pub target: Option<Vec<f32>>,
+    pub context: Vec<SourceContextPair>,
+    pub exclude_ids: Vec<u64>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct SourceEvent {
@@ -235,6 +261,8 @@ pub enum Operation {
         representation_query: Option<RepresentationQuery>,
         #[serde(default)]
         recommendation_query: Option<SourceRecommendation>,
+        #[serde(default)]
+        discovery_query: Option<SourceDiscovery>,
         #[serde(default)]
         rerank_query: Option<RepresentationQuery>,
         #[serde(default)]
@@ -351,6 +379,37 @@ pub fn encode_helper_response(
 #[cfg(test)]
 mod search_contract_tests {
     use super::*;
+
+    #[test]
+    fn discovery_context_pairs_are_typed_and_refuse_unknown_fields() {
+        let input = json!({"representation":"dense","model_id":"fixture","model_version":"r1",
+            "strategy":"discover","target":[1,0],"context":[{"positive":[1,0],"negative":[0,1]}],"exclude_ids":[1,2,3]});
+        let value = json!({"operation":"source_search","index_id":1,"generation":"g","storage_epoch":"e",
+            "q":"","top_k":1,"discovery_query":input});
+        assert!(matches!(
+            serde_json::from_value::<Operation>(value.clone()).unwrap(),
+            Operation::SourceSearch {
+                discovery_query: Some(SourceDiscovery {
+                    strategy: DiscoveryStrategy::Discover,
+                    ..
+                }),
+                ..
+            }
+        ));
+        for (field, contents) in [
+            ("strategy", json!("caller_strategy")),
+            ("target", json!("caller-point-id")),
+            (
+                "context",
+                json!([{"positive":[1,0],"negative":[0,1],"tenant_id":"caller"}]),
+            ),
+            ("tenant_id", json!("caller-domain")),
+        ] {
+            let mut invalid = value.clone();
+            invalid["discovery_query"][field] = contents;
+            assert!(serde_json::from_value::<Operation>(invalid).is_err());
+        }
+    }
 
     #[test]
     fn recommendation_model_strategy_and_resolved_examples_are_typed() {

@@ -1,16 +1,16 @@
 //! Embedded Edge mutation owner. No SQL values select a filesystem path.
 use pg_qdrant_protocol::{
-    ProbeError, RecommendationStrategy, RepresentationContract, RepresentationQuery,
-    RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch, SourceFusion, SourcePredicates,
-    SourceRecommendation,
+    DiscoveryStrategy, ProbeError, RecommendationStrategy, RepresentationContract,
+    RepresentationQuery, RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch,
+    SourceDiscovery, SourceFusion, SourcePredicates, SourceRecommendation,
 };
 use qdrant_edge::bm25_embed::EdgeBm25;
 use qdrant_edge::{
-    Distance, EdgeConfig, EdgeShard, EdgeSparseVectorParams, EdgeVectorParams, Filter, Fusion,
-    IdfCorpusParams, IdfParams, Modifier, MultiVectorComparator, MultiVectorConfig, NamedQuery,
-    PointId, PointInsertOperations, PointOperations, PointStruct, Prefetch, QueryEnum,
-    QueryRequest, RecommendQuery, ScoringQuery, SearchParams, UpdateOperation, Vector,
-    VectorInternal, Vectors, WithPayloadInterface,
+    ContextPair, ContextQuery, DiscoverQuery, Distance, EdgeConfig, EdgeShard,
+    EdgeSparseVectorParams, EdgeVectorParams, Filter, Fusion, IdfCorpusParams, IdfParams, Modifier,
+    MultiVectorComparator, MultiVectorConfig, NamedQuery, PointId, PointInsertOperations,
+    PointOperations, PointStruct, Prefetch, QueryEnum, QueryRequest, RecommendQuery, ScoringQuery,
+    SearchParams, UpdateOperation, Vector, VectorInternal, Vectors, WithPayloadInterface,
 };
 use serde_json::{Value, json};
 use std::{
@@ -358,11 +358,12 @@ impl SourceOwner {
         top_k: usize,
         representation_query: Option<RepresentationQuery>,
         recommendation_query: Option<SourceRecommendation>,
+        discovery_query: Option<SourceDiscovery>,
         rerank_query: Option<RepresentationQuery>,
         fusion: Option<SourceFusion>,
         predicates: SourcePredicates,
     ) -> Result<Value, ProbeError> {
-        if (recommendation_query.is_none() && q.is_empty())
+        if (recommendation_query.is_none() && discovery_query.is_none() && q.is_empty())
             || q.len() > 8192
             || !(1..=1000).contains(&top_k)
         {
@@ -385,7 +386,91 @@ impl SourceOwner {
         let mut request = QueryRequest::new(top_k);
         let mut filter = crate::lexical::compile(&predicates, &self.encoder)?;
         request.filter = filter.clone();
-        let (scoring, uses_idf) = if let Some(recommendation) = recommendation_query {
+        let (scoring, uses_idf) = if let Some(discovery) = discovery_query {
+            if recommendation_query.is_some()
+                || representation_query.is_some()
+                || rerank_query.is_some()
+                || fusion.is_some()
+            {
+                return Err(ProbeError::invalid(
+                    "discovery cannot be combined, fused or reranked",
+                ));
+            }
+            let contract = owned
+                .representations
+                .get(&discovery.representation)
+                .ok_or_else(|| ProbeError::invalid("discovery slot is not owned"))?;
+            let target_required = matches!(discovery.strategy, DiscoveryStrategy::Discover);
+            let count = discovery
+                .context
+                .len()
+                .saturating_mul(2)
+                .saturating_add(usize::from(discovery.target.is_some()));
+            if contract.kind != "dense"
+                || discovery.model_id != contract.model_id
+                || discovery.model_version != contract.model_version
+                || discovery.target.is_some() != target_required
+                || discovery.context.is_empty()
+                || count > 32
+                || discovery.exclude_ids.len() != count
+                || discovery.exclude_ids.iter().any(|id| *id == 0)
+                || discovery
+                    .exclude_ids
+                    .iter()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len()
+                    != count
+            {
+                return Err(ProbeError::invalid(
+                    "invalid discovery target, context or model contract",
+                ));
+            }
+            admit_example_work(
+                count,
+                contract.dimensions,
+                shard.info().map_err(error)?.points_count,
+            )?;
+            for vector in discovery.target.iter().chain(
+                discovery
+                    .context
+                    .iter()
+                    .flat_map(|pair| [&pair.positive, &pair.negative]),
+            ) {
+                validate_representation(&RepresentationVector::Dense(vector.clone()), contract)?;
+            }
+            let exclusion: Filter =
+                serde_json::from_value(json!({"must_not":[{"has_id":discovery.exclude_ids}]}))
+                    .map_err(error)?;
+            filter
+                .get_or_insert_with(Filter::default)
+                .must_not
+                .get_or_insert_with(Vec::new)
+                .extend(exclusion.must_not.unwrap());
+            request.filter = filter.clone();
+            let pairs = discovery
+                .context
+                .into_iter()
+                .map(|pair| ContextPair {
+                    positive: VectorInternal::Dense(pair.positive),
+                    negative: VectorInternal::Dense(pair.negative),
+                })
+                .collect();
+            let using = Some(discovery.representation);
+            let query = match discovery.strategy {
+                DiscoveryStrategy::Discover => QueryEnum::Discover(NamedQuery {
+                    using,
+                    query: DiscoverQuery::new(
+                        VectorInternal::Dense(discovery.target.unwrap()),
+                        pairs,
+                    ),
+                }),
+                DiscoveryStrategy::Context => QueryEnum::Context(NamedQuery {
+                    using,
+                    query: ContextQuery::new(pairs),
+                }),
+            };
+            (ScoringQuery::Vector(query), false)
+        } else if let Some(recommendation) = recommendation_query {
             if representation_query.is_some() || rerank_query.is_some() || fusion.is_some() {
                 return Err(ProbeError::invalid(
                     "recommendation cannot be fused or reranked",
@@ -417,7 +502,7 @@ impl SourceOwner {
                     "invalid recommendation examples or model contract",
                 ));
             }
-            admit_recommendation_work(
+            admit_example_work(
                 count,
                 contract.dimensions,
                 shard.info().map_err(error)?.points_count,
@@ -615,7 +700,7 @@ impl SourceOwner {
 }
 
 // Recommendation exact work uses the owned corpus before applying filters.
-fn admit_recommendation_work(
+fn admit_example_work(
     examples: usize,
     dimensions: usize,
     owned_points: usize,
@@ -625,7 +710,7 @@ fn admit_recommendation_work(
         .saturating_mul(owned_points);
     if work > 20_000_000 {
         return Err(ProbeError::invalid(
-            "recommendation scalar-work budget exceeds 20000000",
+            "source-example scalar-work budget exceeds 20000000",
         ));
     }
     Ok(())
@@ -755,10 +840,10 @@ mod tests {
 
     #[test]
     fn recommendation_work_uses_owned_corpus_and_cannot_overflow() {
-        assert!(admit_recommendation_work(32, 125, 5000).is_ok());
-        assert!(admit_recommendation_work(32, 125, 5001).is_err());
-        assert!(admit_recommendation_work(32, 4096, 153).is_err());
-        assert!(admit_recommendation_work(32, 4096, usize::MAX).is_err());
+        assert!(admit_example_work(32, 125, 5000).is_ok());
+        assert!(admit_example_work(32, 125, 5001).is_err());
+        assert!(admit_example_work(32, 4096, 153).is_err());
+        assert!(admit_example_work(32, 4096, usize::MAX).is_err());
     }
     use pg_qdrant_protocol::{SourceEvent, SparseValues};
 
@@ -881,6 +966,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap_err();
@@ -895,6 +981,7 @@ mod tests {
                 "anchor",
                 10,
                 Some(query.clone()),
+                None,
                 None,
                 None,
                 None,
@@ -926,6 +1013,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap();
@@ -947,6 +1035,7 @@ mod tests {
                 Some(query),
                 None,
                 None,
+                None,
                 Some(SourceFusion::Dbsf),
                 SourcePredicates::default(),
             )
@@ -958,7 +1047,183 @@ mod tests {
     }
 
     #[test]
-    fn recommendation_adapter_pinned_best_and_sum() {
+    fn discovery_context_adapter_pinned_scores_and_exclusions() {
+        use pg_qdrant_protocol::SourceContextPair;
+        let (owner, root, generation, epoch, values) = dense_example_fixture();
+        for distance in ["dot", "cosine", "euclid", "manhattan"] {
+            let vector = |raw: [f32; 2]| -> Vec<f32> {
+                if distance != "cosine" {
+                    return raw.to_vec();
+                }
+                let norm = (raw[0] * raw[0] + raw[1] * raw[1]).sqrt();
+                if norm == 0.0 {
+                    vec![0.5f32.sqrt(), 0.5f32.sqrt()]
+                } else {
+                    vec![raw[0] / norm, raw[1] / norm]
+                }
+            };
+            // Independent f64 goldens: native context rank plus bounded target,
+            // or the sum of bounded negative-margin losses. Ties have no order.
+            let similarity = |a: &[f32], b: &[f32]| -> f64 {
+                match distance {
+                    "dot" | "cosine" => a
+                        .iter()
+                        .zip(b)
+                        .map(|(x, y)| f64::from(*x) * f64::from(*y))
+                        .sum(),
+                    "euclid" => -a
+                        .iter()
+                        .zip(b)
+                        .map(|(x, y)| (f64::from(*x) - f64::from(*y)).powi(2))
+                        .sum::<f64>(),
+                    "manhattan" => -a
+                        .iter()
+                        .zip(b)
+                        .map(|(x, y)| (f64::from(*x) - f64::from(*y)).abs())
+                        .sum::<f64>(),
+                    _ => unreachable!(),
+                }
+            };
+            for discover in [false, true] {
+                let input = SourceDiscovery {
+                    representation: distance.into(),
+                    model_id: "fixture".into(),
+                    model_version: "r1".into(),
+                    strategy: if discover {
+                        DiscoveryStrategy::Discover
+                    } else {
+                        DiscoveryStrategy::Context
+                    },
+                    target: discover.then(|| vector(values[2])),
+                    context: vec![SourceContextPair {
+                        positive: vector(values[0]),
+                        negative: vector(values[1]),
+                    }],
+                    exclude_ids: if discover { vec![1, 2, 3] } else { vec![1, 2] },
+                };
+                let hits = owner
+                    .search(
+                        1,
+                        &generation,
+                        &epoch,
+                        "",
+                        100,
+                        None,
+                        None,
+                        Some(input.clone()),
+                        None,
+                        None,
+                        SourcePredicates::default(),
+                    )
+                    .unwrap();
+                let hits = hits.as_array().unwrap();
+                assert_eq!(hits.len(), if discover { 4 } else { 5 });
+                for hit in hits {
+                    let id = hit["id"].as_u64().unwrap();
+                    assert!(!input.exclude_ids.contains(&id));
+                    let v = vector(values[id as usize - 1]);
+                    let p = similarity(&v, &input.context[0].positive);
+                    let n = similarity(&v, &input.context[0].negative);
+                    let expected = if discover {
+                        let rank = if p > n {
+                            1.0
+                        } else if p < n {
+                            -1.0
+                        } else {
+                            0.0
+                        };
+                        let target = similarity(&v, input.target.as_ref().unwrap());
+                        rank + 0.5 * (target / (1.0 + target.abs()) + 1.0)
+                    } else {
+                        let loss = (p - n - f64::from(f32::EPSILON)).min(0.0);
+                        loss / (1.0 + loss.abs())
+                    };
+                    assert!(
+                        (hit["score"].as_f64().unwrap() - expected).abs() < 5e-6,
+                        "{distance} discover={discover} id={id}: {hit} != {expected}"
+                    );
+                }
+                let constrained = owner
+                    .search(
+                        1,
+                        &generation,
+                        &epoch,
+                        "",
+                        1,
+                        None,
+                        None,
+                        Some(input.clone()),
+                        None,
+                        None,
+                        SourcePredicates {
+                            key_exact: Some("4".into()),
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                assert_eq!(constrained[0]["id"], 4);
+                let excluded = owner
+                    .search(
+                        1,
+                        &generation,
+                        &epoch,
+                        "",
+                        1,
+                        None,
+                        None,
+                        Some(input.clone()),
+                        None,
+                        None,
+                        SourcePredicates {
+                            key_exact: Some("1".into()),
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                assert_eq!(excluded, json!([]));
+                for invalid in [
+                    SourceDiscovery {
+                        target: if discover { None } else { Some(vec![1., 0.]) },
+                        ..input.clone()
+                    },
+                    SourceDiscovery {
+                        context: vec![],
+                        ..input.clone()
+                    },
+                    SourceDiscovery {
+                        model_version: "wrong".into(),
+                        ..input.clone()
+                    },
+                    SourceDiscovery {
+                        exclude_ids: vec![1, 1],
+                        ..input.clone()
+                    },
+                ] {
+                    assert!(
+                        owner
+                            .search(
+                                1,
+                                &generation,
+                                &epoch,
+                                "",
+                                10,
+                                None,
+                                None,
+                                Some(invalid),
+                                None,
+                                None,
+                                SourcePredicates::default()
+                            )
+                            .is_err()
+                    );
+                }
+            }
+        }
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    fn dense_example_fixture() -> (SourceOwner, PathBuf, String, String, [[f32; 2]; 7]) {
         let root = std::env::temp_dir().join(format!(
             "pgq-recommend-{}-{}",
             std::process::id(),
@@ -1035,6 +1300,12 @@ mod tests {
                 .collect(),
         };
         owner.apply(batch).unwrap();
+        (owner, root, generation, epoch, values)
+    }
+
+    #[test]
+    fn recommendation_adapter_pinned_best_and_sum() {
+        let (owner, root, generation, epoch, values) = dense_example_fixture();
         for distance in ["dot", "cosine", "euclid", "manhattan"] {
             for best in [false, true] {
                 let recommendation = SourceRecommendation {
@@ -1061,6 +1332,7 @@ mod tests {
                         Some(recommendation.clone()),
                         None,
                         None,
+                        None,
                         SourcePredicates::default(),
                     )
                     .unwrap();
@@ -1075,6 +1347,7 @@ mod tests {
                         1,
                         None,
                         Some(recommendation.clone()),
+                        None,
                         None,
                         None,
                         SourcePredicates {
@@ -1093,6 +1366,7 @@ mod tests {
                         1,
                         None,
                         Some(recommendation.clone()),
+                        None,
                         None,
                         None,
                         SourcePredicates {
@@ -1130,6 +1404,7 @@ mod tests {
                                 100,
                                 None,
                                 Some(invalid),
+                                None,
                                 None,
                                 None,
                                 SourcePredicates::default()
@@ -1251,6 +1526,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates::default()
                     )
                     .is_err()
@@ -1298,6 +1574,7 @@ mod tests {
                     &epoch,
                     "retired",
                     10,
+                    None,
                     None,
                     None,
                     None,

@@ -34,9 +34,10 @@ the cursor instead of mixing different result versions. Other uncaptured rows
 can change: the snapshot is a bounded historical candidate domain, not a
 transactionally frozen global ranking.
 
-Source-example recommendations also capture the resolved seed digest. Changing
+Source-example recommendations and Discover/Context also capture the resolved seed digest. Changing
 only an excluded example invalidates the cursor with 55000, even when cached
-hits are unchanged. See [source recommendations](source-recommendations.md).
+hits are unchanged. See [source recommendations](source-recommendations.md)
+and [source-key context/discovery](source-context-discovery.md).
 
 Source binding and catalog locks span page admission and rechecking. They use
 NOWAIT to avoid unbounded DDL/management waits. Initial snapshot quota admission
