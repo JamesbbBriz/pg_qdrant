@@ -72,7 +72,7 @@ assert capabilities['source_statistics_available']
 assert capabilities['source_matrix_available']
 assert capabilities['source_groups_available']
 assert capabilities['bounded_lexical_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','F13','F14','F15','F19','V01','V02','V03','Q02','Q03','Q04','Q05','Q06','Q07','Q08','Q09','Q10','Q11','Q12']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','F13','F14','F15','F17','F19','V01','V02','V03','Q02','Q03','Q04','Q05','Q06','Q07','Q08','Q09','Q10','Q11','Q12']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 if faults:
     import verify_transport

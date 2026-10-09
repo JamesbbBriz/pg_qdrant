@@ -1,5 +1,6 @@
 """Actual mature lexical queries over durable, authorized Edge facts."""
 import json
+import hashlib
 import os
 import signal
 import time
@@ -15,14 +16,39 @@ def run(sql,ready,ticket_from,checks,spawn=None):
         return 'SELECT qdrant.search_lexical('+literal(index)+','+literal(q)+','+literal(kind)+','+str(k)+','+str(slop)+','+literal(json.dumps(options or {}))+')'
     def query(**kw):return json.loads(sql(statement(**kw)))
     def keys(result):return {h['source_key']['value'] for h in result['hits']}
+    def validate_snippet(hit,original):
+        snippet=hit['snippet']
+        assert snippet['source_field']=='body' and snippet['source_fingerprint']==hashlib.sha256(original.encode()).hexdigest(),snippet
+        if snippet['status']!='ready':
+            assert snippet['status'] in ['no_positive_term_match','fragment_budget_exceeded'],snippet
+            assert 'text' not in snippet and 'highlights' not in snippet,snippet
+            return []
+        text=snippet['text'];encoded=text.encode();source=original.encode()
+        assert encoded in source and len(encoded)<=512 and len(snippet['highlights'])<=32,snippet
+        assert snippet['offset_unit']=='utf8_bytes' and snippet['offset_scope']=='fragment',snippet
+        if snippet['source_occurrence_ambiguous']:
+            assert snippet['source_byte_start'] is None and source.find(encoded)!=source.rfind(encoded),snippet
+        else:
+            start=snippet['source_byte_start']
+            assert source[start:start+len(encoded)]==encoded and source.find(encoded)==source.rfind(encoded),snippet
+        terms=[]
+        for r in snippet['highlights']:
+            assert 0<=r['start']<r['end']<=len(encoded),snippet
+            terms.append(encoded[r['start']:r['end']].decode())
+        assert terms and 'html' not in snippet,snippet
+        return terms
     def replay():
         ready('bounded_lexical')
+        bodies=json.loads(sql('SELECT jsonb_object_agg(id,body) FROM bounded_lexical'))
         for q,kind,slop,expected in [('transactoin','fuzzy',0,{'1','2','3'}),('transaction recovery','proximity',0,{'1'}),
             ('transaction recovery','proximity',1,{'1','2'}),('transaction recovery','proximity',2,{'1','2','3'})]:
             result=query(q=q,kind=kind,slop=slop)
             assert keys(result)==expected and result['matched_points']==len(expected),result
             assert result['matched_count_exact'] and result['engine']=='tantivy-0.26.2' and not result['release_supported'],result
             assert all('id' not in h and 'payload' not in h for h in result['hits']),result
+            for hit in result['hits']:
+                terms=validate_snippet(hit,bodies[hit['source_key']['value']])
+                assert terms and all(term.lower() in ['transaction','recovery'] for term in terms),hit
         result=query(options={'filter':{'field':'category','eq':'Allow'}})
         assert keys(result)=={'1','2'} and result['filtered_points']==4,result
         assert query(q='unmatched')['matched_points']==0
@@ -33,6 +59,9 @@ def run(sql,ready,ticket_from,checks,spawn=None):
             syntax=query(q=q,kind='syntax')
             assert keys(syntax)==expected and syntax['matched_points']==len(expected),syntax
             assert 'default AND' in syntax['syntax_policy'],syntax
+            for hit in syntax['hits']:
+                terms=validate_snippet(hit,bodies[hit['source_key']['value']])
+                assert 'durable' not in [t.lower() for t in terms],hit
         boosted=query(q='diary^10 OR transaction',kind='syntax')
         assert boosted['hits'][0]['source_key']['value']=='4',boosted
         filtered=query(q='NOT durable',kind='syntax',options={'filter':{'field':'category','eq':'Allow'}})
@@ -55,6 +84,22 @@ def run(sql,ready,ticket_from,checks,spawn=None):
     assert keys(query(q=r'body:foo\:bar',kind='syntax'))=={'ERR-0042'}
     sql("UPDATE bounded_lexical SET body='identifier only' WHERE id='ERR-0042'");replay()
     checks.append('strict syntax refuses unsupported fields/expansions/range/regex/set/all, malformed syntax, empty analysis and structural/term budgets; literal Unicode and escapes use native analysis')
+    original="Préface 🙂 <script> Café CAFÉ cafe\u0301 end"
+    sql("UPDATE bounded_lexical SET body="+literal(original)+" WHERE id='ERR-0042'");ready('bounded_lexical')
+    accented=query(q='café',kind='syntax')
+    assert keys(accented)=={'ERR-0042'},accented
+    assert validate_snippet(accented['hits'][0],original)==['Café','CAFÉ'],accented
+    assert '<script>' in accented['hits'][0]['snippet']['text'],accented
+    original='word '*80
+    sql("UPDATE bounded_lexical SET body="+literal(original)+" WHERE id='ERR-0042'");ready('bounded_lexical')
+    repeated=query(q='word',kind='syntax')['hits'][0]
+    validate_snippet(repeated,original)
+    assert repeated['snippet']['source_occurrence_ambiguous'] and repeated['snippet']['source_byte_start'] is None,repeated
+    sql("UPDATE bounded_lexical SET body="+literal('a '*80)+" WHERE id='ERR-0042'");ready('bounded_lexical')
+    limited=query(q='a',kind='syntax')
+    assert limited['matched_points']==1 and limited['hits'][0]['snippet']['status']=='fragment_budget_exceeded',limited
+    sql("UPDATE bounded_lexical SET body='identifier only' WHERE id='ERR-0042'");replay()
+    checks.append('native positive-term snippets preserve original UTF8 bytes/case/markup without HTML, bind current source fingerprint, omit ambiguous absolute offsets and explicitly bound fragments/ranges')
     for kw in [dict(q='ERR-0042'),dict(q='中文'),dict(q='a'),dict(q='two words'),dict(kind='unknown'),dict(slop=1),
                dict(q='transaction recovery',kind='proximity',slop=9),dict(k=101),dict(k=0),dict(options={'unknown':1})]:
         assert '22023' in sql(statement(**kw),ok=False),kw
