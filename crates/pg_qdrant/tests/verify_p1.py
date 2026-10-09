@@ -466,7 +466,7 @@ verify_retirements.run(sql,ready,checks,faults,crash_matrix)
 build_info=json.loads(sql('SELECT qdrant.build_info()'))
 worker=json.loads(sql('SELECT qdrant_internal.p0_ping()'))['worker_pid']
 observer=spawn('SELECT pg_sleep(2)','pgq_extension_drop_observer')
-sql("SELECT qdrant.drop_index('recommendation_docs'); SELECT qdrant.drop_index('numeric_dense'); SELECT qdrant.drop_index('numeric_sparse'); SELECT qdrant.drop_index('discovery_docs'); SELECT qdrant.drop_index('page_docs'); SELECT qdrant.drop_index('lexical_docs'); SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
+sql("SELECT qdrant.drop_index('retrieve_docs'); SELECT qdrant.drop_index('recommendation_docs'); SELECT qdrant.drop_index('numeric_dense'); SELECT qdrant.drop_index('numeric_sparse'); SELECT qdrant.drop_index('discovery_docs'); SELECT qdrant.drop_index('page_docs'); SELECT qdrant.drop_index('lexical_docs'); SELECT qdrant.drop_index('token_docs'); SELECT qdrant.drop_index('sparse_docs'); SELECT qdrant.drop_index('model_docs'); SELECT qdrant.drop_index('docs'); DROP EXTENSION pg_qdrant")
 assert sql("SELECT count(*) FROM pg_trigger WHERE tgrelid='model_docs'::regclass AND NOT tgisinternal")=='0'
 finish(observer)
 assert sql('SELECT count(*) FROM docs')=='1'
