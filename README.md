@@ -76,9 +76,10 @@ with current source/version and permission rechecks.
 See [capability discovery](docs/capability-discovery.md) for current index and
 model-slot readiness, separate from adapter implementation and release support.
 
-See the [P1 integration status](docs/p1-integration.md) and historical
-[CI hold](docs/ci-temporary-hold.md). The integration branch restores automatic
-CI; opening a PR alone does not establish a tested installation.
+See the [P1 integration status](docs/p1-integration.md) and
+[local act CI policy](docs/ci-temporary-hold.md). Full CI runs locally against
+an immutable source snapshot; opening a PR alone does not establish a tested
+installation.
 
 ## Development
 

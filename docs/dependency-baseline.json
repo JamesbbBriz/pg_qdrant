@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "query_local_lexical_combined_local_build_hosted_regression_pending",
+  "status": "query_local_lexical_combined_local_build_full_act_regression_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
