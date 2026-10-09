@@ -19,7 +19,7 @@ pub const CONNECTION_LIMIT: usize = 16;
 pub const MAX_TIMEOUT_MS: i32 = 120_000;
 pub const CONSUMER_REQUEST_BYTES: usize = 512 * 1024;
 pub const SEARCH_REQUEST_BYTES: usize = 128 * 1024;
-pub const SOURCE_CONTRACT_VERSION: u32 = 19;
+pub const SOURCE_CONTRACT_VERSION: u32 = 20;
 /// Linux virtual address space, including mmap. This is not an RSS quota.
 pub const HELPER_ADDRESS_SPACE_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 pub const HELPER_MIN_ADDRESS_SPACE_BYTES: u64 = 512 * 1024 * 1024;
@@ -93,6 +93,16 @@ pub struct SourceMatrix {
     pub representation: String,
     pub sample_size: usize,
     pub neighbors: usize,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceGroups {
+    pub field: String,
+    pub q: String,
+    pub groups: usize,
+    pub group_size: usize,
+    pub representation_query: Option<RepresentationQuery>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -328,6 +338,8 @@ pub enum Operation {
         facet_limit: usize,
         #[serde(default)]
         matrix: Option<SourceMatrix>,
+        #[serde(default)]
+        groups: Option<SourceGroups>,
         #[serde(default)]
         predicates: SourcePredicates,
     },

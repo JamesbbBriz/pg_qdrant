@@ -70,7 +70,8 @@ assert capabilities['bounded_search_page_available']
 assert capabilities['source_retrieve_available']
 assert capabilities['source_statistics_available']
 assert capabilities['source_matrix_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','F19','V01','V02','V03','Q02','Q03','Q04','Q05','Q06','Q07','Q08','Q10','Q11','Q12']
+assert capabilities['source_groups_available']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','F19','V01','V02','V03','Q02','Q03','Q04','Q05','Q06','Q07','Q08','Q09','Q10','Q11','Q12']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)')
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
@@ -377,6 +378,8 @@ import verify_statistics
 verify_statistics_replay=verify_statistics.run(sql,ready,ticket_from,checks,spawn)
 import verify_matrix
 verify_matrix_replay=verify_matrix.run(sql,ready,ticket_from,checks,spawn)
+import verify_groups
+verify_groups_replay=verify_groups.run(sql,ready,ticket_from,checks,spawn)
 def verify_model_replay():
     verify_dense_replay()
     verify_sparse_replay()
@@ -396,6 +399,7 @@ def verify_model_replay():
     verify_fusion_replay()
     verify_statistics_replay()
     verify_matrix_replay()
+    verify_groups_replay()
 # PostgreSQL cancellation must not release an executing fused native query's owner.
 ready('model_docs')
 hybrid_vector=json.dumps({'dense':{'model_id':'fixture-model','model_version':'r1','vector':[1,0]}})

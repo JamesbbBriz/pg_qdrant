@@ -3,8 +3,8 @@ use pg_qdrant_protocol::formula::ScoreFormula;
 use pg_qdrant_protocol::{
     DiscoveryStrategy, PayloadKind, ProbeError, RecommendationStrategy, RepresentationContract,
     RepresentationQuery, RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch,
-    SourceDiscovery, SourceFeedback, SourceFusion, SourceMatrix, SourceMmr, SourcePredicates,
-    SourceRecommendation,
+    SourceDiscovery, SourceFeedback, SourceFusion, SourceGroups, SourceMatrix, SourceMmr,
+    SourcePredicates, SourceRecommendation,
 };
 use qdrant_edge::EdgeShardRead;
 use qdrant_edge::bm25_embed::EdgeBm25;
@@ -995,6 +995,7 @@ impl SourceOwner {
         facet: Option<String>,
         facet_limit: usize,
         matrix: Option<SourceMatrix>,
+        groups: Option<SourceGroups>,
         predicates: SourcePredicates,
     ) -> Result<Value, ProbeError> {
         if point_ids.len() > 1000
@@ -1050,6 +1051,128 @@ impl SourceOwner {
         request.exact = true;
         request.filter = Some(filter.clone());
         let points = owned.shard.count(request).map_err(error)?;
+        let mut group_result = Value::Null;
+        if let Some(groups) = groups {
+            if facet.is_some()
+                || matrix.is_some()
+                || !(1..=32).contains(&groups.groups)
+                || !(1..=16).contains(&groups.group_size)
+                || groups.groups * groups.group_size > 256
+                || groups.q.trim().is_empty()
+                || groups.q.len() > 8192
+                || !matches!(
+                    owned.payload_contract.get(&groups.field),
+                    Some(PayloadKind::Keyword | PayloadKind::Integer)
+                )
+            {
+                return Err(ProbeError::invalid(
+                    "groups require keyword/integer alias, query and bounded group/hit counts",
+                ));
+            }
+            let (using, vector, idf): (String, VectorInternal, bool) =
+                if let Some(query) = &groups.representation_query {
+                    let contract = owned
+                        .representations
+                        .get(&query.representation)
+                        .filter(|c| {
+                            c.kind == "dense"
+                                && c.model_id == query.model_id
+                                && c.model_version == query.model_version
+                        })
+                        .ok_or_else(|| {
+                            ProbeError::invalid("group query requires the declared dense model")
+                        })?;
+                    let work = point_ids
+                        .len()
+                        .checked_mul(contract.dimensions)
+                        .and_then(|n| n.checked_mul(10));
+                    if work.is_none_or(|n| n > 20_000_000) {
+                        return Err(ProbeError::invalid(
+                            "group dense scalar work exceeds 20000000",
+                        ));
+                    }
+                    validate_representation(&query.vector, contract)?;
+                    let mut complete = qdrant_edge::CountRequest::new();
+                    complete.exact = true;
+                    complete.filter = Some(Filter::new_must(
+                        serde_json::from_value(json!({"has_vector":query.representation}))
+                            .map_err(error)?,
+                    ));
+                    if owned.shard.count(complete).map_err(error)? != point_ids.len() {
+                        return Err(error(
+                            "group representation is incomplete in the owned generation",
+                        ));
+                    }
+                    (
+                        query.representation.clone(),
+                        native_vector(&query.vector)?.into(),
+                        false,
+                    )
+                } else {
+                    (
+                        "bm25".to_owned(),
+                        VectorInternal::Sparse(self.encoder.embed_query(&groups.q)),
+                        true,
+                    )
+                };
+            let mut query = QueryRequest::new(groups.groups * groups.group_size);
+            query.query = Some(ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
+                using: Some(using),
+                query: vector.into(),
+            })));
+            query.filter = Some(filter.clone());
+            query.params = Some(SearchParams {
+                exact: true,
+                indexed_only: false,
+                idf: idf.then(|| {
+                    IdfParams::Corpus(IdfCorpusParams {
+                        corpus: Filter::default(),
+                    })
+                }),
+                ..Default::default()
+            });
+            let response = owned
+                .shard
+                .query_groups(qdrant_edge::GroupRequest::new(
+                    query,
+                    format!("attributes.{}", groups.field)
+                        .parse()
+                        .map_err(|_| ProbeError::invalid("invalid grouping alias"))?,
+                    groups.groups,
+                    groups.group_size,
+                ))
+                .map_err(error)?;
+            if response.len() > groups.groups {
+                return Err(error("native group count exceeds budget"));
+            }
+            let mut rows = Vec::with_capacity(response.len());
+            let mut keys = std::collections::HashSet::new();
+            for group in response {
+                let value = serde_json::to_value(group.key).map_err(error)?;
+                if !(value.is_string() || value.as_i64().is_some())
+                    || !keys.insert(value.clone())
+                    || group.hits.len() > groups.group_size
+                {
+                    return Err(error("invalid native group key or hit budget"));
+                }
+                let mut ids = std::collections::HashSet::new();
+                let mut hits = Vec::with_capacity(group.hits.len());
+                for hit in group.hits {
+                    let PointId::NumId(id) = hit.id else {
+                        return Err(error("unexpected grouped point identity"));
+                    };
+                    if !point_ids.contains(&id) || !ids.insert(id) || !hit.score.is_finite() {
+                        return Err(error("invalid grouped point or non-finite score"));
+                    }
+                    hits.push(json!({"id":id,"score":hit.score}));
+                }
+                rows.push(json!({"value":value,"hits":hits}));
+            }
+            group_result = json!({"field":groups.field,"groups":rows,"group_limit":groups.groups,"group_size":groups.group_size,
+                "mode":if idf {"text"}else{"semantic"},"exact_scores":true,"groups_complete":false,
+                "request_budget":{"collect":5,"fill":5},"nulls":"omitted","ordering":"native best-hit order",
+                "scope":"bounded native group discovery and filling; no total-group or per-group count claim"});
+        }
         let mut matrix_result = Value::Null;
         if let Some(matrix) = matrix {
             let contract = owned
@@ -1175,7 +1298,9 @@ impl SourceOwner {
             }
             facet_result = json!({"field":name,"hits":hits,"values_complete":complete,"nulls":"omitted","ordering":"count descending; typed value ascending for ties"});
         }
-        Ok(json!({"points":points,"proof":proof,"facet":facet_result,"matrix":matrix_result}))
+        Ok(
+            json!({"points":points,"proof":proof,"facet":facet_result,"matrix":matrix_result,"grouped":group_result}),
+        )
     }
 
     pub fn retrieve(
@@ -2710,6 +2835,7 @@ mod tests {
                 Some("category".into()),
                 1,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap();
@@ -2731,6 +2857,7 @@ mod tests {
                 (1..=7).collect(),
                 Some("available".into()),
                 100,
+                None,
                 None,
                 predicates,
             )
@@ -2760,6 +2887,7 @@ mod tests {
                         None,
                         1,
                         None,
+                        None,
                         SourcePredicates::default()
                     )
                     .is_err()
@@ -2776,6 +2904,7 @@ mod tests {
                         Some(alias.into()),
                         100,
                         None,
+                        None,
                         SourcePredicates::default()
                     )
                     .is_err()
@@ -2783,6 +2912,46 @@ mod tests {
         }
         drop(owner);
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn source_groups_native_fill_and_independent_dense_scores() {
+        let (owner,root,generation,epoch,values)=dense_payload_fixture(true);
+        for alias in ["dot","euclid"] {
+            for field in ["category","quantity"] {
+                let groups=SourceGroups {field:field.into(),q:"anchor".into(),groups:2,group_size:2,
+                    representation_query:Some(RepresentationQuery {representation:alias.into(),model_id:"fixture".into(),
+                        model_version:"r1".into(),vector:RepresentationVector::Dense(vec![1.,0.])})};
+                let result=owner.statistics(1,&generation,&epoch,(1..=7).collect(),None,1,None,Some(groups.clone()),SourcePredicates::default()).unwrap();
+                let rows=result["grouped"]["groups"].as_array().unwrap();
+                assert_eq!(rows.len(),2);
+                assert_eq!(result["grouped"]["groups_complete"],false);
+                let mut best=Vec::new();
+                for group in rows {
+                    let actual=group["hits"].as_array().unwrap();
+                    let score=|n:usize|if alias=="dot" {values[n][0] as f64} else {(1.-values[n][0] as f64).hypot(values[n][1] as f64)};
+                    let mut expected:Vec<_>=(0..7).filter(|n|if field=="category" {
+                        group["value"]==json!(if (n+1)%2==0 {"Allow"}else{"Denied"})
+                    }else {group["value"]==json!(n+1)}).map(score).collect();
+                    expected.sort_by(|a,b|if alias=="dot" {b.total_cmp(a)}else{a.total_cmp(b)});
+                    expected.truncate(2);
+                    assert_eq!(actual.len(),expected.len());
+                    for (hit,expected) in actual.iter().zip(expected) {
+                        let n=hit["id"].as_u64().unwrap() as usize-1;
+                        assert!((hit["score"].as_f64().unwrap()-expected).abs()<1e-6);
+                        assert!((score(n)-expected).abs()<1e-6);
+                    }
+                    best.push(actual[0]["score"].as_f64().unwrap());
+                }
+                assert!(if alias=="dot" {best[0]>=best[1]}else{best[0]<=best[1]});
+                let predicates=serde_json::from_value(json!({"payload_filter":{"field":"category","eq":"Allow"}})).unwrap();
+                let filtered=owner.statistics(1,&generation,&epoch,(1..=7).collect(),None,1,None,Some(groups),predicates).unwrap();
+                for group in filtered["grouped"]["groups"].as_array().unwrap() {
+                    for hit in group["hits"].as_array().unwrap() {assert_eq!(hit["id"].as_u64().unwrap()%2,0);}
+                }
+            }
+        }
+        drop(owner);std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
@@ -2804,6 +2973,7 @@ mod tests {
                 None,
                 1,
                 request(),
+                None,
                 SourcePredicates::default(),
             )
             .unwrap();
@@ -2838,6 +3008,7 @@ mod tests {
                         sample_size: 7,
                         neighbors: 6,
                     }),
+                    None,
                     SourcePredicates::default(),
                 )
                 .unwrap();
@@ -2884,6 +3055,7 @@ mod tests {
                 None,
                 1,
                 request(),
+                None,
                 predicates,
             )
             .unwrap();
@@ -2920,6 +3092,7 @@ mod tests {
                         None,
                         1,
                         Some(bad),
+                        None,
                         SourcePredicates::default()
                     )
                     .is_err()

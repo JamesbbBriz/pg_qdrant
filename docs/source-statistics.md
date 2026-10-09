@@ -58,7 +58,7 @@ can proceed. These checks establish a current-source validation point, not a
 cross-engine historical MVCC snapshot. Cancellation retains the sole native
 owner until the actual operation completes and discards the canceled response.
 
-Source protocol 19 requires matching extension, helper and install SQL with a
+Source protocol 20 requires matching extension, helper and install SQL with a
 fresh development catalog. No direct dependency or lockfile changes are made.
 Installed SQL tests compare native facets to independent PostgreSQL GROUP BY,
 exercise integer extrema, nulls, filtering, permission refusals, stale output
