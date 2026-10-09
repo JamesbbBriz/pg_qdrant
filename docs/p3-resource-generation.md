@@ -54,8 +54,10 @@ Tickets for a superseded generation explicitly report `generation_invalidated`.
 
 After cutover, the sole native owner flushes and drops the old shard's
 references before removing its validated child directory. Retirement receipts
-are replayable for the exact task/consumer identity. A changed owner or
-uncertain path preserves storage and reports cleanup failure. Task success
+are replayable for the exact task/consumer identity. An uncertain path preserves
+storage and reports cleanup failure. Generation-build
+cleanup still requires the original helper; committed DROP can verify persisted
+epoch identities after helper replacement. Task success
 and `retired_storage_cleanup` are separate results.
 
 ```sql
@@ -115,16 +117,21 @@ cannot be cancelled: ownership cleanup remains necessary. A same-name new
 registration has a different internal index identity and storage path, so the
 old task cannot remove its shard.
 
-If a helper has changed since an epoch was owned, cleanup fails closed and
-preserves its uncertain directory. The task explicitly reports failure and
-remaining epochs; it does not claim physical cleanup or reopen that storage.
-Drop status also retains the native failure's `error_code`. A changed ownership
-nonce reports `source_owner_changed`; a failed request write or closed response
-pipe reports `worker_unavailable`. These are failed cleanup outcomes, with
-pending epochs preserved, regardless of their timing or diagnostic wording.
-Consumer epoch rotations retain prior ownership records, so recovery cannot
-erase an old directory from subsequent cleanup accounting.
-Automatic orphan reclamation across helper replacement is still unsupported.
+Every newly allocated epoch has a durable exact index/generation/epoch/consumer
+binding beside its native directory. A committed drop writes an exclusive,
+task-bound retirement intent before removing the directory and syncs the parent
+directory before acknowledging cleanup. These small identity and retirement
+records remain after deletion, preventing reuse and supporting exact replay.
+A replacement helper holds the same process-lifetime database OS owner lock;
+it can validate those records and retire a historical epoch without reopening
+its dirty shard. A lost transport response is retried for that exact identity.
+Missing, mismatched, malformed or symlinked records fail closed and preserve
+uncertain storage. Old epochs created before this storage contract have no
+binding and cannot be automatically reclaimed. Consumer rotations retain prior
+epochs in PostgreSQL until their precise cleanup is acknowledged. This is
+explicit committed-drop cleanup, not a scan that deletes unregistered paths.
+Identity-record garbage collection and generation-build cleanup across helper
+replacement remain open.
 Wait for drop tasks before uninstalling the extension; dropping the extension
 does not itself prove that its asynchronous native cleanup completed.
 
@@ -140,7 +147,8 @@ directory removal and refusal to reopen or mutate a retired epoch.
 `verify_retirements.py` covers transactional rollback, uncommitted wait refusal,
 owner admission, forged receipts, same-name replacement, archived task outcomes,
 40 native create/drop cycles, unrelated directory preservation and actual helper
-SIGKILL with explicit failed cleanup and usable fresh registration.
+SIGKILL with precise retirement replay and usable fresh registration, plus
+missing-ownership failure that preserves uncertain storage.
 `verify_abandoned.py` exercises 40 actually flushed shadow builds followed by
 cancellation and physical retirement while the serving generation stays bound,
 plus rollback, stopped-helper timeout, forged receipts, owner/snapshot rejection,
@@ -156,8 +164,10 @@ rescan changed schemas, change model/analyzer contracts or migrate disk formats.
 Same-owner failed/cancelled shadows now retire while the index remains registered.
 Index removal transfers remaining owned epochs into its cleanup task. Uncertain
 old epochs are retained and cannot be reported as cleaned.
-The helper's 32-open-shard limit and 256-retirement-receipt limit remain bounded
-capacity constraints; disk/RSS admission and old-owner orphan reclamation remain open.
+The helper's 32-open-shard limit remains a capacity constraint. Retirement
+identities are now durable files rather than a 256-entry volatile receipt cache;
+record garbage collection, general disk/RSS admission and unregistered orphan
+reclamation remain open.
 
 The protocol resource validators and narrower SQL limits do not establish full
 native memory/thread/optimization budgets. A [logical source recovery slice](logical-source-restore.md)
@@ -167,3 +177,15 @@ Automatic metadata restoration remains open. Base backup/PITR/replication, forma
 upgrade and rollback, platform distribution, full fault combinations and
 quality gates remain required. No release support or complete stage gate is
 promoted by this implementation.
+
+Local act scope `retirement-4be0f151a0933a8c` validates the persisted retirement
+contract with matching fault helper and installed extension: nine SQL groups,
+40 create/drop cycles, two SIGKILLs and actual native aborts after intent
+publication and after durable deletion before PostgreSQL ACK. Exact event/task
+receipts, preserved unrelated paths and missing-ownership refusal passed. The
+scope omits the earlier failed-shadow archive fixtures supplied by the complete
+product harness; it does not replace that regression or establish P3 acceptance.
+The full log SHA-256 is
+`d94639fec1c3fd703264b05dec9b04c79759701d2359dd38ecd9da27312eb6bb`.
+Normal helper tests (34), fault helper tests (35), protocol tests (23) and
+supervisor-child tests (2) also passed for these source inputs.

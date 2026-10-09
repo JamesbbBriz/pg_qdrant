@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "local_package_installation_preview",
+  "status": "passed",
+  "release_supported": false,
+  "command": "python3 scripts/local_preview.py --image pgq-preview-base-943f7f3b0dae71f9 --source-snapshot artifacts/local-ci/preview-943f7f3b0dae71f9/snapshot/ci-input.json",
+  "runner": "act-local",
+  "run_id": "preview-a044eef4fe310bef",
+  "packaging_commit": "a5a17ad4bdb718630fff64cdd2f1342b16b9d0f1",
+  "source_commit": "acfc88539bb852ea2620a72ce551cd3b17ff86b2",
+  "source_manifest_sha256": "b7170212986af9341b9eb941655f62a3102fc65262a69660579f165ac6f2e3cc",
+  "cargo_lock_sha256": "79666ddb27e6f87bc84f1711bef5667bfe23422617d08c6f9131057f3f074e9c",
+  "runner_image": "sha256:ad12718e89881afe3833461059d37dfa663cfac9f0c3305b20f8d0f79d1a12a7",
+  "product_image": "sha256:33a7a62b3ae1309f74d80b989043168aa1b1afe57e224b9485a4e91ec2f6384f",
+  "act_log_sha256": "358190d84719c60ecba81f86fe2dfe0bc828f3952e0d4247db88289b25954f6f",
+  "archive_sha256": "60feda4def05df86d1e1fda69aa4b6bc1dffbaf20a6168787975bafcb5b10ed5",
+  "archive_bytes": 76311774,
+  "manifest_sha256": "fbcb300d6d8916ad03e70c18f67c34f1d32d7b4a1672bccb518e33cc16bd2ed0",
+  "sql_result_sha256": "bfae45a7d30647b5ac51c8d36e136dd20460eb40d8cc0fbfb129ad9882bb30c6",
+  "archive_regressions": 12,
+  "platform": {
+    "architecture": "x86_64",
+    "build_profile": "debug",
+    "fault_injection": false,
+    "layout": "PGDG",
+    "os": "Linux",
+    "postgres_major": 17
+  },
+  "runtime_limits": {
+    "memory_bytes": 2147483648,
+    "swap_bytes": 0,
+    "cpus": 2,
+    "pids": 128,
+    "network": "none"
+  },
+  "installed_sha256": {
+    "usr/lib/postgresql/17/lib/pg_qdrant.so": "4c5dc0058308140afa7ace02646186b1eeaf027feb64891d7945f0610e1848f8",
+    "usr/lib/postgresql/17/bin/pg_qdrant_p0_helper": "f5a523dc67b7000f626ee9c32c5f1efd5f114ca458dd134cc1315c71ca7c4dd7",
+    "usr/share/postgresql/17/extension/pg_qdrant.control": "3e2dc1da4af34898121c2cfe9715975c23c872327a014afe896ddebd8f2767f2",
+    "usr/share/postgresql/17/extension/pg_qdrant--0.0.1.sql": "f2a21e3f1aa85222e6bdc43b2ec45c1fca1a6f5be3372425fe70b4f90484b47c"
+  },
+  "sql_groups": [
+    "four archive hashes match installed normal helper/extension/control/SQL; fresh PG17 CREATE EXTENSION without source tree or fault function",
+    "ordinary table backfill/DML, exact durable ticket and actual BM25 source JOIN; writer has no ledger or index-owner access",
+    "actual public rebuild switches generation; PG restart/source replay returns the same native matches",
+    "public drop, extension uninstall and reinstall preserve source facts and reproduce native matches"
+  ],
+  "drop_outcomes": [
+    {
+      "succeeded": true,
+      "physical_cleanup_completed": true,
+      "pending_epochs": 0
+    },
+    {
+      "succeeded": true,
+      "physical_cleanup_completed": true,
+      "pending_epochs": 0
+    }
+  ],
+  "limitations": [
+    "Debug build and PGDG PostgreSQL 17/Linux x86_64 only.",
+    "Two identical archives from the same binaries; independent binary reproducibility is unverified.",
+    "Matching build-tools environment; minimal runtime dependency closure is unverified.",
+    "Complete transitive/native license review, real upgrade/rollback and remaining P1-P5 acceptance stay open.",
+    "Previous full regression ce5f3b2904da7e8f failed 36/37: direct OOM cooperative deadline; this scoped installation does not replace it."
+  ]
+}
