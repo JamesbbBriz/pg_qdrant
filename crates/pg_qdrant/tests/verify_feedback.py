@@ -134,9 +134,13 @@ def run(sql,ready,ticket_from,checks,spawn=None):
                 sql("UPDATE recommendation_docs SET v='[1,0]' WHERE id=1")
             end=time.monotonic()+10
             while time.monotonic()<end:
-                if not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active'):break
+                completed=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+                if not completed.get('active'):break
                 time.sleep(.02)
-            assert not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active')
+            # A committed source edit can schedule the next native apply as soon
+            # as this search completes. Assert the same observed idle state;
+            # a second ping can legitimately see that separate consumer job.
+            assert not completed.get('active'),completed
             ready('recommendation_docs');replay()
         checks.append('actual feedback SQL cancellation retains native ownership and concurrent excluded feedback-seed mutation refuses the complete in-flight response')
     return replay
