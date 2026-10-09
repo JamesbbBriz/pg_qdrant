@@ -5882,14 +5882,14 @@
         "source_api_review": {
           "status": "partially_verified",
           "required": "Selected registry release public types/methods and implementation behavior or explicit upstream-absence record.",
-          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Bounded native dense sampled-set matrices share complete model/source proof, sampled-only neighbor scope, model-column permissions and cancellation/concurrent-model refusal. Full original acceptance including documents/large domains/general matrix representations remains open. See docs/source-statistics.md and docs/source-matrix.md."
         },
         "compile_probe": {
           "status": "partially_verified",
           "probe_id": "CAP-Q11",
           "required": "Real supported API invocation/configuration compiled under the locked feature graph; no type-name-only proof.",
           "evidence": "docs/evidence/p0-engine.json",
-          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Bounded native dense sampled-set matrices share complete model/source proof, sampled-only neighbor scope, model-column permissions and cancellation/concurrent-model refusal. Full original acceptance including documents/large domains/general matrix representations remains open. See docs/source-statistics.md and docs/source-matrix.md."
         },
         "engine_runtime": {
           "status": "partially_verified",
@@ -5899,13 +5899,13 @@
           "check_groups": [
             "payload_index_and_scoped_count"
           ],
-          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Bounded native dense sampled-set matrices share complete model/source proof, sampled-only neighbor scope, model-column permissions and cancellation/concurrent-model refusal. Full original acceptance including documents/large domains/general matrix representations remains open. See docs/source-statistics.md and docs/source-matrix.md."
         },
         "sql_integration": {
           "status": "partially_verified",
           "case_id": "SQL-Q11",
           "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
-          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Bounded native dense sampled-set matrices share complete model/source proof, sampled-only neighbor scope, model-column permissions and cancellation/concurrent-model refusal. Full original acceptance including documents/large domains/general matrix representations remains open. See docs/source-statistics.md and docs/source-matrix.md."
         },
         "release": {
           "status": "pending",
