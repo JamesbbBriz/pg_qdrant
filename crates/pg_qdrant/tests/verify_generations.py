@@ -21,7 +21,11 @@ def run(sql, ready, spawn, finish, wait_session, ticket_from, native_hits, model
     task=json.loads(sql("SELECT qdrant.rebuild_index('generation_docs')"))['task_id']
     assert '55006' in sql("SELECT qdrant.rebuild_index('generation_docs')",ok=False)
     fast=ticket_from(sql("BEGIN; UPDATE generation_docs SET body='new shadow' WHERE id=1; DELETE FROM generation_docs WHERE id=2; INSERT INTO generation_docs VALUES(2,'reused shadow'); SELECT qdrant.track_changes('generation_docs'); COMMIT"))
-    assert json.loads(sql("SELECT qdrant.await_changes('"+fast+"',4000)"))['durable']
+    fast_result=json.loads(sql("SELECT qdrant.await_changes('"+fast+"',4000)"))
+    assert fast_result['durable'],{'ticket':fast_result,
+        'index':json.loads(sql("SELECT qdrant.index_status('generation_docs')")),
+        'task':json.loads(sql("SELECT qdrant.task_status('"+task+"')")),
+        'activity':json.loads(sql("SELECT jsonb_agg(jsonb_build_object('pid',pid,'backend_type',backend_type,'wait',wait_event,'blocked_by',pg_blocking_pids(pid),'query',left(query,200))) FROM pg_stat_activity"))}
     assert slow.poll() is None,'source consumer must progress while shadow cannot switch'
     assert sql("SELECT generation FROM qdrant_internal.index_catalog WHERE index_name='generation_docs'")==old_generation
     assert sql("SELECT source_key FROM qdrant.search('generation_docs','reused')")=='2'

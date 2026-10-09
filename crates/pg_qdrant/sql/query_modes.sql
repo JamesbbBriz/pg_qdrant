@@ -6,6 +6,7 @@ CREATE TABLE qdrant_internal.query_modes (
 );
 INSERT INTO qdrant_internal.query_modes VALUES
  ('text','{}',ARRAY['F01','F05','F06','F07','F08','F09','F10','F11','Q12'],'one source text field; fixed native analysis and bounded predicates'),
+ ('explore',ARRAY['dense'],ARRAY['Q04','V01','Q12'],'dense source-example recommendation; fixed native best_score/sum_scores; before-cap predicates and exclusion'),
  ('semantic',ARRAY['dense'],ARRAY['V01','Q12'],'declared named dense BYOV; exact native query'),
  ('sparse',ARRAY['learned_sparse'],ARRAY['F02','V02','Q12'],'declared sparse BYOV with explicit vocabulary and live-generation IDF contract'),
  ('hybrid',ARRAY['dense','learned_sparse'],ARRAY['F01','V01','V02','Q02','Q03','Q12'],'BM25 and one dense or sparse branch; fixed native RRF/DBSF'),

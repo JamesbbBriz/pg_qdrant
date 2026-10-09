@@ -56,7 +56,7 @@ def run(sql, ready, ticket_from, checks, spawn, finish, wait_session):
     sql('GRANT SELECT ON page_docs TO builder,pgq_page_reader')
     # Permission changes and metadata drift must also invalidate cached pages.
     sql('ALTER TABLE page_docs ENABLE ROW LEVEL SECURITY')
-    assert '55000' in page(first['next_cursor'], ok=False)
+    assert '0A000' in page(first['next_cursor'], ok=False)
     sql('ALTER TABLE page_docs DISABLE ROW LEVEL SECURITY')
     # Use a new index because conservative DDL drift remains deliberately closed.
     drop = json.loads(sql("SELECT qdrant.drop_index('page_docs')"))['task_id']

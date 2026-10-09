@@ -28,6 +28,7 @@ validation, which does not promise execution of advanced capabilities.
 | hybrid | At least one dense or learned sparse slot |
 | maxsim | Token vectors |
 | precision | Token vectors; dense/sparse recall remains optional |
+| explore | Dense; query-specific current source examples required |
 
 Each mode reports its capability IDs and bounded implementation scope,
 `adapter_available`, `upstream_api_scope`, `release_validation_passed`,

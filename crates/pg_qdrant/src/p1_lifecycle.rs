@@ -49,3 +49,9 @@ pgrx::extension_sql_file!(
     name = "p2_mode_registry",
     requires = ["p1_representations"]
 );
+
+pgrx::extension_sql_file!(
+    "../sql/recommendations.sql",
+    name = "p2_recommendation_admission",
+    requires = ["p1_representations"]
+);
