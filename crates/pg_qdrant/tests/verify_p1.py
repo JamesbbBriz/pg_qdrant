@@ -67,7 +67,7 @@ faults=sql('SELECT (qdrant.build_info()->\'features\'->>\'p0_fault_injection\'):
 capabilities=json.loads(sql('SELECT qdrant.capabilities()'))
 assert capabilities['index_catalog_available']
 assert capabilities['bounded_search_page_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','V01','V02','V03','Q02','Q03','Q04','Q05','Q06','Q07','Q12']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','V01','V02','V03','Q02','Q03','Q04','Q05','Q06','Q07','Q08','Q12']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 sql('CREATE TABLE docs(id bigint PRIMARY KEY, body text NOT NULL, ignored text)')
 sql("INSERT INTO docs SELECT n,'transaction recovery '||n,repeat('x',100000) FROM generate_series(1,1100)n")
@@ -360,6 +360,8 @@ import verify_feedback
 verify_feedback_replay=verify_feedback.run(sql,ready,ticket_from,checks,spawn)
 import verify_mmr
 verify_mmr_replay=verify_mmr.run(sql,ready,ticket_from,checks,spawn)
+import verify_formula
+verify_formula_replay=verify_formula.run(sql,ready,ticket_from,checks,spawn)
 def verify_model_replay():
     verify_dense_replay()
     verify_sparse_replay()
@@ -372,6 +374,7 @@ def verify_model_replay():
     verify_context_discovery_replay()
     verify_feedback_replay()
     verify_mmr_replay()
+    verify_formula_replay()
 # PostgreSQL cancellation must not release an executing fused native query's owner.
 ready('model_docs')
 hybrid_vector=json.dumps({'dense':{'model_id':'fixture-model','model_version':'r1','vector':[1,0]}})

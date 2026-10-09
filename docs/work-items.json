@@ -5377,6 +5377,16 @@
           "source_paths": [
             "crates/edge-probe/src/api_inventory.rs"
           ]
+        },
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_score_formula",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_formula.py",
+          "scope": "Pinned native score-only Formula over bounded authorized BM25/dense/sparse/hybrid/MaxSim/precision prefetch candidates. Independent arithmetic/rank/candidate scope, exact 64-node boundary, strict numeric/depth/fields/arity, permissions/RLS/explore refusals, actual divide/sqrt/overflow errors with same-owner recovery, explicit zero default, expression-bound paging and retained-owner cancellation. Native tests cover four nearest-distance score domains. Payload/time/geo expressions, general scoring combinations and quality remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#query-execution-and-filtering",
@@ -5404,7 +5414,7 @@
         "support_status": "public primitive candidate; fixed-release call and runtime evidence required"
       },
       "input_config": "Expression schema, allowed operands/types, defaults, reference time and allowed payload fields.",
-      "sql_exposure": "search Formula scoring options",
+      "sql_exposure": "qdrant.search/explain_search/search_page with bounded options.formula over non-explore stages; matching development helper required",
       "execution": [
         "Validate supported input/configuration, caller permissions, required slots and generation.",
         "Compile project-owned request and mandatory predicates through the appropriate adapter.",
@@ -5437,14 +5447,16 @@
           "verified_scope": "Exhaustive enum/method sentinels or typed constructors only; full callable/negative-input coverage remains pending."
         },
         "engine_runtime": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "ENGINE-Q08",
-          "required": "Supported score/payload/time/geo expressions, typed inputs, defaults and limits"
+          "required": "Supported score/payload/time/geo expressions, typed inputs, defaults and limits",
+          "verified_scope": "Bounded score-only native Formula; full original scoring acceptance remains open. See docs/source-formula.md."
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q08",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "verified_scope": "Bounded score-only native Formula; full original scoring acceptance remains open. See docs/source-formula.md."
         },
         "release": {
           "status": "pending",
@@ -5474,7 +5486,7 @@
           "status": "pending"
         }
       ],
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {

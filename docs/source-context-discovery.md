@@ -52,7 +52,7 @@ refused if examples change during native execution. Paging revalidates this
 digest even when every captured candidate row remains unchanged. Current source
 seed admission does not replace the separate durable change-ticket contract.
 
-The development source protocol is version 12 and requires the matching
+The development source protocol is version 13 and requires the matching
 extension library, installation SQL and managed helper. Fresh installation is
 required; upgrading earlier development catalogs is unsupported. Tests cover
 independent native score formulas for all four dense distances, installed Dot
