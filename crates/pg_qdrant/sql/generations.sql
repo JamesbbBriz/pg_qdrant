@@ -148,15 +148,19 @@ BEGIN
   SELECT e.event_id,jsonb_build_object('event_id',e.event_id,'point_id',e.point_id,'revision',s.revision,
    'incarnation',e.incarnation,'key',e.tagged_key,'fingerprint',s.fingerprint,
    'body',CASE WHEN s.point_id=e.point_id AND s.incarnation=e.incarnation AND NOT s.tombstone THEN s.body END,
-   'vectors',CASE WHEN s.point_id=e.point_id AND s.incarnation=e.incarnation AND NOT s.tombstone
+   'payload',CASE WHEN s.point_id=e.point_id AND s.incarnation=e.incarnation AND NOT s.tombstone THEN s.payload END,
+     'payload_fingerprint',CASE WHEN s.point_id=e.point_id AND s.incarnation=e.incarnation AND NOT s.tombstone THEN s.payload_fingerprint END,
+     'vectors',CASE WHEN s.point_id=e.point_id AND s.incarnation=e.incarnation AND NOT s.tombstone
       THEN qdrant_internal.ready_vectors(s.index_name,s.tagged_key,s.incarnation) ELSE '{}'::jsonb END) AS data
   FROM qdrant_internal.outbox e JOIN qdrant_internal.source_state s ON s.index_name=e.index_name AND s.tagged_key=e.tagged_key
   LEFT JOIN qdrant_internal.generation_receipts a ON a.task_id=j.task_id AND a.event_id=e.event_id
   WHERE e.index_name=i.index_name AND (a.event_id IS NULL OR a.storage_epoch<>j.storage_epoch OR a.consumer_id<>j.consumer_id)
   ORDER BY e.event_id LIMIT 16) v;
+ events:=qdrant_internal.pack_source_events(events);
  UPDATE qdrant_internal.generation_reservations SET state='dirty',updated_at=clock_timestamp() WHERE task_id=j.task_id;
- RETURN jsonb_build_object('source_contract_version',14,'task_id',j.task_id,'index_id',i.index_id,
+ RETURN jsonb_build_object('source_contract_version',15,'task_id',j.task_id,'index_id',i.index_id,
    'generation',j.generation,'storage_epoch',j.storage_epoch,'consumer_id',j.consumer_id,
+   'payload_contract',qdrant_internal.payload_contract(i.index_name),
    'representations',coalesce((SELECT jsonb_object_agg(name,contract) FROM qdrant_internal.representation_catalog WHERE index_name=i.index_name),'{}'),
    'events',events);
 END $$;
@@ -250,9 +254,9 @@ BEGIN
    RETURN NULL;
  END IF;
  UPDATE qdrant_internal.generation_reservations SET retired_state='running' WHERE task_id=j.task_id;
- RETURN jsonb_build_object('source_contract_version',14,'task_id',j.task_id,'retire',true,'index_id',i.index_id,
+ RETURN jsonb_build_object('source_contract_version',15,'task_id',j.task_id,'retire',true,'index_id',i.index_id,
    'generation',j.retired_generation,'storage_epoch',j.retired_epoch,'consumer_id',j.retired_consumer,
-   'representations','{}'::jsonb,'events','[]'::jsonb);
+   'payload_contract','{}'::jsonb,'representations','{}'::jsonb,'events','[]'::jsonb);
 END $$;
 
 CREATE FUNCTION qdrant_internal.ack_retirement_batch(p_batch jsonb) RETURNS void

@@ -31,10 +31,15 @@ CREATE TABLE qdrant_internal.source_state (
     incarnation uuid NOT NULL,
     revision bigint NOT NULL CHECK (revision > 0),
     fingerprint text,
+    payload jsonb,
+    payload_fingerprint text,
     tombstone boolean NOT NULL,
     body text,
     PRIMARY KEY (index_name, tagged_key),
     UNIQUE (index_name, point_id),
+    CHECK ((tombstone AND payload IS NULL AND payload_fingerprint IS NULL)
+        OR (NOT tombstone AND payload IS NOT NULL AND payload_fingerprint IS NOT NULL
+            AND jsonb_typeof(payload)='object' AND payload_fingerprint ~ '^[0-9a-f]{64}$')),
     CHECK ((tombstone AND body IS NULL)
         OR (NOT tombstone AND fingerprint ~ '^[0-9a-f]{64}$' AND body IS NOT NULL))
 );
@@ -89,7 +94,7 @@ CREATE INDEX outbox_by_ticket
 -- Record a row mutation in the same PostgreSQL transaction as the source write.
 -- ACK is a separate, exact-set consumer receipt after successful Edge flush.
 CREATE FUNCTION qdrant_internal.p1_record(
-    p_name text, p_operation text, p_key text, p_body text, p_origin text, p_models jsonb DEFAULT '{}'
+    p_name text, p_operation text, p_key text, p_body text, p_origin text, p_models jsonb DEFAULT '{}', p_payload jsonb DEFAULT '{}'
 ) RETURNS bigint
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path = pg_catalog, qdrant_internal, pg_temp
@@ -108,6 +113,8 @@ DECLARE
     v_fingerprint text;
     v_event bigint;
     v_vectors jsonb;
+    v_payload jsonb;
+    v_payload_fingerprint text;
 BEGIN
     SELECT * INTO STRICT v_idx FROM qdrant_internal.index_catalog WHERE index_name = p_name;
     IF p_operation NOT IN ('upsert','delete')
@@ -141,6 +148,10 @@ BEGIN
                 USING ERRCODE = '22023';
         END IF;
         v_fingerprint := encode(sha256(convert_to(v_body, 'UTF8')), 'hex');
+        IF p_payload IS NULL OR jsonb_typeof(p_payload) IS DISTINCT FROM 'object' OR octet_length(p_payload::text)>8192 THEN
+            RAISE EXCEPTION 'Invalid payload projection' USING ERRCODE='22023'; END IF;
+        v_payload:=p_payload;
+        v_payload_fingerprint:=encode(sha256(convert_to(v_payload::text,'UTF8')),'hex');
     END IF;
     SELECT * INTO v_old FROM qdrant_internal.source_state
         WHERE index_name = p_name AND tagged_key = v_tagged FOR UPDATE;
@@ -163,6 +174,7 @@ BEGIN
         UPDATE qdrant_internal.source_state SET
             point_id = v_point, incarnation = v_incarnation,
             revision = v_revision, fingerprint = v_fingerprint,
+            payload = v_payload, payload_fingerprint = v_payload_fingerprint,
             tombstone = p_operation = 'delete',
             body = CASE WHEN p_operation = 'upsert' THEN v_body ELSE NULL END
         WHERE index_name = p_name AND tagged_key = v_tagged;
@@ -171,12 +183,12 @@ BEGIN
         v_incarnation := gen_random_uuid();
         v_point := nextval('qdrant_internal.point_seq'::regclass);
         INSERT INTO qdrant_internal.source_state
-          (index_name, tagged_key, point_id, incarnation, revision, fingerprint, tombstone, body)
+          (index_name, tagged_key, point_id, incarnation, revision, fingerprint, tombstone, body, payload, payload_fingerprint)
         VALUES (p_name, v_tagged, v_point, v_incarnation, v_revision,
-                v_fingerprint, p_operation='delete', v_body);
+                v_fingerprint, p_operation='delete', v_body, v_payload, v_payload_fingerprint);
     END IF;
     v_vectors:=qdrant_internal.capture_representations(p_name,v_tagged,v_incarnation,v_fingerprint,p_models,p_operation='delete');
-    IF p_operation='upsert' AND octet_length(jsonb_build_object('body',v_body,'vectors',v_vectors)::text)>458752 THEN
+    IF p_operation='upsert' AND octet_length(jsonb_build_object('body',v_body,'vectors',v_vectors,'payload',v_payload)::text)>458752 THEN
       RAISE EXCEPTION 'Text and representation projection exceeds the 448 KiB consumer budget' USING ERRCODE='54000';
     END IF;
     INSERT INTO qdrant_internal.outbox
@@ -185,7 +197,7 @@ BEGIN
     VALUES
       (p_name, pg_current_xact_id(), v_tagged, v_point, v_incarnation, v_revision,
        p_operation, v_fingerprint,
-       CASE WHEN p_operation = 'upsert' THEN jsonb_build_object('body',v_body,'vectors',v_vectors) ELSE NULL END,
+       CASE WHEN p_operation = 'upsert' THEN jsonb_build_object('body',v_body,'vectors',v_vectors,'payload',v_payload,'payload_fingerprint',v_payload_fingerprint) ELSE NULL END,
        p_origin)
     RETURNING event_id INTO v_event;
     RETURN v_event;
@@ -221,7 +233,7 @@ BEGIN
         EXECUTE format('SELECT ($1).%I::text, ($1).%I',v_idx.key_field,v_idx.text_field)
           INTO v_new_key,v_new_body USING NEW;
         PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',v_new_key,v_new_body,'source_write',
-          qdrant_internal.model_projection(v_idx.index_name,NEW));
+          qdrant_internal.model_projection(v_idx.index_name,NEW),qdrant_internal.payload_projection(v_idx.index_name,NEW));
         RETURN NEW;
     ELSIF TG_OP = 'UPDATE' THEN
         EXECUTE format('SELECT ($1).%I::text',v_idx.key_field)
@@ -232,7 +244,7 @@ BEGIN
             PERFORM qdrant_internal.p1_record(v_idx.index_name,'delete',v_old_key,NULL,'source_write');
         END IF;
         PERFORM qdrant_internal.p1_record(v_idx.index_name,'upsert',v_new_key,v_new_body,'source_write',
-          qdrant_internal.model_projection(v_idx.index_name,NEW));
+          qdrant_internal.model_projection(v_idx.index_name,NEW),qdrant_internal.payload_projection(v_idx.index_name,NEW));
         RETURN NEW;
     END IF;
     RAISE EXCEPTION 'unsupported P1 trigger event' USING ERRCODE = '0A000';

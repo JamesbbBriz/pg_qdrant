@@ -1,7 +1,7 @@
 //! Embedded Edge mutation owner. No SQL values select a filesystem path.
 use pg_qdrant_protocol::formula::ScoreFormula;
 use pg_qdrant_protocol::{
-    DiscoveryStrategy, ProbeError, RecommendationStrategy, RepresentationContract,
+    DiscoveryStrategy, PayloadKind, ProbeError, RecommendationStrategy, RepresentationContract,
     RepresentationQuery, RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch,
     SourceDiscovery, SourceFeedback, SourceFusion, SourceMmr, SourcePredicates,
     SourceRecommendation,
@@ -26,6 +26,8 @@ struct SourceShard {
     shard: EdgeShard,
     representations: BTreeMap<String, RepresentationContract>,
     lexical_ready: bool,
+    payload_contract: BTreeMap<String, PayloadKind>,
+    payload_ready: bool,
 }
 
 pub struct SourceOwner {
@@ -81,6 +83,7 @@ impl SourceOwner {
         if batch.retire {
             if !batch.events.is_empty()
                 || !batch.representations.is_empty()
+                || !batch.payload_contract.is_empty()
                 || batch.task_id.is_none()
             {
                 return Err(ProbeError::invalid("retirement contains mutation data"));
@@ -127,6 +130,7 @@ impl SourceOwner {
         if self.retired.contains_key(&key) {
             return Err(error("retired storage epoch cannot receive mutations"));
         }
+        crate::payload::validate_contract(&batch.payload_contract)?;
         let mut dense_config = HashMap::new();
         let mut sparse_config = HashMap::from([(
             "bm25".to_owned(),
@@ -217,6 +221,7 @@ impl SourceOwner {
             dense_config.insert(name.clone(), params);
         }
         for event in &batch.events {
+            crate::payload::validate_event(event, &batch.payload_contract)?;
             for (name, vector) in &event.vectors {
                 let contract = batch
                     .representations
@@ -228,11 +233,10 @@ impl SourceOwner {
                 return Err(ProbeError::invalid("tombstone contains vectors"));
             }
         }
-        if self
-            .shards
-            .get(&key)
-            .is_some_and(|s| s.representations != batch.representations)
-        {
+        if self.shards.get(&key).is_some_and(|s| {
+            s.representations != batch.representations
+                || s.payload_contract != batch.payload_contract
+        }) {
             return Err(error("representation contract changed within a generation"));
         }
         if !self.shards.contains_key(&key) {
@@ -257,6 +261,8 @@ impl SourceOwner {
                     shard: EdgeShard::new(&path, config).map_err(error)?,
                     representations: batch.representations.clone(),
                     lexical_ready: false,
+                    payload_contract: batch.payload_contract.clone(),
+                    payload_ready: false,
                 },
             );
             // Register native ownership before fallible schema creation so a
@@ -273,6 +279,13 @@ impl SourceOwner {
                 .get_mut(&key)
                 .expect("owned shard")
                 .lexical_ready = true;
+        }
+        if !self.shards[&key].payload_ready {
+            crate::payload::install(&self.shards[&key].shard, &batch.payload_contract)?;
+            self.shards
+                .get_mut(&key)
+                .expect("owned shard")
+                .payload_ready = true;
         }
         let shard = &self.shards[&key].shard;
         #[cfg(feature = "p0-fault-injection")]
@@ -311,7 +324,8 @@ impl SourceOwner {
                     event.point_id,
                     Vectors::new_named(vectors),
                     json!({"source_key":event.key,"revision":event.revision,
-                        "incarnation":event.incarnation,"fingerprint":event.fingerprint,"body":body,"body_prefix":body}),
+                          "incarnation":event.incarnation,"fingerprint":event.fingerprint,"body":body,"body_prefix":body,
+                          "attributes":event.payload,"payload_fingerprint":event.payload_fingerprint}),
                 );
                 PointOperations::UpsertPoints(PointInsertOperations::PointsList(vec![point.into()]))
             } else {
@@ -851,9 +865,15 @@ impl SourceOwner {
         // Fetch identity/version metadata without copying every candidate body
         // into the bounded IPC response (one source row can contain 64 KiB).
         request.with_payload = WithPayloadInterface::Fields(
-            ["source_key", "revision", "incarnation", "fingerprint"]
-                .map(|field| field.parse().expect("constant payload selector"))
-                .to_vec(),
+            [
+                "source_key",
+                "revision",
+                "incarnation",
+                "fingerprint",
+                "payload_fingerprint",
+            ]
+            .map(|field| field.parse().expect("constant payload selector"))
+            .to_vec(),
         );
         let hits = shard.query(request).map_err(error)?;
         let mut result = Vec::with_capacity(hits.len());
@@ -900,9 +920,15 @@ impl SourceOwner {
         let mut request =
             RetrieveRequest::new(point_ids.iter().copied().map(PointId::NumId).collect());
         request.with_payload = Some(WithPayloadInterface::Fields(
-            ["source_key", "revision", "incarnation", "fingerprint"]
-                .map(|field| field.parse().expect("constant payload selector"))
-                .to_vec(),
+            [
+                "source_key",
+                "revision",
+                "incarnation",
+                "fingerprint",
+                "payload_fingerprint",
+            ]
+            .map(|field| field.parse().expect("constant payload selector"))
+            .to_vec(),
         ));
         // RetrieveRequest defaults vectors to false. Explicitly strip all native
         // fields beyond identity/version metadata from the owned IPC result.
@@ -1134,6 +1160,136 @@ mod tests {
 
     use pg_qdrant_protocol::{SourceEvent, SparseValues};
 
+    #[test]
+    fn typed_payload_is_indexed_replaced_and_guarded_by_generation() {
+        use qdrant_edge::{Condition, CountRequest, FieldCondition, Match, PayloadSchemaType};
+        let (mut owner, root, generation, epoch, _) = dense_example_fixture();
+        let contract = BTreeMap::from([
+            ("category".into(), PayloadKind::Keyword),
+            ("quantity".into(), PayloadKind::Integer),
+            ("price".into(), PayloadKind::Float),
+            ("available".into(), PayloadKind::Bool),
+        ]);
+        let mut batch = SourceBatch {
+            source_contract_version: SOURCE_CONTRACT_VERSION,
+            index_id: 2,
+            generation: generation.clone(),
+            storage_epoch: epoch.clone(),
+            consumer_id: epoch.clone(),
+            task_id: None,
+            retire: false,
+            representations: BTreeMap::new(),
+            payload_contract: contract,
+            events: vec![SourceEvent {
+                event_id: 1,
+                point_id: 100,
+                revision: 1,
+                incarnation: generation.clone(),
+                fingerprint: Some("fixture".into()),
+                key: json!({"type":"bigint","value":"100"}),
+                body: Some("payload anchor".into()),
+                vectors: BTreeMap::new(),
+                payload: Some(BTreeMap::from([
+                    ("category".into(), json!("original")),
+                    ("quantity".into(), json!(i64::MAX)),
+                    ("price".into(), json!(-12.5)),
+                    ("available".into(), json!(true)),
+                ])),
+                payload_fingerprint: Some("0".repeat(64)),
+            }],
+        };
+        assert_eq!(owner.apply(batch.clone()).unwrap()["flushed"], true);
+        let key = identity(2, &generation, &epoch).unwrap();
+        let info = owner.shards[&key].shard.info().unwrap();
+        for (field, schema) in [
+            ("category", PayloadSchemaType::Keyword),
+            ("quantity", PayloadSchemaType::Integer),
+            ("price", PayloadSchemaType::Float),
+            ("available", PayloadSchemaType::Bool),
+        ] {
+            assert_eq!(
+                info.payload_schema[&format!("attributes.{field}").parse().unwrap()].data_type,
+                schema
+            );
+        }
+        let count = |owner: &SourceOwner, category: &str| {
+            owner.shards[&key]
+                .shard
+                .count(CountRequest {
+                    exact: true,
+                    filter: Some(Filter {
+                        must: Some(vec![Condition::Field(FieldCondition::new_match(
+                            "attributes.category".parse().unwrap(),
+                            Match::new_value(qdrant_edge::ValueVariants::String(
+                                category.to_owned(),
+                            )),
+                        ))]),
+                        ..Default::default()
+                    }),
+                })
+                .unwrap()
+        };
+        assert_eq!(count(&owner, "original"), 1);
+        for value in [json!([]), json!({}), json!(1), json!("x".repeat(1025))] {
+            let mut bad = batch.clone();
+            bad.events[0]
+                .payload
+                .as_mut()
+                .unwrap()
+                .insert("category".into(), value);
+            assert_eq!(owner.apply(bad).unwrap_err().code, "invalid_parameter");
+        }
+        let mut bad = batch.clone();
+        bad.events[0]
+            .payload
+            .as_mut()
+            .unwrap()
+            .insert("quantity".into(), json!(u64::MAX));
+        assert!(owner.apply(bad).is_err());
+        let mut bad = batch.clone();
+        bad.events[0].payload_fingerprint = None;
+        assert!(owner.apply(bad).is_err());
+        let mut bad = batch.clone();
+        bad.events[0]
+            .payload
+            .as_mut()
+            .unwrap()
+            .insert("undeclared".into(), json!(true));
+        assert!(owner.apply(bad).is_err());
+        let mut bad = batch.clone();
+        bad.payload_contract
+            .insert("alias.path".into(), PayloadKind::Bool);
+        assert!(owner.apply(bad).is_err());
+        let mut bad = batch.clone();
+        bad.payload_contract
+            .insert("quantity".into(), PayloadKind::Float);
+        assert_eq!(owner.apply(bad).unwrap_err().code, "source_engine_error");
+        batch.events[0].revision = 2;
+        batch.events[0]
+            .payload
+            .as_mut()
+            .unwrap()
+            .insert("category".into(), json!("new"));
+        batch.events[0]
+            .payload
+            .as_mut()
+            .unwrap()
+            .insert("quantity".into(), json!(i64::MIN));
+        owner.apply(batch.clone()).unwrap();
+        assert_eq!(count(&owner, "original"), 0);
+        assert_eq!(count(&owner, "new"), 1);
+        let native = owner.retrieve(2, &generation, &epoch, vec![100]).unwrap();
+        assert!(native[0]["payload"].get("attributes").is_none());
+        assert_eq!(native[0]["payload"]["revision"], 2);
+        batch.events[0].body = None;
+        batch.events[0].payload = None;
+        batch.events[0].payload_fingerprint = None;
+        owner.apply(batch).unwrap();
+        assert_eq!(count(&owner, "new"), 0);
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     fn numeric_contract() -> RepresentationContract {
         serde_json::from_value(json!({
             "kind":"dense","model_id":"fixture","model_version":"r1","tokenizer":"fixture",
@@ -1204,6 +1360,7 @@ mod tests {
             consumer_id: epoch.clone(),
             task_id: None,
             retire: false,
+            payload_contract: BTreeMap::new(),
             representations: BTreeMap::from([("dense".into(), contract.clone())]),
             events: vec![SourceEvent {
                 event_id: 1,
@@ -1213,6 +1370,8 @@ mod tests {
                 fingerprint: Some("fixture".into()),
                 key: json!({"type":"bigint","value":"1"}),
                 body: Some("anchor".into()),
+                payload: Some(BTreeMap::new()),
+                payload_fingerprint: Some("0".repeat(64)),
                 vectors: BTreeMap::from([(
                     "dense".into(),
                     RepresentationVector::Dense(vec![1.0, 0.0]),
@@ -2084,6 +2243,7 @@ mod tests {
             consumer_id: epoch.clone(),
             task_id: None,
             retire: false,
+            payload_contract: BTreeMap::new(),
             representations: ["dot", "cosine", "euclid", "manhattan"]
                 .into_iter()
                 .map(|distance| {
@@ -2108,6 +2268,8 @@ mod tests {
                         fingerprint: Some("fixture".into()),
                         key: json!({"type":"bigint","value":id.to_string()}),
                         body: Some("anchor".into()),
+                        payload: Some(BTreeMap::new()),
+                        payload_fingerprint: Some("0".repeat(64)),
                         vectors: ["dot", "cosine", "euclid", "manhattan"]
                             .into_iter()
                             .map(|distance| {
@@ -2151,12 +2313,13 @@ mod tests {
         );
         for record in result.as_array().unwrap() {
             assert_eq!(record.as_object().unwrap().len(), 2);
-            assert_eq!(record["payload"].as_object().unwrap().len(), 4);
+            assert_eq!(record["payload"].as_object().unwrap().len(), 5);
             assert_eq!(record["payload"]["revision"], 1);
             assert_eq!(record["payload"]["fingerprint"], "fixture");
             assert!(record.get("score").is_none());
             assert!(record.get("vectors").is_none());
             assert!(record["payload"].get("body").is_none());
+            assert!(record["payload"].get("attributes").is_none());
         }
         assert_eq!(
             owner.retrieve(1, &generation, &epoch, vec![]).unwrap(),
@@ -2194,6 +2357,7 @@ mod tests {
                 consumer_id: epoch.clone(),
                 task_id: None,
                 retire: false,
+                payload_contract: BTreeMap::new(),
                 representations,
                 events: vec![SourceEvent {
                     event_id: 8,
@@ -2203,6 +2367,8 @@ mod tests {
                     fingerprint: Some("fixture".into()),
                     key: json!({"type":"bigint","value":"3"}),
                     body: None,
+                    payload: None,
+                    payload_fingerprint: None,
                     vectors: BTreeMap::new(),
                 }],
             })
@@ -2410,6 +2576,7 @@ mod tests {
             consumer_id: epoch.clone(),
             task_id: None,
             retire: false,
+            payload_contract: BTreeMap::new(),
             representations: BTreeMap::new(),
             events: vec![SourceEvent {
                 event_id: 1,
@@ -2419,6 +2586,8 @@ mod tests {
                 fingerprint: Some("fixture".into()),
                 key: json!({"type":"bigint","value":"1"}),
                 body: Some("retired searchable point".into()),
+                payload: Some(BTreeMap::new()),
+                payload_fingerprint: Some("0".repeat(64)),
                 vectors: BTreeMap::new(),
             }],
         };

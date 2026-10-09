@@ -51,13 +51,14 @@ the existing MaxSim or query budgets and are not an RSS or latency guarantee.
 
 Explore strategies are refused: Formula ordering would change their existing
 rank contract. Payload fields, arbitrary variables, condition/geo/date
-expressions and additional native operators require separate declared
-capture, synchronization and permission contracts. Those requirements remain
+expressions and additional native operators remain unsupported by this adapter.
+[Declared scalar payload](source-payload.md) provides a synchronization and
+permission foundation; it does not yet enable Formula variables. Those requirements remain
 open, along with general Q08/P4-SCORING acceptance and quality evaluation.
 
 The whole expression binds the existing page request hash. Changing it
 invalidates a continuation. Cancellation retains the native owner until
-completion. Development source protocol 14 requires matching extension,
+completion. Development source protocol 15 requires matching extension,
 installation SQL and managed helper with a fresh catalog. Upgrades of earlier
 development catalogs remain unsupported. The retained regression cases cover
 the scoped adapter; they do not establish release support or full Q08.

@@ -9,6 +9,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 mod lexical;
+mod payload;
 mod resources;
 mod source;
 

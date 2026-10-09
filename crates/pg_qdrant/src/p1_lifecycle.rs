@@ -1,5 +1,10 @@
 //! Installed transactional source ledger and management APIs.
 pgrx::extension_sql_file!(
+    "../sql/payload.sql",
+    name = "p1_declared_payload",
+    requires = ["p1_transaction_capture"]
+);
+pgrx::extension_sql_file!(
     "../sql/retrieve.sql",
     name = "p4_source_retrieve",
     requires = ["p1_consumer_contract", qdrant_internal::p1_retrieve]
@@ -53,7 +58,7 @@ pgrx::extension_sql_file!(
 pgrx::extension_sql_file!(
     "../sql/management.sql",
     name = "p1_management",
-    requires = ["p1_transaction_capture"]
+    requires = ["p1_declared_payload"]
 );
 pgrx::extension_sql_file!(
     "../sql/ddl.sql",

@@ -46,6 +46,8 @@ BEGIN
      'revision',s.revision,'incarnation',e.incarnation,'key',e.tagged_key,
      'fingerprint',s.fingerprint,'body',CASE WHEN s.point_id=e.point_id
        AND s.incarnation=e.incarnation AND NOT s.tombstone THEN s.body END,
+     'payload',CASE WHEN s.point_id=e.point_id AND s.incarnation=e.incarnation AND NOT s.tombstone THEN s.payload END,
+     'payload_fingerprint',CASE WHEN s.point_id=e.point_id AND s.incarnation=e.incarnation AND NOT s.tombstone THEN s.payload_fingerprint END,
      'vectors',CASE WHEN s.point_id=e.point_id AND s.incarnation=e.incarnation AND NOT s.tombstone
        THEN qdrant_internal.ready_vectors(s.index_name,s.tagged_key,s.incarnation) ELSE '{}'::jsonb END) AS data
    FROM qdrant_internal.outbox e JOIN qdrant_internal.source_state s
@@ -54,9 +56,11 @@ BEGIN
    WHERE e.index_name=i.index_name AND (a.event_id IS NULL OR a.storage_epoch<>c.storage_epoch)
    ORDER BY e.event_id LIMIT 16
  ) v;
+ events:=qdrant_internal.pack_source_events(events);
  UPDATE qdrant_internal.consumer_state SET state='dirty',updated_at=clock_timestamp()
  WHERE index_name=i.index_name;
- RETURN jsonb_build_object('source_contract_version',14,'index_id',i.index_id,'generation',i.generation,
+ RETURN jsonb_build_object('source_contract_version',15,'index_id',i.index_id,'generation',i.generation,
+   'payload_contract',qdrant_internal.payload_contract(i.index_name),
    'representations',coalesce((SELECT jsonb_object_agg(name,contract) FROM qdrant_internal.representation_catalog WHERE index_name=i.index_name),'{}'::jsonb),
    'storage_epoch',c.storage_epoch,'consumer_id',c.consumer_id,'events',events);
 END $$;
