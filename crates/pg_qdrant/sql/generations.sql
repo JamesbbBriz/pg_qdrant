@@ -158,7 +158,7 @@ BEGIN
   ORDER BY e.event_id LIMIT 16) v;
  events:=qdrant_internal.pack_source_events(events);
  UPDATE qdrant_internal.generation_reservations SET state='dirty',updated_at=clock_timestamp() WHERE task_id=j.task_id;
- RETURN jsonb_build_object('source_contract_version',19,'task_id',j.task_id,'index_id',i.index_id,
+ RETURN jsonb_build_object('source_contract_version',20,'task_id',j.task_id,'index_id',i.index_id,
    'generation',j.generation,'storage_epoch',j.storage_epoch,'consumer_id',j.consumer_id,
    'payload_contract',qdrant_internal.payload_contract(i.index_name),
    'representations',coalesce((SELECT jsonb_object_agg(name,contract) FROM qdrant_internal.representation_catalog WHERE index_name=i.index_name),'{}'),
@@ -254,7 +254,7 @@ BEGIN
    RETURN NULL;
  END IF;
  UPDATE qdrant_internal.generation_reservations SET retired_state='running' WHERE task_id=j.task_id;
- RETURN jsonb_build_object('source_contract_version',19,'task_id',j.task_id,'retire',true,'index_id',i.index_id,
+ RETURN jsonb_build_object('source_contract_version',20,'task_id',j.task_id,'retire',true,'index_id',i.index_id,
    'generation',j.retired_generation,'storage_epoch',j.retired_epoch,'consumer_id',j.retired_consumer,
    'payload_contract','{}'::jsonb,'representations','{}'::jsonb,'events','[]'::jsonb);
 END $$;

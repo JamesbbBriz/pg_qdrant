@@ -130,6 +130,7 @@ fn run() -> Result<(), ProbeError> {
                 facet,
                 facet_limit,
                 matrix,
+                groups,
                 predicates,
             } => source_owner.statistics(
                 index_id,
@@ -139,6 +140,7 @@ fn run() -> Result<(), ProbeError> {
                 facet,
                 facet_limit,
                 matrix,
+                groups,
                 predicates,
             ),
             Operation::SourceSearch {

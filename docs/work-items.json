@@ -5546,6 +5546,16 @@
             "authorized_document_groups"
           ],
           "fixture_points": 8
+        },
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_source_groups",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_groups.py",
+          "scope": "Bounded native grouped text/dense retrieval over at most 1000 proven current source points, declared keyword/int64 fields, 32 groups and 16 hits per group within 256 hits, native five collect/five fill requests, 20 million dense scalar work and 256 KiB response. Independent dot/Euclidean score goldens, real text group refill, typed SQL source-key JOIN, null handling, before-candidate predicates, owner/source permissions, cancellation ownership and concurrent source/model refusal. General grouped pages, arbitrary query combinations, large domains and complete document/chunk quality acceptance remain open. See docs/source-groups.md.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#query-execution-and-filtering",
@@ -5595,15 +5605,16 @@
       ],
       "evidence_requirements": {
         "source_api_review": {
-          "status": "pending",
-          "required": "Selected registry release public types/methods and implementation behavior or explicit upstream-absence record."
+          "status": "partially_verified",
+          "required": "Selected registry release public types/methods and implementation behavior or explicit upstream-absence record.",
+          "verified_scope": "Bounded native grouped text/dense retrieval over at most 1000 proven current source points, declared keyword/int64 fields, 32 groups and 16 hits per group within 256 hits, native five collect/five fill requests, 20 million dense scalar work and 256 KiB response. Independent dot/Euclidean score goldens, real text group refill, typed SQL source-key JOIN, null handling, before-candidate predicates, owner/source permissions, cancellation ownership and concurrent source/model refusal. General grouped pages, arbitrary query combinations, large domains and complete document/chunk quality acceptance remain open. See docs/source-groups.md."
         },
         "compile_probe": {
           "status": "partially_verified",
           "probe_id": "CAP-Q09",
           "required": "Real supported API invocation/configuration compiled under the locked feature graph; no type-name-only proof.",
           "evidence": "docs/evidence/p0-engine.json",
-          "verified_scope": "The actual public API calls in the named runtime checks compile; all remaining public-call and invalid-input combinations are still required."
+          "verified_scope": "Bounded native grouped text/dense retrieval over at most 1000 proven current source points, declared keyword/int64 fields, 32 groups and 16 hits per group within 256 hits, native five collect/five fill requests, 20 million dense scalar work and 256 KiB response. Independent dot/Euclidean score goldens, real text group refill, typed SQL source-key JOIN, null handling, before-candidate predicates, owner/source permissions, cancellation ownership and concurrent source/model refusal. General grouped pages, arbitrary query combinations, large domains and complete document/chunk quality acceptance remain open. See docs/source-groups.md."
         },
         "engine_runtime": {
           "status": "partially_verified",
@@ -5612,12 +5623,14 @@
           "evidence": "docs/evidence/p0-engine.json",
           "check_groups": [
             "authorized_document_groups"
-          ]
+          ],
+          "verified_scope": "Bounded native grouped text/dense retrieval over at most 1000 proven current source points, declared keyword/int64 fields, 32 groups and 16 hits per group within 256 hits, native five collect/five fill requests, 20 million dense scalar work and 256 KiB response. Independent dot/Euclidean score goldens, real text group refill, typed SQL source-key JOIN, null handling, before-candidate predicates, owner/source permissions, cancellation ownership and concurrent source/model refusal. General grouped pages, arbitrary query combinations, large domains and complete document/chunk quality acceptance remain open. See docs/source-groups.md."
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q09",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "verified_scope": "Bounded native grouped text/dense retrieval over at most 1000 proven current source points, declared keyword/int64 fields, 32 groups and 16 hits per group within 256 hits, native five collect/five fill requests, 20 million dense scalar work and 256 KiB response. Independent dot/Euclidean score goldens, real text group refill, typed SQL source-key JOIN, null handling, before-candidate predicates, owner/source permissions, cancellation ownership and concurrent source/model refusal. General grouped pages, arbitrary query combinations, large domains and complete document/chunk quality acceptance remain open. See docs/source-groups.md."
         },
         "release": {
           "status": "pending",
@@ -5647,7 +5660,7 @@
           "status": "pending"
         }
       ],
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {

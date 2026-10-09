@@ -43,7 +43,7 @@ model/source mutation, missing slot, dirty generation or undurable event
 refuses the whole result with `55000`. RLS and unsupported snapshots raise
 `0A000`. Cancellation retains native ownership until execution completes.
 
-Source contract 19 requires matched development binaries and fresh install
+Source contract 20 requires matched development binaries and fresh install
 SQL. This is a partial Q11 adapter, not full release support or an upgrade
 migration. Large source domains, general sparse/token matrices, document
 statistics, quality and complete stage/release acceptance remain open.
