@@ -2446,7 +2446,7 @@
         }
       ],
       "missing_upstream_plan": "I-07 compares extension policy, released Tantivy and pg_search; adopt a mature lexical path with quality/license/lifecycle evidence. I-08 becomes mandatory if a second engine is selected.",
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {
@@ -2457,6 +2457,14 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
+      },
+      "development_sql_evidence": {
+        "interface": "qdrant.search_lexical(kind => 'syntax')",
+        "contract": "docs/source-bounded-lexical.md",
+        "test": "crates/pg_qdrant/tests/verify_bounded_lexical.py",
+        "scope": "Strict pinned upstream grammar and native body-only Boolean/phrase/slop/escape/boost execution over complete filtered durable authorized snapshot; bounded AST and analyzed terms; general analyzers and full quality/combination/release acceptance remain open.",
+        "full_capability_acceptance": false,
+        "release_supported": false
       }
     },
     {

@@ -3,7 +3,7 @@
 use pg_qdrant_protocol::{ProbeError, SourceLexical};
 use serde_json::{Value, json};
 use tantivy::collector::{Count, TopDocs};
-use tantivy::query::{BooleanQuery, EmptyQuery, Occur, PhraseQuery, Query, TermQuery};
+use tantivy::query::{BooleanQuery, EmptyQuery, Occur, PhraseQuery, Query, QueryParser, TermQuery};
 use tantivy::schema::{
     INDEXED, IndexRecordOption, STORED, Schema, TextFieldIndexing, TextOptions, Value as _,
 };
@@ -110,15 +110,21 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
         .split_ascii_whitespace()
         .map(str::to_ascii_lowercase)
         .collect();
-    if words.is_empty()
-        || words.len() > 8
-        || words
-            .iter()
-            .any(|w| w.len() > 32 || !w.bytes().all(|b| b.is_ascii_alphabetic()))
-        || (request.kind == "fuzzy"
-            && (words.len() != 1 || words[0].len() < 3 || request.slop != 0))
-        || (request.kind == "proximity" && words.len() < 2)
-        || !matches!(request.kind.as_str(), "fuzzy" | "proximity")
+    let syntax = if request.kind == "syntax" {
+        Some(crate::lexical_syntax::parse(&request.q, request.slop)?)
+    } else {
+        None
+    };
+    if syntax.is_none()
+        && (words.is_empty()
+            || words.len() > 8
+            || words
+                .iter()
+                .any(|w| w.len() > 32 || !w.bytes().all(|b| b.is_ascii_alphabetic()))
+            || (request.kind == "fuzzy"
+                && (words.len() != 1 || words[0].len() < 3 || request.slop != 0))
+            || (request.kind == "proximity" && words.len() < 2)
+            || !matches!(request.kind.as_str(), "fuzzy" | "proximity"))
     {
         return Err(ProbeError::invalid(
             "lexical query requires ASCII words: fuzzy one 3..32-letter word, proximity 2..8 words; identifiers are not fuzzed",
@@ -157,7 +163,21 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
         .map_err(error)?;
     let reader: tantivy::IndexReader = reader;
     let searcher = reader.searcher();
-    let query: Box<dyn Query> = if request.kind == "fuzzy" {
+    let query: Box<dyn Query> = if let Some(ast) = syntax {
+        let mut parser = QueryParser::for_index(&index, vec![body]);
+        parser.set_conjunction_by_default();
+        let query = parser
+            .build_query_from_user_input_ast(ast)
+            .map_err(|e| ProbeError::invalid(&format!("invalid lexical syntax: {e}")))?;
+        let mut terms = 0usize;
+        query.query_terms(&mut |_, _| terms += 1);
+        if terms == 0 || terms > 32 {
+            return Err(ProbeError::invalid(
+                "syntax requires 1..32 analyzed query term occurrences",
+            ));
+        }
+        query
+    } else if request.kind == "fuzzy" {
         fuzzy_query(&searcher, body, &words[0])?
     } else {
         let mut query = PhraseQuery::new(
@@ -194,7 +214,8 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
     Ok(
         json!({"hits":output,"matched_points":count,"matched_count_exact":true,"top_k":request.top_k,
         "kind":request.kind,"q":request.q,"slop":request.slop,"engine":"tantivy-0.26.2",
-        "analyzer":"simple_lower_v1; Unicode simple words, lowercase, positions; ASCII query words only",
+        "analyzer":"simple_lower_v1; Unicode simple words, lowercase, positions; ASCII fuzzy/proximity words; syntax literals use this analyzer",
+        "syntax_policy":if request.kind=="syntax"{Some("strict body-only grammar; default AND; literals/Boolean/quotes/escapes/boosts; 32 nodes/16 literals/depth8/32 analyzed terms; no expansion/range/regex/set/all")}else{None},
         "score_semantics":"native Tantivy query score; no cross-engine normalization",
         "fuzzy_distance":if request.kind=="fuzzy"{Some(1)}else{None},"transpositions":request.kind=="fuzzy","max_fuzzy_expansions":32,
         "phrase_semantics":"native total movement budget; adjacent transposition costs two",
@@ -206,6 +227,59 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn strict_syntax_executes_boolean_phrase_boost_and_literal_analysis() {
+        let documents = vec![
+            (1, "transaction recovery".into()),
+            (2, "transaction durable recovery".into()),
+            (3, "recovery transaction".into()),
+            (4, "dairy diary".into()),
+            (5, "数据库 恢复".into()),
+            (6, "foo bar".into()),
+        ];
+        let request = |q: &str| SourceLexical {
+            q: q.into(),
+            kind: "syntax".into(),
+            slop: 0,
+            top_k: 100,
+        };
+        for (q, expected) in [
+            ("body:transaction AND NOT durable", vec![1, 3]),
+            ("(transaction OR diary) AND NOT durable", vec![1, 3, 4]),
+            ("transaction recovery", vec![1, 2, 3]),
+            ("body:\"transaction recovery\"", vec![1]),
+            ("\"transaction recovery\"~1", vec![1, 2]),
+            ("恢复", vec![5]),
+            (r"body:foo\:bar", vec![6]),
+        ] {
+            let result = search(&documents, &request(q)).unwrap();
+            let ids: std::collections::BTreeSet<u64> = result["hits"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|h| h["id"].as_u64().unwrap())
+                .collect();
+            assert_eq!(ids, expected.into_iter().collect(), "{q}");
+            assert_eq!(result["matched_points"], ids.len());
+        }
+        let boosted = search(&documents, &request("diary^10 OR transaction")).unwrap();
+        assert_eq!(boosted["hits"][0]["id"], 4);
+        for q in ["point_id:1", "*", "word*", "\"!!!\"", "body:[a TO z]"] {
+            assert_eq!(
+                search(&documents, &request(q)).unwrap_err().code,
+                "invalid_parameter"
+            );
+        }
+        let excess = (b'a'..=b'l')
+            .map(|c| format!("\"a b c{}\"", char::from(c)))
+            .collect::<Vec<_>>()
+            .join(" OR ");
+        assert_eq!(
+            search(&documents, &request(&excess)).unwrap_err().code,
+            "invalid_parameter"
+        );
+    }
 
     #[test]
     fn mature_fuzzy_and_positional_semantics_and_budgets() {

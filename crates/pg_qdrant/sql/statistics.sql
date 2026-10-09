@@ -86,7 +86,7 @@ BEGIN
       OR p_lexical-ARRAY['q','kind','slop','top_k']<>'{}'
       OR jsonb_typeof(p_lexical->'q') IS DISTINCT FROM 'string'
       OR jsonb_typeof(p_lexical->'kind') IS DISTINCT FROM 'string'
-      OR p_lexical->>'kind' NOT IN ('fuzzy','proximity')
+      OR p_lexical->>'kind' NOT IN ('fuzzy','proximity','syntax')
       OR jsonb_typeof(p_lexical->'slop') IS DISTINCT FROM 'number'
       OR p_lexical->>'slop' !~ '^[0-8]$'
       OR jsonb_typeof(p_lexical->'top_k') IS DISTINCT FROM 'number'
