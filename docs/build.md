@@ -38,8 +38,13 @@ CI permits at most three identical Docker build attempts when the failing
 download is an Ubuntu Snapshot HTTP 500/502/503/504 transport error, with
 10- and 20-second delays. All failed-attempt output remains in the job log.
 The wrapper preserves every build argument, URL, version and checksum;
-persistent transport failure fails the step. Compilation, tests, checksum
-mismatches and signature failures are not retried or converted to success.
+persistent transport failure fails the step. Compilation, tests, unexplained
+checksum mismatches and signature failures are not retried or converted to success.
+If BuildKit reports a checksum mismatch for a Snapshot `ADD`, the wrapper can
+classify it as transport failure only when a fresh, TLS-verified HTTP
+500/502/503/504 response from that exact pinned URL has the identical rejected
+body digest. This observation is bounded to 64 KiB with a ten-second socket timeout. The error
+body is never installed, and every retry must still pass the pinned checksum.
 This bounded retry policy does not establish upstream availability. Local
 builds can use `python3 scripts/retry_snapshot_build.py docker build ...`
 or invoke the identical Docker build directly.

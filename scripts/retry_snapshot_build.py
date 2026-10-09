@@ -1,21 +1,58 @@
 """Retry only failed immutable Ubuntu Snapshot downloads; never retry tests."""
 import collections
+import hashlib
 import re
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
 
-def snapshot_transport_failure(lines):
+def snapshot_error_body(url):
+    try:
+        with urllib.request.urlopen(url, timeout=10):
+            return None  # A successful response cannot explain rejected bytes.
+    except urllib.error.HTTPError as error:
+        with error:
+            if error.code not in (500, 502, 503, 504) or error.geturl() != url:
+                return None
+            data = error.read(65537)
+            if len(data) > 65536:
+                return None
+            return error.code, hashlib.sha256(data).hexdigest()
+    except (OSError, ValueError):
+        return None
+
+
+def snapshot_transport_failure(lines, probe=snapshot_error_body):
     text = ''.join(lines)
     # Integrity and authentication failures require investigation, even when an
     # earlier download in the same attempt also encountered a transport error.
-    if re.search(r'digest mismatch|hash sum mismatch|GPG error|NO_PUBKEY', text, re.I):
+    if re.search(r'hash sum mismatch|GPG error|NO_PUBKEY', text, re.I):
         return False
     errors = [line for line in lines if 'ERROR:' in line]
     if not errors:
         return False
     terminal = errors[-1]
+    if 'digest mismatch' in text.lower():
+        mismatch = re.search(r'digest mismatch sha256:([0-9a-f]{64}): sha256:([0-9a-f]{64})', terminal)
+        if not mismatch:
+            return False
+        observed, expected = mismatch.groups()
+        # BuildKit may hash an HTTP error body before reporting its status.
+        # Explain this only with a fresh HTTPS error response whose bytes match
+        # the rejected digest. Neither response is used as an archive.
+        adds = re.findall(r'ADD --checksum=sha256:' + expected +
+                          r'\s+(https://snapshot\.ubuntu\.com/[^\s"<>]+)', text)
+        if len(set(adds)) != 1:
+            return False
+        response = probe(adds[0])
+        if response is None or response[0] not in (500, 502, 503, 504) or response[1] != observed:
+            return False
+        print(f'Rejected download matches an HTTP {response[0]} error body; '
+              'no archive was accepted.', flush=True)
+        return True
     if 'apt-get' in terminal and 'exit code: 100' in terminal:
         return bool(re.search(
             r'Failed to fetch https://snapshot\.ubuntu\.com/\S+\s+(500|502|503|504)\b', text))

@@ -73,5 +73,46 @@ class SnapshotRetryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             retry.run(['docker', 'run', 'test-image'], start=lambda *a, **k: self.fail())
 
+    def test_buildkit_digest_requires_matching_live_http_error_bytes_and_pinned_url(self):
+        expected = 'a' * 64
+        observed = 'b' * 64
+        url = 'https://snapshot.ubuntu.com/ubuntu/fixed/ca.deb'
+        lines = [f'ADD --checksum=sha256:{expected} {url} /tmp/ca.deb\n',
+                 f'ERROR: digest mismatch sha256:{observed}: sha256:{expected}\n']
+        probes = []
+        def confirmed(value):
+            probes.append(value)
+            return 503, observed
+        with patch('sys.stdout', new=io.StringIO()):
+            self.assertTrue(retry.snapshot_transport_failure(lines, probe=confirmed))
+        self.assertEqual(probes, [url])
+        for response in [None, (503, 'c' * 64), (200, observed)]:
+            self.assertFalse(retry.snapshot_transport_failure(lines, probe=lambda u: response))
+        self.assertFalse(retry.snapshot_transport_failure(
+            [lines[0].replace('snapshot.ubuntu.com', 'unrelated.example'), lines[1]],
+            probe=lambda u: self.fail()))
+        self.assertFalse(retry.snapshot_transport_failure(
+            [lines[0].replace(expected, 'c' * 64), lines[1]], probe=lambda u: self.fail()))
+        self.assertFalse(retry.snapshot_transport_failure(
+            lines + ['GPG error\n'], probe=lambda u: self.fail()))
+
+    def test_http_observation_never_accepts_success_bad_status_or_large_body(self):
+        import hashlib
+        import urllib.error
+        url = 'https://snapshot.ubuntu.com/ubuntu/fixed/ca.deb'
+        for status, data, expected in [(503, b'503 response', (503, hashlib.sha256(b'503 response').hexdigest())),
+                                       (404, b'missing', None), (503, b'x' * 65537, None)]:
+            with self.subTest(status=status, length=len(data)):
+                error = urllib.error.HTTPError(url, status, 'error', {}, io.BytesIO(data))
+                with patch.object(retry.urllib.request, 'urlopen', side_effect=error):
+                    self.assertEqual(retry.snapshot_error_body(url), expected)
+        with patch.object(retry.urllib.request, 'urlopen', side_effect=TimeoutError()):
+            self.assertIsNone(retry.snapshot_error_body(url))
+        redirected = urllib.error.HTTPError(url + '/redirect', 503, 'error', {}, io.BytesIO(b'error'))
+        with patch.object(retry.urllib.request, 'urlopen', side_effect=redirected):
+            self.assertIsNone(retry.snapshot_error_body(url))
+        with patch.object(retry.urllib.request, 'urlopen', return_value=io.BytesIO(b'archive')):
+            self.assertIsNone(retry.snapshot_error_body(url))
+
 
 if __name__ == '__main__': unittest.main()
