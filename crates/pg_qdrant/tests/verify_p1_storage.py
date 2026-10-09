@@ -52,19 +52,18 @@ disk = Path(os.environ['PG_QDRANT_P1_DISK_DIR']).resolve()
 assert os.getuid() != 0
 assert data.parent.parent == Path('/tmp') and data.parent.name.startswith('pgq-p1-product.')
 assert Path(sql('SHOW data_directory')).resolve() == data
-assert disk == Path('/pgq-p1-faults') and disk.stat().st_uid == os.getuid()
+assert disk == data/'pg_qdrant_p0/db-5.indexes' and disk.stat().st_uid == os.getuid()
+assert disk.resolve()==disk and not disk.is_symlink()
 mounts = [line.split() for line in Path('/proc/self/mountinfo').read_text().splitlines()]
 mount = next(row for row in mounts if row[4] == str(disk))
 assert mount[mount.index('-') + 1] == 'tmpfs'
 capacity = os.statvfs(disk)
 capacity_bytes = capacity.f_blocks * capacity.f_frsize
 assert capacity_bytes == 384 * 1024 * 1024 and not list(disk.iterdir())
-engine_root = disk / 'indexes'
-engine_root.mkdir(mode=0o700)
+engine_root = disk
 ipc = data / 'pg_qdrant_p0'
-ipc.mkdir(mode=0o700)
 database_oid = sql("SELECT oid FROM pg_database WHERE datname=current_database()")
-(ipc / ('db-' + database_oid + '.indexes')).symlink_to(engine_root, target_is_directory=True)
+assert database_oid=='5' and ipc/('db-'+database_oid+'.indexes')==engine_root
 assert os.stat(data).st_dev != os.stat(engine_root).st_dev
 
 sql('CREATE EXTENSION pg_qdrant')

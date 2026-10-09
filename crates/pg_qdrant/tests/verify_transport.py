@@ -49,10 +49,22 @@ def run(sql, ready, ticket_from, checks, crash_matrix=None):
         index_id,prior=prior_epochs[name]
         prior_path=root/(index_id+'-'+prior['generation']+'-'+prior['storage_epoch'])
         current_path=root/(index_id+'-'+current['generation']+'-'+current['storage_epoch'])
-        assert result['completed'] and not result['succeeded'] and not result['physical_cleanup_completed'],result
-        assert result['state']=='failed' and result['error_code']=='source_owner_changed' and 'owner_changed' in result['error'],result
-        assert result['pending_epochs']==1 and prior_path.is_dir() and not current_path.exists(),result
-        cleanup.append({'index_name':name,'task':result,'prior_directory_preserved':prior_path.is_dir(),
+        assert result['completed'] and result['succeeded'] and result['physical_cleanup_completed'],result
+        assert result['state']=='succeeded' and result['error_code'] is None and result['error'] is None,result
+        assert result['pending_epochs']==0 and not prior_path.exists() and not current_path.exists(),result
+        epochs=json.loads(sql("SELECT jsonb_agg(jsonb_build_object('generation',generation,'storage_epoch',storage_epoch,"
+            "'consumer_id',consumer_id,'native_task',native_task,'state',state)) FROM qdrant_internal.drop_epochs "
+            "WHERE drop_task='"+task['task_id']+"'"))
+        assert len(epochs)==2 and all(e['state']=='cleaned' for e in epochs),epochs
+        assert {(e['generation'],e['storage_epoch']) for e in epochs}=={
+            (prior['generation'],prior['storage_epoch']),(current['generation'],current['storage_epoch'])},epochs
+        for epoch in epochs:
+            key=index_id+'-'+epoch['generation']+'-'+epoch['storage_epoch']
+            assert json.loads((root/(key+'.owner')).read_text())=={
+                'version':1,'epoch_key':key,'consumer_id':epoch['consumer_id']},epoch
+            assert json.loads((root/(key+'.retired')).read_text())=={
+                'version':1,'epoch_key':key,'consumer_id':epoch['consumer_id'],'task_id':epoch['native_task']},epoch
+        cleanup.append({'index_name':name,'task':result,'exact_epochs':epochs,'prior_directory_cleaned':not prior_path.exists(),
                         'current_directory_cleaned':not current_path.exists()})
     observed['cleanup']=cleanup
     if crash_matrix is not None:
