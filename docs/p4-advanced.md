@@ -4,7 +4,7 @@ The original P4 slice adds a strict typed parser and a PostgreSQL validator.
 That parser does not execute engine queries. Separate installed development
 adapters now provide bounded [recommendations](source-recommendations.md),
 [Discover/Context](source-context-discovery.md) and [feedback](source-feedback.md).
-The [MMR adapter](source-mmr.md) has separate execution and verification scope.
+The [MMR adapter](source-mmr.md) and [score Formula](source-formula.md) have separate execution and verification scopes.
 These partial adapters do not complete P4 acceptance.
 
 ## Implemented in this slice
@@ -25,7 +25,7 @@ These partial adapters do not complete P4 acceptance.
 ## Explicitly not satisfied
 
 The full Q01–Q14 contracts, document/chunk grouping, general filter/prefetch
-combinations, formula execution, facet counts, visual vector compatibility,
+combinations, general payload formula execution, facet counts, visual vector compatibility,
 quality and complete authorized ordering remain open. Individual installed
 adapter tests cover only the explicit scopes in their respective documents.
 

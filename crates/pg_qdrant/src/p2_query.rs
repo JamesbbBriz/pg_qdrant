@@ -31,7 +31,7 @@ DECLARE
     relation_info record;
     text_field text;
     request_plan text;
-    allowed_options text[] := ARRAY['plan','candidate_limit','timeout_ms','fallback','fusion','matching'];
+    allowed_options text[] := ARRAY['plan','candidate_limit','timeout_ms','fallback','fusion','matching','formula'];
     option_key text;
     candidate_limit integer;
     timeout_ms integer;
@@ -41,6 +41,7 @@ DECLARE
     discovery jsonb;
     feedback jsonb;
     mmr jsonb;
+    formula jsonb;
     representation_kind text;
     rerank_query jsonb;
     named_input record;
@@ -79,6 +80,12 @@ BEGIN
               USING ERRCODE = '22023';
         END IF;
     END LOOP;
+    IF options ? 'formula' THEN
+        IF mode='explore' OR octet_length((options->'formula')::text)>8192 THEN
+            RAISE EXCEPTION 'Formula requires non-explore scoring and at most 8192 bytes' USING ERRCODE='22023';
+        END IF;
+        formula:=qdrant_internal.admit_score_formula(options->'formula');
+    END IF;
     matching:=coalesce(options->'matching','{}'::jsonb);
     IF jsonb_typeof(matching)<>'object' THEN
         RAISE EXCEPTION 'matching must be an object' USING ERRCODE='22023';
@@ -248,7 +255,16 @@ BEGIN
             END IF;
         END IF;
     END IF;
+    IF formula IS NOT NULL THEN effective_plan:=effective_plan||'_formula'; END IF;
     RETURN jsonb_build_object(
+       'formula',formula,
+       'formula_contract',CASE WHEN formula IS NOT NULL THEN jsonb_build_object(
+         'scope','bounded authorized candidates from the entire preceding query stage',
+         'score_variable','$score[0]','score_domain','pinned Edge Formula arithmetic; descending final score',
+         'candidate_limit',candidate_limit,'max_nodes',64,'max_depth',8,'max_arguments',8,
+         'max_node_evaluations',64*candidate_limit,'payload_fields_available',false,
+         'nonfinite_policy','reject complete query; no partial results',
+         'conversion','float32 constants with finite absolute bound 1000000') END,
        'index_name',index_name,'source_oid',selected.source_oid,
        'source_key_type',selected.key_type,
        'requested_mode',mode,'effective_plan',effective_plan,'representation_query',representation_query,'representation_kind',representation_kind,'fusion',fusion,
@@ -363,6 +379,7 @@ BEGIN
       'discovery_query',plan->'discovery_query',
       'feedback_query',plan->'feedback_query',
       'mmr_query',plan->'mmr_query',
+      'formula',plan->'formula',
       'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',
       'predicates',plan->'matching',
@@ -416,6 +433,7 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
         "p2_recommendation_admission",
         "p2_context_discovery_admission",
         "p2_feedback_admission",
-        "p2_mmr_admission"
+        "p2_mmr_admission",
+        qdrant_internal::admit_score_formula
     ]
 );

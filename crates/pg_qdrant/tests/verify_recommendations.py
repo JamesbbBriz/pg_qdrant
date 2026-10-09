@@ -120,13 +120,13 @@ def run(sql, ready, ticket_from, checks, spawn=None):
     assert first['hits'][0]['source_key']=='3' and first['next_cursor']
     continuation=page_request+",'"+json.dumps(first['next_cursor'])+"')"
     assert len(json.loads(sql(continuation))['hits'])==1
-    before=json.loads(sql("SELECT jsonb_agg(jsonb_build_object('key',s.point_id,'revision',s.revision)) FROM qdrant_internal.source_state s WHERE index_name='recommendation_docs' AND tagged_key->>'value' NOT IN ('1','2')"))
+    before=json.loads(sql("SELECT jsonb_agg(jsonb_build_object('key',s.point_id,'revision',s.revision) ORDER BY s.point_id) FROM qdrant_internal.source_state s WHERE index_name='recommendation_docs' AND tagged_key->>'value' NOT IN ('1','2')"))
     sql("UPDATE recommendation_docs SET v='[0.5,0.5]' WHERE id=1")
     ready('recommendation_docs')
     error=sql(continuation,ok=False)
     assert '55000' in error and 'Recommendation examples changed since snapshot capture' in error,error
-    after=json.loads(sql("SELECT jsonb_agg(jsonb_build_object('key',s.point_id,'revision',s.revision)) FROM qdrant_internal.source_state s WHERE index_name='recommendation_docs' AND tagged_key->>'value' NOT IN ('1','2')"))
-    assert before==after,'only the excluded source seed changed'
+    after=json.loads(sql("SELECT jsonb_agg(jsonb_build_object('key',s.point_id,'revision',s.revision) ORDER BY s.point_id) FROM qdrant_internal.source_state s WHERE index_name='recommendation_docs' AND tagged_key->>'value' NOT IN ('1','2')"))
+    assert before==after,('only the excluded source seed changed',before,after)
     sql("UPDATE recommendation_docs SET v='[1,0]' WHERE id=1")
     sql("UPDATE recommendation_docs SET body='seed source changed' WHERE id=1")
     assert '55000' in call(ok=False)

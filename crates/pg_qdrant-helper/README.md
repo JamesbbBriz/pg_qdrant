@@ -12,7 +12,8 @@ The development owner applies committed source events, flushes before exact
 receipt acknowledgement, and executes bounded native BM25, dense, sparse,
 MaxSim, fusion, [source-example recommendations](../../docs/source-recommendations.md)
 and [Discover/Context](../../docs/source-context-discovery.md), with
-[source-key feedback](../../docs/source-feedback.md) and [MMR](../../docs/source-mmr.md).
+[source-key feedback](../../docs/source-feedback.md), [MMR](../../docs/source-mmr.md)
+and [score Formula](../../docs/source-formula.md).
 These installed paths remain partial product integration; complete reliability,
 resource, upgrade and release acceptance is still open.
 

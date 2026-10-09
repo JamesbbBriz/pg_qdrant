@@ -127,13 +127,15 @@ mod qdrant {
                     cfg!(feature = "p0-managed-helper") && prefix == "Q" && number == 5;
                 let feedback_sql =
                     cfg!(feature = "p0-managed-helper") && prefix == "Q" && number == 6;
+                let formula_sql =
+                    cfg!(feature = "p0-managed-helper") && prefix == "Q" && number == 8;
                 let mmr_sql = cfg!(feature = "p0-managed-helper") && prefix == "Q" && number == 7;
                 ids.push(json!({
                     "id": format!("{prefix}{number:02}"),
-                    "product_status": if bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql || lexical_sql || recommendation_sql || discovery_sql || feedback_sql || mmr_sql {"partial_sql_integration"} else {"planned"},
+                    "product_status": if bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql || lexical_sql || recommendation_sql || discovery_sql || feedback_sql || mmr_sql || formula_sql {"partial_sql_integration"} else {"planned"},
                     "release_supported": false,
-                    "sql_product_interface": bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql || lexical_sql || recommendation_sql || discovery_sql || feedback_sql || mmr_sql,
-                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else if dense_sql {Some("fixed-generation named dense BYOV; owner domain; full live-row readiness; migrations open")} else if sparse_sql {Some("declared learned sparse BYOV; none/external/engine live-corpus IDF; owner domain; scope/model migrations open")} else if token_sql {Some("declared token BYOV; bounded native exact MaxSim and candidate-domain precision; owner domain; full acceptance open")} else if fusion_sql {Some("bounded BM25/dense-or-sparse prefetch; native RRF k=2 or DBSF; optional token rerank; general planner open")} else if lexical_sql {Some("fixed shared native body analysis; bounded AND/OR/exclude/phrase and distinct token/whole-key prefixes before every candidate cap; owner domain; configurable analysis/general filters/quality open")} else if recommendation_sql {Some("fixed native dense source-example best_score/sum_scores; excluded seeds and source predicates before cap; owner domain; general recommendation and full acceptance open")} else if discovery_sql {Some("pinned native dense source-key discover/context; bounded exact owned-corpus scoring; source predicates and all-seed exclusion before cap; owner domain; general context/model/quality acceptance open")} else if feedback_sql {Some("pinned native dense source-key feedback; explicit bounded coefficients and worst-case pair work; owner domain; general feedback/quality acceptance open")} else if mmr_sql {Some("pinned native dense source-key MMR; candidate-domain diversity with original dense scores and preserved rank; owner domain; quality/full acceptance open")} else {None}
+                    "sql_product_interface": bm25_sql || dense_sql || sparse_sql || token_sql || fusion_sql || lexical_sql || recommendation_sql || discovery_sql || feedback_sql || mmr_sql || formula_sql,
+                    "implementation_scope": if bm25_sql {Some("one text field; owner domain; fixed analyzer; full acceptance open")} else if dense_sql {Some("fixed-generation named dense BYOV; owner domain; full live-row readiness; migrations open")} else if sparse_sql {Some("declared learned sparse BYOV; none/external/engine live-corpus IDF; owner domain; scope/model migrations open")} else if token_sql {Some("declared token BYOV; bounded native exact MaxSim and candidate-domain precision; owner domain; full acceptance open")} else if fusion_sql {Some("bounded BM25/dense-or-sparse prefetch; native RRF k=2 or DBSF; optional token rerank; general planner open")} else if lexical_sql {Some("fixed shared native body analysis; bounded AND/OR/exclude/phrase and distinct token/whole-key prefixes before every candidate cap; owner domain; configurable analysis/general filters/quality open")} else if recommendation_sql {Some("fixed native dense source-example best_score/sum_scores; excluded seeds and source predicates before cap; owner domain; general recommendation and full acceptance open")} else if discovery_sql {Some("pinned native dense source-key discover/context; bounded exact owned-corpus scoring; source predicates and all-seed exclusion before cap; owner domain; general context/model/quality acceptance open")} else if feedback_sql {Some("pinned native dense source-key feedback; explicit bounded coefficients and worst-case pair work; owner domain; general feedback/quality acceptance open")} else if mmr_sql {Some("pinned native dense source-key MMR; candidate-domain diversity with original dense scores and preserved rank; owner domain; quality/full acceptance open")} else if formula_sql {Some("pinned native score Formula over bounded authorized prefetch candidates; strict arithmetic and whole-response nonfinite refusal; owner domain; payload/time/geo and full scoring acceptance open")} else {None}
                 }));
             }
         }
@@ -149,6 +151,17 @@ mod qdrant_internal {
     use super::{formats, identity, ipc, recheck, worker};
     use pgrx::JsonB;
     use pgrx::prelude::*;
+
+    #[pg_extern(immutable, parallel_safe)]
+    fn admit_score_formula(expression: JsonB) -> JsonB {
+        let formula: pg_qdrant_protocol::formula::ScoreFormula =
+            serde_json::from_value(expression.0)
+                .unwrap_or_else(|_| ipc::raise(ipc::ProbeError::invalid("invalid score formula")));
+        formula
+            .validate()
+            .unwrap_or_else(|message| ipc::raise(ipc::ProbeError::invalid(&message)));
+        JsonB(serde_json::to_value(formula).expect("owned finite formula"))
+    }
 
     #[pg_extern(volatile, parallel_unsafe)]
     fn p1_start_consumer() -> JsonB {

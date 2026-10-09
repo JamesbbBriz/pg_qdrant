@@ -1,4 +1,5 @@
 //! Embedded Edge mutation owner. No SQL values select a filesystem path.
+use pg_qdrant_protocol::formula::ScoreFormula;
 use pg_qdrant_protocol::{
     DiscoveryStrategy, ProbeError, RecommendationStrategy, RepresentationContract,
     RepresentationQuery, RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch,
@@ -8,11 +9,11 @@ use pg_qdrant_protocol::{
 use qdrant_edge::bm25_embed::EdgeBm25;
 use qdrant_edge::{
     ContextPair, ContextQuery, DiscoverQuery, Distance, EdgeConfig, EdgeShard,
-    EdgeSparseVectorParams, EdgeVectorParams, FeedbackItem, FeedbackNaiveQuery, Filter, Fusion,
-    IdfCorpusParams, IdfParams, Mmr, Modifier, MultiVectorComparator, MultiVectorConfig,
-    NaiveFeedbackStrategy, NamedQuery, PointId, PointInsertOperations, PointOperations,
-    PointStruct, Prefetch, QueryEnum, QueryRequest, RecommendQuery, ScoringQuery, SearchParams,
-    UpdateOperation, Vector, VectorInternal, Vectors, WithPayloadInterface,
+    EdgeSparseVectorParams, EdgeVectorParams, Expression, FeedbackItem, FeedbackNaiveQuery, Filter,
+    Formula, Fusion, IdfCorpusParams, IdfParams, Mmr, Modifier, MultiVectorComparator,
+    MultiVectorConfig, NaiveFeedbackStrategy, NamedQuery, PointId, PointInsertOperations,
+    PointOperations, PointStruct, Prefetch, QueryEnum, QueryRequest, RecommendQuery, ScoringQuery,
+    SearchParams, UpdateOperation, Vector, VectorInternal, Vectors, WithPayloadInterface,
 };
 use serde_json::{Value, json};
 use std::{
@@ -363,6 +364,7 @@ impl SourceOwner {
         discovery_query: Option<SourceDiscovery>,
         feedback_query: Option<SourceFeedback>,
         mmr_query: Option<SourceMmr>,
+        formula: Option<ScoreFormula>,
         rerank_query: Option<RepresentationQuery>,
         fusion: Option<SourceFusion>,
         predicates: SourcePredicates,
@@ -376,6 +378,20 @@ impl SourceOwner {
             || !(1..=1000).contains(&top_k)
         {
             return Err(ProbeError::invalid("search outside bounds"));
+        }
+        if let Some(expression) = &formula {
+            expression
+                .validate()
+                .map_err(|message| ProbeError::invalid(&message))?;
+            if recommendation_query.is_some()
+                || discovery_query.is_some()
+                || feedback_query.is_some()
+                || mmr_query.is_some()
+            {
+                return Err(ProbeError::invalid(
+                    "score formula cannot wrap explore scoring",
+                ));
+            }
         }
         let key = identity(index_id, generation, epoch)?;
         let owned = self
@@ -802,7 +818,7 @@ impl SourceOwner {
             candidates.query = request.query.take();
             candidates.prefetches = std::mem::take(&mut request.prefetches);
             candidates.params = request.params.take();
-            candidates.filter = filter;
+            candidates.filter = filter.clone();
             request.prefetches = vec![candidates];
             request.query = Some(ScoringQuery::Vector(QueryEnum::Nearest(NamedQuery {
                 using: Some(rerank.representation),
@@ -813,6 +829,22 @@ impl SourceOwner {
                 indexed_only: false,
                 ..Default::default()
             });
+        }
+        if let Some(expression) = formula {
+            let mut candidates = Prefetch::new(top_k);
+            candidates.query = request.query.take();
+            candidates.prefetches = std::mem::take(&mut request.prefetches);
+            candidates.params = request.params.take();
+            candidates.filter = filter.clone();
+            request.prefetches = vec![candidates];
+            let formula = Formula {
+                formula: native_formula(expression),
+                defaults: HashMap::new(),
+            }
+            .try_into()
+            .map_err(error)?;
+            request.query = Some(ScoringQuery::Formula(formula));
+            request.params = None;
         }
         // Source text is returned only through the authorized PostgreSQL JOIN.
         // Fetch identity/version metadata without copying every candidate body
@@ -848,6 +880,31 @@ fn feedback_coefficients_valid(a: f32, b: f32, c: f32) -> bool {
         && (0.0..=4.0).contains(&b)
         && c.is_finite()
         && c.abs() <= 16.0
+}
+
+fn native_formula(expression: ScoreFormula) -> Expression {
+    match expression {
+        ScoreFormula::Constant { value } => Expression::Constant(value as f32),
+        ScoreFormula::Score {} => Expression::Variable("$score[0]".into()),
+        ScoreFormula::Add { args } => {
+            Expression::Sum(args.into_iter().map(native_formula).collect())
+        }
+        ScoreFormula::Multiply { args } => {
+            Expression::Mult(args.into_iter().map(native_formula).collect())
+        }
+        ScoreFormula::Negate { arg } => Expression::Neg(Box::new(native_formula(*arg))),
+        ScoreFormula::Abs { arg } => Expression::Abs(Box::new(native_formula(*arg))),
+        ScoreFormula::Sqrt { arg } => Expression::Sqrt(Box::new(native_formula(*arg))),
+        ScoreFormula::Divide {
+            left,
+            right,
+            by_zero_default,
+        } => Expression::Div {
+            left: Box::new(native_formula(*left)),
+            right: Box::new(native_formula(*right)),
+            by_zero_default: by_zero_default.map(|v| v as f32),
+        },
+    }
 }
 
 fn admit_mmr_work(
@@ -1020,6 +1077,7 @@ mod tests {
         assert!(admit_mmr_work(100, 190001, 100).is_err());
         assert!(admit_mmr_work(4096, usize::MAX, 1000).is_err());
     }
+
     use pg_qdrant_protocol::{SourceEvent, SparseValues};
 
     fn numeric_contract() -> RepresentationContract {
@@ -1144,6 +1202,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap_err();
@@ -1158,6 +1217,7 @@ mod tests {
                 "anchor",
                 10,
                 Some(query.clone()),
+                None,
                 None,
                 None,
                 None,
@@ -1195,6 +1255,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SourcePredicates::default(),
             )
             .unwrap();
@@ -1214,6 +1275,7 @@ mod tests {
                 "anchor",
                 10,
                 Some(query),
+                None,
                 None,
                 None,
                 None,
@@ -1298,6 +1360,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates::default(),
                     )
                     .unwrap();
@@ -1342,6 +1405,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates {
                             key_exact: Some("4".into()),
                             ..Default::default()
@@ -1359,6 +1423,7 @@ mod tests {
                         None,
                         None,
                         Some(input.clone()),
+                        None,
                         None,
                         None,
                         None,
@@ -1403,12 +1468,147 @@ mod tests {
                                 None,
                                 None,
                                 None,
+                                None,
                                 SourcePredicates::default()
                             )
                             .is_err()
                     );
                 }
             }
+        }
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn source_formula_native_scores_scope_and_arithmetic_errors() {
+        let (owner, root, generation, epoch, values) = dense_example_fixture();
+        for distance in ["dot", "cosine", "euclid", "manhattan"] {
+            let query = RepresentationQuery {
+                representation: distance.into(),
+                model_id: "fixture".into(),
+                model_version: "r1".into(),
+                vector: RepresentationVector::Dense(vec![1.0, 0.0]),
+            };
+            let run = |expression, cap, predicates| {
+                owner.search(
+                    1,
+                    &generation,
+                    &epoch,
+                    "anchor",
+                    cap,
+                    Some(query.clone()),
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(expression),
+                    None,
+                    None,
+                    predicates,
+                )
+            };
+            let hits = run(ScoreFormula::Score {}, 7, SourcePredicates::default()).unwrap();
+            assert_eq!(hits.as_array().unwrap().len(), 7);
+            for hit in hits.as_array().unwrap() {
+                let n = hit["id"].as_u64().unwrap() as usize - 1;
+                let v = values[n];
+                let expected = match distance {
+                    "dot" => f64::from(v[0]),
+                    "cosine" => {
+                        let norm = f64::from(v[0]).hypot(f64::from(v[1]));
+                        if norm == 0.0 {
+                            0.5f64.sqrt()
+                        } else {
+                            f64::from(v[0]) / norm
+                        }
+                    }
+                    "euclid" => (f64::from(v[0]) - 1.0).hypot(f64::from(v[1])),
+                    "manhattan" => (f64::from(v[0]) - 1.0).abs() + f64::from(v[1]).abs(),
+                    _ => unreachable!(),
+                };
+                assert!(
+                    (hit["score"].as_f64().unwrap() - expected).abs() < 1e-5,
+                    "{distance}: {hit} != {expected}"
+                );
+                assert!(hit.get("vector").is_none());
+            }
+            let neg = ScoreFormula::Negate {
+                arg: Box::new(ScoreFormula::Score {}),
+            };
+            let bounded = run(neg.clone(), 3, SourcePredicates::default()).unwrap();
+            let nearest = run(ScoreFormula::Score {}, 3, SourcePredicates::default()).unwrap();
+            let ids = |hits: &Value| {
+                hits.as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|h| h["id"].as_u64().unwrap())
+                    .collect::<std::collections::BTreeSet<_>>()
+            };
+            assert_eq!(ids(&bounded), ids(&nearest));
+            assert!(
+                bounded
+                    .as_array()
+                    .unwrap()
+                    .windows(2)
+                    .all(|w| w[0]["score"].as_f64() >= w[1]["score"].as_f64())
+            );
+            let constrained = run(
+                neg,
+                1,
+                SourcePredicates {
+                    key_exact: Some("6".into()),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            assert_eq!(constrained[0]["id"], 6);
+            let division = |default| ScoreFormula::Divide {
+                left: Box::new(ScoreFormula::Constant { value: 1.0 }),
+                right: Box::new(ScoreFormula::Constant { value: 0.0 }),
+                by_zero_default: default,
+            };
+            assert!(run(division(None), 7, SourcePredicates::default()).is_err());
+            let fallback = run(division(Some(-7.0)), 7, SourcePredicates::default()).unwrap();
+            assert!(
+                fallback
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|h| h["score"] == -7.0)
+            );
+            assert!(
+                run(
+                    ScoreFormula::Sqrt {
+                        arg: Box::new(ScoreFormula::Constant { value: -1.0 })
+                    },
+                    7,
+                    SourcePredicates::default()
+                )
+                .is_err()
+            );
+            let overflow = ScoreFormula::Multiply {
+                args: vec![ScoreFormula::Constant { value: 1_000_000.0 }; 8],
+            };
+            assert!(run(overflow, 7, SourcePredicates::default()).is_err());
+            assert!(
+                run(
+                    ScoreFormula::Constant {
+                        value: f64::INFINITY
+                    },
+                    7,
+                    SourcePredicates::default()
+                )
+                .is_err()
+            );
+            assert_eq!(
+                run(ScoreFormula::Score {}, 7, SourcePredicates::default())
+                    .unwrap()
+                    .as_array()
+                    .unwrap()
+                    .len(),
+                7
+            );
         }
         drop(owner);
         std::fs::remove_dir_all(root).unwrap();
@@ -1472,6 +1672,7 @@ mod tests {
                         Some(input.clone()),
                         None,
                         None,
+                        None,
                         SourcePredicates::default(),
                     )
                     .unwrap();
@@ -1532,6 +1733,7 @@ mod tests {
                         Some(input.clone()),
                         None,
                         None,
+                        None,
                         SourcePredicates {
                             key_exact: Some("4".into()),
                             ..Default::default()
@@ -1552,6 +1754,7 @@ mod tests {
                             None,
                             None,
                             Some(input.clone()),
+                            None,
                             None,
                             None,
                             SourcePredicates {
@@ -1578,6 +1781,7 @@ mod tests {
                                 None,
                                 None,
                                 Some(invalid),
+                                None,
                                 None,
                                 None,
                                 SourcePredicates::default()
@@ -1662,6 +1866,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates::default(),
                     )
                     .unwrap();
@@ -1700,6 +1905,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates {
                             key_exact: Some("4".into()),
                             ..Default::default()
@@ -1719,6 +1925,7 @@ mod tests {
                             None,
                             None,
                             Some(input.clone()),
+                            None,
                             None,
                             None,
                             None,
@@ -1755,6 +1962,7 @@ mod tests {
                                 None,
                                 None,
                                 None,
+                                None,
                                 SourcePredicates::default()
                             )
                             .is_err()
@@ -1775,6 +1983,7 @@ mod tests {
                                 None,
                                 None,
                                 Some(invalid),
+                                None,
                                 None,
                                 None,
                                 None,
@@ -1903,6 +2112,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates::default(),
                     )
                     .unwrap();
@@ -1917,6 +2127,7 @@ mod tests {
                         1,
                         None,
                         Some(recommendation.clone()),
+                        None,
                         None,
                         None,
                         None,
@@ -1938,6 +2149,7 @@ mod tests {
                         1,
                         None,
                         Some(recommendation.clone()),
+                        None,
                         None,
                         None,
                         None,
@@ -1978,6 +2190,7 @@ mod tests {
                                 100,
                                 None,
                                 Some(invalid),
+                                None,
                                 None,
                                 None,
                                 None,
@@ -2105,6 +2318,7 @@ mod tests {
                         None,
                         None,
                         None,
+                        None,
                         SourcePredicates::default()
                     )
                     .is_err()
@@ -2152,6 +2366,7 @@ mod tests {
                     &epoch,
                     "retired",
                     10,
+                    None,
                     None,
                     None,
                     None,
