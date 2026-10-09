@@ -1,8 +1,12 @@
 # Local PG17 installation preview
 
-Status: packaging implementation prepared; actual archive and clean-install
-validation are pending. This is a local development preview, with no release,
-tag, published binary or completed P5 acceptance.
+Status: local act run `preview-a044eef4fe310bef` passed the actual archive and
+package-only clean-install path for source `acfc88539bb852ea2620a72ce551cd3b17ff86b2`.
+The [scoped receipt](evidence/local-installation-preview.json) records archive,
+installed-object, SQL-result and log hashes. Twelve archive regressions and four
+SQL groups passed, including two completed physical drops after restart and
+reinstallation. This is a local development preview, with no release, tag,
+published binary or completed P5 acceptance.
 
 The preview builds an archive from an existing normal managed-helper Linux
 x86_64/PGDG PostgreSQL 17 image. It requires that image's clean exact-commit
