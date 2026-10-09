@@ -117,6 +117,11 @@ cannot be cancelled: ownership cleanup remains necessary. A same-name new
 registration has a different internal index identity and storage path, so the
 old task cannot remove its shard.
 
+The helper creates the native storage root only under its existing database
+owner-lock directory, rejects symlink or non-directory roots, and syncs the
+parent directory before publishing ownership or creating an epoch. Missing
+ancestors are rejected. An existing root is synced through its parent too, so
+an owner restart cannot bypass a prior incomplete root publication.
 Every newly allocated epoch has a durable exact index/generation/epoch/consumer
 binding beside its native directory. A committed drop writes an exclusive,
 task-bound retirement intent before removing the directory and syncs the parent
@@ -143,7 +148,10 @@ cancellation, denied roles and dense/hybrid replay. Targeted shadow crashes
 before and after flush leave the build failed and unacknowledged; the serving
 identity is retained, recovered and queried before a fresh successful build.
 The helper unit test verifies exact retirement replay, mismatched identities,
-directory removal and refusal to reopen or mutate a retired epoch.
+directory removal and refusal to reopen or mutate a retired epoch. Root tests
+exercise new and existing directories and refusal of missing parents, regular
+files and symlinks without changing unrelated paths. These tests and the process
+crash cuts do not establish storage-device or hardware power-loss behavior.
 `verify_retirements.py` covers transactional rollback, uncommitted wait refusal,
 owner admission, forged receipts, same-name replacement, archived task outcomes,
 40 native create/drop cycles, unrelated directory preservation and actual helper
@@ -189,3 +197,13 @@ The full log SHA-256 is
 `d94639fec1c3fd703264b05dec9b04c79759701d2359dd38ecd9da27312eb6bb`.
 Normal helper tests (34), fault helper tests (35), protocol tests (23) and
 supervisor-child tests (2) also passed for these source inputs.
+
+Local act scope `retirement-ee3e2a3993e264bd` repeats those nine SQL groups,
+40 cycles and four crash cuts after adding the storage-root parent sync. All
+passed, alongside 36 normal helper, 37 fault helper, 23 protocol and two
+supervisor-child tests. The tested storage source SHA-256 is
+`12535467931cc6449a1051b2735ed23fd0615849042d6f21e0e5599f4c252b39`;
+the full log SHA-256 is
+`bc7bcb33058221a377c63af0d372a7604d31d380f7fb44ae4d646ac008a9003c`.
+The same scope limitations apply; hardware power loss and the full regression
+remain unproven by this run.
