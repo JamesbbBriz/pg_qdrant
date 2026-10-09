@@ -22,7 +22,7 @@ BEGIN
    RETURN NULL;
  END IF;
  UPDATE qdrant_internal.generation_reservations SET abandoned_state='running',updated_at=clock_timestamp() WHERE task_id=j.task_id;
- RETURN jsonb_build_object('source_contract_version',17,'task_id',j.task_id,'retire',true,'index_id',i.index_id,
+ RETURN jsonb_build_object('source_contract_version',18,'task_id',j.task_id,'retire',true,'index_id',i.index_id,
    'generation',j.generation,'storage_epoch',j.storage_epoch,'consumer_id',j.consumer_id,
    'payload_contract','{}'::jsonb,'representations','{}'::jsonb,'events','[]'::jsonb);
 END $$;

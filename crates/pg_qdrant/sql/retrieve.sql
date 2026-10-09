@@ -85,7 +85,7 @@ BEGIN
    FROM jsonb_array_elements_text($1) WITH ORDINALITY k(value,ordinality)
    LEFT JOIN ONLY %s t ON t.%I=k.value::%s
    LEFT JOIN qdrant_internal.source_state s ON s.index_name=$2 AND s.tagged_key->>''value''=k.value AND NOT s.tombstone
-   LEFT JOIN LATERAL (SELECT v AS hit FROM jsonb_array_elements($3) v WHERE (v->>''id'')::bigint=s.point_id) h ON true',
+   LEFT JOIN LATERAL (SELECT native.hit FROM jsonb_array_elements($3) AS native(hit) WHERE (native.hit->>''id'')::bigint=s.point_id) h ON true',
    i.key_field,i.text_field,i.text_field,i.source_oid::regclass,i.key_field,i.key_type::regtype)
  INTO items USING normalized,i.index_name,hits;
  IF octet_length(items::text)>262144 THEN RAISE EXCEPTION 'Retrieve result exceeds 256 KiB' USING ERRCODE='54000'; END IF;

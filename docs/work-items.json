@@ -2927,22 +2927,25 @@
           "status": "partially_verified",
           "required": "Selected registry release public types/methods and implementation behavior or explicit upstream-absence record.",
           "evidence": "crates/edge-probe/README.md",
-          "verified_scope": "Native primitives and product gaps are recorded; full field/config/query contract and library decision remain pending."
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
         },
         "compile_probe": {
-          "status": "pending",
+          "status": "partially_verified",
           "probe_id": "CAP-F19",
-          "required": "Real supported API invocation/configuration compiled under the locked feature graph; no type-name-only proof."
+          "required": "Real supported API invocation/configuration compiled under the locked feature graph; no type-name-only proof.",
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
         },
         "engine_runtime": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "ENGINE-F19",
-          "required": "Full lexical domain versus candidates; document versus point counts; authorized scope"
+          "required": "Full lexical domain versus candidates; document versus point counts; authorized scope",
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-F19",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
         },
         "release": {
           "status": "pending",
@@ -2978,7 +2981,7 @@
         }
       ],
       "missing_upstream_plan": "Project statistics planner proves a permitted match domain or returns scoped candidates/null; never labels an unavailable global statistic exact.",
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {
@@ -5877,15 +5880,16 @@
       ],
       "evidence_requirements": {
         "source_api_review": {
-          "status": "pending",
-          "required": "Selected registry release public types/methods and implementation behavior or explicit upstream-absence record."
+          "status": "partially_verified",
+          "required": "Selected registry release public types/methods and implementation behavior or explicit upstream-absence record.",
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
         },
         "compile_probe": {
           "status": "partially_verified",
           "probe_id": "CAP-Q11",
           "required": "Real supported API invocation/configuration compiled under the locked feature graph; no type-name-only proof.",
           "evidence": "docs/evidence/p0-engine.json",
-          "verified_scope": "The actual public API calls in the named runtime checks compile; all remaining public-call and invalid-input combinations are still required."
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
         },
         "engine_runtime": {
           "status": "partially_verified",
@@ -5894,12 +5898,14 @@
           "evidence": "docs/evidence/p0-engine.json",
           "check_groups": [
             "payload_index_and_scoped_count"
-          ]
+          ],
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q11",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "verified_scope": "Exact native point counts and keyword/integer/bool facets with complete current-source proof for at most 1000 live points; owner domain, lexical/scalar predicates, permission, cancellation and concurrent-source refusal. Full original acceptance including documents/large domains/matrix remains open. See docs/source-statistics.md."
         },
         "release": {
           "status": "pending",
@@ -5929,7 +5935,7 @@
           "status": "pending"
         }
       ],
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {

@@ -412,6 +412,7 @@ fn run(database_oid: u32) -> Result<(), ProbeError> {
                     Operation::SourceApply { .. } => "source_apply",
                     Operation::SourceSearch { .. } => "source_search",
                     Operation::SourceRetrieve { .. } => "source_retrieve",
+                    Operation::SourceStatistics { .. } => "source_statistics",
                 };
                 #[cfg(feature = "p0-managed-helper")]
                 let Some(connection) = supervisor.connection() else {
@@ -556,6 +557,7 @@ fn execute(operation: Operation) -> Result<Value, ProbeError> {
         Operation::SourceApply { .. }
         | Operation::SourceSearch { .. }
         | Operation::SourceRetrieve { .. }
+        | Operation::SourceStatistics { .. }
         | Operation::AddressSpaceProbe => Err(ProbeError::invalid(
             "source indexing requires the managed helper build",
         )),

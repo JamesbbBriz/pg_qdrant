@@ -985,6 +985,112 @@ impl SourceOwner {
         Ok(Value::Array(result))
     }
 
+    pub fn statistics(
+        &self,
+        index_id: u64,
+        generation: &str,
+        epoch: &str,
+        point_ids: Vec<u64>,
+        facet: Option<String>,
+        facet_limit: usize,
+        predicates: SourcePredicates,
+    ) -> Result<Value, ProbeError> {
+        if point_ids.len() > 1000
+            || !(1..=100).contains(&facet_limit)
+            || point_ids.iter().any(|&id| id == 0 || id > i64::MAX as u64)
+            || point_ids
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len()
+                != point_ids.len()
+        {
+            return Err(ProbeError::invalid(
+                "statistics identity/facet budget exceeded",
+            ));
+        }
+        let key = identity(index_id, generation, epoch)?;
+        let owned = self
+            .shards
+            .get(&key)
+            .ok_or_else(|| error("generation not owned by this helper"))?;
+        if !owned.lexical_ready || !owned.payload_ready {
+            return Err(error("owned lexical/payload indexes are not ready"));
+        }
+        // Validate the entire owned domain, including points excluded by a filter.
+        // This makes stale or omitted source identities a complete-query refusal.
+        let mut all = qdrant_edge::CountRequest::new();
+        all.exact = true;
+        if owned.shard.count(all).map_err(error)? != point_ids.len() {
+            return Err(error(
+                "statistics owned point domain differs from source domain",
+            ));
+        }
+        let mut proof = Vec::with_capacity(point_ids.len());
+        for batch in point_ids.chunks(100) {
+            let records = self.retrieve(index_id, generation, epoch, batch.to_vec())?;
+            let records = records
+                .as_array()
+                .ok_or_else(|| error("invalid statistics identity proof"))?;
+            if records.len() != batch.len() {
+                return Err(error("incomplete statistics identity proof"));
+            }
+            proof.extend(records.iter().cloned());
+        }
+        let mut filter = crate::lexical::compile(&predicates, &self.encoder)?.unwrap_or_default();
+        if let Some(expression) = &predicates.payload_filter {
+            let condition: qdrant_edge::Condition =
+                serde_json::from_value(expression.native(&owned.payload_contract)?)
+                    .map_err(|_| ProbeError::invalid("invalid compiled statistics filter"))?;
+            filter.must.get_or_insert_with(Vec::new).push(condition);
+        }
+        filter = filter.with_point_ids(point_ids.into_iter().map(PointId::NumId));
+        let mut request = qdrant_edge::CountRequest::new();
+        request.exact = true;
+        request.filter = Some(filter.clone());
+        let points = owned.shard.count(request).map_err(error)?;
+        let mut facet_result = Value::Null;
+        if let Some(name) = facet {
+            match owned.payload_contract.get(&name) {
+                Some(PayloadKind::Keyword | PayloadKind::Integer | PayloadKind::Bool) => {}
+                _ => {
+                    return Err(ProbeError::invalid(
+                        "facet requires a declared keyword/integer/bool alias",
+                    ));
+                }
+            }
+            let mut request = qdrant_edge::FacetRequest::new(
+                format!("attributes.{name}")
+                    .parse()
+                    .map_err(|_| ProbeError::invalid("invalid facet alias"))?,
+            );
+            request.filter = Some(filter);
+            request.exact = true;
+            // At most 1000 scalar rows => at most 1000 distinct non-null values.
+            request.limit = 1000;
+            let response = owned.shard.facet(request).map_err(error)?;
+            let complete = response.hits.len() <= facet_limit;
+            let hits: Vec<Value> = response
+                .hits
+                .into_iter()
+                .take(facet_limit)
+                .map(|hit| {
+                    let value = match hit.value {
+                        qdrant_edge::FacetValue::Keyword(value) => json!(value),
+                        qdrant_edge::FacetValue::Int(value) => json!(value),
+                        qdrant_edge::FacetValue::Bool(value) => json!(value),
+                        qdrant_edge::FacetValue::Uuid(_) => Value::Null,
+                    };
+                    json!({"value":value,"count":hit.count})
+                })
+                .collect();
+            if hits.iter().any(|hit| hit["value"].is_null()) {
+                return Err(error("unexpected facet value kind"));
+            }
+            facet_result = json!({"field":name,"hits":hits,"values_complete":complete,"nulls":"omitted","ordering":"count descending; typed value ascending for ties"});
+        }
+        Ok(json!({"points":points,"proof":proof,"facet":facet_result}))
+    }
+
     pub fn retrieve(
         &self,
         index_id: u64,
@@ -2503,6 +2609,89 @@ mod tests {
         };
         owner.apply(batch).unwrap();
         (owner, root, generation, epoch, values)
+    }
+
+    #[test]
+    fn source_statistics_native_domain_facets_and_admission() {
+        let (owner, root, generation, epoch, _) = dense_payload_fixture(true);
+        let result = owner
+            .statistics(
+                1,
+                &generation,
+                &epoch,
+                (1..=7).collect(),
+                Some("category".into()),
+                1,
+                SourcePredicates::default(),
+            )
+            .unwrap();
+        assert_eq!(result["points"], 7);
+        assert_eq!(result["proof"].as_array().unwrap().len(), 7);
+        assert_eq!(
+            result["facet"]["hits"],
+            json!([{"value":"Denied","count":4}])
+        );
+        assert_eq!(result["facet"]["values_complete"], false);
+        let predicates: SourcePredicates = serde_json::from_value(json!({
+            "payload_filter":{"field":"category","eq":"Allow"}}))
+        .unwrap();
+        let result = owner
+            .statistics(
+                1,
+                &generation,
+                &epoch,
+                (1..=7).collect(),
+                Some("available".into()),
+                100,
+                predicates,
+            )
+            .unwrap();
+        assert_eq!(result["points"], 3);
+        assert_eq!(
+            result["facet"]["hits"],
+            json!([
+            {"value":false,"count":2},{"value":true,"count":1}])
+        );
+        assert_eq!(result["facet"]["values_complete"], true);
+        assert_eq!(result["proof"].as_array().unwrap().len(), 7);
+        for ids in [
+            vec![1, 1],
+            vec![0],
+            (1..=1001).collect(),
+            (1..=6).collect(),
+            vec![99],
+        ] {
+            assert!(
+                owner
+                    .statistics(
+                        1,
+                        &generation,
+                        &epoch,
+                        ids,
+                        None,
+                        1,
+                        SourcePredicates::default()
+                    )
+                    .is_err()
+            );
+        }
+        for alias in ["price", "unknown"] {
+            assert!(
+                owner
+                    .statistics(
+                        1,
+                        &generation,
+                        &epoch,
+                        (1..=7).collect(),
+                        Some(alias.into()),
+                        100,
+                        SourcePredicates::default()
+                    )
+                    .is_err()
+            );
+        }
+        drop(owner);
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
