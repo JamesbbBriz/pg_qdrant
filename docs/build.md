@@ -319,6 +319,16 @@ lockfile and enabled features for all four builds. Check it with:
 python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check
 ```
 
+## Source backup boundaries
+
+The [physical recovery procedure](physical-source-restore.md) tests a matching
+PG17 hot backup with external native storage, old-receipt refusal and actual
+BM25/dense/sparse/MaxSim replay in an independent clone. Default native storage
+inside PGDATA exceeds PostgreSQL 17 base-backup path limits and remains
+unsupported for physical backup. The documented external layout must be
+provisioned separately for source and restored clusters before helper startup.
+PITR, replication, failover and release support remain open.
+
 ## Keeping evidence current
 
 Failed local product tests retain their stopped disposable PostgreSQL cluster

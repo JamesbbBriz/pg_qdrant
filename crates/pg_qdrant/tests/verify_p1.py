@@ -535,6 +535,9 @@ checks += ['live-consumer DROP, installation rollback and reinstallation']
 import verify_logical_restore
 verify_logical_restore.run(sql,ready,ticket_from,checks,spawn,finish,wait_session)
 
+import verify_physical_restore
+verify_physical_restore.run(sql,ready,ticket_from,checks)
+
 print(json.dumps({'status':'passed','checks':checks,'fault_build':faults,
     'source_revision':os.environ.get('PG_QDRANT_SOURCE_SHA','unrecorded'),
     'cargo_lock_sha256':hashlib.sha256(pathlib.Path('/src/Cargo.lock').read_bytes()).hexdigest(),
