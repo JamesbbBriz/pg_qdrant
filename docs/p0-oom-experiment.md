@@ -191,3 +191,23 @@ the outer `kernel_record` attribution. The helper's roughly 30-second recorded
 recovery interval includes waiting for the already running companion `pg_sleep`;
 it is not a restart-latency measurement. The deliberate positive OOM preference
 and tiny fixture do not establish general memory isolation or index durability.
+
+## Bounded debug initialization
+
+The private native allocator initializes each successfully reserved 1 MiB buffer
+with a bulk byte write before publishing its length. The pointer covers the
+reserved `u8` allocation and all bytes are initialized before `set_len`;
+subsequent volatile writes still touch every native page. This avoids debug
+`Vec::resize` iterator overhead. The 768 MiB aggregate cap, 10-second cooperative
+deadline, allocation-error refusal, process checks and exact victim attribution
+remain unchanged.
+
+Scoped local act `oominit-617f038029ebf56c` rebuilt both private native profiles
+from matching installed build inputs plus the hashed allocator change. Four
+native guard tests passed. Each actual profile observed one kernel OOM kill;
+the direct worker exit affected companion SQL, while the helper supervisor and
+companion survived and source replay reached a fresh native owner. Neither
+strict outer gate passed: the daemon-visible PID did not establish the kernel
+victim PID. These remain correlated observations, not strict attribution,
+production isolation or full-revision CI evidence. The failed receipts are
+retained and the checker continues to fail closed.
