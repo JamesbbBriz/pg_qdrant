@@ -580,7 +580,13 @@ fn allocate(guard: &mut Guard) -> Checked<&'static str> {
         if bytes.try_reserve_exact(CHUNK_BYTES).is_err() {
             return Ok("allocation_error");
         }
-        bytes.resize(CHUNK_BYTES, 0);
+        // Initialize the reserved allocation in bulk even in debug builds.
+        // SAFETY: reserve succeeded for CHUNK_BYTES u8 elements, len is zero,
+        // and every byte is initialized before publishing the new length.
+        unsafe {
+            bytes.as_mut_ptr().write_bytes(0, CHUNK_BYTES);
+            bytes.set_len(CHUNK_BYTES);
+        }
         for offset in (0..CHUNK_BYTES).step_by(guard.page_size) {
             if started.elapsed() >= Duration::from_secs(10) {
                 return Ok("cooperative_deadline");
