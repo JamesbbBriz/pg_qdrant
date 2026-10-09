@@ -3303,7 +3303,7 @@
           "evidence": "docs/dense-representations.md",
           "test_entry": "crates/pg_qdrant/tests/verify_models.py",
           "artifact": "p1-product/p1-product-results.json",
-          "verified_scope": "Local installed PG17/Edge tests: fixed-generation dense capture, encoding inputs, source/incarnation freshness, native stale-slot removal, named slot independence, model validation, permissions, rollback and process-crash replay. Hosted exact-revision validation remains required; schema migration and full capability acceptance remain open.",
+          "verified_scope": "Local installed PG17/Edge tests: fixed-generation dense capture, encoding inputs, source/incarnation freshness, native stale-slot removal, named slot independence, model validation, permissions, rollback and process-crash replay. Full exact-revision local act validation remains required; schema migration and full capability acceptance remain open.",
           "release_supported": false
         },
         "release": {
@@ -4619,7 +4619,7 @@
           "evidence": "docs/hybrid-search.md",
           "test_entry": "crates/pg_qdrant/tests/verify_models.py",
           "artifact": "p1-product-results.json",
-          "verified_scope": "Installed owner-domain BM25/dense two-stage exact prefetch with native RRF/DBSF, bounded branch budgets and real replay queries. General nested plans, filters, tenant domains, quality and migrations remain pending; hosted evidence must identify the tested revision."
+          "verified_scope": "Installed owner-domain BM25/dense two-stage exact prefetch with native RRF/DBSF, bounded branch budgets and real replay queries. General nested plans, filters, tenant domains, quality and migrations remain pending; full local act evidence must identify the tested source snapshot."
         },
         "release": {
           "status": "pending",
@@ -4797,7 +4797,7 @@
           "evidence": "docs/hybrid-search.md",
           "test_entry": "crates/pg_qdrant/tests/verify_models.py",
           "artifact": "p1-product-results.json",
-          "verified_scope": "Actual native RRF k=2 equal weights and DBSF scores checked against independent single-branch goldens, including singleton, empty and disjoint lexical distributions. Weighted/general fusion, quality and migrations remain pending; hosted evidence must identify the tested revision."
+          "verified_scope": "Actual native RRF k=2 equal weights and DBSF scores checked against independent single-branch goldens, including singleton, empty and disjoint lexical distributions. Weighted/general fusion, quality and migrations remain pending; full local act evidence must identify the tested source snapshot."
         },
         "release": {
           "status": "pending",

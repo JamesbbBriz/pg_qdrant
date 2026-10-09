@@ -1,7 +1,8 @@
 # Installed source-to-Edge integration
 
 Status: installed Linux PG17 integration tests pass locally; full P1/P2 and
-release acceptance remain open. Hosted exact-revision CI is still required.
+release acceptance remain open. Full exact-revision local act CI is required;
+subset or development-probe success cannot satisfy it.
 [ADR 0005](adr/0005-p1-ledger-integration.md) records consolidation
 of the two earlier capture branches.
 
@@ -111,7 +112,7 @@ advanced APIs remain separate implementation gates.
 
 Run `crates/pg_qdrant/tests/run-p1.sh` against the installed helper build.
 `experiments/p1-ledger/run.sh` preserves the original independent transaction
-regressions. P0 automatic CI also runs the installed source-to-search and crash
+regressions. The full local act pipeline also runs the installed source-to-search and crash
 integration. Remaining model kinds/migration, comprehensive DDL, storage/OOM faults, upgrade/rollback,
 quality, resource limits and public packaging still require acceptance.
 

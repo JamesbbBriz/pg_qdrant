@@ -87,4 +87,5 @@ benchmark.
 slots, maximum ID/length admission, malformed contracts/output, missing and stale
 output, source edits, key reuse, permissions, native hybrid and actual shadow
 generation switching. The installed crash suite reruns these queries after native
-cuts and PostgreSQL restart. Hosted evidence must correspond to the exact head.
+cuts and PostgreSQL restart. Full local act evidence must correspond to the
+exact tested source snapshot and lockfile.
