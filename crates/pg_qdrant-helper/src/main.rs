@@ -17,6 +17,7 @@ mod lexical_syntax;
 mod payload;
 mod resources;
 mod source;
+mod storage;
 
 fn main() {
     if let Err(error) = run() {

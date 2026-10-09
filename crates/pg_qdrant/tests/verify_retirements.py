@@ -97,35 +97,27 @@ def run(sql, ready, checks, faults, crash_matrix):
         assert (sentinel/'preserve').read_text() == 'unrelated storage'
     checks.append('40 installed create/flush/drop cycles release native references beyond the 32-open-shard ceiling')
 
-    # Actual helper replacement invalidates ownership; it must preserve the
-    # old canonical directory and never claim cleanup based on an old nonce.
-    _, uncertain_path = create()
+    # Replacement retains the database OS fence and replays the exact persisted
+    # epoch identity, including a lost response after native deletion.
+    _, old_path = create()
     before = ready('retirement_docs')
     pid = json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
     os.kill(pid, signal.SIGSTOP)
     task = drop()
     os.kill(pid, signal.SIGKILL)
-    failure = wait(task, success=False)
-    # SIGKILL can precede dispatch, break its write, or close its response pipe.
-    # All are actual failed ownership/transport outcomes, never cleanup receipts.
-    reasons = {'source_owner_changed':['owner_changed'],
-               'worker_unavailable':['transport: Broken pipe', 'managed helper disconnected']}
-    assert failure['error_code'] in reasons and any(reason in failure['error'] for reason in reasons[failure['error_code']]), failure
-    assert failure['state']=='failed' and failure['pending_epochs']==1, failure
-    assert sql("SELECT count(*) FROM qdrant_internal.drop_epochs WHERE drop_task='"+task+"' AND state='cleaned'")=='0'
-    assert uncertain_path.is_dir() and (sentinel/'preserve').is_file()
-    # A fresh index remains usable despite the explicit failed cleanup task.
+    completed = wait(task)
+    assert not old_path.exists() and (sentinel/'preserve').is_file()
+    assert sql("SELECT count(*) FROM qdrant_internal.drop_epochs WHERE drop_task='"+task+"' AND state='cleaned'")=='1'
     _, path = create()
     after = ready('retirement_docs')
     assert json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid'] != pid
     assert sql("SELECT source_key FROM qdrant.search('retirement_docs','replacement')") == '1'
-    task = drop()
-    wait(task)
-    assert not path.exists() and uncertain_path.is_dir()
-    crash_matrix.append({'cut': 'drop_owner_sigkill', 'before': before, 'failed_drop': failure,
-                         'after': after, 'uncertain_directory_preserved': uncertain_path.is_dir(),
+    wait(drop())
+    assert not path.exists()
+    crash_matrix.append({'cut': 'drop_owner_sigkill', 'before': before, 'completed_drop': completed,
+                         'after': after, 'old_directory_cleaned': not old_path.exists(),
                          'fresh_directory_cleaned': not path.exists(), 'final_source_keys': ['1']})
-    checks.append('SIGKILL owner replacement fails cleanup closed, preserves uncertain storage and permits fresh trusted-source registration')
+    checks.append('SIGKILL owner replacement replays exact durable retirement and preserves unrelated/fresh storage')
 
     _, prior_path = create()
     before = ready('retirement_docs')
@@ -142,11 +134,43 @@ def run(sql, ready, checks, faults, crash_matrix):
     current_path = root/(index_id+'-'+after['generation']+'-'+after['storage_epoch'])
     assert current_path.is_dir()
     assert sql("SELECT source_key FROM qdrant.search('retirement_docs','replacement')") == '1'
-    failure = wait(drop(), success=False)
-    assert failure['error_code']=='source_owner_changed' and 'owner_changed' in failure['error'] and failure['pending_epochs'] == 1, failure
-    assert prior_path.is_dir() and not current_path.exists(), (prior_path, current_path, failure)
-    sql('DROP TABLE retirement_docs')
+    completed = wait(drop())
+    assert not prior_path.exists() and not current_path.exists(), (prior_path, current_path, completed)
     crash_matrix.append({'cut': 'drop_prior_owner_history', 'before': before, 'after': after,
-                         'failed_drop': failure, 'prior_directory_preserved': prior_path.is_dir(),
+                         'completed_drop': completed, 'prior_directory_cleaned': not prior_path.exists(),
                          'current_directory_cleaned': not current_path.exists(), 'final_source_keys': ['1']})
-    checks.append('epoch rotation retains prior ownership: DROP cleans current epoch but reports preserved old epoch as incomplete')
+    checks.append('epoch rotation retains exact ownership: DROP durably cleans current and prior owner epochs')
+
+    if faults:
+        for cut in ('after_retirement_intent','after_retirement_delete'):
+            _, deleted_path = create()
+            pid = json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
+            os.kill(pid, signal.SIGSTOP)
+            try:
+                task = drop()
+                marker = root.with_suffix('.fault')
+                marker.write_text('task:'+task+':'+cut)
+            finally:
+                os.kill(pid, signal.SIGCONT)
+            completed = wait(task)
+            assert not deleted_path.exists() and not marker.exists(), (deleted_path, completed)
+            replacement_pid = json.loads(sql('SELECT qdrant_internal.p0_ping()'))['engine_pid']
+            assert replacement_pid != pid, (pid, replacement_pid)
+            crash_matrix.append({'cut':'drop_'+cut+'_before_ack','old_helper_pid':pid,
+                                 'replacement_helper_pid':replacement_pid,'completed_drop':completed,
+                                 'directory_absent':not deleted_path.exists()})
+            checks.append('actual native abort '+cut+' before PG ACK replays persisted exact retirement')
+
+
+    # Lack of an ownership marker is uncertainty, even for a loaded shard.
+    # Keep this real negative case instead of accepting arbitrary old paths.
+    _, uncertain_path = create()
+    uncertain_path.with_name(uncertain_path.name+'.owner').unlink()
+    failure = wait(drop(), success=False)
+    assert failure['error_code']=='source_storage_identity' and failure['pending_epochs']==1, failure
+    assert uncertain_path.is_dir() and (sentinel/'preserve').is_file()
+    _, fresh_path = create()
+    wait(drop())
+    assert not fresh_path.exists() and uncertain_path.is_dir()
+    sql('DROP TABLE retirement_docs')
+    checks.append('missing persisted ownership fails cleanup closed; unrelated and uncertain storage survive fresh registration')

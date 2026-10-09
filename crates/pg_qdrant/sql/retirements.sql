@@ -151,14 +151,9 @@ BEGIN
        WHERE drop_task=d.task_id AND state='failed') THEN 'failed' ELSE 'succeeded' END WHERE task_id=d.task_id;
    RETURN NULL;
  END IF;
- IF e.engine_instance<>p_instance THEN
-   UPDATE qdrant_internal.drop_epochs SET state='failed',last_error='owner_changed; preserve uncertain storage'
-     WHERE drop_task=d.task_id AND generation=e.generation AND storage_epoch=e.storage_epoch;
-   UPDATE qdrant_internal.drop_tasks SET state='running',updated_at=clock_timestamp(),
-     last_error=coalesce(last_error,'owner_changed; preserve uncertain storage'),
-     last_error_code=coalesce(last_error_code,'source_owner_changed') WHERE task_id=d.task_id;
-   RETURN NULL;
- END IF;
+ -- The replacement helper holds the same database OS owner lock. It must
+ -- verify the persisted exact epoch/consumer binding and durable retirement
+ -- intent before deleting any path; missing or mismatched evidence fails closed.
  UPDATE qdrant_internal.drop_epochs SET state='running' WHERE drop_task=d.task_id AND generation=e.generation AND storage_epoch=e.storage_epoch;
  UPDATE qdrant_internal.drop_tasks SET state='running',updated_at=clock_timestamp() WHERE task_id=d.task_id;
  RETURN jsonb_build_object('source_contract_version',21,'task_id',e.native_task,'retire',true,'index_id',d.index_id,
@@ -179,7 +174,11 @@ BEGIN
    UPDATE qdrant_internal.drop_tasks SET state=CASE
      WHEN EXISTS(SELECT 1 FROM qdrant_internal.drop_epochs WHERE drop_task=t AND state IN ('queued','running')) THEN 'running'
      WHEN EXISTS(SELECT 1 FROM qdrant_internal.drop_epochs WHERE drop_task=t AND state='failed') THEN 'failed'
-     ELSE 'succeeded' END,updated_at=clock_timestamp() WHERE task_id=t;
+     ELSE 'succeeded' END,updated_at=clock_timestamp(),
+     last_error=CASE WHEN EXISTS(SELECT 1 FROM qdrant_internal.drop_epochs WHERE drop_task=t AND state='failed')
+       THEN last_error ELSE NULL END,
+     last_error_code=CASE WHEN EXISTS(SELECT 1 FROM qdrant_internal.drop_epochs WHERE drop_task=t AND state='failed')
+       THEN last_error_code ELSE NULL END WHERE task_id=t;
  ELSE
    PERFORM qdrant_internal.ack_generation_retirement(p_batch);
    DELETE FROM qdrant_internal.prior_epochs h USING qdrant_internal.generation_reservations j
@@ -194,7 +193,10 @@ LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE t uuid;
 BEGIN
  IF coalesce((p_error->>'retire')::boolean,false) THEN
-   UPDATE qdrant_internal.drop_epochs e SET state='failed',last_error=left(p_error->>'error',4096)
+   -- A disconnected owner may have deleted the directory before losing its
+   -- response. Replay the exact persisted retirement identity after replacement.
+   UPDATE qdrant_internal.drop_epochs e SET state=CASE WHEN p_error->>'error_code'='worker_unavailable'
+     THEN 'queued' ELSE 'failed' END,last_error=left(p_error->>'error',4096)
    FROM qdrant_internal.drop_tasks d WHERE e.drop_task=d.task_id AND d.index_id=(p_error->>'index_id')::bigint
      AND e.native_task::text=p_error->>'task_id' AND e.storage_epoch::text=p_error->>'epoch' AND e.state='running'
    RETURNING e.drop_task INTO t;

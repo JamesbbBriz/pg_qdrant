@@ -1,0 +1,53 @@
+name: Local installation preview
+on:
+  workflow_dispatch:
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: /tmp/preview-source
+    steps:
+      - name: Copy immutable packaging tools
+        working-directory: /tmp
+        run: mkdir /tmp/preview-source && cp -a /pgq-input/. /tmp/preview-source/
+      - name: Run package archive and negative regressions
+        run: python3 -m unittest discover -s scripts/tests -p 'test_preview_package.py' -v
+      - name: Compile the clean frozen normal product when requested
+        if: env.PGQ_BUILD_PRODUCT == '1'
+        run: |
+          python3 scripts/retry_snapshot_build.py docker build -f Dockerfile.p0 \
+            --build-arg P0_HELPER=1 --build-arg PG_QDRANT_SOURCE_SHA=${PGQ_SOURCE_COMMIT} \
+            -t pgq-preview-base-${PGQ_RUN_ID} .
+      - name: Build matching empty PostgreSQL installation environment
+        run: docker build --target build-tools -f Dockerfile.p0 -t pgq-preview-tools-${PGQ_RUN_ID} .
+      - name: Build and compare actual source and binary archives
+        run: |
+          docker build --network=none --target archive -f packaging/Dockerfile.preview \
+            --build-arg PRODUCT_IMAGE=pgq-preview-base-${PGQ_RUN_ID} \
+            --build-arg RUNTIME_IMAGE=pgq-preview-tools-${PGQ_RUN_ID} \
+            -t pgq-preview-archive-${PGQ_RUN_ID} .
+          docker create --label io.pg_qdrant.ci.preview=${PGQ_RUN_ID} --name pgq-preview-archive-${PGQ_RUN_ID} \
+            pgq-preview-archive-${PGQ_RUN_ID} /bin/true
+          mkdir /tmp/preview-evidence
+          docker cp pgq-preview-archive-${PGQ_RUN_ID}:/package-output/preview.tar.gz /tmp/preview-evidence/
+          docker cp pgq-preview-archive-${PGQ_RUN_ID}:/package-output/manifest.json /tmp/preview-evidence/
+      - name: Install only verified package members into the empty PG17 environment
+        run: |
+          docker build --network=none --target runtime -f packaging/Dockerfile.preview \
+            --build-arg PRODUCT_IMAGE=pgq-preview-base-${PGQ_RUN_ID} \
+            --build-arg RUNTIME_IMAGE=pgq-preview-tools-${PGQ_RUN_ID} \
+            -t pgq-preview-runtime-${PGQ_RUN_ID} .
+      - name: Exercise ordinary SQL and recovery from the installed package
+        run: |
+          docker create --label io.pg_qdrant.ci.preview=${PGQ_RUN_ID} --name pgq-preview-runtime-${PGQ_RUN_ID} \
+            --memory=2g --memory-swap=2g --cpus=2 --pids-limit=128 --network=none \
+            pgq-preview-runtime-${PGQ_RUN_ID}
+          docker start --attach pgq-preview-runtime-${PGQ_RUN_ID}
+      - name: Preserve actual package and installation evidence
+        if: always()
+        run: |
+          mkdir -p /tmp/preview-evidence
+          if docker inspect pgq-preview-runtime-${PGQ_RUN_ID} >/dev/null 2>&1; then
+            docker cp pgq-preview-runtime-${PGQ_RUN_ID}:/preview-evidence/. /tmp/preview-evidence/
+          fi

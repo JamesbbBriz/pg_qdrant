@@ -1,0 +1,33 @@
+ARG PRODUCT_IMAGE
+ARG RUNTIME_IMAGE
+FROM ${PRODUCT_IMAGE} AS archive
+USER root
+COPY scripts/preview_package.py /package-tools/preview_package.py
+COPY source-input.json /package-tools/source-input.json
+RUN mkdir /package-output && chown builder:builder /package-output
+USER builder
+RUN python3 /package-tools/preview_package.py build --snapshot /package-tools/source-input.json --output /package-output/preview.tar.gz \
+    && python3 /package-tools/preview_package.py build --snapshot /package-tools/source-input.json --output /package-output/repeat.tar.gz \
+    && cmp /package-output/preview.tar.gz /package-output/repeat.tar.gz \
+    && python3 /package-tools/preview_package.py stage --archive /package-output/preview.tar.gz --destination /package-output/stage \
+    && python3 -c "import sys;sys.path.insert(0,'/package-tools');from preview_package import *;Path('/package-output/manifest.json').write_bytes(canonical(verify_archive('/package-output/preview.tar.gz')))"
+
+FROM ${RUNTIME_IMAGE} AS runtime
+USER root
+RUN test ! -e /src \
+    && test ! -e /usr/lib/postgresql/17/lib/pg_qdrant.so \
+    && test ! -e /usr/lib/postgresql/17/bin/pg_qdrant_p0_helper \
+    && test ! -e /usr/share/postgresql/17/extension/pg_qdrant.control \
+    && test ! -e /usr/share/postgresql/17/extension/pg_qdrant--0.0.1.sql \
+    && useradd --create-home --uid 10001 builder
+COPY --from=archive /package-output/stage/usr/lib/postgresql/17/lib/pg_qdrant.so /usr/lib/postgresql/17/lib/pg_qdrant.so
+COPY --from=archive /package-output/stage/usr/lib/postgresql/17/bin/pg_qdrant_p0_helper /usr/lib/postgresql/17/bin/pg_qdrant_p0_helper
+COPY --from=archive /package-output/stage/usr/share/postgresql/17/extension/pg_qdrant.control /usr/share/postgresql/17/extension/pg_qdrant.control
+COPY --from=archive /package-output/stage/usr/share/postgresql/17/extension/pg_qdrant--0.0.1.sql /usr/share/postgresql/17/extension/pg_qdrant--0.0.1.sql
+COPY --from=archive /package-output/manifest.json /package-tools/manifest.json
+COPY scripts/preview_package.py scripts/verify_preview.py /package-tools/
+COPY packaging/run-preview.sh /package-tools/run-preview.sh
+RUN mkdir /preview-evidence && chown builder:builder /preview-evidence
+ENV PG_QDRANT_MANAGED_HELPER=1 PG_QDRANT_ARTIFACT_DIR=/preview-evidence
+USER builder
+CMD ["bash", "/package-tools/run-preview.sh"]

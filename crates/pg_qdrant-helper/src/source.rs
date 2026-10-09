@@ -26,6 +26,7 @@ use std::{
 
 struct SourceShard {
     shard: EdgeShard,
+    consumer_id: String,
     representations: BTreeMap<String, RepresentationContract>,
     lexical_ready: bool,
     payload_contract: BTreeMap<String, PayloadKind>,
@@ -36,7 +37,6 @@ pub struct SourceOwner {
     root: PathBuf,
     shards: HashMap<String, SourceShard>,
     encoder: EdgeBm25,
-    retired: HashMap<String, (String, Option<String>)>,
 }
 
 fn error(e: impl std::fmt::Display) -> ProbeError {
@@ -64,7 +64,6 @@ impl SourceOwner {
             root,
             shards: HashMap::new(),
             encoder: crate::lexical::encoder()?,
-            retired: HashMap::new(),
         })
     }
 
@@ -90,47 +89,50 @@ impl SourceOwner {
             {
                 return Err(ProbeError::invalid("retirement contains mutation data"));
             }
-            if let Some(receipt) = self.retired.get(&key) {
-                if receipt != &(batch.consumer_id.clone(), batch.task_id.clone()) {
-                    return Err(error("retirement receipt identity mismatch"));
+            if let Some(owned) = self.shards.get(&key) {
+                if owned.consumer_id != batch.consumer_id {
+                    return Err(error("retirement consumer identity mismatch"));
                 }
-                return Ok(
-                    json!({"source_contract_version":SOURCE_CONTRACT_VERSION,"generation":batch.generation,
-                    "storage_epoch":batch.storage_epoch,"consumer_id":batch.consumer_id,"task_id":batch.task_id,
-                    "event_ids":[],"flushed":true,"retired":true}),
-                );
+                owned.shard.flush().map_err(error)?;
             }
-            if self.retired.len() >= 256 {
-                return Err(error("retirement receipt cache is full; restart required"));
-            }
-            let owned = self
-                .shards
-                .get(&key)
-                .ok_or_else(|| error("retired generation is not owned"))?;
-            owned.shard.flush().map_err(error)?;
-            let path = self.root.join(&key);
-            let metadata = std::fs::symlink_metadata(&path).map_err(error)?;
-            if metadata.file_type().is_symlink()
-                || !metadata.is_dir()
-                || path.canonicalize().map_err(error)?.parent()
-                    != Some(self.root.canonicalize().map_err(error)?.as_path())
-            {
-                return Err(error("retirement path is outside the owned storage root"));
-            }
+            crate::storage::begin_retirement(
+                &self.root,
+                &key,
+                &batch.consumer_id,
+                batch.task_id.as_deref().expect("validated retirement task"),
+            )?;
+            #[cfg(feature = "p0-fault-injection")]
+            fault(
+                &self.root,
+                "after_retirement_intent",
+                batch.index_id,
+                batch.task_id.as_deref(),
+            );
             // A single native owner serializes this after all admitted native
-            // queries. PostgreSQL switches only after source binding pins end.
+            // queries and holds the database OS lock across owner replacement.
+            // Persisted exact identity permits retirement without reopening a
+            // dirty shard. PostgreSQL switches only after source pins end.
             drop(self.shards.remove(&key));
-            std::fs::remove_dir_all(&path).map_err(error)?;
-            self.retired
-                .insert(key, (batch.consumer_id.clone(), batch.task_id.clone()));
+            crate::storage::remove_epoch(&self.root, &key)?;
+            #[cfg(feature = "p0-fault-injection")]
+            fault(
+                &self.root,
+                "after_retirement_delete",
+                batch.index_id,
+                batch.task_id.as_deref(),
+            );
             return Ok(
                 json!({"source_contract_version":SOURCE_CONTRACT_VERSION,"generation":batch.generation,
                 "storage_epoch":batch.storage_epoch,"consumer_id":batch.consumer_id,"task_id":batch.task_id,
                 "event_ids":[],"flushed":true,"retired":true}),
             );
         }
-        if self.retired.contains_key(&key) {
-            return Err(error("retired storage epoch cannot receive mutations"));
+        if self
+            .shards
+            .get(&key)
+            .is_some_and(|s| s.consumer_id != batch.consumer_id)
+        {
+            return Err(error("source consumer identity changed within an epoch"));
         }
         crate::payload::validate_contract(&batch.payload_contract)?;
         let mut dense_config = HashMap::new();
@@ -247,9 +249,8 @@ impl SourceOwner {
             }
             let path = self.root.join(&key);
             // Never load an existing path as a clean generation after owner loss.
-            if path.exists() {
-                return Err(error("storage epoch already exists; rebuild required"));
-            }
+            // Bind exact ownership durably before any fallible shard creation.
+            crate::storage::bind(&self.root, &key, &batch.consumer_id)?;
             std::fs::create_dir_all(&path).map_err(error)?;
             let config = EdgeConfig {
                 vectors: dense_config,
@@ -261,6 +262,7 @@ impl SourceOwner {
                 key.clone(),
                 SourceShard {
                     shard: EdgeShard::new(&path, config).map_err(error)?,
+                    consumer_id: batch.consumer_id.clone(),
                     representations: batch.representations.clone(),
                     lexical_ready: false,
                     payload_contract: batch.payload_contract.clone(),
@@ -3767,7 +3769,7 @@ mod tests {
                 .is_err()
         );
         drop(owner);
-        std::fs::remove_dir(&root).unwrap();
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }
 
