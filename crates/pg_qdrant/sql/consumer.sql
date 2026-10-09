@@ -21,14 +21,21 @@ BEGIN
  ON CONFLICT(index_name) DO UPDATE SET generation=excluded.generation,
    storage_epoch=gen_random_uuid(),consumer_id=gen_random_uuid(),engine_instance=excluded.engine_instance,
    state='building',last_error=NULL WHERE old.engine_instance<>excluded.engine_instance;
- SELECT idx.* INTO i FROM qdrant_internal.index_catalog idx
- JOIN qdrant_internal.consumer_state cs USING(index_name)
- WHERE cs.state<>'failed'
-   AND qdrant_internal.p1_index_status(idx.index_name)->>'capture_state'='capturing'
-   AND (cs.state<>'ready' OR NOT idx.backfill_done OR EXISTS (
+ -- Materialize pending work before validating a source binding. A planner can
+ -- otherwise evaluate the catalog/trigger checks and history counts for every
+ -- idle index on each dispatch. Bind validation to the materialized name, not
+ -- the outer catalog scan; every eligible source still passes the same gate.
+ WITH pending AS MATERIALIZED (
+   SELECT idx.index_id,idx.index_name,cs.updated_at
+   FROM qdrant_internal.index_catalog idx
+   JOIN qdrant_internal.consumer_state cs USING(index_name)
+   WHERE cs.state<>'failed' AND (cs.state<>'ready' OR NOT idx.backfill_done OR EXISTS (
      SELECT 1 FROM qdrant_internal.outbox e LEFT JOIN qdrant_internal.event_ack a USING(event_id)
      WHERE e.index_name=idx.index_name AND (a.event_id IS NULL OR a.storage_epoch<>cs.storage_epoch)))
- ORDER BY cs.updated_at,idx.index_id LIMIT 1 FOR NO KEY UPDATE OF idx SKIP LOCKED;
+ )
+ SELECT idx.* INTO i FROM pending p JOIN qdrant_internal.index_catalog idx USING(index_id)
+ WHERE qdrant_internal.p1_index_status(p.index_name)->>'capture_state'='capturing'
+ ORDER BY p.updated_at,idx.index_id LIMIT 1 FOR NO KEY UPDATE OF idx SKIP LOCKED;
  IF NOT FOUND THEN RETURN NULL; END IF;
  PERFORM qdrant_internal.backfill_step(i.index_name);
  SELECT * INTO STRICT c FROM qdrant_internal.consumer_state WHERE index_name=i.index_name;

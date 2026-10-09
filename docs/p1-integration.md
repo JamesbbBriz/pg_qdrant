@@ -54,6 +54,13 @@ bound to generation, storage epoch, consumer and exact event membership. Only
 a matching receipt permits PostgreSQL ACK. Caller deadlines do not release a
 running native operation's owner.
 
+Source dispatch materializes pending work before checking source bindings. An
+idle index therefore avoids repeating catalog, trigger and event-history
+validation on each poll; selected pending sources still pass the same capture
+gate. The installed regression measures actual function calls with a positive
+control and requires zero binding validations and unchanged consumer state for
+an idle dispatch. This does not establish a latency or memory guarantee.
+
 Helper replacement rotates storage epoch, preserves dirty directories, and
 replays retained PostgreSQL events into a fresh shard. It uses a fresh random
 execution identity rather than PID equality as its fence.
