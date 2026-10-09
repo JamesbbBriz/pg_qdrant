@@ -324,7 +324,7 @@ def execute(args):
                 try:
                     if observer_image:
                         journal = observe(observer_image, "kernel", {"container_id": container_id,
-                            "mapping": mapping, "since": started_wall})
+                            "mapping": mapping})
                         report["kernel_record_source"] = "daemon_host_read_only_observer"
                     else:
                         journal = command(["journalctl", "-k", "--no-pager", "-n", "2000", "-o", "json",

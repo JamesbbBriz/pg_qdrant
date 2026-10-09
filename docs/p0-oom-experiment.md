@@ -112,6 +112,17 @@ after failure where the Docker daemon remains available. Only this invocation's
 fresh container is eligible for cleanup. Output collection and subprocess waits
 are bounded. A missing or malformed observation is a failed gate.
 
+For local container-daemon observation, a separate read-only observer binds the
+native PID, start ticks and container cgroup before releasing allocation. It
+reads the kernel ring through `klogctl(SYSLOG_ACTION_READ_ALL)` into a fixed
+2 MiB buffer; it never consumes, clears or resizes the ring. A full buffer,
+incomplete record, unavailable interface or unrecognized format fails closed.
+The observer records the kernel log's monotonic cursor before the barrier and
+considers only later records. It does not convert wall time or process start
+ticks into kernel log timestamps. Projection remains bounded to 32 matching
+records of at most 16 KiB each. Exact victim PID and limiting-cgroup checks still
+apply; cgroup counters and SIGKILL alone cannot pass attribution.
+
 ## Verification and CI integration
 
 Safe local checks do not call the native operation or change OOM scores:
