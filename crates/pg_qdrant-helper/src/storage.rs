@@ -87,7 +87,27 @@ fn publish(path: &Path, value: &Value) -> Result<(), ProbeError> {
 }
 
 pub fn bind(root: &Path, key: &str, consumer: &str) -> Result<(), ProbeError> {
-    std::fs::create_dir_all(root).map_err(failure)?;
+    // The database owner lock already requires an existing parent directory.
+    // Do not create unchecked ancestors whose entries have not been synced.
+    match std::fs::create_dir(root) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(error) => return Err(failure(error)),
+    }
+    root_directory(root)?;
+    let parent = root
+        .parent()
+        .ok_or_else(|| failure("storage root has no parent directory"))?;
+    let parent = if parent.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        parent
+    };
+    // Persist the root entry before publishing ownership or creating an epoch.
+    // Also sync an existing root: a prior owner may have died before this sync.
+    File::open(parent)
+        .and_then(|dir| dir.sync_all())
+        .map_err(failure)?;
     let binding = marker(root, key, "owner")?;
     if root.join(key).try_exists().map_err(failure)?
         || binding.try_exists().map_err(failure)?
@@ -171,6 +191,41 @@ mod tests {
         fn drop(&mut self) {
             std::fs::remove_dir_all(&self.0).unwrap();
         }
+    }
+
+    #[test]
+    fn new_root_is_bound_and_existing_root_accepts_a_distinct_epoch() {
+        let f = Fixture::new();
+        let root = f.0.join("indexes");
+        bind(&root, KEY, "consumer").unwrap();
+        assert_eq!(
+            read(&root.join(format!("{KEY}.owner"))).unwrap(),
+            json!({"version":1,"epoch_key":KEY,"consumer_id":"consumer"})
+        );
+        bind(&root, "ab-cd", "other").unwrap();
+        assert!(root.join("ab-cd.owner").is_file());
+        assert!(bind(&root, KEY, "consumer").is_err());
+    }
+
+    #[test]
+    fn missing_parent_and_non_directory_roots_preserve_existing_paths() {
+        let f = Fixture::new();
+        let missing_parent = f.0.join("missing");
+        assert!(bind(&missing_parent.join("indexes"), KEY, "consumer").is_err());
+        assert!(!missing_parent.exists());
+
+        let file = f.0.join("file");
+        std::fs::write(&file, b"preserve").unwrap();
+        assert!(bind(&file, KEY, "consumer").is_err());
+        assert_eq!(std::fs::read(&file).unwrap(), b"preserve");
+
+        let outside = Fixture::new();
+        std::fs::write(outside.0.join("data"), b"preserve").unwrap();
+        let link = f.0.join("link");
+        std::os::unix::fs::symlink(&outside.0, &link).unwrap();
+        assert!(bind(&link, KEY, "consumer").is_err());
+        assert_eq!(std::fs::read(outside.0.join("data")).unwrap(), b"preserve");
+        assert!(!outside.0.join(format!("{KEY}.owner")).exists());
     }
 
     #[test]
