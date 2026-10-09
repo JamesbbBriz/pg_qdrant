@@ -289,3 +289,33 @@ occurred. The helper retained PostgreSQL and companion sessions and replayed
 source data under a replacement owner. All 84 Python tests passed in the
 separate three-gate static scope `5ca30ddc729b7039`, including staged-input and
 invalid/reused publication checks. A full current-revision run remains required.
+
+## Bounded external allocation observations
+
+The SQL fault driver records selected cgroup memory, reclaim, pressure and CPU
+throttling counters every 50 ms during its existing 30-second observation window,
+with an explicit maximum of 601 samples. It also reads the exact native target's
+main-thread CPU ticks and page faults from the Linux
+[task stat interface](https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html).
+The start tick must match before any thread counters are attributed; a reused
+PID or disappeared task is recorded separately. Missing optional cgroup counters
+remain absent, and unexpected read or parsing failures fail the observation.
+Samples already collected remain in the failure report.
+
+These read-only observations help distinguish reclaim pressure, CPU throttling
+and page-fault work if the cooperative deadline recurs. They do not prove a
+cause or change the native allocator, its 768 MiB cap, 10-second deadline,
+64 KiB native-log limit or the outer 2 MiB SQL-report limit. Exact kernel
+victim attribution and PostgreSQL/source recovery remain required independently.
+
+Scoped local act `oomsnapshot-b91541b37b6c5a8c` passed both strict kernel-victim
+comparisons with these observers and eight parser/refusal tests. The native
+direct/helper binaries were retained unchanged from clean `123f611`; their
+extension hashes were checked against their original native build reports.
+Seven frozen executable/observer inputs and the full act log were hash-verified;
+the log SHA-256 is
+`6ec7425a3798eb63f468ac98843e9092145c0eb504b32e14678972d26e7d9098`.
+Direct-worker collateral interruption, PostgreSQL recovery and marker retention
+passed; the helper preserved the companion and replayed deletion/key reuse to a
+durable ticket with obsolete native incarnation removal. These scoped passes do
+not replace the earlier failed full regression or establish the deadline's cause.

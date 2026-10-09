@@ -15,7 +15,11 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from oom_allocation_snapshot import allocation_snapshot
 
 
 PSQL = os.environ["PG_QDRANT_PSQL"]
@@ -215,13 +219,16 @@ def observe():
         "profile": PROFILE, "target": target, "cgroup": marker["cgroup"], "armed": armed_record})
     started = time.monotonic()
     samples = []
+    REPORT["memory_samples"] = samples
     event_observed = False
     overlap = False
     deadline = started + 30
     while time.monotonic() < deadline:
         current = counters()
+        assert len(samples) < 601, "bounded allocation observation exceeded"
         samples.append({"after_ms": int((time.monotonic()-started)*1000),
-                        "memory_current": int(bounded_text(CGROUP / "memory.current"))})
+                        "memory_current": int(bounded_text(CGROUP / "memory.current")),
+                        **allocation_snapshot(target, bounded_text, CGROUP)})
         records = native_lines()
         boundaries = [record for record in records if record.get("event") == "allocation_started"]
         if boundaries:
