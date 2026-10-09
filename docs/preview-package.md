@@ -21,6 +21,12 @@ Upstream license texts remain unchanged. Complete transitive/native notices and
 distribution review remain open; this archive is for local installation tests.
 It is not a release attestation or a complete distribution license inventory.
 
+The local command also exports [unchanged notice evidence](notice-evidence.md)
+beside the archive. It verifies original crate checksums and members, records
+missing texts and retains native package copyright files. The run receipt hashes
+every exported notice recursively. This material is separate from the four
+installed runtime objects and does not certify complete distribution coverage.
+
 ```sh
 # Compile this clean checkout, then build and exercise its package:
 python3 scripts/local_preview.py --build

@@ -12,7 +12,9 @@ jobs:
         working-directory: /tmp
         run: mkdir /tmp/preview-source && cp -a /pgq-input/. /tmp/preview-source/
       - name: Run package archive and negative regressions
-        run: python3 -m unittest discover -s scripts/tests -p 'test_preview_package.py' -v
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_preview_package.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_collect_notices.py' -v
       - name: Compile the clean frozen normal product when requested
         if: env.PGQ_BUILD_PRODUCT == '1'
         run: |
@@ -32,6 +34,7 @@ jobs:
           mkdir /tmp/preview-evidence
           docker cp pgq-preview-archive-${PGQ_RUN_ID}:/package-output/preview.tar.gz /tmp/preview-evidence/
           docker cp pgq-preview-archive-${PGQ_RUN_ID}:/package-output/manifest.json /tmp/preview-evidence/
+          docker cp pgq-preview-archive-${PGQ_RUN_ID}:/package-output/notices /tmp/preview-evidence/
       - name: Install only verified package members into the empty PG17 environment
         run: |
           docker build --network=none --target runtime -f packaging/Dockerfile.preview \
