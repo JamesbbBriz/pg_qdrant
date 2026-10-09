@@ -1,5 +1,6 @@
 """Installed declared scalar capture, durability and authorized source retrieval."""
 import json
+import time
 
 
 def run(sql,ready,ticket_from,checks):
@@ -16,6 +17,10 @@ def run(sql,ready,ticket_from,checks):
     def register(name,source='payload_docs',payload=None):
         value=dict(settings,payload=contract if payload is None else payload)
         return 'SELECT qdrant.create_index('+literal(name)+','+literal(source)+",'id',"+literal(json.dumps(value))+')'
+    def drop(name):
+        task=json.loads(sql('SELECT qdrant.drop_index('+literal(name)+')'))['task_id']
+        result=json.loads(sql('SELECT qdrant.await_task('+literal(task)+',60000)'))
+        assert result['succeeded'] and result['physical_cleanup_completed'],result
     sql('CREATE TABLE payload_docs(id bigint PRIMARY KEY,body text NOT NULL,"Category / 汉字" text,quantity bigint,price double precision,available boolean,private_note text)')
     sql("INSERT INTO payload_docs SELECT n,'payload anchor '||n,'class '||n,CASE WHEN n=1 THEN 9223372036854775807 ELSE n END,n::float8/10,n%2=0,'private unindexed secret' FROM generate_series(1,40) n")
     sql(register('payload_docs'))
@@ -60,6 +65,12 @@ def run(sql,ready,ticket_from,checks):
     # Public task status and fresh active generation prove the same scalar contract
     # is built and caught up through actual shadow native delivery.
     assert json.loads(sql("SELECT qdrant.await_task('"+task['task_id']+"',30000)"))['state']=='succeeded'
+    deadline=time.monotonic()+10
+    while time.monotonic()<deadline:
+        cleanup=json.loads(sql("SELECT qdrant.task_status('"+task['task_id']+"')"))
+        if cleanup['retired_storage_cleanup']: break
+        time.sleep(.01)
+    assert cleanup['retired_storage_cleanup'],cleanup
     replay()
     checks.append('payload primary-key reincarnation and actual shadow generation rebuild retain current attributes')
     sql('CREATE TABLE payload_invalid(id bigint PRIMARY KEY,body text NOT NULL,quantity bigint)')
@@ -91,13 +102,13 @@ def run(sql,ready,ticket_from,checks):
     ready('payload_binding')
     sql('ALTER TABLE payload_binding ALTER COLUMN category TYPE bigint USING NULL::bigint')
     assert '55000' in sql("SELECT qdrant.retrieve('payload_binding','[\"1\"]')",ok=False)
-    sql("SELECT qdrant.drop_index('payload_binding')")
+    drop('payload_binding')
     checks.append('payload source type changes invalidate admission and cannot serve an old native schema')
     sql('CREATE TABLE payload_large(id bigint PRIMARY KEY,body text NOT NULL,category text)')
     sql(register('payload_large','payload_large',{'c'+str(n):dict(field='category',kind='keyword') for n in range(8)}))
     assert '54000' in sql("INSERT INTO payload_large VALUES(1,'anchor',repeat('x',1024))",ok=False)
     assert sql('SELECT count(*) FROM payload_large')=='0'
-    sql("SELECT qdrant.drop_index('payload_large')")
+    drop('payload_large')
     # Four accepted near-limit source projections exceed one IPC envelope.
     # Exact byte packing must make forward progress without dropping membership.
     sql('CREATE TABLE payload_packed(id bigint PRIMARY KEY,body text NOT NULL,category text)')
@@ -112,6 +123,6 @@ def run(sql,ready,ticket_from,checks):
     waited=json.loads(sql("SELECT qdrant.await_task('"+task+"',30000)"))
     assert waited['succeeded'],(waited,sql("SELECT qdrant.task_status('"+task+"')"),sql("SELECT qdrant.index_status('payload_packed')"))
     assert sql("SELECT count(*) FROM qdrant.search('payload_packed','anchor')")=='4'
-    sql("SELECT qdrant.drop_index('payload_packed')")
+    drop('payload_packed')
     checks.append('8 KiB scalar projection overflow rolls back, 480 KiB event prefix leaves IPC headroom and multi-envelope source/backfill batches ACK all exact events after native flush')
     return replay

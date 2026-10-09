@@ -59,6 +59,7 @@ def start(owner, ready=True, inherited_address_space=None):
         limits = result["result"]["resource_limits"]
         assert limits['address_space_limit_enforced'] and not limits['rss_limit_enforced']
         assert limits['address_space_soft_bytes'] == limits['address_space_hard_bytes']
+        assert limits['glibc_arena_max'] == 2
         assert 512*1024**2 <= limits['address_space_hard_bytes'] <= 8*1024**3
         assert resource.prlimit(process.pid, resource.RLIMIT_AS) == (limits['address_space_soft_bytes'], limits['address_space_hard_bytes'])
     return process
