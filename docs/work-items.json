@@ -9109,6 +9109,17 @@
           "scope": "Matching-build PG17 actual custom-format source dump/restore with explicitly retained dense, learned sparse and token-vector declarations. Restored model guards are matched by function/event/arguments/output-column set under the source DDL lock and reused; omitted or eight altered guards fail closed, and invalid later slots/rollback preserve trigger identities. Fresh incarnations make retained outputs stale; old identity submissions and model queries are refused. Current encoding inputs plus ordinary source UPDATE rebuild all three native representations through exact durable tickets and actual dense/sparse/MaxSim results. A later model-guard drop still invalidates capture and native reads. Automatic metadata/declaration restoration, ACL/roles, changed configuration, cross-version upgrades, base backup, PITR, replication/failover and full local act evidence remain open.",
           "full_capability_acceptance": false,
           "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-09",
+          "level": "SQL-integration-verified",
+          "kind": "installed_physical_source_replay",
+          "status": "passed",
+          "source": "docs/physical-source-restore.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_physical_restore.py",
+          "scope": "Scoped local act 393b0ec17909c944 on matching cffdae8 installed PG17 binaries and hashed test inputs: actual streaming-WAL hot basebackup overlaps committed update/delete/key reuse, passes full pg_verifybackup, excludes a post-backup commit, preserves PG incarnations/generations, refuses old ACK readiness, rotates native owner/consumer/epoch, rebuilds exact durable tickets and queries BM25/dense/sparse/MaxSim. Source and clone use separately provisioned private external native directories; zero Edge files enter the backup. Default PGDATA native layout fails PostgreSQL 17 tar path limits and is unsupported for physical backup. Automatic relocation, PITR, replication/failover, interrupted/corrupt backups and exact-tip full CI remain open.",
+          "full_capability_acceptance": false,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
@@ -11612,6 +11623,17 @@
           "source": "docs/logical-source-restore.md",
           "test_entry": "crates/pg_qdrant/tests/verify_model_restore.py",
           "scope": "Matching-build PG17 actual custom-format source dump/restore with explicitly retained dense, learned sparse and token-vector declarations. Restored model guards are matched by function/event/arguments/output-column set under the source DDL lock and reused; omitted or eight altered guards fail closed, and invalid later slots/rollback preserve trigger identities. Fresh incarnations make retained outputs stale; old identity submissions and model queries are refused. Current encoding inputs plus ordinary source UPDATE rebuild all three native representations through exact durable tickets and actual dense/sparse/MaxSim results. A later model-guard drop still invalidates capture and native reads. Automatic metadata/declaration restoration, ACL/roles, changed configuration, cross-version upgrades, base backup, PITR, replication/failover and full local act evidence remain open.",
+          "full_capability_acceptance": false,
+          "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-09",
+          "level": "SQL-integration-verified",
+          "kind": "installed_physical_source_replay",
+          "status": "passed",
+          "source": "docs/physical-source-restore.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_physical_restore.py",
+          "scope": "Scoped local act 393b0ec17909c944 on matching cffdae8 installed PG17 binaries and hashed test inputs: actual streaming-WAL hot basebackup overlaps committed update/delete/key reuse, passes full pg_verifybackup, excludes a post-backup commit, preserves PG incarnations/generations, refuses old ACK readiness, rotates native owner/consumer/epoch, rebuilds exact durable tickets and queries BM25/dense/sparse/MaxSim. Source and clone use separately provisioned private external native directories; zero Edge files enter the backup. Default PGDATA native layout fails PostgreSQL 17 tar path limits and is unsupported for physical backup. Automatic relocation, PITR, replication/failover, interrupted/corrupt backups and exact-tip full CI remain open.",
           "full_capability_acceptance": false,
           "release_supported": false
         }

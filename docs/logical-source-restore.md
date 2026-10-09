@@ -117,8 +117,12 @@ outputs and queries real native dense, sparse and MaxSim results after durable
 tickets.
 
 Automatic declaration export or restore, changed analyzers/configuration,
-cross-version/cluster upgrades, base
-backup, PITR, physical replication and failover remain unsupported pending
+cross-version/cluster upgrades, default-layout base backup, PITR, physical
+replication and failover remain unsupported pending
 their own implementation and end-to-end evidence. Retained BYOV columns alone
 do not establish readiness under new incarnations. No full L12 or stage
 acceptance is promoted by this recovery slice.
+
+A separate [physical recovery slice](physical-source-restore.md) verifies a
+matching-build standalone hot backup with explicitly external native storage
+and fresh source-derived replay. It does not establish the modes above.
