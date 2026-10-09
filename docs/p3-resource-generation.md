@@ -161,8 +161,9 @@ capacity constraints; disk/RSS admission and old-owner orphan reclamation remain
 
 The protocol resource validators and narrower SQL limits do not establish full
 native memory/thread/optimization budgets. A [logical source recovery slice](logical-source-restore.md)
-uses explicit fresh text registration after pg_dump/restore; automatic metadata
-restore and BYOV migration remain open. Base backup/PITR/replication, format
+uses explicit fresh registration after pg_dump/restore, including strictly
+matched model guards and resubmission of stale BYOV outputs with new identities.
+Automatic metadata restoration remains open. Base backup/PITR/replication, format
 upgrade and rollback, platform distribution, full fault combinations and
 quality gates remain required. No release support or complete stage gate is
 promoted by this implementation.

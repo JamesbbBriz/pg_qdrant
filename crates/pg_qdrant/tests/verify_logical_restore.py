@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import secrets
 import subprocess
+import verify_model_restore
 
 
 def run(sql, ready, ticket_from, checks, spawn, finish, wait_session):
@@ -31,6 +32,7 @@ def run(sql, ready, ticket_from, checks, spawn, finish, wait_session):
         old_ticket = ticket_from(sql("BEGIN; UPDATE restored_docs SET body='logical backup committed' WHERE id=1; "
                                     "SELECT qdrant.track_changes('restored_docs'); COMMIT"))
         assert json.loads(sql("SELECT qdrant.await_changes('" + old_ticket + "',60000)"))['durable']
+        model_fixture = verify_model_restore.prepare(sql, ready, ticket_from)
         subprocess.run(['pg_dump', '--format=custom', '--no-owner', '--no-acl', '--file', str(dump)],
                        check=True, timeout=30)
         sql('CREATE DATABASE ' + restored_database + ' TEMPLATE template0')
@@ -94,6 +96,7 @@ def run(sql, ready, ticket_from, checks, spawn, finish, wait_session):
         assert sql("SELECT count(*) FROM qdrant.search('restored_docs','committed')") == '0'
         assert sql("SELECT count(*) FROM qdrant.search('restored_docs','restored')") == '2'
         checks.append('ordinary restored-source DML, delete/key reuse and a newly committed fixed ticket reach real Edge flush/ACK without reusing the old backup ticket')
+        verify_model_restore.recover(sql, ready, ticket_from, checks, model_fixture)
         sql('CREATE TABLE ownership_race(id bigint PRIMARY KEY,body text NOT NULL); ALTER TABLE ownership_race OWNER TO pgq_writer')
         owner_name = sql('SELECT session_user').replace('"', '""')
         holder = spawn('BEGIN; LOCK TABLE ownership_race IN ACCESS EXCLUSIVE MODE; SELECT pg_sleep(3); '

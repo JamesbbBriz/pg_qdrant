@@ -127,6 +127,7 @@ CREATE FUNCTION qdrant_internal.register_representations(p_name text,p_slots jso
 LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog,pg_temp AS $$
 DECLARE i qdrant_internal.index_catalog%ROWTYPE; slot record; c jsonb; k text; field text;
         field_type oid; fields text[]:='{}'; dimensions bigint; allowed text[];
+        legacy pg_trigger%ROWTYPE; expected_attributes smallint[]; actual_attributes smallint[]; reuse_guard boolean;
         common_fields text[]:=ARRAY['kind','model_id','model_version','tokenizer','dimensions','distance',
           'normalization','storage_precision','vector_field','fingerprint_field','incarnation_field',
           'model_id_field','model_version_field'];
@@ -194,11 +195,29 @@ BEGIN
      END IF;
      fields:=array_append(fields,field);
    END LOOP;
+   -- Source registration still holds the DDL lock. A logical restore retains
+   -- user-table guards but no representation catalog. Reuse only an exact
+   -- declaration match; dropping a guard would correctly invalidate capture.
+   SELECT * INTO legacy FROM pg_trigger WHERE tgrelid=i.source_oid AND tgname='qdrant_model_'||slot.key;
+   reuse_guard:=FOUND;
+   IF reuse_guard THEN
+     SELECT array_agg(attnum ORDER BY attnum) INTO expected_attributes FROM pg_attribute
+       WHERE attrelid=i.source_oid AND attname=ANY(fields) AND attnum>0 AND NOT attisdropped;
+     SELECT array_agg(a ORDER BY a) INTO actual_attributes FROM unnest(legacy.tgattr::smallint[]) a;
+     IF (NOT legacy.tgisinternal AND legacy.tgenabled='O' AND legacy.tgtype=19 AND legacy.tgnargs=2
+         AND legacy.tgargs=convert_to(p_name,'UTF8')||decode('00','hex')||convert_to(slot.key,'UTF8')||decode('00','hex')
+         AND legacy.tgfoid='qdrant_internal.model_output_guard()'::regprocedure
+         AND legacy.tgqual IS NULL AND legacy.tgconstraint=0 AND actual_attributes=expected_attributes) IS NOT TRUE THEN
+       RAISE EXCEPTION 'Unrecognized model output trigger: %',legacy.tgname USING ERRCODE='55000';
+     END IF;
+   END IF;
    INSERT INTO qdrant_internal.representation_catalog VALUES(p_name,slot.key,c);
-   EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OF %s ON %s
+   IF NOT reuse_guard THEN
+     EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OF %s ON %s
       FOR EACH ROW EXECUTE FUNCTION qdrant_internal.model_output_guard(%L,%L)',
       'qdrant_model_'||slot.key,(SELECT string_agg(format('%I',f),',') FROM unnest(fields) f),
       i.source_oid::regclass,p_name,slot.key);
+   END IF;
  END LOOP;
 END $$;
 
