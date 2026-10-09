@@ -10,12 +10,14 @@ def run(sql, ready, ticket_from, checks, spawn=None):
     contract=dict(kind='dense',model_id='recommendation',model_version='r1',tokenizer='fixture',dimensions=2,
         distance='dot',normalization='none',storage_precision='float32',vector_field='v',fingerprint_field='fp',
         incarnation_field='inc',model_id_field='model',model_version_field='version')
-    sql('CREATE TABLE recommendation_docs(id bigint PRIMARY KEY,body text NOT NULL,v jsonb,fp text,inc uuid,model text,version text)')
+    sql('CREATE TABLE recommendation_docs(id bigint PRIMARY KEY,body text NOT NULL,v jsonb,fp text,inc uuid,model text,version text,category text,quantity bigint,price float8,available boolean)')
     bodies=['positive anchor','negative anchor','anchor preferred crate','anchor distant crate','anchor compact blue','anchor distant red','anchor neutral room']
     vectors=[[1,0],[0,1],[.9,.1],[.1,.9],[.5,.5],[-1,0],[0,0]]
     for key,body in enumerate(bodies,1):
         sql("INSERT INTO recommendation_docs(id,body) VALUES("+str(key)+",'"+body+"')")
-    sql("SELECT qdrant.create_index('recommendation_docs','recommendation_docs','id','"+json.dumps(dict(text=dict(fields=['body']),representations=dict(dense=contract)))+"')")
+    sql("UPDATE recommendation_docs SET category=CASE WHEN id=7 THEN NULL WHEN id%2=0 THEN 'Allow' ELSE 'Denied' END,quantity=CASE id WHEN 1 THEN 9223372036854775807 WHEN 2 THEN 9223372036854775806 WHEN 3 THEN 9007199254740993 WHEN 7 THEN NULL ELSE id END,price=CASE WHEN id=7 THEN NULL ELSE id::float8/10 END,available=CASE WHEN id=7 THEN NULL ELSE id=2 END")
+    payload={name:dict(field=name,kind=kind) for name,kind in [('category','keyword'),('quantity','integer'),('price','float'),('available','bool')]}
+    sql("SELECT qdrant.create_index('recommendation_docs','recommendation_docs','id','"+json.dumps(dict(text=dict(fields=['body']),representations=dict(dense=contract),payload=payload))+"')")
     ready('recommendation_docs')
     query=lambda strategy:dict(dense=dict(model_id='recommendation',model_version='r1',positive=['1'],negative=['2'],strategy=strategy))
     def call(operation='count(*)',strategy='sum_scores',options=None,tail='',ok=True,top_k=10):

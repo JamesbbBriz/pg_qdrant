@@ -105,6 +105,8 @@ BEGIN
    JOIN ONLY %s t ON t.%I=(h.hit->>''source_key'')::%s
    WHERE NOT ss.tombstone AND ss.revision=(h.hit #>> ''{provenance,revision}'')::bigint
      AND ss.incarnation::text=h.hit #>> ''{provenance,incarnation}''
+     AND ss.payload_fingerprint=h.hit #>> ''{provenance,payload_fingerprint}''
+     AND encode(sha256(convert_to(qdrant_internal.payload_projection($2,t)::text,''UTF8'')),''hex'')=ss.payload_fingerprint
      AND encode(sha256(convert_to(t.%I,''UTF8'')),''hex'')=h.hit #>> ''{provenance,source_fingerprint}''',
    i.source_oid::regclass,i.key_field,i.key_type::regtype,i.text_field)
  INTO found_count USING s.results,i.index_name;
