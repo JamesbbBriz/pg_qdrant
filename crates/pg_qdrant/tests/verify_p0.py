@@ -111,10 +111,16 @@ def exercise():
     expected = {f"{prefix}{i:02}" for prefix, count in [("F", 20), ("V", 8), ("Q", 14), ("L", 12)] for i in range(1, count + 1)}
     assert {row["id"] for row in capabilities["capabilities"]} == expected
     assert all(not row["release_supported"] for row in capabilities["capabilities"])
-    expect_error("SELECT qdrant.capabilities('missing')", "0A000")
+    assert capabilities['registry_schema_version'] == 2
+    assert all(item['adapter_available'] is HELPER and item['admission_ready'] is None
+               and not item['release_supported'] for item in capabilities['query_modes'])
+    expect_error("SELECT qdrant.capabilities('missing')", "22023" if HELPER else "0A000")
     assert scalar("SELECT bool_and(provolatile='v' AND proparallel='u' AND NOT prosecdef) "
                   "FROM pg_proc WHERE pronamespace IN ('qdrant'::regnamespace,'qdrant_internal'::regnamespace) "
-                  "AND (proname LIKE 'p0_%' OR proname IN ('build_info','capabilities'))") == "t"
+                  "AND (proname LIKE 'p0_%' OR proname IN ('build_info','capability_registry_base'))") == "t"
+    assert scalar("SELECT provolatile='v' AND proparallel='u' AND prosecdef "
+                  "AND proconfig @> ARRAY['search_path=pg_catalog, pg_temp'] "
+                  "FROM pg_proc WHERE oid='qdrant.capabilities(text)'::regprocedure") == "t"
     record("install_and_honest_capabilities", count=54, postgres_major=17)
 
     starts = [spawn("SELECT qdrant_internal.p0_start_worker(5000)") for _ in range(2)]

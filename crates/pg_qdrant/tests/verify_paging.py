@@ -149,7 +149,7 @@ def run(sql, ready, ticket_from, checks, spawn, finish, wait_session):
     cached = page()
     original_preflight = sql("SELECT pg_get_functiondef('qdrant.explain_search(text,text,text,integer,jsonb,jsonb)'::regprocedure)")
     saved_preflight = original_preflight.replace('FUNCTION qdrant.explain_search(', 'FUNCTION qdrant.page_preflight_saved(')
-    saved_preflight = saved_preflight.replace('explain_search.index_name', 'page_preflight_saved.index_name')
+    saved_preflight = saved_preflight.replace('explain_search.', 'page_preflight_saved.')
     sql(saved_preflight)
     try:
         sql('CREATE TABLE qdrant_internal.page_preflight_fault(calls integer NOT NULL,cut integer NOT NULL); '
