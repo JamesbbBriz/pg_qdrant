@@ -163,9 +163,19 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
         .map_err(error)?;
     let reader: tantivy::IndexReader = reader;
     let searcher = reader.searcher();
+    let mut highlight_query: Option<Box<dyn Query>> = None;
     let query: Box<dyn Query> = if let Some(ast) = syntax {
         let mut parser = QueryParser::for_index(&index, vec![body]);
         parser.set_conjunction_by_default();
+        if let Some(positive) = crate::lexical_syntax::highlight_ast(&ast) {
+            highlight_query = Some(
+                parser
+                    .build_query_from_user_input_ast(positive)
+                    .map_err(|e| ProbeError::invalid(&format!("invalid positive syntax: {e}")))?,
+            );
+        } else {
+            highlight_query = Some(Box::new(EmptyQuery));
+        }
         let query = parser
             .build_query_from_user_input_ast(ast)
             .map_err(|e| ProbeError::invalid(&format!("invalid lexical syntax: {e}")))?;
@@ -195,6 +205,13 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
             &(TopDocs::with_limit(request.top_k).order_by_score(), Count),
         )
         .map_err(error)?;
+    let mut snippets = tantivy::snippet::SnippetGenerator::create(
+        &searcher,
+        highlight_query.as_deref().unwrap_or(query.as_ref()),
+        body,
+    )
+    .map_err(error)?;
+    snippets.set_max_num_chars(150);
     let mut output = Vec::with_capacity(hits.len());
     let mut seen = std::collections::HashSet::new();
     for (score, address) in hits {
@@ -209,7 +226,13 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
         {
             return Err(error("invalid lexical identity or score"));
         }
-        output.push(json!({"id":point_id,"score":score}));
+        let original = &documents
+            .iter()
+            .find(|(id, _)| *id == point_id)
+            .ok_or_else(|| error("missing lexical source body"))?
+            .1;
+        output.push(json!({"id":point_id,"score":score,
+            "snippet":crate::lexical_snippets::render(&snippets,original)?}));
     }
     Ok(
         json!({"hits":output,"matched_points":count,"matched_count_exact":true,"top_k":request.top_k,
@@ -227,6 +250,56 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn snippets_use_expanded_native_terms_and_conservative_positive_syntax() {
+        let documents = vec![
+            (1, "transaction durable recovery".into()),
+            (2, "diary recovery".into()),
+        ];
+        let request = |q: &str, kind: &str| SourceLexical {
+            q: q.into(),
+            kind: kind.into(),
+            slop: 0,
+            top_k: 10,
+        };
+        let fuzzy = search(&documents, &request("transactoin", "fuzzy")).unwrap();
+        let snippet = &fuzzy["hits"][0]["snippet"];
+        let text = snippet["text"].as_str().unwrap();
+        let r = &snippet["highlights"][0];
+        assert_eq!(
+            &text[r["start"].as_u64().unwrap() as usize..r["end"].as_u64().unwrap() as usize],
+            "transaction"
+        );
+        for q in [
+            "transaction OR NOT durable",
+            "(transaction OR NOT durable)^2",
+        ] {
+            let result = search(&documents, &request(q, "syntax")).unwrap();
+            assert_eq!(result["matched_points"], 2);
+            for hit in result["hits"].as_array().unwrap() {
+                let snippet = &hit["snippet"];
+                if hit["id"] == 2 {
+                    assert_eq!(snippet["status"], "no_positive_term_match");
+                    continue;
+                }
+                assert_eq!(snippet["status"], "ready");
+                let text = snippet["text"].as_str().unwrap();
+                for r in snippet["highlights"].as_array().unwrap() {
+                    assert_eq!(
+                        &text[r["start"].as_u64().unwrap() as usize
+                            ..r["end"].as_u64().unwrap() as usize],
+                        "transaction"
+                    );
+                }
+            }
+        }
+        let negative = search(&documents, &request("NOT durable", "syntax")).unwrap();
+        assert_eq!(
+            negative["hits"][0]["snippet"]["status"],
+            "no_positive_term_match"
+        );
+    }
 
     #[test]
     fn strict_syntax_executes_boolean_phrase_boost_and_literal_analysis() {

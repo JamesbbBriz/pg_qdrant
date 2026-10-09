@@ -2733,7 +2733,7 @@
         }
       ],
       "missing_upstream_plan": "I-07 compares extension policy, released Tantivy and pg_search; adopt a mature lexical path with quality/license/lifecycle evidence. I-08 becomes mandatory if a second engine is selected.",
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {
@@ -2744,6 +2744,14 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "latest_scoped_evidence": "docs/evidence/p0-tantivy-local.json"
+      },
+      "development_sql_evidence": {
+        "interface": "qdrant.search_lexical hit.snippet",
+        "contract": "docs/source-bounded-lexical.md",
+        "test": "crates/pg_qdrant/tests/verify_bounded_lexical.py",
+        "scope": "Pinned native original-source snippets with UTF-8 fragment byte ranges, exact source fingerprint, explicit ambiguity and fragment/range bounds; actual fuzzy expansions and conservative positive syntax terms; source permissions, DML/reuse, concurrent mutation and cancellation tested. General search-mode snippets, normalization mapping, configurable analysis and full F17 acceptance remain open.",
+        "full_capability_acceptance": false,
+        "release_supported": false
       }
     },
     {

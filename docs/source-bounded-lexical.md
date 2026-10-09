@@ -25,7 +25,7 @@ SELECT qdrant.search_lexical('lexical_articles', '"transaction recovery"~1', 'sy
 WITH result AS (
   SELECT qdrant.search_lexical('lexical_articles', 'transactoin', 'fuzzy') AS value
 )
-SELECT a.id, a.body, h->>'rank' AS rank, h->>'score' AS score
+SELECT a.id, a.body, h->>'rank' AS rank, h->>'score' AS score, h->'snippet' AS snippet
 FROM result, LATERAL jsonb_array_elements(value->'hits') h
 JOIN lexical_articles a ON a.id = h->'source_key'->>'value';
 ```
@@ -82,8 +82,36 @@ Concurrent source changes invalidate the whole response.
 
 Results include typed source keys, rank, native scores, exact matched-point
 count within the filtered snapshot, snapshot scope, generation, epoch and
-execution budgets. They expose no native point IDs or source bodies. Scores
+execution budgets. They expose no native point IDs; source text is limited to
+authorized bounded snippets. Scores
 use the query-local filtered corpus statistics and are not combined with Edge
-BM25, cosine or MaxSim scores. No cross-engine fusion, highlight, suggestion,
+BM25, cosine or MaxSim scores. No cross-engine fusion, suggestion,
 pagination or release-support claim is made. Budget overflow returns `54000`;
 invalid input returns `22023`; stale/uncommitted source returns `55000`.
+
+Each lexical hit includes a `snippet` from pinned Tantivy's `SnippetGenerator`
+over the original body string. A ready snippet contains raw `text`, the current
+`source_field` and SHA-256 `source_fingerprint`, and half-open `highlights` ranges
+in UTF-8 bytes relative to that fragment. Case, accents, combining characters
+and markup remain literal source bytes; no HTML is generated. Applications must
+escape this text when rendering HTML and interpret offsets as bytes rather than
+Unicode scalar or UTF-16 indices. The current simple analyzer does not normalize
+canonically equivalent accents.
+
+`source_byte_start` is an absolute UTF-8 byte offset only when the fragment has
+one occurrence in the original body. Repeated occurrences return null and
+`source_occurrence_ambiguous = true`. Native fragments use a 150-character
+target; a fragment exceeding 512 bytes or 32 highlight ranges returns
+`fragment_budget_exceeded` with no text or ranges. Pure-negative queries and
+hits without positive terms return `no_positive_term_match`. These snippet
+states do not change the matching count or discard hits.
+
+Fuzzy highlights use actual expanded dictionary terms. Syntax highlighting
+conservatively removes every negative subtree, including nested negatives, and
+boost wrappers from its term projection. Highlights describe positive lexical
+term occurrences; they do not prove Boolean branch satisfaction, phrase spans,
+or semantic correspondence. The search query and scores are unchanged.
+Source permissions, current source fingerprints and generation/receipt fences
+cover snippets before exposure and after native execution. Helper and SQL must
+come from the same build. General search-mode snippets, configurable analysis,
+normalization mappings and full F17 acceptance remain open.

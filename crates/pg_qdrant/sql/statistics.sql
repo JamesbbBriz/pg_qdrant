@@ -160,10 +160,19 @@ BEGIN
    IF jsonb_typeof(result #> '{lexical,hits}') IS DISTINCT FROM 'array'
       OR jsonb_array_length(result #> '{lexical,hits}')>(p_lexical->>'top_k')::integer
       OR EXISTS(SELECT 1 FROM jsonb_array_elements(result #> '{lexical,hits}') h WHERE NOT ids @> jsonb_build_array(h->'id'))
+      OR EXISTS(SELECT 1 FROM jsonb_array_elements(result #> '{lexical,hits}') h
+        WHERE jsonb_typeof(h->'snippet') IS DISTINCT FROM 'object'
+          OR (h #>> '{snippet,status}' IN ('ready','no_positive_term_match','fragment_budget_exceeded')) IS DISTINCT FROM true
+          OR (h #>> '{snippet,status}'='ready' AND (
+            jsonb_typeof(h #> '{snippet,text}') IS DISTINCT FROM 'string'
+            OR octet_length(h #>> '{snippet,text}')>512
+            OR jsonb_typeof(h #> '{snippet,highlights}') IS DISTINCT FROM 'array'
+            OR jsonb_array_length(h #> '{snippet,highlights}')>32)))
       OR (SELECT count(DISTINCT h->'id') FROM jsonb_array_elements(result #> '{lexical,hits}') h)<>jsonb_array_length(result #> '{lexical,hits}') THEN
      RAISE EXCEPTION 'Invalid lexical source membership' USING ERRCODE='XX000'; END IF;
    result:=jsonb_set(result,'{lexical,hits}',(SELECT coalesce(jsonb_agg(jsonb_build_object(
-     'source_key',h #> '{payload,source_key}','score',hit->'score','rank',rank) ORDER BY rank),'[]')
+     'source_key',h #> '{payload,source_key}','score',hit->'score','rank',rank,
+     'snippet',(hit->'snippet')||jsonb_build_object('source_field',i.text_field,'source_fingerprint',h #> '{payload,fingerprint}')) ORDER BY rank),'[]')
      FROM jsonb_array_elements(result #> '{lexical,hits}') WITH ORDINALITY members(hit,rank)
      JOIN jsonb_array_elements(proof) h ON h->'id'=hit->'id'));
  END IF;

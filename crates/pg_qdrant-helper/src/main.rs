@@ -10,6 +10,7 @@ use std::thread;
 use std::time::Duration;
 mod lexical;
 mod lexical_candidates;
+mod lexical_snippets;
 mod lexical_syntax;
 mod payload;
 mod resources;

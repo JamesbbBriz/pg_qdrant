@@ -43,6 +43,26 @@ fn complete_negations(ast: &mut UserInputAst) {
     }
 }
 
+// A snippet is lexical term evidence, not proof of the Boolean/phrase match.
+// Conservatively omit every prohibited subtree, even double negations.
+pub fn highlight_ast(ast: &UserInputAst) -> Option<UserInputAst> {
+    match ast {
+        UserInputAst::Boost(child, _) => highlight_ast(child),
+        UserInputAst::Clause(children) => {
+            let positive: Vec<_> = children
+                .iter()
+                .filter(|(occur, _)| *occur != Some(Occur::MustNot))
+                .filter_map(|(occur, child)| highlight_ast(child).map(|ast| (*occur, ast)))
+                .collect();
+            (!positive.is_empty()).then_some(UserInputAst::Clause(positive))
+        }
+        UserInputAst::Leaf(leaf) if matches!(leaf.as_ref(), UserInputLeaf::Literal(_)) => {
+            Some(ast.clone())
+        }
+        _ => None,
+    }
+}
+
 fn validate(
     ast: &UserInputAst,
     depth: usize,
