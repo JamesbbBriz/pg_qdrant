@@ -1,0 +1,10 @@
+ARG PGQ_QUALITY_BASE
+FROM ${PGQ_QUALITY_BASE}
+USER root
+COPY scripts/quality_metrics.py scripts/run_quality.py /src/scripts/
+COPY ci/quality-sources.json /src/ci/
+COPY crates/pg_qdrant/tests/run-p1.sh /src/crates/pg_qdrant/tests/
+COPY fixtures/ /opt/quality-fixtures/
+ENV PG_QDRANT_QUALITY_TEST=1 PG_QDRANT_QUALITY_FIXTURES=/opt/quality-fixtures PG_QDRANT_ARTIFACT_DIR=/src/artifacts/quality
+USER builder
+ENTRYPOINT ["bash", "/src/crates/pg_qdrant/tests/run-p1.sh"]

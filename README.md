@@ -73,6 +73,8 @@ development contracts. Broader native JSON and model workflows remain in the
 [proposed API](docs/design.md#proposed-sql-experience).
 See [bounded directional synonyms](docs/source-synonyms.md) for explicit
 versioned query policies and native contiguous phrase alternatives.
+See [bounded bilingual BM25 measurements](docs/bounded-quality.md) for pinned
+reduced-corpus inputs, reproducible local act commands and explicit metric limits.
 See [bounded source-word suggestions](docs/source-suggestions.md) for literal
 prefix completion over the current durable filtered source snapshot.
 See [bounded search pages](docs/search-pages.md) for immutable candidate pages

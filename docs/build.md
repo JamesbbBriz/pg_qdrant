@@ -363,3 +363,8 @@ product implementation. Current source and native/CPU build verification passed
 the finite CI8 gates for the recorded inputs; product transactions,
 source authorization, resource admission, lexical quality, index upgrades/rollback
 and clean release installation retain their P1–P5 owners in `work-items.json`.
+
+The separate [bounded bilingual quality workload](bounded-quality.md) runs
+locally with act against a selected installed product image. It records frozen
+public input hashes, per-query rankings and aggregate metrics without treating
+measurement completion as quality or full CI acceptance.
