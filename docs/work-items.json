@@ -9087,7 +9087,19 @@
       "phase": "P3",
       "owner": "lifecycle/recovery",
       "status": "pending",
-      "evidence": [],
+      "evidence": [
+        {
+          "observed_on": "2026-10-09",
+          "level": "SQL-integration-verified",
+          "kind": "installed_logical_source_restore",
+          "status": "passed",
+          "source": "docs/logical-source-restore.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_logical_restore.py",
+          "scope": "Matching-build PG17 custom pg_dump/pg_restore of ordinary text source facts with explicit fresh registration. Complete orphan capture pair replacement is atomic and owner-protected under the source DDL lock; altered triggers/configuration and rollback preserve state. Fresh generation/incarnation, real Edge search, restored DML/key reuse and new exact durable tickets are verified. Automatic declaration/metadata restoration, BYOV migration, ACL/role migration, base backup, PITR, replication, failover and full local act evidence remain open.",
+          "full_capability_acceptance": false,
+          "release_supported": false
+        }
+      ],
       "source_contract": "docs/capabilities.md#lifecycle-and-postgresql-integration",
       "deliverable": "Executable source/config/BYOV rebuild and independently tested or explicitly unsupported backup/replication modes.",
       "dependencies": [
@@ -11568,6 +11580,17 @@
           "scope": "An owned child is killed after mutations and before explicit flush. The controller refuses the old generation, preserves 36 files and builds a new generation from a complete fixture, verifying deletion, primary-key reuse and revision decisions. This is not a PostgreSQL data loop, ACK crash cut, unflushed-survival or production-generation cutover test.",
           "full_capability_acceptance": false,
           "sql_product_integration_verified": false,
+          "release_supported": false
+        },
+        {
+          "observed_on": "2026-10-09",
+          "level": "SQL-integration-verified",
+          "kind": "installed_logical_source_restore",
+          "status": "passed",
+          "source": "docs/logical-source-restore.md",
+          "test_entry": "crates/pg_qdrant/tests/verify_logical_restore.py",
+          "scope": "Matching-build PG17 custom pg_dump/pg_restore of ordinary text source facts with explicit fresh registration. Complete orphan capture pair replacement is atomic and owner-protected under the source DDL lock; altered triggers/configuration and rollback preserve state. Fresh generation/incarnation, real Edge search, restored DML/key reuse and new exact durable tickets are verified. Automatic declaration/metadata restoration, BYOV migration, ACL/role migration, base backup, PITR, replication, failover and full local act evidence remain open.",
+          "full_capability_acceptance": false,
           "release_supported": false
         }
       ],
