@@ -98,9 +98,10 @@ def run(sql,ready,ticket_from,checks,spawn=None):
         finally:os.kill(pid,signal.SIGCONT)
         end=time.monotonic()+10
         while time.monotonic()<end:
-            if not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active'):break
+            completed=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+            if not completed.get('active'):break
             time.sleep(.02)
-        assert not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active')
+        assert not completed.get('active'),completed
         replay()
         os.kill(pid,signal.SIGSTOP)
         try:

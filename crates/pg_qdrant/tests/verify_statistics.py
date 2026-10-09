@@ -119,9 +119,10 @@ def run(sql,ready,ticket_from,checks,spawn=None):
                 sql("UPDATE recommendation_docs SET category='Denied' WHERE id=1")
             deadline=time.monotonic()+10
             while time.monotonic()<deadline:
-                if not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active'):break
+                completed=json.loads(sql('SELECT qdrant_internal.p0_ping()'))
+                if not completed.get('active'):break
                 time.sleep(.02)
-            assert not json.loads(sql('SELECT qdrant_internal.p0_ping()')).get('active')
+            assert not completed.get('active'),completed
             replay()
         checks.append('count/facet cancellation retains native ownership; an excluded source row entering a filtered domain refuses the entire stale statistic')
     checks.append('native exact point count and typed full-domain facets agree with independent SQL groups, preserve int64 extrema, omit nulls and report distinct-value truncation honestly')
