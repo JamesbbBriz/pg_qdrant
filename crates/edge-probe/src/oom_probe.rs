@@ -607,6 +607,42 @@ impl MemoryMapping {
         unsafe { std::ptr::write_volatile(self.pointer.add(offset), 0xa5) };
         Ok(())
     }
+    fn prefault_write(&mut self, offset: usize, length: usize) -> Checked<()> {
+        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+        require(
+            (4096..=65536).contains(&page_size) && (page_size as usize).is_power_of_two(),
+            "unsupported prefault page size",
+        )?;
+        let page_size = page_size as usize;
+        require(
+            length > 0
+                && length <= 16 * CHUNK_BYTES
+                && offset % page_size == 0
+                && length % page_size == 0
+                && offset
+                    .checked_add(length)
+                    .is_some_and(|end| end <= self.length),
+            "prefault outside bounded aligned mapping",
+        )?;
+        // SAFETY: this page-aligned writable anonymous range is owned by this
+        // mapping and checked above. The kernel faults writable private pages;
+        // no file, shared mapping or memory outside this range is affected.
+        // Errors (including unsupported kernels) remain failed experiments.
+        let result = unsafe {
+            libc::madvise(
+                self.pointer.add(offset).cast(),
+                length,
+                libc::MADV_POPULATE_WRITE,
+            )
+        };
+        if result != 0 {
+            return Err(format!(
+                "writable anonymous prefault: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        Ok(())
+    }
 }
 impl Drop for MemoryMapping {
     fn drop(&mut self) {
@@ -620,7 +656,8 @@ fn allocate(guard: &mut Guard) -> Checked<&'static str> {
     let boundary = json!({"event": "allocation_started", "touched_bytes": 0,
         "companion_identity_verified": guard.marker["companion"],
         "participants_verified_at_barrier": true, "allocation_limits": guard.allocation_limits,
-        "allocator": "private anonymous mapping; one volatile write per native page"});
+        "allocator": "private anonymous mapping; bounded MADV_POPULATE_WRITE then one volatile write per native page",
+        "prefault_chunk_bytes": 16 * CHUNK_BYTES});
     writeln!(guard.log, "{boundary}").map_err(|e| e.to_string())?;
     guard.log.sync_data().map_err(|e| e.to_string())?;
     guard.allocation_started = true;
@@ -632,6 +669,9 @@ fn allocate(guard: &mut Guard) -> Checked<&'static str> {
     for offset in (0..MEMORY_BYTES as usize).step_by(guard.page_size) {
         if started.elapsed() >= Duration::from_secs(10) {
             return Ok("cooperative_deadline");
+        }
+        if offset % (16 * CHUNK_BYTES) == 0 {
+            memory.prefault_write(offset, 16 * CHUNK_BYTES)?;
         }
         memory.touch(offset)?;
         let touched = offset + guard.page_size;
@@ -679,6 +719,32 @@ pub fn run(profile: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn writable_prefault_preserves_bytes_and_rejects_unowned_ranges() {
+        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
+        let mut memory = MemoryMapping::new(2 * page_size).unwrap();
+        memory.touch(0).unwrap();
+        memory.prefault_write(0, page_size).unwrap();
+        memory.prefault_write(page_size, page_size).unwrap();
+        // SAFETY: both inspected bytes are inside this live owned mapping.
+        assert_eq!(unsafe { std::ptr::read_volatile(memory.pointer) }, 0xa5);
+        assert_eq!(
+            unsafe { std::ptr::read_volatile(memory.pointer.add(page_size)) },
+            0
+        );
+        for (offset, length) in [
+            (0, 0),
+            (1, page_size),
+            (0, 1),
+            (2 * page_size, page_size),
+            (usize::MAX, page_size),
+            (0, 17 * CHUNK_BYTES),
+        ] {
+            assert!(memory.prefault_write(offset, length).is_err());
+        }
+        memory.touch(page_size).unwrap();
+    }
 
     #[test]
     fn bounded_mapping_initializes_pages_and_rejects_invalid_offsets() {

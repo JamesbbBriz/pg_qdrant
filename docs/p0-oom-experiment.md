@@ -319,3 +319,35 @@ Direct-worker collateral interruption, PostgreSQL recovery and marker retention
 passed; the helper preserved the companion and replayed deletion/key reuse to a
 durable ticket with obsolete native incarnation removal. These scoped passes do
 not replace the earlier failed full regression or establish the deadline's cause.
+
+## Bounded writable prefault comparison
+
+Full local act `b0250ecb249009de` on clean `119bbea` failed 3 of 37 gates,
+without skips. The direct native allocation again returned at its 10-second
+cooperative deadline without a kernel OOM. Its 221 samples recorded the memory
+cap, substantial direct reclaim/file refaults and CPU throttling. These observations
+are consistent with reclaim thrashing; they do not identify the individual
+file-backed code pages involved. The other failures were an obsolete transport
+cleanup expectation and a symlink-based disk fixture rejected before readiness.
+
+The private fault build now requests writable prefaults for at most 16 MiB of
+its owned anonymous mapping at a time, before the existing volatile write to
+each native page. Linux
+[`MADV_POPULATE_WRITE`](https://man7.org/linux/man-pages/man2/madvise.2.html)
+faults writable pages and can trigger the kernel OOM path; unsupported kernels
+or syscall errors fail the experiment. Alignment, overflow, extent and per-call
+limits are checked before the call. The 768 MiB total, cooperative 10-second
+deadline, outer watchdog and strict kernel-victim/recovery gates are unchanged.
+This changes only fault injection, not the production allocator or memory policy.
+
+Local act `oomprefault-7584d2ff910e54bf` passed six guard tests and both actual
+OOM/recovery comparisons after rebuilding the fault binaries over clean
+`119bbea`. Exact kernel tasks 24528 (direct worker) and 28339 (helper) matched
+their limiting cgroups; no external termination was requested. PostgreSQL
+recovery/committed marker retention passed for the direct profile. The helper
+preserved the companion and replayed source deletion/key reuse to an exact
+durable ticket with obsolete native incarnation removal. Six frozen inputs
+and the log were hash-verified; log SHA-256 is
+`f3be4745c32d8b34d11b517be6bd2af31dc012b9898545ecd45a4033edee2bcc`.
+The scoped candidate preceded formatting-only changes. These passes do not
+replace a fresh full regression or prove production RSS isolation.

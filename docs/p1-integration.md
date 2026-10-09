@@ -138,7 +138,9 @@ This does not repair invalidated source capture or migrate model/analyzer contra
 
 Index removal returns a committed cleanup task rather than equating catalog
 deletion with native storage deletion. Rollback performs no native retirement;
-owner changes preserve uncertain epochs and report failure. Await the returned
+replacement owners verify persisted exact epoch/consumer bindings and retirement
+receipts. Missing or mismatched bindings preserve uncertain storage and report
+failure. Await the returned
 task before uninstalling. See the generation lifecycle for the full boundary.
 
 After a native transport failure, the supervisor checks its current connection
@@ -146,4 +148,23 @@ before claiming another source batch. A cleared connection cannot receive work
 based on an earlier readiness snapshot. The installed fault regression queues
 two indexes, verifies that the PostgreSQL supervisor survives native owner
 replacement, and checks both exact durable tickets and current-only search.
-Old storage epochs retain their explicit incomplete-cleanup outcome.
+Committed removal cleans both prior and current epochs only with their exact
+persisted ownership and task receipts; an owner change alone is not uncertainty.
+
+The dedicated ENOSPC fixture mounts tmpfs directly at the database's exact Edge
+root, without a root symlink. A fresh container prepares fixed mount parents,
+then initializes and runs PostgreSQL as its non-root account. PostgreSQL source,
+WAL and IPC stay on the other device. The outer runner removes a successful
+container; cluster cleanup never recursively traverses the active mount.
+
+Scoped local act `faultfixture-25c88675d991b039` passed the live transport cut
+with two pending indexes, exact durable tickets and current-only search, followed
+by cleanup of all four prior/current directories and verification of each exact
+owner/retirement receipt. Its dedicated 384 MiB engine tmpfs reached ENOSPC,
+the native helper exited with SIGBUS, and the event remained unacknowledged.
+After releasing capacity, replacement reconstructed a fresh epoch, retained the
+failed directory and proved durable delivery and final source search. Eight
+frozen fixture inputs and the act log were hash-verified; the log SHA-256 is
+`e13db6cfbfd3af6221c8e574ea3e43e807bc27a8f9db815700f5302ccceb198a`.
+The native binaries were unchanged from clean `119bbea`; this scope does not
+replace the full product regression or complete P1 acceptance.

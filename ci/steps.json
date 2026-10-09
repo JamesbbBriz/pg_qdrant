@@ -196,7 +196,7 @@
         "requires": [
           "engine_helper_fault_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-storage-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p1-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_P1_STORAGE_TEST=1 --env PG_QDRANT_P1_DISK_DIR=/pgq-p1-faults \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p1.sh\ndocker start --attach pg-qdrant-p1-storage-${PGQ_RUN_ID}\n"
+        "command": "docker create --user root --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-storage-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /tmp/pgq-p1-product.storage/data/pg_qdrant_p0/db-5.indexes:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_P1_STORAGE_TEST=1 --env PG_QDRANT_P1_DISK_DIR=/tmp/pgq-p1-product.storage/data/pg_qdrant_p0/db-5.indexes \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p1-storage.sh\ndocker start --attach pg-qdrant-p1-storage-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_28",

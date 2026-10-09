@@ -4,7 +4,12 @@ if [[ "$(id -u)" == 0 ]]; then echo 'Run as non-root' >&2; exit 2; fi
 pgq_bin="$(pg_config --bindir)"
 pgq_artifacts="${PG_QDRANT_ARTIFACT_DIR:-/src/artifacts}"
 mkdir -p "$pgq_artifacts"
-pgq_cluster="$(mktemp -d /tmp/pgq-p1-product.XXXXXXXX)"
+if [[ "${PG_QDRANT_P1_STORAGE_TEST:-0}" == 1 ]]; then
+  pgq_cluster=/tmp/pgq-p1-product.storage
+  [[ -d "$pgq_cluster/data/pg_qdrant_p0/db-5.indexes" && ! -e "$pgq_cluster/bootstrap" ]]
+else
+  pgq_cluster="$(mktemp -d /tmp/pgq-p1-product.XXXXXXXX)"
+fi
 mkdir "$pgq_cluster/socket"
 cleanup() {
   code=$?
@@ -14,7 +19,9 @@ cleanup() {
   "$pgq_bin/pg_ctl" -D "$pgq_cluster/data" -m immediate -w stop >/dev/null 2>&1
   stop_code=$?
   if [[ "$code" == 0 && "$stop_code" == 0 ]]; then
-    rm -rf -- "$pgq_cluster"
+    # The storage fixture contains a Docker-managed mount. Its successful
+    # disposable container is removed by the outer runner, never recursively here.
+    if [[ "${PG_QDRANT_P1_STORAGE_TEST:-0}" != 1 ]]; then rm -rf -- "$pgq_cluster"; fi
   else
     if [[ "$code" == 0 ]]; then code=1; fi
     python3 -c 'import json,sys; print(json.dumps({"status":"failed","cluster":sys.argv[1],"exit_code":int(sys.argv[2]),"stop_exit_code":int(sys.argv[3]),"release_supported":False}))' \
@@ -24,7 +31,14 @@ cleanup() {
   exit "$code"
 }
 trap cleanup EXIT
-"$pgq_bin/initdb" -D "$pgq_cluster/data" --no-locale --encoding=UTF8 --auth=trust >"$pgq_artifacts/p1-product-init.log" 2>&1
+pgq_init="$pgq_cluster/data"
+if [[ "${PG_QDRANT_P1_STORAGE_TEST:-0}" == 1 ]]; then pgq_init="$pgq_cluster/bootstrap"; fi
+"$pgq_bin/initdb" -D "$pgq_init" --no-locale --encoding=UTF8 --auth=trust >"$pgq_artifacts/p1-product-init.log" 2>&1
+if [[ "$pgq_init" != "$pgq_cluster/data" ]]; then
+  # Docker mounts the exact engine root before startup. Initialize beside that
+  # mount and copy the fresh cluster without replacing the mounted directory.
+  cp -a -- "$pgq_init/." "$pgq_cluster/data/"
+fi
 "$pgq_bin/pg_ctl" -D "$pgq_cluster/data" -l "$pgq_artifacts/p1-product-postgres.log" \
   -o "-c listen_addresses='' -c unix_socket_directories='$pgq_cluster/socket' -c port=55434 -c fsync=on -c synchronous_commit=on" -w start
 export PGHOST="$pgq_cluster/socket" PGPORT=55434 PGDATABASE=postgres PGUSER="$(id -un)"
