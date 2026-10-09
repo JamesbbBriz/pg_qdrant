@@ -130,8 +130,14 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
         }
         None
     };
+    let suggestion_prefix = if request.kind == "suggestions" {
+        Some(crate::lexical_suggestions::prefix(request)?)
+    } else {
+        None
+    };
     if syntax.is_none()
         && synonyms.is_none()
+        && suggestion_prefix.is_none()
         && (words.is_empty()
             || words.len() > 8
             || words
@@ -179,6 +185,15 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
         .map_err(error)?;
     let reader: tantivy::IndexReader = reader;
     let searcher = reader.searcher();
+    if let Some(prefix) = suggestion_prefix {
+        let mut result =
+            crate::lexical_suggestions::collect(&searcher, body, &prefix, request.top_k)?;
+        result["source_bytes"] = json!(bytes);
+        result["max_source_bytes"] = json!(MAX_BYTES);
+        result["writer_threads"] = json!(1);
+        result["writer_memory_budget"] = json!(15_000_000);
+        return Ok(result);
+    }
     let mut highlight_query: Option<Box<dyn Query>> = None;
     let query: Box<dyn Query> = if let Some(expansion) = &synonyms {
         expansion.query(body)
@@ -269,6 +284,76 @@ pub fn search(documents: &[(u64, String)], request: &SourceLexical) -> Result<Va
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_suggestions_count_source_points_and_rank_complete_prefix_terms() {
+        let documents = vec![
+            (1, "transaction transaction transfer".into()),
+            (2, "transfer".into()),
+            (3, "transit".into()),
+            (4, "数据库 数据集".into()),
+            (5, "transfer123".into()),
+        ];
+        let mut request = SourceLexical {
+            q: "TRAN".into(),
+            kind: "suggestions".into(),
+            slop: 0,
+            top_k: 2,
+            synonyms: None,
+        };
+        let result = search(&documents, &request).unwrap();
+        assert_eq!(result["total_terms"], 3);
+        assert_eq!(result["terms_complete"], false);
+        assert_eq!(
+            result["items"],
+            json!([
+            {"term":"transfer","point_count":2},
+            {"term":"transaction","point_count":1}])
+        );
+        request.q = "数据".into();
+        assert_eq!(
+            search(&documents, &request).unwrap()["items"],
+            json!([
+            {"term":"数据库","point_count":1},{"term":"数据集","point_count":1}])
+        );
+        request.q = "zz".into();
+        assert_eq!(search(&documents, &request).unwrap()["total_terms"], 0);
+        for q in ["", "a", "SKU-123", "a b", "car*", "cafe\u{301}"] {
+            request.q = q.into();
+            assert_eq!(
+                search(&documents, &request).unwrap_err().code,
+                "invalid_parameter"
+            );
+        }
+        request.q = "trans".into();
+        request.top_k = 21;
+        assert!(search(&documents, &request).is_err());
+        request.top_k = 1;
+        request.slop = 1;
+        assert!(search(&documents, &request).is_err());
+    }
+
+    #[test]
+    fn native_suggestion_exact_candidate_limit_refuses_overflow_before_ranking() {
+        let term = |n: u8| format!("ab{}{}", (b'a' + n / 26) as char, (b'a' + n % 26) as char);
+        let text = (0..128).map(term).collect::<Vec<_>>().join(" ");
+        let request = SourceLexical {
+            q: "ab".into(),
+            kind: "suggestions".into(),
+            slop: 0,
+            top_k: 1,
+            synonyms: None,
+        };
+        let mut documents = vec![(1, text)];
+        let exact = search(&documents, &request).unwrap();
+        assert_eq!(exact["total_terms"], 128);
+        assert_eq!(exact["items"].as_array().unwrap().len(), 1);
+        documents.push((2, term(128)));
+        assert_eq!(
+            search(&documents, &request).unwrap_err().code,
+            "source_lexical_budget"
+        );
+    }
 
     #[test]
     fn directional_synonyms_execute_exact_native_phrases_and_original_highlights() {

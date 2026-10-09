@@ -2884,7 +2884,7 @@
         }
       ],
       "missing_upstream_plan": "I-07 compares extension policy, released Tantivy and pg_search; adopt a mature lexical path with quality/license/lifecycle evidence. I-08 becomes mandatory if a second engine is selected.",
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {
@@ -2894,6 +2894,15 @@
         "sql_product_integration_verified": false,
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe."
+      },
+      "development_sql_evidence": {
+        "interface": "qdrant.suggest",
+        "contract": "docs/source-suggestions.md",
+        "test": "crates/pg_qdrant/tests/verify_suggestions.py",
+        "scope": "Scoped native and installed SQL tests verify complete bounded native dictionary prefix enumeration, exact source-point frequencies, deterministic ties and Unicode literals; 128 eligible terms/1024 segment visits refuse overflow before top-k. Source/owner permissions, durable DML/key reuse, source-change/cancel races, RLS refusal, DDL registration and uninstall/rollback/reinstall passed. Query-local RAM only; full instant interaction, typo suggestions, multilingual analysis, quality, latency and full revision crash acceptance remain open.",
+        "local_ci_run": "suggestions-9a45b99873e068bd",
+        "full_capability_acceptance": false,
+        "release_supported": false
       }
     },
     {

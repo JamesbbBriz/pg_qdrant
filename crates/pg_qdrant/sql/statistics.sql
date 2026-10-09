@@ -86,7 +86,7 @@ BEGIN
       OR p_lexical-ARRAY['q','kind','slop','top_k','synonyms']<>'{}'
       OR jsonb_typeof(p_lexical->'q') IS DISTINCT FROM 'string'
       OR jsonb_typeof(p_lexical->'kind') IS DISTINCT FROM 'string'
-      OR p_lexical->>'kind' NOT IN ('fuzzy','proximity','syntax','synonyms')
+      OR p_lexical->>'kind' NOT IN ('fuzzy','proximity','syntax','synonyms','suggestions')
       OR jsonb_typeof(p_lexical->'slop') IS DISTINCT FROM 'number'
       OR p_lexical->>'slop' !~ '^[0-8]$'
       OR jsonb_typeof(p_lexical->'top_k') IS DISTINCT FROM 'number'
@@ -285,3 +285,15 @@ BEGIN
    'filtered_points',result->'points','matching',result->'matching','filter',result->'filter','release_supported',false);
 END $$;
 GRANT EXECUTE ON FUNCTION qdrant.search_synonyms(text,text,jsonb,integer,jsonb) TO PUBLIC;
+
+CREATE FUNCTION qdrant.suggest(index_name text,prefix text,limit_count integer DEFAULT 10,options jsonb DEFAULT '{}')
+RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+DECLARE result jsonb;
+BEGIN
+ result:=qdrant_internal.source_statistics(index_name,NULL,1,options,NULL,NULL,
+   jsonb_build_object('q',prefix,'kind','suggestions','slop',0,'top_k',limit_count));
+ RETURN ((result->'lexical')-'hits')||jsonb_build_object('index_name',index_name,'generation',result->'generation',
+   'storage_epoch',result->'storage_epoch','live_points',result->'live_points','max_live_points',1000,
+   'filtered_points',result->'points','matching',result->'matching','filter',result->'filter','release_supported',false);
+END $$;
+GRANT EXECUTE ON FUNCTION qdrant.suggest(text,text,integer,jsonb) TO PUBLIC;
