@@ -3,8 +3,8 @@ use pg_qdrant_protocol::formula::ScoreFormula;
 use pg_qdrant_protocol::{
     DiscoveryStrategy, PayloadKind, ProbeError, RecommendationStrategy, RepresentationContract,
     RepresentationQuery, RepresentationVector, SOURCE_CONTRACT_VERSION, SourceBatch,
-    SourceDiscovery, SourceFeedback, SourceFusion, SourceGroups, SourceMatrix, SourceMmr,
-    SourcePredicates, SourceRecommendation,
+    SourceDiscovery, SourceFeedback, SourceFusion, SourceGroups, SourceLexical, SourceMatrix,
+    SourceMmr, SourcePredicates, SourceRecommendation,
 };
 use qdrant_edge::EdgeShardRead;
 use qdrant_edge::bm25_embed::EdgeBm25;
@@ -994,6 +994,7 @@ impl SourceOwner {
         Ok(Value::Array(result))
     }
 
+    #[cfg(test)]
     pub fn statistics(
         &self,
         index_id: u64,
@@ -1004,6 +1005,33 @@ impl SourceOwner {
         facet_limit: usize,
         matrix: Option<SourceMatrix>,
         groups: Option<SourceGroups>,
+        predicates: SourcePredicates,
+    ) -> Result<Value, ProbeError> {
+        self.statistics_with_lexical(
+            index_id,
+            generation,
+            epoch,
+            point_ids,
+            facet,
+            facet_limit,
+            matrix,
+            groups,
+            None,
+            predicates,
+        )
+    }
+
+    pub fn statistics_with_lexical(
+        &self,
+        index_id: u64,
+        generation: &str,
+        epoch: &str,
+        point_ids: Vec<u64>,
+        facet: Option<String>,
+        facet_limit: usize,
+        matrix: Option<SourceMatrix>,
+        groups: Option<SourceGroups>,
+        lexical: Option<SourceLexical>,
         predicates: SourcePredicates,
     ) -> Result<Value, ProbeError> {
         if point_ids.len() > 1000
@@ -1059,6 +1087,60 @@ impl SourceOwner {
         request.exact = true;
         request.filter = Some(filter.clone());
         let points = owned.shard.count(request).map_err(error)?;
+        let mut lexical_result = Value::Null;
+        if let Some(query) = lexical {
+            if facet.is_some() || matrix.is_some() || groups.is_some() {
+                return Err(ProbeError::invalid(
+                    "lexical candidates cannot combine statistics operations",
+                ));
+            }
+            let mut request = qdrant_edge::ScrollRequest::new();
+            request.limit = Some(32);
+            request.filter = Some(filter.clone());
+            request.with_payload = Some(WithPayloadInterface::Fields(vec![
+                "body".parse().expect("constant field"),
+            ]));
+            let mut documents = Vec::with_capacity(points);
+            let mut bytes = 0usize;
+            loop {
+                let (records, next) = owned.shard.scroll(request.clone()).map_err(error)?;
+                for record in records {
+                    let PointId::NumId(id) = record.id else {
+                        return Err(error("unexpected lexical point ID"));
+                    };
+                    if !point_ids.contains(&id) {
+                        return Err(error("lexical point outside source domain"));
+                    }
+                    let payload = record
+                        .payload
+                        .ok_or_else(|| error("missing lexical source payload"))?;
+                    let body = payload
+                        .0
+                        .get("body")
+                        .and_then(Value::as_str)
+                        .ok_or_else(|| error("missing lexical source body"))?;
+                    bytes = bytes
+                        .checked_add(body.len())
+                        .ok_or_else(|| error("lexical byte count overflow"))?;
+                    if body.len() > 65536 || bytes > 1024 * 1024 || documents.len() >= 1000 {
+                        return Err(ProbeError::new(
+                            "source_lexical_budget",
+                            "lexical source snapshot exceeds 1 MiB or 1000 points",
+                            "No partial lexical result is returned.",
+                        ));
+                    }
+                    documents.push((id, body.to_owned()));
+                }
+                if next.is_none() {
+                    break;
+                }
+                request.offset = next;
+            }
+            if documents.len() != points {
+                return Err(error("incomplete filtered lexical source snapshot"));
+            }
+            lexical_result = crate::lexical_candidates::search(&documents, &query)?;
+        }
         let mut group_result = Value::Null;
         if let Some(groups) = groups {
             if facet.is_some()
@@ -1307,7 +1389,7 @@ impl SourceOwner {
             facet_result = json!({"field":name,"hits":hits,"values_complete":complete,"nulls":"omitted","ordering":"count descending; typed value ascending for ties"});
         }
         Ok(
-            json!({"points":points,"proof":proof,"facet":facet_result,"matrix":matrix_result,"grouped":group_result}),
+            json!({"points":points,"proof":proof,"facet":facet_result,"matrix":matrix_result,"grouped":group_result,"lexical":lexical_result}),
         )
     }
 

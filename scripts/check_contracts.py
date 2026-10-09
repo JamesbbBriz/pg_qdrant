@@ -194,8 +194,20 @@ def main() -> None:
         require(package["version"] == dependency["version"][1:] and
                 package["checksum"] == candidate["package_sha256"],
                 "The isolated Tantivy lockfile/checksum differs from its candidate baseline.")
-        require(not candidate["adopted"] and "tantivy" not in declared,
-                "Core lexical adoption requires an explicit revised integration contract.")
+        if candidate["adopted"]:
+            require(candidate.get("integration_contract") == "docs/adr/0006-query-local-lexical.md"
+                    and (ROOT / candidate["integration_contract"]).is_file(),
+                    "Core lexical adoption requires its explicit integration ADR.")
+            require(declared["tantivy"] == {candidate["cargo_requirement_candidate"]}
+                    and any(d["name"] == "tantivy" for d in baseline["required_direct_dependencies"]),
+                    "Adopted lexical dependency must have an exact core baseline pin.")
+            helper = tomllib.loads((ROOT / "crates/pg_qdrant-helper/Cargo.toml").read_text())
+            require(helper["dependencies"]["tantivy"].get("default-features") is False
+                    and helper["dependencies"]["tantivy"].get("features") == ["lz4-compression"],
+                    "Query-local lexical integration requires the reviewed RAM/lz4 feature set.")
+        else:
+            require("tantivy" not in declared,
+                    "Core lexical adoption requires an explicit revised integration contract.")
     print(json.dumps({"status": "passed", "capabilities": 54, "work_items": len(work),
                       "scope_completed": False, "compiled_graph_claim": baseline["compiled_dependency_graph_verified"]}))
 

@@ -59,8 +59,8 @@ The following are product requirements, not verified native Edge features. Evalu
 
 | ID | Capability | Proposed owner / library candidate | Required acceptance |
 | --- | --- | --- | --- |
-| F13 | Bounded typo tolerance and fuzzy prefixes | Lexical adapter; Tantivy fuzzy primitives candidate | Edit-distance/expansion limits; exact-ID protection; multilingual misspelling set |
-| F14 | Proximity/phrase slop | Position-aware lexical adapter; Tantivy candidate | Explicit positions, distance and field semantics; not mislabeled contiguous phrase filtering |
+| F13 | Bounded typo tolerance and fuzzy prefixes | Bounded ASCII distance-one query-local Tantivy adapter; full contract open | Edit-distance/expansion limits; exact-ID protection; multilingual misspelling set |
+| F14 | Proximity/phrase slop | Bounded query-local Tantivy phrase slop; full contract open | Explicit positions, distance and field semantics; not mislabeled contiguous phrase filtering |
 | F15 | Controlled advanced query syntax | Query compiler; parser-library decision | Field scoping, quotes, escapes, Boolean grouping and boosts; plain-text mode remains predictable |
 | F16 | Synonyms and query expansion | Versioned dictionary/query policy | Directional/multiword behavior, scoring and expansion budgets, rebuild classification |
 | F17 | Snippets and highlighting | Source-aware analyzer/result layer; Tantivy snippet candidate | Real original-text offsets; correct Unicode and normalization mapping; permission/version checks |
@@ -74,11 +74,7 @@ The [standalone Tantivy 0.26.2 experiment](../experiments/tantivy-probe/README.m
 has a separate locked dependency graph. Its [five CI semantic cases](evidence/p0-tantivy-ci.json) repeat the [local observations](evidence/p0-tantivy-local.json) on the identified current build.
 It exercises fuzzy matching and returned-expansion rejection, phrase/slop and
 parser behavior, literal snippets, and writer/reader visibility. These are
-candidate-engine runtime checks. Tantivy is not linked into the extension or
-Edge adapter, and pg_search remains an unexecuted fixed comparator. Hard fuzzy
-work bounds, shared analyzer/offset policy, authorization, two-engine lifecycle,
-held-out relevance and all F13–F20 acceptance requirements remain open under
-[ADR 0002](adr/0002-lexical-gap-strategy.md).
+candidate-engine runtime checks. The later [bounded query-local SQL integration](source-bounded-lexical.md) links pinned Tantivy into the managed helper for ASCII fuzzy distance one and phrase slop over a complete durable filtered Edge source snapshot. It caps source bytes, points, query terms and complete fuzzy expansions, and creates no second persistent index. Its SQL permission, freshness, cancellation and budget checks are distinct from these historical experiments. pg_search remains an unexecuted fixed comparator. General analyzers, source offsets, persistent two-engine lifecycle, held-out relevance and full F13–F20 acceptance remain open.
 
 ### Analyzer configuration contract
 

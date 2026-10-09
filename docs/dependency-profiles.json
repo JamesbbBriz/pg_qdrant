@@ -3,7 +3,7 @@
   "evidence_kind": "cargo_locked_profile_resolution_comparison",
   "target": "x86_64-unknown-linux-gnu",
   "baseline_profile": "direct-normal",
-  "cargo_lock_sha256": "e7dfa1f4defe286d5a491c1c0479baea0901febbb0e1cb13181cdfd36695beb8",
+  "cargo_lock_sha256": "492e34e2852978c8587cd605e1ce52cca448bfe2fa92e2dc0d7149e380639c7a",
   "manifest_inputs": [
     {
       "path": "Cargo.toml",
@@ -19,7 +19,7 @@
     },
     {
       "path": "crates/pg_qdrant-helper/Cargo.toml",
-      "sha256": "8682740658861f124e15aafa9e55cae98edff8560d3c6a83c84b668f32dd9f6e"
+      "sha256": "44fa12a60c5f25946eaa41f60b30068fe00ff5c8e7358408510d4c4fee08522a"
     },
     {
       "path": "crates/pg_qdrant-protocol/Cargo.toml",
@@ -40,8 +40,8 @@
         "pg_qdrant/pg17",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "0ea6085329a493128fb39be12c601d4fe79c23726d3abe0ea2df742de36aff34",
-      "package_count": 440,
+      "full_inventory_sha256": "c96be75258f769f86d5bf33e77977fa06cd7fe60561d4a7653056c31778184ea",
+      "package_count": 482,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
         {
@@ -67,11 +67,14 @@
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
+            "levenshtein_automata@0.2.1",
             "libc@0.2.189",
             "pg-qdrant-edge-probe@0.0.1",
             "pg-qdrant-protocol@0.0.1",
             "qdrant-edge@0.8.0",
-            "serde_json@1.0.151"
+            "serde_json@1.0.151",
+            "tantivy-fst@0.5.0",
+            "tantivy@0.26.2"
           ]
         },
         {
@@ -122,8 +125,8 @@
         "pg_qdrant/p0-fault-injection",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "6a4cce319dd6042835710a2b477e687cb57d5ce7922e6987d2167de9727f021f",
-      "package_count": 440,
+      "full_inventory_sha256": "3695622d1101df4cbf2670c63c2b6e04c69496f21e6fd256aeacbad37ec20a83",
+      "package_count": 482,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
         {
@@ -151,11 +154,14 @@
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
+            "levenshtein_automata@0.2.1",
             "libc@0.2.189",
             "pg-qdrant-edge-probe@0.0.1",
             "pg-qdrant-protocol@0.0.1",
             "qdrant-edge@0.8.0",
-            "serde_json@1.0.151"
+            "serde_json@1.0.151",
+            "tantivy-fst@0.5.0",
+            "tantivy@0.26.2"
           ]
         },
         {
@@ -228,8 +234,8 @@
         "pg_qdrant/p0-managed-helper",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "ee1a045d8d8ca9018fab3550ad1f1d726d0d339ff148a86425a113a39b91694c",
-      "package_count": 440,
+      "full_inventory_sha256": "40471e8f6785fcf074543a54c54c2e9147c9f490296b89695fe345f8786641c1",
+      "package_count": 482,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
         {
@@ -255,11 +261,14 @@
           "license_file_sha256": null,
           "features": [],
           "dependencies": [
+            "levenshtein_automata@0.2.1",
             "libc@0.2.189",
             "pg-qdrant-edge-probe@0.0.1",
             "pg-qdrant-protocol@0.0.1",
             "qdrant-edge@0.8.0",
-            "serde_json@1.0.151"
+            "serde_json@1.0.151",
+            "tantivy-fst@0.5.0",
+            "tantivy@0.26.2"
           ]
         },
         {
@@ -325,8 +334,8 @@
         "pg-qdrant-helper/p0-fault-injection",
         "pgrx/cshim"
       ],
-      "full_inventory_sha256": "37bb7653971021511cf8205f7d1bb387ac7597ccaa32aef87c82c2c930917a2f",
-      "package_count": 440,
+      "full_inventory_sha256": "33b46b20d015e09a3054b9f56278b95e3179c7b354085015da3b820fb044ec05",
+      "package_count": 482,
       "registry_coordinates_checksums_match_direct_normal": true,
       "workspace_packages": [
         {
@@ -356,11 +365,14 @@
             "p0-fault-injection"
           ],
           "dependencies": [
+            "levenshtein_automata@0.2.1",
             "libc@0.2.189",
             "pg-qdrant-edge-probe@0.0.1",
             "pg-qdrant-protocol@0.0.1",
             "qdrant-edge@0.8.0",
-            "serde_json@1.0.151"
+            "serde_json@1.0.151",
+            "tantivy-fst@0.5.0",
+            "tantivy@0.26.2"
           ]
         },
         {

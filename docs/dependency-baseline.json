@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "p0_ci8_current_source_native_cpu_verified_product_release_pending",
+  "status": "query_local_lexical_combined_local_build_hosted_regression_pending",
   "reviewed_on": "2026-10-08",
   "platform_candidate": {
     "os": "linux",
@@ -32,6 +32,22 @@
       "features": [
         "pg17",
         "cshim"
+      ]
+    },
+    {
+      "name": "tantivy",
+      "cargo_requirement": "=0.26.2",
+      "role": "bounded_query_local_lexical_primitives",
+      "source": "crates.io",
+      "package_sha256": "861facfabd71044968f364837f9a083b56464ba5a59079f88706ee5c451ca069",
+      "default_features": false,
+      "features": [
+        "lz4-compression",
+        "lz4_flex"
+      ],
+      "public_api": "https://docs.rs/tantivy/0.26.2/tantivy/",
+      "declared_features": [
+        "lz4-compression"
       ]
     }
   ],
@@ -68,7 +84,7 @@
   "optional_lexical_candidate": {
     "name": "tantivy",
     "cargo_requirement_candidate": "=0.26.2",
-    "adopted": false,
+    "adopted": true,
     "decision_gate": "FTS gap evaluation and lifecycle/fusion ADR",
     "registry_record": "https://crates.io/api/v1/crates/tantivy/0.26.2",
     "package_sha256": "861facfabd71044968f364837f9a083b56464ba5a59079f88706ee5c451ca069",
@@ -83,12 +99,14 @@
     "experiment_evidence": "evidence/p0-tantivy-ci.json",
     "experiment_status": "five_isolated_ci_primitive_characterizations_passed_not_adopted",
     "experiment_verified_source_commit": "57c58fcee51efb0067f04b03ffb44e300f76ce72",
-    "experiment_ci_run_id": 37743504259
+    "experiment_ci_run_id": 37743504259,
+    "integration_contract": "docs/adr/0006-query-local-lexical.md",
+    "integration_scope": "bounded query-local RAM fuzzy/proximity over durable Edge source snapshot; full lexical/release acceptance open"
   },
   "mandatory_inference_dependencies": [],
   "mandatory_network_qdrant_client_dependencies": [],
   "cargo_lock_present": true,
-  "compiled_dependency_graph_verified": true,
+  "compiled_dependency_graph_verified": false,
   "automatic_dependency_updates_active": false,
   "dependency_update_configuration_present": true,
   "build_configuration": {

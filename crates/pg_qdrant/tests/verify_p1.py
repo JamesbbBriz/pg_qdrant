@@ -71,7 +71,8 @@ assert capabilities['source_retrieve_available']
 assert capabilities['source_statistics_available']
 assert capabilities['source_matrix_available']
 assert capabilities['source_groups_available']
-assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','F19','V01','V02','V03','Q02','Q03','Q04','Q05','Q06','Q07','Q08','Q09','Q10','Q11','Q12']
+assert capabilities['bounded_lexical_available']
+assert [item['id'] for item in capabilities['capabilities'] if item['sql_product_interface']]==['F01','F02','F04','F05','F06','F07','F08','F09','F10','F11','F13','F14','F19','V01','V02','V03','Q02','Q03','Q04','Q05','Q06','Q07','Q08','Q09','Q10','Q11','Q12']
 assert not any(item['release_supported'] for item in capabilities['capabilities'])
 if faults:
     import verify_transport
@@ -353,6 +354,8 @@ import verify_tokens
 verify_tokens_replay=verify_tokens.run(sql,ready,ticket_from,checks)
 import verify_lexical
 verify_lexical_replay=verify_lexical.run(sql,ready,ticket_from,checks,faults,crash_matrix)
+import verify_bounded_lexical
+verify_bounded_lexical_replay=verify_bounded_lexical.run(sql,ready,ticket_from,checks,spawn)
 import verify_paging
 verify_paging_replay=verify_paging.run(sql,ready,ticket_from,checks,spawn,finish,wait_session)
 import verify_discovery
@@ -388,6 +391,7 @@ def verify_model_replay():
     verify_sparse_replay()
     verify_tokens_replay()
     verify_lexical_replay()
+    verify_bounded_lexical_replay()
     verify_paging_replay()
     verify_discovery_replay()
     verify_numeric_replay()

@@ -11,7 +11,7 @@ Status: active dependency and upgrade contract. The [machine-readable baseline](
 | Extension build/package tool | `cargo-pgrx 0.19.3`, matching the library | Build and distribution |
 | Tokenization used by Edge | Edge-owned dependency graph and analyzer configuration | Engine adapter and lexical policy |
 | Application vector generation | Optional application/model integration, outside the core build | Model contract |
-| Rich lexical gaps | Evaluate Tantivy `0.26.2`; not adopted or required | Lexical adapter decision |
+| Rich lexical gaps | Direct Tantivy `=0.26.2` for bounded query-local RAM fuzzy/proximity; [ADR 0006](adr/0006-query-local-lexical.md); full lexical acceptance open | Lexical adapter decision |
 | SQL schema and migrations | Versioned project-owned API | Extension lifecycle |
 
 The core integration should use published Edge types and methods. The `qdrant-client` REST/gRPC SDK is not the embedded engine dependency. FastEmbed/ONNX and model downloads are not mandatory dependencies for local BM25 or BYOV retrieval.

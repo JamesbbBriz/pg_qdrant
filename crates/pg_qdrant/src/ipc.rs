@@ -18,6 +18,7 @@ pub fn raise(error: ProbeError) -> ! {
         "invalid_parameter" | "protocol_error" => Code::ERRCODE_INVALID_PARAMETER_VALUE,
         "timeout" => Code::ERRCODE_QUERY_CANCELED,
         "queue_full" => Code::ERRCODE_CONFIGURATION_LIMIT_EXCEEDED,
+        "source_lexical_budget" => Code::ERRCODE_PROGRAM_LIMIT_EXCEEDED,
         "worker_unavailable" => Code::ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE,
         _ => Code::ERRCODE_INTERNAL_ERROR,
     };

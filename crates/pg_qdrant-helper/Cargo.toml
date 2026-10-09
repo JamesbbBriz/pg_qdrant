@@ -17,6 +17,9 @@ p0-fault-injection = ["pg-qdrant-edge-probe/p0-fault-injection"]
 
 [dependencies]
 qdrant-edge = "=0.8.0"
+tantivy = { version = "=0.26.2", default-features = false, features = ["lz4-compression"] }
+levenshtein_automata = "=0.2.1"
+tantivy-fst = "=0.5.0"
 pg-qdrant-protocol = { path = "../pg_qdrant-protocol" }
 pg-qdrant-edge-probe = { path = "../edge-probe" }
 serde_json = "=1.0.151"
