@@ -38,6 +38,7 @@ DECLARE
     matched_triggers integer;
     representation_query jsonb;
     recommendation jsonb;
+    discovery jsonb;
     representation_kind text;
     rerank_query jsonb;
     named_input record;
@@ -209,8 +210,13 @@ BEGIN
         ELSE effective_plan:='precision_bm25_'||representation_kind||'_'||fusion||'_maxsim';
         END IF;
     ELSIF mode='explore' THEN
-        recommendation:=qdrant_internal.admit_recommendation(index_name,query_vectors);
-        effective_plan:='explore_dense_'||(recommendation #>> '{query,strategy}');
+        IF (SELECT value->>'strategy' FROM jsonb_each(query_vectors) LIMIT 1) IN ('discover','context') THEN
+            discovery:=qdrant_internal.admit_discovery(index_name,query_vectors);
+            effective_plan:='explore_dense_'||(discovery #>> '{query,strategy}');
+        ELSE
+            recommendation:=qdrant_internal.admit_recommendation(index_name,query_vectors);
+            effective_plan:='explore_dense_'||(recommendation #>> '{query,strategy}');
+        END IF;
     ELSIF mode IN ('semantic','sparse','hybrid','maxsim') THEN
         representation_query:=qdrant_internal.admit_representation(index_name,query_vectors);
         SELECT contract->>'kind' INTO representation_kind FROM qdrant_internal.representation_catalog
@@ -240,7 +246,15 @@ BEGIN
        'requested_mode',mode,'effective_plan',effective_plan,'representation_query',representation_query,'representation_kind',representation_kind,'fusion',fusion,
        'rerank_query',rerank_query,
        'recommendation_query',recommendation->'query',
-       'seed_digest',recommendation->'seed_digest',
+       'discovery_query',discovery->'query',
+       'seed_digest',coalesce(recommendation,discovery)->'seed_digest',
+       'discovery_contract',CASE WHEN discovery IS NOT NULL THEN jsonb_build_object(
+         'seed_versions',discovery->'seed_versions','seed_digest',discovery->'seed_digest',
+         'seed_scope','current visible PostgreSQL source and ready representation snapshot; durability is a separate ticket',
+         'strategy',discovery #>> '{query,strategy}','scalar_work_limit',20000000,
+         'work_basis','target and context-vector count * dimensions * native owned live points; checked before execution',
+         'seed_exclusion','target and every context example excluded before candidate truncation',
+         'text_query_used_for_scoring',false) END,
        'recommendation_contract',CASE WHEN recommendation IS NOT NULL THEN jsonb_build_object(
          'seed_versions',recommendation->'seed_versions','seed_digest',recommendation->'seed_digest',
          'seed_scope','current visible PostgreSQL source and ready representation snapshot; durability is a separate ticket',
@@ -321,6 +335,7 @@ BEGIN
       'generation',i.generation,'storage_epoch',c.storage_epoch,'q',q,
       'representation_query',plan->'representation_query',
       'recommendation_query',plan->'recommendation_query',
+      'discovery_query',plan->'discovery_query',
       'rerank_query',plan->'rerank_query',
       'fusion',plan->'fusion',
       'predicates',plan->'matching',
@@ -371,6 +386,7 @@ GRANT EXECUTE ON FUNCTION qdrant.explain_search(text,text,text,integer,jsonb,jso
     requires = [
         "p1_representations",
         "p2_mode_registry",
-        "p2_recommendation_admission"
+        "p2_recommendation_admission",
+        "p2_context_discovery_admission"
     ]
 );

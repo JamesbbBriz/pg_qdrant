@@ -6,6 +6,9 @@ primitives to `qdrant.search`, `explain_search` and bounded `search_page` throug
 domain. It does not complete P4-EXPLORE or establish recommendation quality,
 general planning or release support.
 
+[Source-key discovery and context](source-context-discovery.md) use the same
+owner and source/model admission with explicit target/context pair contracts.
+
 Declare and populate a named [dense BYOV slot](dense-representations.md) through
 ordinary source-table DML. Each current live row must have a ready slot with the
 declared model ID/version, source fingerprint and incarnation. Source keys use
@@ -81,6 +84,6 @@ refusal. SQL ranking goldens currently cover Dot. These synthetic fixtures do
 not establish relevance quality or the complete recommendation capability
 across every supported combination.
 
-Source protocol ABI 9 and the added development snapshot metadata require a
+Source protocol ABI 10 and the added development snapshot metadata require a
 matching helper and fresh installation. Existing development-catalog upgrades
 and disk-format/model migrations remain unsupported until separately tested.

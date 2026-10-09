@@ -4948,6 +4948,16 @@
           "source_paths": [
             "crates/edge-probe/src/api_inventory.rs"
           ]
+        },
+        {
+          "level": "SQL-integration-verified",
+          "kind": "installed_dense_source_discovery_context",
+          "status": "passed",
+          "source": "crates/pg_qdrant/tests/verify_context_discovery.py",
+          "scope": "Installed dense source-key Discover/Context with independent Dot score goldens, multiple context pairs, source constraints and all-seed exclusion before cap, bigint/uuid/quoted text key resolution, current incarnation/model checks, permissions and RLS refusal, actual 32-vector 64 KiB admission, target-sensitive paging and retained-owner SQL cancellation/concurrent context-seed mutation. Native adapter goldens cover Dot/Cosine/Euclid/Manhattan. General context representations, quality, full combinations and migrations remain open.",
+          "full_capability_acceptance": false,
+          "sql_product_integration_verified": true,
+          "release_supported": false
         }
       ],
       "source_contract": "docs/capabilities.md#query-execution-and-filtering",
@@ -4974,7 +4984,7 @@
         "support_status": "public primitive candidate; fixed-release call and runtime evidence required"
       },
       "input_config": "Target input, positive/negative context pairs and compatible named representation.",
-      "sql_exposure": "proposed discover entry",
+      "sql_exposure": "qdrant.search/explain_search/search_page explore with named dense source-key discover/context strategy; matching development helper required",
       "execution": [
         "Validate supported input/configuration, caller permissions, required slots and generation.",
         "Compile project-owned request and mandatory predicates through the appropriate adapter.",
@@ -5007,14 +5017,16 @@
           "verified_scope": "Exhaustive enum/method sentinels or typed constructors only; full callable/negative-input coverage remains pending."
         },
         "engine_runtime": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "ENGINE-Q05",
-          "required": "Context pairs, budgets and authorized examples"
+          "required": "Context pairs, budgets and authorized examples",
+          "verified_scope": "Bounded dense current-source examples only; full original acceptance remains open. See docs/source-context-discovery.md."
         },
         "sql_integration": {
-          "status": "pending",
+          "status": "partially_verified",
           "case_id": "SQL-Q05",
-          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions."
+          "required": "Positive and negative PostgreSQL inputs with permission, lifecycle, cancel, result and declared-source-visibility assertions.",
+          "verified_scope": "Bounded dense current-source examples only; full original acceptance remains open. See docs/source-context-discovery.md."
         },
         "release": {
           "status": "pending",
@@ -5043,7 +5055,7 @@
           "status": "pending"
         }
       ],
-      "product_status": "planned",
+      "product_status": "partial_sql_integration",
       "full_acceptance_complete": false,
       "release_supported": false,
       "probe_progress": {

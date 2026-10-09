@@ -14,6 +14,12 @@ pgrx::extension_sql_file!(
     name = "p1_consumer_contract",
     requires = ["p1_representations"]
 );
+
+pgrx::extension_sql_file!(
+    "../sql/context_discovery.sql",
+    name = "p2_context_discovery_admission",
+    requires = ["p2_recommendation_admission"]
+);
 pgrx::extension_sql_file!(
     "../sql/generations.sql",
     name = "p1_native_generations",
