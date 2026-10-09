@@ -90,14 +90,14 @@ def exercise():
     require({row["key"] for row in search()} == {"doc-a", "doc-c"}, "ordinary writer was not captured")
     sql("SET ROLE preview_writer; SELECT count(*) FROM qdrant_internal.outbox", "42501")
     sql("SET ROLE preview_writer; SELECT * FROM qdrant.search('preview_docs','transaction')", "42501")
-    ticket = owned("BEGIN; UPDATE preview_docs SET body='updated transaction recovery' WHERE id='doc-a'; "
+    ticket = owned("BEGIN; UPDATE preview_docs SET body='updated transaction transaction recovery' WHERE id='doc-a'; "
                    "SELECT qdrant.track_changes('preview_docs'); COMMIT")
     require(len(ticket) == 36, "missing fixed-membership ticket")
     outcome = json.loads(owned("SELECT qdrant.await_changes('" + ticket + "',45000)"))
     require(outcome["committed"] and outcome["applied"] and outcome["durable"]
             and outcome["pending_events"] == 0 and not outcome["timed_out"], "ticket was not durable")
     REPORT["ticket"] = outcome
-    require({row["body"] for row in search()} == {"updated transaction recovery", "ordinary transaction write"},
+    require({row["body"] for row in search()} == {"updated transaction transaction recovery", "ordinary transaction write"},
             "updated native/source JOIN mismatch")
     REPORT["checks"].append("ordinary table backfill/DML, exact durable ticket and actual BM25 source JOIN; writer has no ledger or index-owner access")
     task = json.loads(owned("SELECT qdrant.rebuild_index('preview_docs')"))
@@ -106,6 +106,16 @@ def exercise():
     REPORT["rebuild"] = rebuilt
     ready()
     before = search()
+    # A repeated query term gives a strict rank, avoiding unspecified native ties
+    # across fresh index registration after extension uninstall/reinstall.
+    scores_query = ("SELECT coalesce(jsonb_agg(h.score ORDER BY h.rank),'[]') "
+                    "FROM qdrant.search('preview_docs','transaction','text',10) h")
+    scores = json.loads(owned(scores_query))
+    REPORT["before_restart_search"] = before
+    REPORT["before_restart_scores"] = scores
+    require(before == [{"key": "doc-a", "body": "updated transaction transaction recovery"},
+                       {"key": "doc-c", "body": "ordinary transaction write"}]
+            and len(scores) == 2 and scores[0] > scores[1], "fixture requires strictly ranked native matches")
     subprocess.run(["pg_ctl", "-D", os.environ["PG_QDRANT_DISPOSABLE_DATA"], "-m", "fast", "-w",
                     "restart", "-l", str(ARTIFACTS / "postgres.log")], check=True, timeout=40,
                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -118,7 +128,11 @@ def exercise():
     sql("CREATE EXTENSION pg_qdrant")
     owned(register)
     ready()
-    require(search() == before, "reinstalled package/source backfill changed results")
+    after = search()
+    REPORT["after_reinstall_search"] = after
+    REPORT["after_reinstall_scores"] = json.loads(owned(scores_query))
+    require(after == before and REPORT["after_reinstall_scores"] == scores,
+            "reinstalled package/source backfill changed results or native scores")
     drop()
     sql("DROP EXTENSION pg_qdrant")
     REPORT["checks"].append("public drop, extension uninstall and reinstall preserve source facts and reproduce native matches")
