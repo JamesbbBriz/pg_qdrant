@@ -5,6 +5,8 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
+import time
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -36,6 +38,71 @@ def observation():
 
 
 class OomEvidenceTests(unittest.TestCase):
+    def test_inner_ready_publication_is_complete_and_never_replaces(self):
+        inner = SOURCE.parents[1] / "crates/pg_qdrant/tests/verify_oom.py"
+        spec = importlib.util.spec_from_file_location("oom_inner_publication", inner)
+        module = importlib.util.module_from_spec(spec)
+        environment = {"PG_QDRANT_PSQL": "unused", "PG_QDRANT_ARTIFACT_DIR": "/unused",
+            "PG_QDRANT_DISPOSABLE_DATA": "/unused", "PG_QDRANT_P0_OOM_RUN_ID": "0" * 32}
+        with patch.dict(os.environ, environment):
+            spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ready.json"
+            fsync = os.fsync
+            def before_publication(fd):
+                self.assertFalse(path.exists())
+                self.assertEqual(json.loads(path.with_name("ready.json.pending").read_bytes()),
+                    {"nonce": "complete"})
+                fsync(fd)
+            with patch.object(module.os, "fsync", side_effect=before_publication):
+                module.write_owned(path, {"nonce": "complete"})
+            with self.assertRaises(FileExistsError):
+                module.write_owned(path, {"nonce": "replacement"})
+            self.assertEqual(json.loads(path.read_bytes()), {"nonce": "complete"})
+            self.assertFalse(path.with_name("ready.json.pending").exists())
+
+    def test_barrier_is_invisible_until_complete_stdin_is_published(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "go.json"
+            child = subprocess.Popen([sys.executable, "-c", MODULE.BARRIER_WRITER, str(path)],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                child.stdin.write(b'{"nonce":')
+                child.stdin.flush()
+                deadline = time.monotonic() + 3
+                while not path.with_name("go.json.pending").exists():
+                    self.assertIsNone(child.poll())
+                    self.assertLess(time.monotonic(), deadline)
+                    time.sleep(0.01)
+                self.assertFalse(path.exists())
+                output, error = child.communicate(b'"complete"}\n', timeout=3)
+                self.assertEqual(child.returncode, 0, error)
+                self.assertEqual(output, b"")
+                self.assertEqual(json.loads(path.read_bytes()), {"nonce": "complete"})
+                self.assertFalse(path.with_name("go.json.pending").exists())
+                if os.name == "posix":
+                    self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                child.communicate(timeout=3)
+
+    def test_barrier_refuses_incomplete_oversized_or_reused_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "go.json"
+            for data in (b"", b'{"nonce":', b" " * 16385):
+                result = subprocess.run([sys.executable, "-c", MODULE.BARRIER_WRITER, str(path)],
+                    input=data, capture_output=True, timeout=3)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(path.exists())
+                self.assertFalse(path.with_name("go.json.pending").exists())
+            path.write_bytes(b'{"nonce":"original"}')
+            result = subprocess.run([sys.executable, "-c", MODULE.BARRIER_WRITER, str(path)],
+                input=b'{"nonce":"replacement"}', capture_output=True, timeout=3)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(path.read_bytes(), b'{"nonce":"original"}')
+            self.assertFalse(path.with_name("go.json.pending").exists())
+
     def test_mapping_wrapper_compiles_with_future_import_and_limits_observer_capabilities(self):
         calls = []
         def command(args, **kwargs):

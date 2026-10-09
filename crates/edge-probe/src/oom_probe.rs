@@ -560,46 +560,85 @@ impl Drop for ScoreAdjustment {
     }
 }
 
+/// Anonymous private mapping: Linux initializes pages to zero on first touch.
+/// Ownership remains local and is released before the final failure report.
+struct MemoryMapping {
+    pointer: *mut u8,
+    length: usize,
+}
+impl MemoryMapping {
+    fn new(length: usize) -> Checked<Self> {
+        require(
+            length > 0 && length <= MEMORY_BYTES as usize,
+            "invalid bounded mapping length",
+        )?;
+        // SAFETY: no fixed address, file or shared mapping is requested. MAP_FAILED
+        // is checked before the pointer can be used; length stays fixed for Drop.
+        let pointer = unsafe {
+            libc::mmap(
+                std::ptr::null_mut(),
+                length,
+                libc::PROT_READ | libc::PROT_WRITE,
+                libc::MAP_PRIVATE | libc::MAP_ANONYMOUS,
+                -1,
+                0,
+            )
+        };
+        if pointer == libc::MAP_FAILED {
+            return Err(format!(
+                "anonymous mapping: {}",
+                std::io::Error::last_os_error()
+            ));
+        }
+        if pointer.is_null() {
+            // SAFETY: mmap succeeded; reject an address Rust cannot dereference.
+            unsafe { libc::munmap(pointer, length) };
+            return Err("anonymous mapping returned a null address".into());
+        }
+        Ok(Self {
+            pointer: pointer.cast(),
+            length,
+        })
+    }
+    fn touch(&mut self, offset: usize) -> Checked<()> {
+        require(offset < self.length, "touch outside bounded mapping")?;
+        // SAFETY: this writable mapping is owned for its complete fixed length;
+        // the offset is checked and Linux supplies initialized anonymous pages.
+        unsafe { std::ptr::write_volatile(self.pointer.add(offset), 0xa5) };
+        Ok(())
+    }
+}
+impl Drop for MemoryMapping {
+    fn drop(&mut self) {
+        // SAFETY: the exact mmap address/length are owned once and never moved,
+        // resized, shared or unmapped elsewhere.
+        unsafe { libc::munmap(self.pointer.cast(), self.length) };
+    }
+}
+
 fn allocate(guard: &mut Guard) -> Checked<&'static str> {
-    let mut chunks: Vec<Vec<u8>> = Vec::new();
-    chunks
-        .try_reserve_exact((MEMORY_BYTES as usize) / CHUNK_BYTES)
-        .map_err(|_| "cannot reserve bounded buffer list")?;
     let boundary = json!({"event": "allocation_started", "touched_bytes": 0,
         "companion_identity_verified": guard.marker["companion"],
-        "participants_verified_at_barrier": true, "allocation_limits": guard.allocation_limits});
+        "participants_verified_at_barrier": true, "allocation_limits": guard.allocation_limits,
+        "allocator": "private anonymous mapping; one volatile write per native page"});
     writeln!(guard.log, "{boundary}").map_err(|e| e.to_string())?;
     guard.log.sync_data().map_err(|e| e.to_string())?;
     guard.allocation_started = true;
     let started = Instant::now();
-    while chunks.len() * CHUNK_BYTES < MEMORY_BYTES as usize {
+    let mut memory = match MemoryMapping::new(MEMORY_BYTES as usize) {
+        Ok(memory) => memory,
+        Err(_) => return Ok("allocation_error"),
+    };
+    for offset in (0..MEMORY_BYTES as usize).step_by(guard.page_size) {
         if started.elapsed() >= Duration::from_secs(10) {
             return Ok("cooperative_deadline");
         }
-        let mut bytes = Vec::<u8>::new();
-        if bytes.try_reserve_exact(CHUNK_BYTES).is_err() {
-            return Ok("allocation_error");
-        }
-        // Initialize the reserved allocation in bulk even in debug builds.
-        // SAFETY: reserve succeeded for CHUNK_BYTES u8 elements, len is zero,
-        // and every byte is initialized before publishing the new length.
-        unsafe {
-            bytes.as_mut_ptr().write_bytes(0, CHUNK_BYTES);
-            bytes.set_len(CHUNK_BYTES);
-        }
-        for offset in (0..CHUNK_BYTES).step_by(guard.page_size) {
-            if started.elapsed() >= Duration::from_secs(10) {
-                return Ok("cooperative_deadline");
-            }
-            // Initialized, owned storage; touch a real byte in every native page.
-            unsafe { std::ptr::write_volatile(bytes.as_mut_ptr().add(offset), 0xa5) };
-        }
-        chunks.push(bytes);
-        if chunks.len() % 16 == 0 {
+        memory.touch(offset)?;
+        let touched = offset + guard.page_size;
+        if touched % (16 * CHUNK_BYTES) == 0 {
             writeln!(
                 guard.log,
-                "{{\"event\":\"progress\",\"touched_bytes\":{}}}",
-                chunks.len() * CHUNK_BYTES
+                "{{\"event\":\"progress\",\"touched_bytes\":{touched}}}"
             )
             .map_err(|e| e.to_string())?;
         }
@@ -625,7 +664,7 @@ pub fn run(profile: &str) -> Value {
         }
     };
     let barrier = guard.barrier(adjustment.previous);
-    // allocate() drops every owned buffer before any final JSON construction.
+    // allocate() releases its mapping before any final JSON construction.
     let outcome = barrier.and_then(|()| allocate(&mut guard));
     let allocation_started = guard.allocation_started;
     let restored = adjustment.restore();
@@ -640,6 +679,25 @@ pub fn run(profile: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bounded_mapping_initializes_pages_and_rejects_invalid_offsets() {
+        // A single page verifies ownership/bounds without running the OOM probe.
+        let mut memory = MemoryMapping::new(4096).unwrap();
+        // SAFETY: Linux provides initialized anonymous storage for this live map.
+        assert_eq!(unsafe { std::ptr::read_volatile(memory.pointer) }, 0);
+        assert_eq!(
+            unsafe { std::ptr::read_volatile(memory.pointer.add(4095)) },
+            0
+        );
+        memory.touch(0).unwrap();
+        memory.touch(4095).unwrap();
+        assert_eq!(unsafe { std::ptr::read_volatile(memory.pointer) }, 0xa5);
+        assert!(memory.touch(4096).is_err());
+        assert!(memory.touch(usize::MAX).is_err());
+        assert!(MemoryMapping::new(0).is_err());
+        assert!(MemoryMapping::new(MEMORY_BYTES as usize + 1).is_err());
+    }
 
     #[test]
     fn nonce_refuses_paths_and_ambiguous_values_without_native_execution() {

@@ -23,6 +23,26 @@ import time
 MEMORY = 768 * 1024 * 1024
 LIMIT = 2 * 1024 * 1024
 
+# The native reader must never see a created-but-empty release file. Publish a
+# fully written inode without replacing an existing nonce or following a link.
+BARRIER_WRITER = """import json,os,sys
+path = sys.argv[1]
+pending = path + '.pending'
+fd = os.open(pending, os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW, 0o600)
+try:
+    with os.fdopen(fd, 'wb') as stream:
+        data = sys.stdin.buffer.read(16385)
+        if not data or len(data) > 16384:
+            raise ValueError('invalid barrier size')
+        json.loads(data)
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.link(pending, path, follow_symlinks=False)
+finally:
+    os.unlink(pending)
+"""
+
 
 def command(args, *, timeout=10, data=None, check=True):
     process = subprocess.Popen(args, stdin=subprocess.PIPE if data is not None else subprocess.DEVNULL,
@@ -296,9 +316,8 @@ def execute(args):
                     report["stage"] = "allocation_and_recovery"
                     go = {"nonce": nonce, "target": ready["target"], "container_inspection_verified": True,
                           "host_pid": mapping["host_pid"]}
-                    writer = "import os,sys; p=sys.argv[1]; fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600); f=os.fdopen(fd,'w'); f.write(sys.stdin.read(16384)); f.flush(); os.fsync(f.fileno()); f.close()"
                     command(["docker", "exec", "--user", "10001:10001", "-i", container_id,
-                             "python3", "-c", writer, f"/tmp/pgq-p0-oom-{nonce}/go.json"], data=json.dumps(go)+"\n")
+                             "python3", "-c", BARRIER_WRITER, f"/tmp/pgq-p0-oom-{nonce}/go.json"], data=json.dumps(go)+"\n")
             time.sleep(0.2)
         else:
             report["external_termination_requested"] = True
