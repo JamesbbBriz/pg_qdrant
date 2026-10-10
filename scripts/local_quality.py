@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from local_ci import ROOT, RUNNER, act_binary, snapshot
+from ci_resources import MANAGED, require_clean_start, finish_run
 
 
 def output(args):
@@ -22,6 +23,7 @@ def main():
     parser.add_argument("--fixtures", type=Path, default=ROOT / "artifacts/quality-fixtures")
     parser.add_argument("--act")
     args = parser.parse_args()
+    require_clean_start()
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / ("quality-" + run_id)
     source = directory / "snapshot"
@@ -53,13 +55,30 @@ def main():
                "-j", "quality", "-P", "ubuntu-24.04=" + runner, "--pull=false", "--reuse", "--network", "none",
                "--container-daemon-socket", "/var/run/docker.sock", "--env-file", str(empty), "--secret-file", str(empty),
                "--env", "PGQ_RUN_ID=" + run_id, "--container-options",
-               '--label io.pg_qdrant.ci.quality-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"']
+               '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.quality-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"']
+    code = 1
+    try:
+        code = measure(command, directory, report, manifest, source, run_id)
+    except Exception as error:
+        report.update(status="failed", error=f"{type(error).__name__}: {error}")
+    finally:
+        report["resource_cleanup"] = finish_run(run_id, directory, "io.pg_qdrant.ci.quality",
+            "io.pg_qdrant.ci.quality-runner", "/tmp/quality-evidence/.")
+        if report["resource_cleanup"]["status"] != "passed":
+            code = 1
+        if code != 0:
+            report["status"] = "failed"
+        manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return code
+
+
+def measure(command, directory, report, manifest, source, run_id):
     print(directory, flush=True)
     with (directory / "act.log").open("wb") as log:
         try:
             result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
         except subprocess.TimeoutExpired:
-            report.update(status="failed", act_exit=124, reason="act deadline; owned containers retained")
+            report.update(status="failed", act_exit=124, reason="act deadline; diagnostic retirement required")
             manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
             raise
     report["act_exit"] = result.returncode
@@ -69,8 +88,7 @@ def main():
     state = json.loads(output(["docker", "inspect", ids[0]]))[0]
     if state["Config"]["Labels"]["io.pg_qdrant.ci.quality-runner"] != run_id:
         raise ValueError("unexpected quality runner")
-    subprocess.run(["docker", "cp", ids[0] + ":/tmp/quality-evidence", str(directory / "evidence")], check=True)
-    subprocess.run(["docker", "rm", "-f", ids[0]], check=True)
+    subprocess.run(["docker", "cp", ids[0] + ":/tmp/quality-evidence", str(directory / "evidence")], check=True, timeout=90)
     native_name = "pgq-quality-" + run_id
     observed = subprocess.run(["docker", "inspect", native_name], text=True, capture_output=True)
     if observed.returncode == 0:
@@ -78,8 +96,6 @@ def main():
         if native["Config"]["Labels"]["io.pg_qdrant.ci.quality"] != run_id:
             raise ValueError("unexpected product container")
         report["container_state"] = native["State"]
-        if result.returncode == 0 and native["State"]["ExitCode"] == 0:
-            subprocess.run(["docker", "rm", native_name], check=True)
     report["act_log_sha256"] = hashlib.sha256((directory / "act.log").read_bytes()).hexdigest()
     for item in report["snapshot"]["files"]:
         if hashlib.sha256((source / item["path"]).read_bytes()).hexdigest() != item["sha256"]:
@@ -98,8 +114,8 @@ def main():
     report["status"] = "measured" if result.returncode == 0 else "failed"
     manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print("Evidence:", directory)
-    sys.exit(result.returncode)
+    return result.returncode
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

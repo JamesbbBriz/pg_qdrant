@@ -30,7 +30,7 @@ jobs:
             --build-arg PRODUCT_IMAGE=pgq-preview-base-${PGQ_RUN_ID} \
             --build-arg RUNTIME_IMAGE=pgq-preview-tools-${PGQ_RUN_ID} \
             -t pgq-preview-archive-${PGQ_RUN_ID} .
-          docker create --label io.pg_qdrant.ci.preview=${PGQ_RUN_ID} --name pgq-preview-archive-${PGQ_RUN_ID} \
+          docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci.preview=${PGQ_RUN_ID} --name pgq-preview-archive-${PGQ_RUN_ID} \
             pgq-preview-archive-${PGQ_RUN_ID} /bin/true
           mkdir /tmp/preview-evidence
           docker cp pgq-preview-archive-${PGQ_RUN_ID}:/package-output/preview.tar.gz /tmp/preview-evidence/
@@ -44,7 +44,7 @@ jobs:
             -t pgq-preview-runtime-${PGQ_RUN_ID} .
       - name: Exercise ordinary SQL and recovery from the installed package
         run: |
-          docker create --label io.pg_qdrant.ci.preview=${PGQ_RUN_ID} --name pgq-preview-runtime-${PGQ_RUN_ID} \
+          docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci.preview=${PGQ_RUN_ID} --name pgq-preview-runtime-${PGQ_RUN_ID} \
             --memory=2g --memory-swap=2g --cpus=2 --pids-limit=128 --network=none \
             pgq-preview-runtime-${PGQ_RUN_ID}
           docker start --attach pgq-preview-runtime-${PGQ_RUN_ID}

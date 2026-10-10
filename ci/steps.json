@@ -28,7 +28,7 @@
         "requires": [
           "engine_lexical_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-tantivy-run-${PGQ_RUN_ID} --memory=512m --memory-swap=512m \\\n  --pids-limit=64 --cpus=1 --network=none pg-qdrant-p0-lexical-${PGQ_RUN_ID} bash -c '\n    set -euo pipefail\n    ulimit -c 0\n    timeout --kill-after=5s 45s target/tantivy-probe/debug/pg-qdrant-tantivy-feasibility \\\n      > /src/artifacts/tantivy-probe.json\n    cat /src/artifacts/tantivy-probe.json\n  '\ndocker start --attach pg-qdrant-p0-tantivy-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-tantivy-run-${PGQ_RUN_ID} --memory=512m --memory-swap=512m \\\n  --pids-limit=64 --cpus=1 --network=none pg-qdrant-p0-lexical-${PGQ_RUN_ID} bash -c '\n    set -euo pipefail\n    ulimit -c 0\n    timeout --kill-after=5s 45s target/tantivy-probe/debug/pg-qdrant-tantivy-feasibility \\\n      > /src/artifacts/tantivy-probe.json\n    cat /src/artifacts/tantivy-probe.json\n  '\ndocker start --attach pg-qdrant-p0-tantivy-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_5",
@@ -42,7 +42,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-disk-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py\ndocker start --attach pg-qdrant-p0-disk-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-disk-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py\ndocker start --attach pg-qdrant-p0-disk-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_7",
@@ -56,7 +56,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-disk-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text\ndocker start --attach pg-qdrant-p0-full-text-disk-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-disk-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text\ndocker start --attach pg-qdrant-p0-full-text-disk-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_9",
@@ -64,7 +64,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-clean-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text --clean\ndocker start --attach pg-qdrant-p0-full-text-clean-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-clean-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text --clean\ndocker start --attach pg-qdrant-p0-full-text-clean-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_10",
@@ -72,7 +72,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-capacity-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text --characterize-128-capacity-refusal\ndocker start --attach pg-qdrant-p0-full-text-capacity-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-full-text-capacity-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /pgq-p0-faults:rw,noexec,nosuid,nodev,size=128m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_ENOSPC_DIR=/pgq-p0-faults \\\n  pg-qdrant-p0-${PGQ_RUN_ID} python3 scripts/run_disk_probe.py --profile full-text --characterize-128-capacity-refusal\ndocker start --attach pg-qdrant-p0-full-text-capacity-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_11",
@@ -86,7 +86,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none pg-qdrant-p0-${PGQ_RUN_ID}\ndocker start --attach pg-qdrant-p0-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none pg-qdrant-p0-${PGQ_RUN_ID}\ndocker start --attach pg-qdrant-p0-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_13",
@@ -108,7 +108,7 @@
         "requires": [
           "engine_fault_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-fault-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none pg-qdrant-p0-faults-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-faults.sh\ndocker start --attach pg-qdrant-p0-fault-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-fault-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none pg-qdrant-p0-faults-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-faults.sh\ndocker start --attach pg-qdrant-p0-fault-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_16",
@@ -130,7 +130,7 @@
         "requires": [
           "engine_helper_normal_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-normal-pipes-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} python3 crates/pg_qdrant-helper/tests/probe.py \\\n  target/debug/pg_qdrant_p0_helper --out /src/artifacts/helper-pipes.json\ndocker start --attach pg-qdrant-p0-helper-normal-pipes-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-normal-pipes-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} python3 crates/pg_qdrant-helper/tests/probe.py \\\n  target/debug/pg_qdrant_p0_helper --out /src/artifacts/helper-pipes.json\ndocker start --attach pg-qdrant-p0-helper-normal-pipes-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_19",
@@ -138,7 +138,7 @@
         "requires": [
           "engine_helper_normal_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-normal-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p0.sh\ndocker start --attach pg-qdrant-p0-helper-normal-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-normal-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p0.sh\ndocker start --attach pg-qdrant-p0-helper-normal-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_20",
@@ -160,7 +160,7 @@
         "requires": [
           "engine_helper_fault_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-fault-pipes-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} python3 crates/pg_qdrant-helper/tests/probe.py \\\n  target/debug/pg_qdrant_p0_helper --faults --out /src/artifacts/helper-fault-pipes.json\ndocker start --attach pg-qdrant-p0-helper-fault-pipes-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-fault-pipes-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} python3 crates/pg_qdrant-helper/tests/probe.py \\\n  target/debug/pg_qdrant_p0_helper --faults --out /src/artifacts/helper-fault-pipes.json\ndocker start --attach pg-qdrant-p0-helper-fault-pipes-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_23",
@@ -168,7 +168,7 @@
         "requires": [
           "engine_helper_fault_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-faults.sh\ndocker start --attach pg-qdrant-p0-helper-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p0-helper-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-faults.sh\ndocker start --attach pg-qdrant-p0-helper-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_24",
@@ -182,7 +182,7 @@
         "requires": [
           "engine_helper_fault_image"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-product-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p1.sh\ndocker start --attach pg-qdrant-p1-product-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-product-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p1.sh\ndocker start --attach pg-qdrant-p1-product-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_26",
@@ -196,7 +196,7 @@
         "requires": [
           "engine_helper_fault_image"
         ],
-        "command": "docker create --user root --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-storage-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /tmp/pgq-p1-product.storage/data/pg_qdrant_p0/db-5.indexes:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_P1_STORAGE_TEST=1 --env PG_QDRANT_P1_DISK_DIR=/tmp/pgq-p1-product.storage/data/pg_qdrant_p0/db-5.indexes \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p1-storage.sh\ndocker start --attach pg-qdrant-p1-storage-${PGQ_RUN_ID}\n"
+        "command": "docker create --user root --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-storage-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  --tmpfs /tmp/pgq-p1-product.storage/data/pg_qdrant_p0/db-5.indexes:rw,noexec,nosuid,nodev,size=384m,uid=10001,gid=10001,mode=0700 \\\n  --env PG_QDRANT_P1_STORAGE_TEST=1 --env PG_QDRANT_P1_DISK_DIR=/tmp/pgq-p1-product.storage/data/pg_qdrant_p0/db-5.indexes \\\n  pg-qdrant-p0-helper-${PGQ_RUN_ID} bash crates/pg_qdrant/tests/run-p1-storage.sh\ndocker start --attach pg-qdrant-p1-storage-${PGQ_RUN_ID}\n"
       },
       {
         "id": "engine_28",
@@ -242,7 +242,7 @@
         "requires": [
           "ledger_2"
         ],
-        "command": "docker create --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p1-base-${PGQ_RUN_ID} bash experiments/p1-ledger/run.sh\ndocker start --attach pg-qdrant-p1-run-${PGQ_RUN_ID}\n"
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pg-qdrant-p1-run-${PGQ_RUN_ID} --memory=5g --cpus=2 --network=none \\\n  pg-qdrant-p1-base-${PGQ_RUN_ID} bash experiments/p1-ledger/run.sh\ndocker start --attach pg-qdrant-p1-run-${PGQ_RUN_ID}\n"
       },
       {
         "id": "ledger_4",
@@ -269,6 +269,22 @@
         "name": "Ensure an unverified preview cannot be released",
         "requires": [],
         "command": "if python3 scripts/check_release_gate.py \\\n      --attestation packaging/release-attestation.example.json; then\n  echo 'Release gate incorrectly allowed draft release' >&2\n  exit 1\nfi\necho 'Expected: incomplete P0-P5 draft release rejected'\n"
+      }
+    ]
+  },
+  "diagnostics": {
+    "lifecycle_failure": [
+      {
+        "id": "lifecycle_failed_test",
+        "name": "Exercise failed-container evidence retirement",
+        "requires": [],
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pgq-lifecycle-failed-${PGQ_RUN_ID} --network=none --memory=128m --pids-limit=32 pg-qdrant-act-runner:29.8.0-node24 sh -c \"mkdir -p /src/artifacts /tmp/cluster; echo diagnostic > /src/artifacts/result; echo checkpoint > /tmp/cluster/state; exit 7\"\ndocker start --attach pgq-lifecycle-failed-${PGQ_RUN_ID}\n"
+      },
+      {
+        "id": "lifecycle_successful_test",
+        "name": "Exercise successful-container retirement after an independent failure",
+        "requires": [],
+        "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pgq-lifecycle-success-${PGQ_RUN_ID} --network=none --memory=128m --pids-limit=32 pg-qdrant-act-runner:29.8.0-node24 sh -c \"mkdir -p /src/artifacts; echo success > /src/artifacts/result\"\ndocker start --attach pgq-lifecycle-success-${PGQ_RUN_ID}\n"
       }
     ]
   }

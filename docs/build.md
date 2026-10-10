@@ -331,14 +331,46 @@ PITR, replication, failover and release support remain open.
 
 ## Keeping evidence current
 
-Failed local product tests retain their stopped disposable PostgreSQL cluster
-inside the owned test container. `p1-failed-cluster.json` records its path and
-test/stop exit codes; a shutdown failure also fails the run. Successful runs
-remove their cluster. `p1-product-progress.json` records completed assertions,
+Failed local product tests leave their stopped disposable PostgreSQL cluster
+inside the owned test container until diagnostic export. `p1-failed-cluster.json`
+records its path and test/stop exit codes; a shutdown failure also fails the run.
+Successful runs remove their cluster. `p1-product-progress.json` records completed assertions,
 completed crash cuts and the current cut's observations, including a failed
 durability wait. An incomplete progress file cannot replace a successful
 product result or satisfy an acceptance gate. Retained clusters contain only
 synthetic fixtures and are diagnostic evidence, not backup or recovery proof.
+
+Local CI, installation preview and quality measurement retire their exact
+run-labelled containers after exporting evidence. A failed gate no longer keeps
+all successful containers from that run. The host records each container's
+state, image identity, logs and filesystem change list, archives available test
+artifacts, and archives `/tmp` for failed or interrupted tests before removal.
+Archive streams have a 512 MiB and 90-second limit each; incomplete exports fail
+cleanup and retain the original container. These archives do not include
+database volumes or already-unmounted tmpfs contents. Historical unlabelled
+containers are not swept automatically.
+
+The runner is retired last, together with only its exact workspace and environment
+volumes. Shared tool caches, unrelated containers, images and business volumes
+are not pruned. Cleanup receipts live under the local run's `resources/` directory.
+A remaining managed run blocks the next launch rather than accumulating another
+set of containers. After resolving an export failure, retry the exact run:
+
+```sh
+python3 scripts/ci_resources.py --run-id <run-id> \
+  --directory artifacts/local-ci/<run-id> --kind verify
+```
+
+Use `--kind preview` or `--kind quality` with that run's original directory for
+the other entry points. A forced host termination or unavailable Docker daemon
+can prevent immediate cleanup; the next launch reports the outstanding resources.
+Old failed runs remain failed after successful diagnostic retirement.
+
+`python3 scripts/local_ci.py --profile lifecycle_failure` is a deliberate
+failure exercise: one synthetic container exits 7 and an independent container
+succeeds. The launcher must return nonzero, preserve both diagnostics and remove
+both containers and the runner. This diagnostic profile is excluded from the
+product's full gate registry and cannot serve as release evidence.
 
 ```sh
 python3 scripts/check_contracts.py

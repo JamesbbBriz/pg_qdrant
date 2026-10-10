@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def selected_steps(registry, profile):
+    if profile in registry.get("diagnostics", {}):
+        return registry["diagnostics"][profile]
     profiles = list(registry["profiles"]) if profile == "full" else [profile]
     return [step for name in profiles for step in registry["profiles"][name]]
 
@@ -38,6 +40,7 @@ def execute_steps(steps, report, artifacts, env):
                     log.flush()
                     print(chunk.decode(errors="replace"), end="", flush=True)
                 code = process.wait()
+                process.stdout.close()
             row.update(status="passed" if code == 0 else "failed", exit_code=code,
                        duration_seconds=round(time.monotonic() - started, 3), log=log_path.name,
                        log_sha256=hashlib.sha256(log_path.read_bytes()).hexdigest())
@@ -48,7 +51,7 @@ def execute_steps(steps, report, artifacts, env):
 
 
 def cleanup(run_id, report, remove):
-    """Inspect run labels before removing exact IDs; retain failed containers."""
+    """Record owned containers; the host retires them after verified export."""
     result = subprocess.run(["docker", "ps", "-aq", "--filter",
                              "label=io.pg_qdrant.ci=" + run_id], capture_output=True, text=True)
     if result.returncode:
@@ -59,14 +62,12 @@ def cleanup(run_id, report, remove):
         if data["Config"].get("Labels", {}).get("io.pg_qdrant.ci") != run_id:
             raise RuntimeError("container ownership changed")
         report["containers"].append({"id": data["Id"], "name": data["Name"],
-                                     "state": data["State"], "removed": remove})
-        if remove:
-            subprocess.run(["docker", "rm", "-f", data["Id"]], check=True)
+                                     "state": data["State"], "removed": False})
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=["full", "engine", "ledger", "static"], default="full")
+    parser.add_argument("--profile", choices=["full", "engine", "ledger", "static", "lifecycle_failure"], default="full")
     args = parser.parse_args()
     artifacts = ROOT / "artifacts"
     artifacts.mkdir(exist_ok=True)

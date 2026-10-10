@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from local_ci import ROOT, RUNNER, act_binary, snapshot
+from ci_resources import MANAGED, require_clean_start, finish_run
 
 
 def output(arguments):
@@ -24,6 +25,7 @@ def main():
     parser.add_argument("--source-snapshot", type=Path, help="existing image's clean compiled ci-input.json")
     parser.add_argument("--act")
     args = parser.parse_args()
+    require_clean_start()
     if bool(args.source_snapshot) != bool(args.image):
         raise ValueError("--source-snapshot is required only with --image")
     run_id = secrets.token_hex(8)
@@ -64,7 +66,7 @@ def main():
                "--container-daemon-socket", "/var/run/docker.sock", "--env-file", str(empty), "--secret-file", str(empty),
                "--env", "PGQ_RUN_ID=" + run_id, "--env", "PGQ_BUILD_PRODUCT=" + ("1" if args.build else "0"),
                "--env", "PGQ_SOURCE_COMMIT=" + compiled["commit"], "--container-options",
-               '--label io.pg_qdrant.ci.preview-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"']
+               '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.preview-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"']
     print(directory, flush=True)
     code = 1
     try:
@@ -82,8 +84,7 @@ def main():
         state = json.loads(output(["docker", "inspect", ids[0]]))[0]
         if state["Config"]["Labels"]["io.pg_qdrant.ci.preview-runner"] != run_id:
             raise ValueError("unexpected preview runner")
-        subprocess.run(["docker", "cp", ids[0] + ":/tmp/preview-evidence", str(directory / "evidence")], check=True)
-        subprocess.run(["docker", "rm", "-f", ids[0]], check=True)
+        subprocess.run(["docker", "cp", ids[0] + ":/tmp/preview-evidence", str(directory / "evidence")], check=True, timeout=90)
         for kind in ("runtime", "archive"):
             observed = subprocess.run(["docker", "inspect", "pgq-preview-" + kind + "-" + run_id],
                                       text=True, capture_output=True)
@@ -95,8 +96,6 @@ def main():
             report[kind + "_container_state"] = native["State"]
             if kind == "runtime" and code == 0 and native["State"]["ExitCode"] != 0:
                 raise ValueError("runtime container did not complete")
-            if code == 0:
-                subprocess.run(["docker", "rm", native["Id"]], check=True)
         if code == 0:
             installed = json.loads((directory / "evidence/preview-result.json").read_text(encoding="utf-8"))
             if installed["status"] != "passed" or len(installed["checks"]) != 4:
@@ -115,6 +114,10 @@ def main():
         code = 1
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
+        report["resource_cleanup"] = finish_run(run_id, directory, "io.pg_qdrant.ci.preview",
+            "io.pg_qdrant.ci.preview-runner", "/tmp/preview-evidence/.")
+        if report["resource_cleanup"]["status"] != "passed":
+            code = 1
         report["status"] = "passed" if code == 0 else "failed"
         if (directory / "act.log").is_file():
             report["act_log_sha256"] = hashlib.sha256((directory / "act.log").read_bytes()).hexdigest()
