@@ -88,6 +88,16 @@ class ResourceGuards(unittest.TestCase):
                 removed = any(call.args[:2] == ("volume", "rm") for call in calls.call_args_list)
                 self.assertEqual(removed, expected == "passed")
 
+    def test_retry_preserves_receipts_for_already_retired_containers(self):
+        with tempfile.TemporaryDirectory() as root:
+            row = {"id": "1" * 64, "removed": True, "files": {"container.log": "digest"}}
+            old = {"run_id": "a" * 16, "label": resources.LABELS[0], "containers": [row]}
+            (Path(root) / "ci-cleanup.json").write_text(json.dumps(old))
+            with patch.object(resources, "docker", return_value=""):
+                result = resources.retire_owned(resources.LABELS[0], "a" * 16, root)
+            self.assertEqual(result["status"], "passed")
+            self.assertEqual(result["containers"], [row])
+
 
 @unittest.skipUnless(os.environ.get("PGQ_RUN_ID"), "requires the local act Docker runner")
 class RealDockerRetirement(unittest.TestCase):

@@ -113,15 +113,16 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
             raise ValueError("invalid run ownership")
         if previous and (previous["run_id"] != run_id or previous["label"] != label):
             raise RuntimeError("cleanup receipt ownership changed")
-        if runner and previous:
+        if previous:
             for row in previous["containers"]:
-                if row.get("removed") and row.get("volumes_pending"):
-                    row.pop("error", None)
+                if row.get("removed"):
                     receipt["containers"].append(row)
-                    try:
-                        remove_volumes(row)
-                    except Exception as error:
-                        row["error"] = f"{type(error).__name__}: {error}"
+                    if runner and row.get("volumes_pending"):
+                        row.pop("error", None)
+                        try:
+                            remove_volumes(row)
+                        except Exception as error:
+                            row["error"] = f"{type(error).__name__}: {error}"
         save()
         identifiers = docker("ps", "-aq", "--filter", f"label={label}={run_id}").split()
         for identifier in identifiers:
