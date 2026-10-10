@@ -13,7 +13,8 @@ import subprocess
 import sys
 import time
 
-from ci_resources import MANAGED, require_clean_start, finish_run
+from ci_images import complete_images
+from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = "pg-qdrant-act-runner:29.8.0-node24"
@@ -97,6 +98,8 @@ def main():
         subprocess.run(["docker", "build", "-f", "ci/Dockerfile.runner", "-t", RUNNER, "."], cwd=source, check=True)
         image = output(["docker", "image", "inspect", RUNNER, "--format", "{{.Id}}"], text=True).strip()
         report["runner_image_id"] = image
+        report["storage_preflight"] = storage_preflight(directory, image, run_id, "io.pg_qdrant.ci",
+            heavy=args.profile not in ("static", "lifecycle_failure"))
         subprocess.run(["docker", "network", "create", "--label", "io.pg_qdrant.ci.runner=" + run_id, network], check=True)
         network_created = True
         workflow = directory / "run.yml"
@@ -155,6 +158,14 @@ def main():
             "io.pg_qdrant.ci.runner", "/tmp/pgq-ci-evidence/.")
         if report["resource_cleanup"]["status"] != "passed":
             code = 1
+        else:
+            try:
+                report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
+                if report["image_retention"]["errors"]:
+                    code = 1
+            except Exception as error:
+                code = 1
+                report["image_retention_error"] = str(error)
         if network_created:
             result = subprocess.run(["docker", "network", "rm", network], capture_output=True, text=True)
             if result.returncode:
@@ -168,4 +179,5 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    with local_run_lock():
+        raise SystemExit(main())

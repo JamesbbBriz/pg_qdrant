@@ -9,7 +9,8 @@ import subprocess
 import sys
 
 from local_ci import ROOT, RUNNER, act_binary, snapshot
-from ci_resources import MANAGED, require_clean_start, finish_run
+from ci_images import complete_images, pin_image, release_alias
+from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight
 
 
 def output(arguments):
@@ -25,11 +26,14 @@ def main():
     parser.add_argument("--source-snapshot", type=Path, help="existing image's clean compiled ci-input.json")
     parser.add_argument("--act")
     args = parser.parse_args()
-    require_clean_start()
     if bool(args.source_snapshot) != bool(args.image):
         raise ValueError("--source-snapshot is required only with --image")
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / ("preview-" + run_id)
+    directory.mkdir(parents=True)
+    require_clean_start()
+    capacity = storage_preflight(directory, RUNNER, run_id,
+        "io.pg_qdrant.ci.preview", heavy=True)
     source = directory / "snapshot"
     source.mkdir(parents=True)
     captured = snapshot(source)
@@ -45,7 +49,7 @@ def main():
                 or variables.get("PG_QDRANT_MANAGED_HELPER") != "1"):
             raise ValueError("image and clean source snapshot do not match")
     report = {"run_id": run_id, "kind": "local_installation_preview", "status": "running",
-              "release_supported": False, "snapshot": captured,
+              "release_supported": False, "storage_preflight": capacity, "snapshot": captured,
               "product_image": image_data["Id"] if image_data else None, "build_product": args.build,
               "compiled_source_commit": compiled["commit"], "compiled_source_manifest_sha256": compiled["source_sha256"],
               "compiled_snapshot_file_sha256": hashlib.sha256(original).hexdigest()}
@@ -54,6 +58,7 @@ def main():
     report["runner_image"] = runner
     base = "pgq-preview-base-" + run_id
     if image_data:
+        pin_image(image_data["Id"])
         subprocess.run(["docker", "tag", image_data["Id"], base], check=True)
         if output(["docker", "image", "inspect", base, "--format", "{{.Id}}"]) != image_data["Id"]:
             raise ValueError("base image changed")
@@ -118,6 +123,16 @@ def main():
             "io.pg_qdrant.ci.preview-runner", "/tmp/preview-evidence/.")
         if report["resource_cleanup"]["status"] != "passed":
             code = 1
+        else:
+            try:
+                if image_data:
+                    release_alias(base, image_data["Id"])
+                report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
+                if report["image_retention"]["errors"]:
+                    code = 1
+            except Exception as error:
+                code = 1
+                report["image_retention_error"] = str(error)
         report["status"] = "passed" if code == 0 else "failed"
         if (directory / "act.log").is_file():
             report["act_log_sha256"] = hashlib.sha256((directory / "act.log").read_bytes()).hexdigest()
@@ -127,4 +142,5 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    with local_run_lock():
+        raise SystemExit(main())

@@ -351,8 +351,8 @@ database volumes or already-unmounted tmpfs contents. Historical unlabelled
 containers are not swept automatically.
 
 The runner is retired last, together with only its exact workspace and environment
-volumes. Shared tool caches, unrelated containers, images and business volumes
-are not pruned. Cleanup receipts live under the local run's `resources/` directory.
+volumes. Shared tool caches, unrelated containers and business volumes are not
+pruned. Cleanup receipts live under the local run's `resources/` directory.
 A remaining managed run blocks the next launch rather than accumulating another
 set of containers. After resolving an export failure, retry the exact run:
 
@@ -365,6 +365,49 @@ Use `--kind preview` or `--kind quality` with that run's original directory for
 the other entry points. A forced host termination or unavailable Docker daemon
 can prevent immediate cleanup; the next launch reports the outstanding resources.
 Old failed runs remain failed after successful diagnostic retirement.
+
+All three host launchers hold one OS file lock across checkouts for the same
+OS user, including evidence export and retirement. A competing launch fails
+before building or creating test resources. The OS releases the lock if its
+owner is killed; remaining managed containers still block the next launch.
+This lock does not coordinate launchers on different hosts or OS users sharing
+a remote Docker daemon. Nested OOM tests and observers carry the outer run label
+so host recovery can find them even if the inner runner is terminated.
+
+Admission measures free space on the host evidence filesystem and a disposable
+Docker writable layer. Static and lifecycle diagnostics require 2 GiB on each;
+native builds, preview and quality require 10 GiB host space and 30 GiB Docker
+space. These floors are initial admission checks, not runtime quotas or a
+prediction of the complete Rust build size. On Docker Desktop the host backing
+drive can still fill as a virtual disk grows. Bootstrap the small runner with
+`docker build -f ci/Dockerfile.runner -t pg-qdrant-act-runner:29.8.0-node24 .`
+before using preview or quality on a new machine.
+
+New build images carry `io.pg_qdrant.ci.image-run`. After successful diagnostic
+retirement, image retention keeps the two latest successful build families and
+the latest failed family. Older recorded families are removed only when the
+exact image labels and tags still match and no container references them.
+There is no daemon-wide prune. Reused preview/quality source images are pinned
+automatically; pins and container references can exceed the normal limit.
+Temporary preview/quality aliases are removed after their containers. Image
+removal uses no force and no ancestor pruning, with a 90-second client deadline.
+A timeout fails the run; a later retry checks inventory because the daemon may
+have completed deletion after the client exited.
+Legacy images, incomplete runs, shared build caches and unrecorded images stay
+outside this automatic policy. The local ledger is `pg-qdrant-ci-images.json`
+in the OS temporary directory; losing it retains unrecorded images for review.
+
+```sh
+python3 scripts/ci_images.py status
+python3 scripts/ci_images.py pin --image <image-id-or-local-tag>
+python3 scripts/ci_images.py unpin --image <image-id-or-local-tag>
+```
+
+Pin a reusable compiled baseline before its rollback window ends. Unpinning
+allows normal retention on a subsequent completed run. Evidence archives and
+source snapshots are retained separately; image deletion does not remove them
+or count a failed run as successful. Native faults, installed preview and model
+quality remain separate gates from static/lifecycle checks.
 
 `python3 scripts/local_ci.py --profile lifecycle_failure` is a deliberate
 failure exercise: one synthetic container exits 7 and an independent container

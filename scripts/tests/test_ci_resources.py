@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import secrets
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -14,6 +15,45 @@ from scripts import ci_resources as resources
 
 
 class ResourceGuards(unittest.TestCase):
+    def test_competing_process_is_refused_and_killed_owner_releases_lock(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = str(Path(root) / "run.lock")
+            source = ("import sys,time;sys.path.insert(0," + repr(str(Path(resources.__file__).parent))
+                      + ");from ci_resources import local_run_lock\nwith local_run_lock("
+                      + repr(path) + "):\n print('locked',flush=True)\n time.sleep(30)\n")
+            owner = subprocess.Popen([sys.executable, "-c", source], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                self.assertEqual(owner.stdout.readline().strip(), b"locked")
+                with self.assertRaisesRegex(RuntimeError, "owns the run lock"):
+                    with resources.local_run_lock(path):
+                        self.fail("competing process admitted")
+                owner.kill()
+                owner.wait(timeout=10)
+                with resources.local_run_lock(path):
+                    pass
+            finally:
+                if owner.poll() is None:
+                    owner.kill()
+                owner.communicate(timeout=10)
+
+    def test_storage_floor_blocks_host_and_docker_exhaustion(self):
+        gib = 1024**3
+        for host, engine in ((gib, 100*gib), (100*gib, gib), (10*gib, 29*gib)):
+            with self.subTest(host=host, engine=engine), self.assertRaisesRegex(RuntimeError, "insufficient free space"):
+                resources.check_free_space(host, engine, heavy=True)
+        resources.check_free_space(10*gib, 30*gib, heavy=True)
+        resources.check_free_space(2*gib, 2*gib, heavy=False)
+        with self.assertRaises(ValueError):
+            resources.check_free_space(-1, 30*gib, heavy=False)
+
+    def test_nested_fault_labels_bind_exact_parent_or_reject_invalid_identity(self):
+        with patch.dict(os.environ, {"PGQ_RUN_ID": "a"*16}):
+            self.assertEqual(resources.nested_run_labels(), ["--label", resources.MANAGED+"=1",
+                "--label", resources.LABELS[0]+"="+"a"*16])
+        with patch.dict(os.environ, {"PGQ_RUN_ID": "not-a-run"}):
+            with self.assertRaises(ValueError):
+                resources.nested_run_labels()
+
     def test_invalid_ownership_never_inspects(self):
         with patch.object(resources, "docker") as docker:
             for label, identity in [(resources.LABELS[0], "../bad"), ("foreign", "a" * 16)]:

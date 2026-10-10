@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import hashlib
+from contextlib import contextmanager
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
+import shutil
 import tarfile
+import tempfile
 import time
 
 MANAGED = "io.pg_qdrant.ci.lifecycle"
@@ -15,8 +19,70 @@ LABELS = ("io.pg_qdrant.ci", "io.pg_qdrant.ci.runner",
           "io.pg_qdrant.ci.quality", "io.pg_qdrant.ci.quality-runner")
 
 
-def docker(*args):
-    return subprocess.check_output(["docker", *args], text=True, timeout=30).strip()
+@contextmanager
+def local_run_lock(path=None):
+    """One launcher per OS user, across checkouts; the OS releases a killed owner."""
+    path = Path(path) if path else Path(tempfile.gettempdir()) / "pg-qdrant-local-ci.lock"
+    with path.open("a+b") as stream:
+        stream.seek(0, 2)
+        if stream.tell() == 0:
+            stream.write(b"0")
+            stream.flush()
+        stream.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as error:
+            raise RuntimeError("another local CI launcher owns the run lock") from error
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+
+def check_free_space(host_free, docker_free, *, heavy):
+    """Admission floors, not a prediction or a runtime disk quota."""
+    required = {"host": (10 if heavy else 2) * 1024**3,
+                "docker": (30 if heavy else 2) * 1024**3}
+    measured = {"host": host_free, "docker": docker_free}
+    if any(type(value) is not int or value < 0 for value in measured.values()):
+        raise ValueError("invalid storage measurement")
+    if any(measured[key] < required[key] for key in required):
+        raise RuntimeError("insufficient free space for local CI: " + json.dumps(
+            {"free_bytes": measured, "required_bytes": required}))
+    return {"free_bytes": measured, "required_bytes": required}
+
+
+def storage_preflight(directory, image, run_id, child_label, *, heavy):
+    """Measure the evidence filesystem and a disposable Docker writable layer."""
+    if child_label not in LABELS or not re.fullmatch(r"[a-f0-9]{16}", run_id):
+        raise ValueError("invalid run ownership")
+    free = docker("run", "--rm", "--network=none", "--read-only", "--memory=64m",
+        "--pids-limit=16", "--label", MANAGED + "=1", "--label", child_label + "=" + run_id,
+        "--entrypoint=python3", image, "-c", "import shutil; print(shutil.disk_usage('/').free)")
+    return check_free_space(shutil.disk_usage(directory).free, int(free), heavy=heavy)
+
+
+def nested_run_labels():
+    """Nested fault/observer containers remain discoverable after runner termination."""
+    run_id = os.environ.get("PGQ_RUN_ID")
+    if run_id is None:
+        return []
+    if not re.fullmatch(r"[a-f0-9]{16}", run_id):
+        raise ValueError("invalid parent run identity")
+    return ["--label", MANAGED + "=1", "--label", LABELS[0] + "=" + run_id]
+
+
+def docker(*args, timeout=30):
+    return subprocess.check_output(["docker", *args], text=True, timeout=timeout).strip()
 
 
 def inspect_owned(identifier, label, run_id):
@@ -226,6 +292,7 @@ if __name__ == "__main__":
                    "preview": (LABELS[2], LABELS[3], "/tmp/preview-evidence/."),
                    "quality": (LABELS[4], LABELS[5], "/tmp/quality-evidence/.")}
     child, runner, evidence = kind_labels[args.kind]
-    result = finish_run(args.run_id, args.directory, child, runner, evidence)
+    with local_run_lock():
+        result = finish_run(args.run_id, args.directory, child, runner, evidence)
     print(json.dumps(result, indent=2))
     raise SystemExit(0 if result["status"] == "passed" else 1)

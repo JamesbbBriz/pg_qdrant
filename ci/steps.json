@@ -12,7 +12,7 @@
         "id": "engine_base_image",
         "name": "Build exact Rust, Edge, pgrx and PostgreSQL prototype",
         "requires": [],
-        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --tag pg-qdrant-p0-${PGQ_RUN_ID} ."
+        "command": "python3 scripts/retry_snapshot_build.py docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --tag pg-qdrant-p0-${PGQ_RUN_ID} ."
       },
       {
         "id": "engine_lexical_image",
@@ -20,7 +20,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0-lexical --build-arg PG_QDRANT_BASE_IMAGE=pg-qdrant-p0-${PGQ_RUN_ID} --tag pg-qdrant-p0-lexical-${PGQ_RUN_ID} ."
+        "command": "python3 scripts/retry_snapshot_build.py docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --file Dockerfile.p0-lexical --build-arg PG_QDRANT_BASE_IMAGE=pg-qdrant-p0-${PGQ_RUN_ID} --tag pg-qdrant-p0-lexical-${PGQ_RUN_ID} ."
       },
       {
         "id": "engine_4",
@@ -100,7 +100,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults-${PGQ_RUN_ID} ."
+        "command": "python3 scripts/retry_snapshot_build.py docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-faults-${PGQ_RUN_ID} ."
       },
       {
         "id": "engine_15",
@@ -122,7 +122,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} ."
+        "command": "python3 scripts/retry_snapshot_build.py docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_HELPER=1 --tag pg-qdrant-p0-helper-normal-${PGQ_RUN_ID} ."
       },
       {
         "id": "engine_18",
@@ -152,7 +152,7 @@
         "requires": [
           "engine_base_image"
         ],
-        "command": "python3 scripts/retry_snapshot_build.py docker build --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper-${PGQ_RUN_ID} ."
+        "command": "python3 scripts/retry_snapshot_build.py docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --file Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} --build-arg P0_HELPER=1 --build-arg P0_FAULTS=1 --tag pg-qdrant-p0-helper-${PGQ_RUN_ID} ."
       },
       {
         "id": "engine_22",
@@ -234,7 +234,7 @@
         "id": "ledger_2",
         "name": "Build exact P0 PostgreSQL 17 and embedded Edge dependencies",
         "requires": [],
-        "command": "python3 scripts/retry_snapshot_build.py docker build -f Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} -t pg-qdrant-p1-base-${PGQ_RUN_ID} ."
+        "command": "python3 scripts/retry_snapshot_build.py docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} -f Dockerfile.p0 --build-arg PG_QDRANT_SOURCE_SHA=${PG_QDRANT_SOURCE_SHA} -t pg-qdrant-p1-base-${PGQ_RUN_ID} ."
       },
       {
         "id": "ledger_3",

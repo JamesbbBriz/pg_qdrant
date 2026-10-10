@@ -19,14 +19,14 @@ jobs:
       - name: Compile the clean frozen normal product when requested
         if: env.PGQ_BUILD_PRODUCT == '1'
         run: |
-          python3 scripts/retry_snapshot_build.py docker build -f Dockerfile.p0 \
+          python3 scripts/retry_snapshot_build.py docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} -f Dockerfile.p0 \
             --build-arg P0_HELPER=1 --build-arg PG_QDRANT_SOURCE_SHA=${PGQ_SOURCE_COMMIT} \
             -t pgq-preview-base-${PGQ_RUN_ID} .
       - name: Build matching empty PostgreSQL installation environment
-        run: docker build --target build-tools -f Dockerfile.p0 -t pgq-preview-tools-${PGQ_RUN_ID} .
+        run: docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --target build-tools -f Dockerfile.p0 -t pgq-preview-tools-${PGQ_RUN_ID} .
       - name: Build and compare actual source and binary archives
         run: |
-          docker build --network=none --target archive -f packaging/Dockerfile.preview \
+          docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --network=none --target archive -f packaging/Dockerfile.preview \
             --build-arg PRODUCT_IMAGE=pgq-preview-base-${PGQ_RUN_ID} \
             --build-arg RUNTIME_IMAGE=pgq-preview-tools-${PGQ_RUN_ID} \
             -t pgq-preview-archive-${PGQ_RUN_ID} .
@@ -38,7 +38,7 @@ jobs:
           docker cp pgq-preview-archive-${PGQ_RUN_ID}:/package-output/notices /tmp/preview-evidence/
       - name: Install only verified package members into the empty PG17 environment
         run: |
-          docker build --network=none --target runtime -f packaging/Dockerfile.preview \
+          docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --network=none --target runtime -f packaging/Dockerfile.preview \
             --build-arg PRODUCT_IMAGE=pgq-preview-base-${PGQ_RUN_ID} \
             --build-arg RUNTIME_IMAGE=pgq-preview-tools-${PGQ_RUN_ID} \
             -t pgq-preview-runtime-${PGQ_RUN_ID} .

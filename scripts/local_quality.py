@@ -9,7 +9,8 @@ import subprocess
 import sys
 
 from local_ci import ROOT, RUNNER, act_binary, snapshot
-from ci_resources import MANAGED, require_clean_start, finish_run
+from ci_images import complete_images, pin_image, release_alias
+from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight
 
 
 def output(args):
@@ -23,15 +24,19 @@ def main():
     parser.add_argument("--fixtures", type=Path, default=ROOT / "artifacts/quality-fixtures")
     parser.add_argument("--act")
     args = parser.parse_args()
-    require_clean_start()
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / ("quality-" + run_id)
+    directory.mkdir(parents=True)
+    require_clean_start()
+    capacity = storage_preflight(directory, RUNNER, run_id,
+        "io.pg_qdrant.ci.quality", heavy=True)
     source = directory / "snapshot"
     source.mkdir(parents=True)
-    report = {"run_id": run_id, "kind": "bounded_quality_measurement", "release_supported": False,
+    report = {"run_id": run_id, "kind": "bounded_quality_measurement", "release_supported": False, "storage_preflight": capacity,
               "snapshot": snapshot(source), "status": "running"}
     image = output(["docker", "image", "inspect", args.image, "--format", "{{.Id}}"])
     runner = output(["docker", "image", "inspect", RUNNER, "--format", "{{.Id}}"])
+    pin_image(image)
     report.update(product_image=image, runner_image=runner, fixtures={})
     expected = json.loads((source / "ci/quality-sources.json").read_text(encoding="utf-8"))
     (source / "fixtures").mkdir()
@@ -66,6 +71,15 @@ def main():
             "io.pg_qdrant.ci.quality-runner", "/tmp/quality-evidence/.")
         if report["resource_cleanup"]["status"] != "passed":
             code = 1
+        else:
+            try:
+                release_alias(base, image)
+                report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
+                if report["image_retention"]["errors"]:
+                    code = 1
+            except Exception as error:
+                code = 1
+                report["image_retention_error"] = str(error)
         if code != 0:
             report["status"] = "failed"
         manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -118,4 +132,5 @@ def measure(command, directory, report, manifest, source, run_id):
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    with local_run_lock():
+        raise SystemExit(main())
