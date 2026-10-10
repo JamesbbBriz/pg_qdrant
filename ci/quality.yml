@@ -8,12 +8,12 @@ jobs:
         run: mkdir -p /tmp/quality-input && cp -a /pgq-input/. /tmp/quality-input/
       - name: Add measurement harness to the selected installed product image
         run: |
-          docker build --network=none --file /tmp/quality-input/ci/Dockerfile.quality \
+          docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --network=none --file /tmp/quality-input/ci/Dockerfile.quality \
             --build-arg PGQ_QUALITY_BASE="pgq-quality-base-${PGQ_RUN_ID}" \
             --tag "pgq-quality-${PGQ_RUN_ID}" /tmp/quality-input
       - name: Measure actual PostgreSQL and native Edge BM25
         run: |
-          docker run --name "pgq-quality-${PGQ_RUN_ID}" --label "io.pg_qdrant.ci.quality=${PGQ_RUN_ID}" \
+          docker run --name "pgq-quality-${PGQ_RUN_ID}" --label io.pg_qdrant.ci.lifecycle=1 --label "io.pg_qdrant.ci.quality=${PGQ_RUN_ID}" \
             --memory=2g --memory-swap=2g --pids-limit=128 --cpus=2 --network=none \
             "pgq-quality-${PGQ_RUN_ID}"
       - name: Collect results including incomplete runs

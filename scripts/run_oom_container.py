@@ -20,6 +20,11 @@ import selectors
 import subprocess
 import time
 
+try:
+    from ci_resources import nested_run_labels
+except ModuleNotFoundError:
+    from scripts.ci_resources import nested_run_labels
+
 MEMORY = 768 * 1024 * 1024
 LIMIT = 2 * 1024 * 1024
 
@@ -138,7 +143,7 @@ def observe(image, operation, payload):
     name = "pgq-oom-observer-" + secrets.token_hex(16)
     try:
         return command(["docker", "run", "--rm", "--name", name,
-            "--label", "io.pg_qdrant.p0.oom.observer=" + name,
+            "--label", "io.pg_qdrant.p0.oom.observer=" + name, *nested_run_labels(),
             "--network=none", "--read-only", "--memory=256m", "--memory-swap=256m",
             "--pids-limit=16", "--cpus=0.25", "--cap-drop=ALL", "--cap-add=SYSLOG",
             *extra_caps,
@@ -290,7 +295,7 @@ def execute(args):
         create = ["docker", "create", "--name", name, "--memory=768m", "--memory-swap=768m",
                   "--cpus=2", "--pids-limit=128", "--cgroupns=private", "--ipc=private", "--network=none",
                   "--cap-drop=ALL", "--security-opt=no-new-privileges", "--user=10001:10001", "--ulimit=core=0",
-                  "--label", "io.pg_qdrant.p0.oom=" + nonce,
+                  "--label", "io.pg_qdrant.p0.oom=" + nonce, *nested_run_labels(),
                   "--env", "PG_QDRANT_P0_OOM_RUN_ID=" + nonce,
                   "--env", "PG_QDRANT_MANAGED_HELPER=" + ("1" if args.profile == "managed_helper" else "0"),
                   image_id, "bash", "crates/pg_qdrant/tests/run-oom.sh"]

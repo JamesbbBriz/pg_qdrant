@@ -9,6 +9,8 @@ import subprocess
 import sys
 
 from local_ci import ROOT, RUNNER, act_binary, snapshot
+from ci_images import complete_images, pin_image, release_alias
+from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight
 
 
 def output(arguments):
@@ -28,6 +30,10 @@ def main():
         raise ValueError("--source-snapshot is required only with --image")
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / ("preview-" + run_id)
+    directory.mkdir(parents=True)
+    require_clean_start()
+    capacity = storage_preflight(directory, RUNNER, run_id,
+        "io.pg_qdrant.ci.preview", heavy=True)
     source = directory / "snapshot"
     source.mkdir(parents=True)
     captured = snapshot(source)
@@ -43,7 +49,7 @@ def main():
                 or variables.get("PG_QDRANT_MANAGED_HELPER") != "1"):
             raise ValueError("image and clean source snapshot do not match")
     report = {"run_id": run_id, "kind": "local_installation_preview", "status": "running",
-              "release_supported": False, "snapshot": captured,
+              "release_supported": False, "storage_preflight": capacity, "snapshot": captured,
               "product_image": image_data["Id"] if image_data else None, "build_product": args.build,
               "compiled_source_commit": compiled["commit"], "compiled_source_manifest_sha256": compiled["source_sha256"],
               "compiled_snapshot_file_sha256": hashlib.sha256(original).hexdigest()}
@@ -52,6 +58,7 @@ def main():
     report["runner_image"] = runner
     base = "pgq-preview-base-" + run_id
     if image_data:
+        pin_image(image_data["Id"])
         subprocess.run(["docker", "tag", image_data["Id"], base], check=True)
         if output(["docker", "image", "inspect", base, "--format", "{{.Id}}"]) != image_data["Id"]:
             raise ValueError("base image changed")
@@ -64,7 +71,7 @@ def main():
                "--container-daemon-socket", "/var/run/docker.sock", "--env-file", str(empty), "--secret-file", str(empty),
                "--env", "PGQ_RUN_ID=" + run_id, "--env", "PGQ_BUILD_PRODUCT=" + ("1" if args.build else "0"),
                "--env", "PGQ_SOURCE_COMMIT=" + compiled["commit"], "--container-options",
-               '--label io.pg_qdrant.ci.preview-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"']
+               '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.preview-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"']
     print(directory, flush=True)
     code = 1
     try:
@@ -82,8 +89,7 @@ def main():
         state = json.loads(output(["docker", "inspect", ids[0]]))[0]
         if state["Config"]["Labels"]["io.pg_qdrant.ci.preview-runner"] != run_id:
             raise ValueError("unexpected preview runner")
-        subprocess.run(["docker", "cp", ids[0] + ":/tmp/preview-evidence", str(directory / "evidence")], check=True)
-        subprocess.run(["docker", "rm", "-f", ids[0]], check=True)
+        subprocess.run(["docker", "cp", ids[0] + ":/tmp/preview-evidence", str(directory / "evidence")], check=True, timeout=90)
         for kind in ("runtime", "archive"):
             observed = subprocess.run(["docker", "inspect", "pgq-preview-" + kind + "-" + run_id],
                                       text=True, capture_output=True)
@@ -95,8 +101,6 @@ def main():
             report[kind + "_container_state"] = native["State"]
             if kind == "runtime" and code == 0 and native["State"]["ExitCode"] != 0:
                 raise ValueError("runtime container did not complete")
-            if code == 0:
-                subprocess.run(["docker", "rm", native["Id"]], check=True)
         if code == 0:
             installed = json.loads((directory / "evidence/preview-result.json").read_text(encoding="utf-8"))
             if installed["status"] != "passed" or len(installed["checks"]) != 4:
@@ -115,6 +119,20 @@ def main():
         code = 1
         report["error"] = f"{type(error).__name__}: {error}"
     finally:
+        report["resource_cleanup"] = finish_run(run_id, directory, "io.pg_qdrant.ci.preview",
+            "io.pg_qdrant.ci.preview-runner", "/tmp/preview-evidence/.")
+        if report["resource_cleanup"]["status"] != "passed":
+            code = 1
+        else:
+            try:
+                if image_data:
+                    release_alias(base, image_data["Id"])
+                report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
+                if report["image_retention"]["errors"]:
+                    code = 1
+            except Exception as error:
+                code = 1
+                report["image_retention_error"] = str(error)
         report["status"] = "passed" if code == 0 else "failed"
         if (directory / "act.log").is_file():
             report["act_log_sha256"] = hashlib.sha256((directory / "act.log").read_bytes()).hexdigest()
@@ -124,4 +142,5 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    with local_run_lock():
+        raise SystemExit(main())

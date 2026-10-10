@@ -13,6 +13,9 @@ import subprocess
 import sys
 import time
 
+from ci_images import complete_images
+from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight
+
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = "pg-qdrant-act-runner:29.8.0-node24"
 
@@ -75,7 +78,7 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=["full", "engine", "ledger", "static"], default="full")
+    parser.add_argument("--profile", choices=["full", "engine", "ledger", "static", "lifecycle_failure"], default="full")
     parser.add_argument("--act", default=os.environ.get("ACT_BINARY"))
     args = parser.parse_args()
     run_id = secrets.token_hex(8)
@@ -88,12 +91,15 @@ def main():
     started = time.monotonic()
     code = 1
     try:
+        require_clean_start()
         report["snapshot"] = snapshot(source)
         act = act_binary(args.act)
         report["act_version"] = output([act, "--version"], text=True).strip()
         subprocess.run(["docker", "build", "-f", "ci/Dockerfile.runner", "-t", RUNNER, "."], cwd=source, check=True)
         image = output(["docker", "image", "inspect", RUNNER, "--format", "{{.Id}}"], text=True).strip()
         report["runner_image_id"] = image
+        report["storage_preflight"] = storage_preflight(directory, image, run_id, "io.pg_qdrant.ci",
+            heavy=args.profile not in ("static", "lifecycle_failure"))
         subprocess.run(["docker", "network", "create", "--label", "io.pg_qdrant.ci.runner=" + run_id, network], check=True)
         network_created = True
         workflow = directory / "run.yml"
@@ -107,7 +113,7 @@ def main():
                    "--pull=false", "--reuse", "--network", network,
                    "--container-daemon-socket", "/var/run/docker.sock",
                    "--env-file", str(empty_env), "--secret-file", str(empty_env),
-                   "--container-options", "--label io.pg_qdrant.ci.runner=" + run_id
+                   "--container-options", "--label " + MANAGED + "=1 --label io.pg_qdrant.ci.runner=" + run_id
                    + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"',
                    "--env", "PGQ_RUN_ID=" + run_id, "--env", "PGQ_PROFILE=" + args.profile]
         report["command"] = command
@@ -136,18 +142,30 @@ def main():
                 raise RuntimeError("act runner ownership changed")
             evidence = directory / "evidence"
             evidence.mkdir()
-            try:
-                subprocess.run(["docker", "cp", data["Id"] + ":/tmp/pgq-ci-evidence/.", str(evidence)], check=True)
-                verification = json.loads((evidence / "verify-report.json").read_text())
-                if verification["run_id"] != run_id or verification["snapshot"] != report["snapshot"]:
-                    raise RuntimeError("exported evidence belongs to a different input snapshot")
-                if verification["status"] != "passed":
-                    code = 1
-            finally:
-                subprocess.run(["docker", "rm", "-f", data["Id"]], check=True)
+            subprocess.run(["docker", "cp", data["Id"] + ":/tmp/pgq-ci-evidence/.", str(evidence)], check=True, timeout=90)
+            verification = json.loads((evidence / "verify-report.json").read_text())
+            if verification["run_id"] != run_id or verification["snapshot"] != report["snapshot"]:
+                raise RuntimeError("exported evidence belongs to a different input snapshot")
+            for step in verification["steps"]:
+                if "log" in step and hashlib.sha256((evidence / step["log"]).read_bytes()).hexdigest() != step["log_sha256"]:
+                    raise RuntimeError("exported step log changed")
+            if verification["status"] != "passed":
+                code = 1
         except Exception as error:
             code = 1
             report["export_error"] = str(error)
+        report["resource_cleanup"] = finish_run(run_id, directory, "io.pg_qdrant.ci",
+            "io.pg_qdrant.ci.runner", "/tmp/pgq-ci-evidence/.")
+        if report["resource_cleanup"]["status"] != "passed":
+            code = 1
+        else:
+            try:
+                report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
+                if report["image_retention"]["errors"]:
+                    code = 1
+            except Exception as error:
+                code = 1
+                report["image_retention_error"] = str(error)
         if network_created:
             result = subprocess.run(["docker", "network", "rm", network], capture_output=True, text=True)
             if result.returncode:
@@ -161,4 +179,5 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    with local_run_lock():
+        raise SystemExit(main())
