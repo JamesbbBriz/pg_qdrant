@@ -150,6 +150,7 @@ def save_oci(image, store, protect=()):
                 if process.poll() is None:
                     process.kill()
                     process.wait(timeout=10)
+                process.stdout.close()
         layout = store.verify(key)
     manifest = oci_manifest(layout, identifier)
     return layout, manifest, {"image_id": identifier, "manifest": manifest, "cache_hit": hit}
