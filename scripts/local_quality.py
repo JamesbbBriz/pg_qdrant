@@ -52,8 +52,11 @@ def main():
     parser.add_argument("--image", required=True, help="matching installed development product image")
     parser.add_argument("--fixtures", type=Path, default=ROOT / "artifacts/quality-fixtures")
     parser.add_argument("--model-inputs", type=Path, help="optional checksum-pinned offline dense model and Linux runtime wheels")
+    parser.add_argument("--tokens", action="store_true", help="also measure the pinned English token model on SciFact")
     parser.add_argument("--act")
     args = parser.parse_args()
+    if args.tokens and not args.model_inputs:
+        parser.error('--tokens requires --model-inputs')
     evidence_admission(ROOT / "artifacts/local-ci")
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / ("quality-" + run_id)
@@ -144,6 +147,16 @@ def measure(args, run_id, directory, source, report):
             validate(target, row)  # Validate the copied bytes, including an acquisition race.
             report["model_inputs"][name] = {"sha256": row["sha256"], "bytes": row["bytes"]}
         report["kind"] = "bounded_dense_and_fusion_measurement"
+        if args.tokens:
+            contract = json.loads((source / "ci/token-quality-model.json").read_bytes())
+            prepare(args.model_inputs, contract)
+            for name, row in entries(contract):
+                target = source / "model-assets" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(args.model_inputs / name, target)
+                validate(target, row)
+                report["model_inputs"][name] = {"sha256": row["sha256"], "bytes": row["bytes"]}
+            report["kind"] = "bounded_dense_fusion_and_token_measurement"
     base = "pgq-quality-base-" + run_id
     subprocess.run(["docker", "tag", image, base], check=True)
     report["base_alias"] = base
@@ -160,6 +173,8 @@ def measure(args, run_id, directory, source, report):
                "--container-daemon-socket", "/var/run/docker.sock", "--env-file", str(empty), "--secret-file", str(empty),
                "--env", "PGQ_RUN_ID=" + run_id, "--container-options",
                '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.quality-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"' + cache_mount, *cache_environment]
+    if args.tokens:
+        command += ['--env', 'PGQ_QUALITY_TOKENS=1']
     print(directory, flush=True)
     with (directory / "act.log").open("wb") as log:
         try:
@@ -197,6 +212,9 @@ def measure(args, run_id, directory, source, report):
     if result.returncode == 0:
         measured = json.loads((directory / "evidence/quality-results.json").read_text(encoding="utf-8"))
         plans = ["text", "dense", "rrf", "dbsf"] if args.model_inputs else ["text"]
+        if args.tokens:
+            from quality_tokens import TOKEN_PLANS
+            plans = {'scifact': plans + TOKEN_PLANS, 't2retrieval': plans}
         validate_measurement(measured, fixed_queries, plans)
     report["status"] = "measured" if result.returncode == 0 else "failed"
     manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")

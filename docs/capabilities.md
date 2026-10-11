@@ -122,6 +122,14 @@ rectangular token rows, equal sparse lengths and unique indices before any
 engine call. Each case uses its own bounded child; no safe post-error owner
 reuse, rollback or SQL error mapping is established.
 
+Later [trained token quality measurements](bounded-quality.md#optional-trained-token-vector-measurement)
+exercise installed candidate-domain MaxSim with a fixed English 17M model,
+ordinary guarded source updates, durable tickets and real stale-output refusals.
+The [aggregate receipt](evidence/bounded-token-quality.json) records 96 reranks,
+independent scores and both quality improvements and regressions. The document
+limit is 128 tokens and the candidate limit is 64. Chinese token quality,
+full-document/corpus evaluation and complete V03/P2 acceptance remain open.
+
 ## Query execution and filtering
 
 | ID | Capability | Dependency / exposure | Required acceptance |

@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "kind": "optional_bounded_token_quality_inputs",
+  "model_id": "mixedbread-ai/mxbai-edge-colbert-v0-17m",
+  "revision": "592c6417c1c6687572043408ed1ae5196bce16b1",
+  "license_declared": "Apache-2.0",
+  "dimensions": 48,
+  "pooling": "per-token",
+  "normalization": "unit",
+  "max_tokens": 128,
+  "query_tokens": 48,
+  "datasets": [
+    "scifact"
+  ],
+  "weights": "float32 ONNX",
+  "status": "input_preparation_only",
+  "release_supported": false,
+  "files": [
+    {
+      "path": "model.onnx",
+      "bytes": 67970609,
+      "sha256": "a2fb3ad410f1b68479caa31e9d6821213050ef25804cb9a3c9ba963e72503f46",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/model.onnx",
+      "git_blob": "d900de867f03a9e25bc020674557fb43d4459ade"
+    },
+    {
+      "path": "tokenizer.json",
+      "bytes": 3583588,
+      "sha256": "594291000b476c98ed600cbb1914ff128c79642a9433aac86213c7a5562d7c1a",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/tokenizer.json",
+      "git_blob": "bc7ae4f3fe3110e96aa87aee0324b66fb30396e2"
+    },
+    {
+      "path": "config_sentence_transformers.json",
+      "bytes": 760,
+      "sha256": "629c4f00d1ac23abe86fec195dc90a7799ee33ceae236df6a3c026d8db018816",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/config_sentence_transformers.json",
+      "git_blob": "e50668c0f5179899f1875d805a80ea12986dc263"
+    },
+    {
+      "path": "onnx_config.json",
+      "bytes": 803,
+      "sha256": "e12026a07eb05b45dbe2a5677390c6b968c511cdfb2281a2156589bf48e27750",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/onnx_config.json",
+      "git_blob": "dbfe518daaeb660f191f4b92438adfd3eaf9e80d"
+    },
+    {
+      "path": "README.md",
+      "bytes": 70069,
+      "sha256": "0d177ea3615e2842ea6523d144d60d35c0cbc9d0e534012c319b4eb6bf7b2fb6",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/README.md",
+      "git_blob": "4b04fe410b26b9e598ebe8127c311893b7e2c05b"
+    },
+    {
+      "path": "config.json",
+      "bytes": 1252,
+      "sha256": "8dfe2360cfa456796f9f2f27d87dbbda083d0329320542b871cea6d34d2c5e8c",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/config.json",
+      "git_blob": "a6cce1231280f39a066105a11f9d202c41acf5ac"
+    },
+    {
+      "path": "1_Dense/config.json",
+      "bytes": 133,
+      "sha256": "fdedbe7da07dafae623a002bcde227e767b8129da964fd90a3da301e3c7f929f",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/1_Dense/config.json",
+      "git_blob": "20271e501ae1fcdffe883c909d13feeb38b185fd"
+    },
+    {
+      "path": "2_Dense/config.json",
+      "bytes": 132,
+      "sha256": "d0e3d51270eb8bef21c3f321b2848ebfc2894d5e93fde02f7f09a8c7308748f0",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/2_Dense/config.json",
+      "git_blob": "88c2c6062d9548e56c7138dc9996b7441545a7bc"
+    },
+    {
+      "path": "modules.json",
+      "bytes": 319,
+      "sha256": "930b80c6d74f342665da7c56d01a9d906176ba3c74dd9f332cea8922121c4bbf",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/modules.json",
+      "git_blob": "34f5a37768da5cd3e2d89ad3bc4f6023b60e0ef8"
+    },
+    {
+      "path": "sentence_bert_config.json",
+      "bytes": 57,
+      "sha256": "418d0ad8b3489d2505453940b1d635e2ec7099fad599ea97d64cd116eb468e76",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/sentence_bert_config.json",
+      "git_blob": "d3690ec3ae8257f0fd43a622a7f67c3b5846960b"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "bytes": 21181,
+      "sha256": "cf6fbfaeb7553a572debf790d8b8bac09686648b83827e01b3efed0470e9f338",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/tokenizer_config.json",
+      "git_blob": "e7adc2172c3c18d735eb73a6a316ea849ce6d581"
+    },
+    {
+      "path": "special_tokens_map.json",
+      "bytes": 581,
+      "sha256": "6edfb9d64c0d7e5cbaa53516e90280fe1f42ba5ea7923d005a5f9b6e082142cf",
+      "url": "https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/resolve/592c6417c1c6687572043408ed1ae5196bce16b1/special_tokens_map.json",
+      "git_blob": "8df1248312c2abd45b31804667c183e83ebaa26f"
+    }
+  ],
+  "runtime_wheels": [],
+  "configuration_override": "document length128 instead of publisher512; query length48, no expansion, lowercase, document punctuation excluded, special tokens retained",
+  "reference_implementation": "https://github.com/lightonai/next-plaid/blob/c6c091d7ee14c81206bb28af90d8ff506fd0235e/next-plaid-onnx/src/lib.rs"
+}

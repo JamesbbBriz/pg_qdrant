@@ -15,14 +15,15 @@ def validate_measurement(measured, fixtures, plans):
     if len(datasets) != len(fixtures) or {d['dataset'] for d in datasets} != set(fixtures):
         raise ValueError('measured dataset identities differ')
     for dataset in datasets:
+        dataset_plans = plans[dataset['dataset']] if isinstance(plans, dict) else plans
         expected = fixtures[dataset['dataset']]
         queries = dataset.get('queries', [])
         if (dataset.get('status') != 'measured'
                 or dataset.get('fixture_sha256') != expected['sha256']
-                or len(queries) != len(expected['query_ids']) * len(plans)
-                or {q['plan'] for q in queries} != set(plans)):
+                or len(queries) != len(expected['query_ids']) * len(dataset_plans)
+                or {q['plan'] for q in queries} != set(dataset_plans)):
             raise ValueError('incomplete fixed query/plan measurement')
-        for plan in plans:
+        for plan in dataset_plans:
             identities = [q['query_id'] for q in queries if q['plan'] == plan]
             if len(identities) != len(expected['query_ids']) or set(identities) != set(expected['query_ids']):
                 raise ValueError('missing, duplicate or substituted fixed query measurement')

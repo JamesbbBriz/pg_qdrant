@@ -33,6 +33,21 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
         temporary.write_text(json.dumps(report,indent=2),encoding='utf-8')
         os.replace(temporary,output)
     dense_contract = None
+    token_contract = None
+    if os.environ.get('PG_QDRANT_QUALITY_TOKENS') == '1':
+        if encoded_directory is None:
+            raise ValueError('token measurement requires the dense comparison inputs')
+        from quality_tokens import CANDIDATES, TOKEN_PLANS, load_tokens, install_outputs, verify_freshness, verify_reranking
+        token_bytes = (pathlib.Path(__file__).resolve().parents[1]/'ci/token-quality-model.json').read_bytes()
+        model = json.loads(token_bytes)
+        tokenizer_sha = next(r['sha256'] for r in model['files'] if r['path']=='tokenizer.json')
+        token_contract = dict(kind='token_vectors',model_id=model['model_id'],model_version=model['revision'],
+            tokenizer='mxbai-tokenizer-sha256:'+tokenizer_sha,dimensions=48,distance='dot',
+            normalization='unit',storage_precision='float32',max_tokens=128,comparator='maxsim',
+            vector_field='token_output',fingerprint_field='token_source',incarnation_field='token_incarnation',
+            model_id_field='token_model',model_version_field='token_version')
+        report['token_contract']=token_contract
+        report['token_quality_scope']='English SciFact only, document128/query48, three exact MaxSim reranks within at most64 recalled candidates; Chinese and whole-corpus MaxSim unmeasured'
     if encoded_directory is not None:
         from quality_vectors import load_vectors
         model_bytes = (pathlib.Path(__file__).resolve().parents[1]/'ci/dense-quality-model.json').read_bytes()
@@ -55,10 +70,16 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
         if hashlib.sha256(raw).hexdigest()!=expected: raise ValueError('fixture identity mismatch: '+name)
         fixture=json.loads(raw)
         vectors = None
+        tokens = None
         if dense_contract is not None:
             vectors,encoding,encoding_sha=load_vectors(encoded_directory,name,fixture,expected,model_bytes)
             report['encoding']=encoding
             report['encoding_manifest_sha256']=encoding_sha
+        if token_contract is not None and name == 'scifact':
+            tokens,token_encoding,token_encoding_sha=load_tokens(pathlib.Path(encoded_directory)/'tokens',fixture,expected,token_bytes)
+            report['token_encoding']=token_encoding
+            report['token_encoding_manifest_sha256']=token_encoding_sha
+            report['absent_ablations'].remove('MaxSim')
         dataset={'dataset':name,'fixture_sha256':hashlib.sha256(raw).hexdigest(),'source_manifest_sha256':fixture['source_manifest_sha256'],
             'upstream_license':fixture['upstream_license'],'selection':fixture['selection'],'original_corpus_points':fixture['original_corpus_points'],
             'selected_points':len(fixture['documents']),'source_bytes':fixture['source_bytes'],'queries':[],'status':'running'}
@@ -70,6 +91,8 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
             docids={d['id'] for d in fixture['documents']};assert len(docids)==len(fixture['documents'])
             assert all(set(q['relevance'])<=docids for q in fixture['queries'])
             columns=',embedding jsonb,embedding_source text,embedding_incarnation uuid,embedding_model text,embedding_version text' if vectors is not None else ''
+            if tokens is not None:
+                columns+=',token_output jsonb,token_source text,token_incarnation uuid,token_model text,token_version text'
             sql('CREATE TABLE '+table+'(id text PRIMARY KEY,body text NOT NULL'+columns+')')
             # Complete UTF-8 bodies are encoded to bound SQL argv bytes without truncation.
             rows=[];bytes_used=0
@@ -85,6 +108,7 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
             started=time.monotonic()
             configuration={'text':{'fields':['body']}}
             if dense_contract is not None: configuration['representations']={'dense':dense_contract}
+            if tokens is not None: configuration['representations']['tokens']=token_contract
             sql('SELECT qdrant.create_index('+literal(table)+','+literal(table)+",'id',"+literal(json.dumps(configuration))+')')
             status=ready(table,timeout=300)
             dataset['registration_to_durable_seconds']=time.monotonic()-started
@@ -124,15 +148,35 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
                     raise ValueError('incomplete durable representation coverage')
                 dataset.update(model_output_to_durable_seconds=time.monotonic()-vector_started,
                     encoding_input_rows=len(seen),durable_model_batches=batches,index_status=status)
+            if tokens is not None:
+                dataset['token_outputs']=install_outputs(sql,ready,table,token_contract,tokens,literal)
+                first=fixture['queries'][0]
+                token_query={'tokens':{'model_id':token_contract['model_id'],'model_version':token_contract['model_version'],
+                    'vector':tokens['queries'][first['id']]['vector']}}
+                arguments=','.join([literal(table),literal(first['text']),"'precision'",'10',literal(json.dumps(token_query)),literal(json.dumps({'candidate_limit':CANDIDATES}))])
+                dataset['model_freshness']=verify_freshness(sql,ready,table,fixture,token_contract,tokens,dense_contract,vectors,literal,arguments)
+                dataset['index_status']=ready(table,timeout=300)
             dataset['capabilities_sha256']=hashlib.sha256(sql('SELECT qdrant.capabilities()').encode()).hexdigest()
             plans=['text'] if vectors is None else ['text','dense','rrf','dbsf']
+            if tokens is not None: plans+=TOKEN_PLANS
             dataset['explain']={}
             for q in fixture['queries']:
                 for plan in plans:
+                    reranking=plan.startswith('maxsim_')
                     mode='semantic' if plan=='dense' else 'hybrid' if plan in ['rrf','dbsf'] else 'text'
-                    query_vectors={} if plan=='text' else {'dense':{'model_id':dense_contract['model_id'],
+                    query_vectors={} if plan in ['text','maxsim_text'] else {'dense':{'model_id':dense_contract['model_id'],
                         'model_version':dense_contract['model_version'],'vector':vectors['queries'][q['id']]['vector']}}
                     options={'fusion':plan,'candidate_limit':100} if mode=='hybrid' else {}
+                    candidates=None
+                    if reranking:
+                        recall='text' if plan=='maxsim_text' else 'hybrid'
+                        options={'candidate_limit':CANDIDATES}
+                        if recall=='hybrid':options['fusion']=plan.removeprefix('maxsim_')
+                        recall_args=','.join([literal(table),literal(q['text']),literal(recall),str(CANDIDATES),literal(json.dumps(query_vectors)),literal(json.dumps(options))])
+                        candidates=json.loads(sql("SELECT coalesce(jsonb_agg(source_key ORDER BY rank),'[]') FROM qdrant.search("+recall_args+')'))
+                        query_vectors['tokens']={'model_id':token_contract['model_id'],'model_version':token_contract['model_version'],
+                            'vector':tokens['queries'][q['id']]['vector']}
+                        mode='precision'
                     arguments=','.join([literal(table),literal(q['text']),literal(mode),'10',literal(json.dumps(query_vectors)),literal(json.dumps(options))])
                     if plan not in dataset['explain']:
                         dataset['explain'][plan]=json.loads(sql('SELECT qdrant.explain_search('+arguments+')'))
@@ -142,6 +186,10 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
                     hits=json.loads(response);ranked=[h['key'] for h in hits]
                     assert set(ranked)<=docids and all(h['rank']==n+1 and math.isfinite(h['score']) for n,h in enumerate(hits)),hits
                     result={'query_id':q['id'],'plan':plan,'latency_seconds':elapsed,'ranking':hits,'positive_judgments':len(q['relevance']),**metrics(ranked,q['relevance'])}
+                    if reranking:
+                        result['maxsim_verification']=verify_reranking(tokens['queries'][q['id']]['vector'],
+                            {key:row['vector'] for key,row in tokens['documents'].items()},candidates,hits)
+                        result['candidate_recall']=sum(key in q['relevance'] for key in candidates)/len(q['relevance'])
                     dataset['queries'].append(result);persist()
             samples=dataset['queries'];latencies=sorted(q['latency_seconds'] for q in samples)
             dataset['aggregate']={m:statistics.mean(q[m] for q in samples) for m in ['recall_at_10','ndcg_at_10','mrr_at_10']}
@@ -176,8 +224,10 @@ def main():
     if data.parent.parent != pathlib.Path('/tmp') or not data.parent.name.startswith('pgq-p1-product.'):
         raise ValueError('a disposable product-test cluster is required')
     def sql(query):
+        if len(query.encode()) > 512*1024:
+            raise ValueError('quality SQL statement exceeds512KiB')
         result = subprocess.run(['psql', '-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1',
-                                 '-c', query], text=True, encoding='utf-8', capture_output=True, timeout=130)
+                                 '-v', 'VERBOSITY=verbose'], input=query+';\n', text=True, encoding='utf-8', capture_output=True, timeout=130)
         if result.returncode:
             raise RuntimeError(result.stderr)
         return result.stdout.strip()
