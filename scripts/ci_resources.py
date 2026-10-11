@@ -371,10 +371,17 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
                                    check=True, timeout=30)
                 if not runner:
                     source = "/src/artifacts/."
+                    package_archive = False
                     if label == "io.pg_qdrant.ci.preview":
-                        source = "/package-output/." if "preview-archive-" in data["Name"] else "/preview-evidence/."
+                        package_archive = "preview-archive-" in data["Name"]
+                        source = "/package-output/." if package_archive else "/preview-evidence/."
                     try:
-                        row["artifacts"] = archive_path(identifier, source, target / "artifacts.tar", max_bytes)
+                        # The package output contains both deterministic archives
+                        # and their expanded installation tree. Preserve every
+                        # member with independent raw and compressed byte bounds.
+                        name = "artifacts.tar.gz" if package_archive else "artifacts.tar"
+                        row["artifacts"] = archive_path(identifier, source, target / name, max_bytes,
+                            compressed=package_archive, max_source_bytes=2 * 1024**3)
                     except FileNotFoundError:
                         row["artifacts_absent"] = source  # Early startup may not create its output directory.
                 # Failed test clusters live under /tmp. Preserve them independently of step collectors.

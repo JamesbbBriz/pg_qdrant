@@ -298,6 +298,33 @@ class RealDockerRetirement(unittest.TestCase):
         self.assertTrue(receipt["containers"][0]["stopped_for_cleanup"])
         self.assertTrue(receipt["containers"][0]["removed"])
 
+    def test_preview_package_tree_is_compressed_bounded_and_complete(self):
+        label = "io.pg_qdrant.ci.preview"
+        identifier = resources.docker("create", "--name", "pgq-preview-archive-" + self.run_id,
+            "--label", resources.LABELS[0] + "=" + self.run_id, "--label", label + "=" + self.run_id,
+            "--network=none", "--memory=128m", "--pids-limit=32", self.image, "sh", "-c",
+            "mkdir -p /package-output/stage; printf manifest > /package-output/manifest.json; "
+            "dd if=/dev/zero of=/package-output/stage/binary bs=1048576 count=4 2>/dev/null")
+        self.ids.append(identifier)
+        resources.docker("start", identifier)
+        self.assertEqual(resources.docker("wait", identifier), "0")
+        refused = resources.retire_owned(label, self.run_id, self.directory, max_bytes=1)
+        self.assertEqual(refused["status"], "failed")
+        self.assertFalse(refused["containers"][0]["removed"])
+        self.assertEqual(resources.inspect_owned(identifier, label, self.run_id)["Id"], identifier)
+        receipt = resources.retire_owned(label, self.run_id, self.directory, max_bytes=32768)
+        self.assertEqual(receipt["status"], "passed")
+        row = receipt["containers"][0]
+        self.assertTrue(row["removed"])
+        exported = row["artifacts"]
+        self.assertGreater(exported["uncompressed_bytes"], 4 * 1024**2)
+        self.assertEqual(exported["uncompressed_limit_bytes"], 2 * 1024**3)
+        self.assertLessEqual(exported["bytes"], 32768)
+        with tarfile.open(self.directory / identifier / exported["path"]) as archive:
+            files = {m.name.rsplit("/", 1)[-1]: m for m in archive if m.isfile()}
+            self.assertEqual(archive.extractfile(files["manifest.json"]).read(), b"manifest")
+            self.assertEqual(archive.extractfile(files["binary"]).read(), b"\0" * (4 * 1024**2))
+
     def test_referenced_runner_volume_is_retained_and_exact_retry_recovers(self):
         name = "pgq-lifecycle-volume-" + self.run_id
         resources.docker("volume", "create", "--label", resources.LABELS[0] + "=" + self.run_id, name)

@@ -64,6 +64,12 @@ into an empty directory with
 Unknown files, interrupted writes, changed hashes and links stop automated
 retirement for review. No global Docker prune or force removal is used.
 
+Package-preview diagnostics include the verified archives and their expanded
+installation tree. Their complete export uses gzip with a 512 MiB compressed
+limit and a separate 2 GiB raw limit; every member and the gzip stream are
+verified before retiring the archive container. Other artifact export limits
+remain unchanged.
+
 For an exact failed run whose raw cluster exceeds the default diagnostic limit,
 review its retained resources, then retry `scripts/ci_resources.py` with
 `--failed-cluster-gib 16` or `32`. Compressed output remains limited to 512 MiB;
