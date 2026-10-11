@@ -345,8 +345,11 @@ run-labelled containers after exporting evidence. A failed gate no longer keeps
 all successful containers from that run. The host records each container's
 state, image identity, logs and filesystem change list, archives available test
 artifacts, and archives `/tmp` for failed or interrupted tests before removal.
-Archive streams have a 512 MiB and 90-second limit each; incomplete exports fail
-cleanup and retain the original container. These archives do not include
+Archive streams have a 512 MiB and 90-second limit each. Failed-cluster `/tmp`
+archives use gzip with an additional 8 GiB uncompressed limit; the complete
+gzip checksum, raw-stream hash and every tar member body are verified before
+retirement. Incomplete exports fail cleanup and retain the original container.
+These archives do not include
 database volumes or already-unmounted tmpfs contents. Historical unlabelled
 containers are not swept automatically.
 

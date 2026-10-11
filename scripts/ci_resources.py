@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import gzip
 from contextlib import contextmanager
 import json
 import os
@@ -177,8 +178,10 @@ def require_clean_start():
                            "evidence export and cleanup before starting another run")
 
 
-def archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024, timeout=90):
+def archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024, timeout=90, *, compressed=False):
     """Copy a bounded tar stream without extracting untrusted member paths."""
+    if compressed:
+        return compressed_archive_path(identifier, source, destination, max_bytes, timeout)
     destination = Path(destination)
     partial = destination.with_suffix(destination.suffix + ".partial")
     with partial.open("wb") as stream, destination.with_suffix(".stderr").open("wb") as errors:
@@ -216,6 +219,83 @@ def archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024, t
     with destination.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
     return {"path": destination.name, "bytes": destination.stat().st_size, "sha256": digest}
+
+
+def compressed_archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024,
+                            timeout=90, *, max_source_bytes=8 * 1024**3):
+    """Preserve large failed clusters with both compressed and raw byte limits."""
+    if max_bytes <= 0 or max_source_bytes <= 0 or timeout <= 0:
+        raise ValueError("archive budgets must be positive")
+    destination = Path(destination)
+    partial = destination.with_suffix(destination.suffix + ".partial")
+    raw_hash = hashlib.sha256()
+    raw_bytes = 0
+    failures = []
+    finished = threading.Event()
+    with partial.open("wb") as stream, destination.with_suffix(".stderr").open("wb") as errors:
+        process = subprocess.Popen(["docker", "cp", identifier + ":" + source, "-"],
+                                   stdout=subprocess.PIPE, stderr=errors)
+        def deadline_guard():
+            if not finished.wait(timeout):
+                failures.append("diagnostic export exceeded time budget")
+                if process.poll() is None:
+                    process.kill()
+        guard = threading.Thread(target=deadline_guard, daemon=True)
+        guard.start()
+        try:
+            with gzip.GzipFile(fileobj=stream, mode="wb", filename="", mtime=0, compresslevel=1) as output:
+                for chunk in iter(lambda: process.stdout.read1(65536), b""):
+                    raw_bytes += len(chunk)
+                    if raw_bytes > max_source_bytes:
+                        raise RuntimeError("diagnostic export exceeded uncompressed byte budget")
+                    raw_hash.update(chunk)
+                    output.write(chunk)
+                    if stream.tell() > max_bytes:
+                        raise RuntimeError("diagnostic export exceeded compressed byte budget")
+            code = process.wait(timeout=10)
+            if failures:
+                raise RuntimeError(failures[0])
+            if code:
+                errors.flush()
+                if "Could not find the file" in destination.with_suffix(".stderr").read_text(errors="replace"):
+                    raise FileNotFoundError("diagnostic path absent: " + source)
+                raise RuntimeError("diagnostic export failed: " + source)
+        finally:
+            finished.set()
+            guard.join(timeout=10)
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=10)
+            process.stdout.close()
+    if partial.stat().st_size > max_bytes:
+        raise RuntimeError("diagnostic export exceeded compressed byte budget")
+    # Check the complete gzip stream, including its CRC/footer, before the
+    # ordinary tar member/body validation and any original-container removal.
+    observed = hashlib.sha256()
+    observed_bytes = 0
+    with gzip.open(partial, "rb") as stream:
+        for chunk in iter(lambda: stream.read(65536), b""):
+            observed_bytes += len(chunk)
+            if observed_bytes > max_source_bytes:
+                raise RuntimeError("diagnostic archive exceeds uncompressed byte budget")
+            observed.update(chunk)
+    if observed_bytes != raw_bytes or observed.digest() != raw_hash.digest():
+        raise RuntimeError("diagnostic compressed stream changed")
+    with tarfile.open(partial) as archive:
+        for member in archive:
+            if member.isfile():
+                count = 0
+                with archive.extractfile(member) as body:
+                    for chunk in iter(lambda: body.read(65536), b""):
+                        count += len(chunk)
+                if count != member.size:
+                    raise RuntimeError("truncated diagnostic archive")
+    partial.replace(destination)
+    with destination.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    return {"path": destination.name, "bytes": destination.stat().st_size, "sha256": digest,
+            "uncompressed_bytes": raw_bytes, "uncompressed_sha256": raw_hash.hexdigest(),
+            "limit_bytes": max_bytes, "uncompressed_limit_bytes": max_source_bytes}
 
 
 def runner_volumes(data):
@@ -294,7 +374,8 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
                         row["artifacts_absent"] = source  # Early startup may not create its output directory.
                 # Failed test clusters live under /tmp. Preserve them independently of step collectors.
                 if not runner and (data["State"].get("ExitCode") != 0 or row.get("stopped_for_cleanup")):
-                    row["failure_tmp"] = archive_path(identifier, "/tmp/.", target / "failure-tmp.tar", max_bytes)
+                    row["failure_tmp"] = archive_path(identifier, "/tmp/.", target / "failure-tmp.tar.gz",
+                                                      max_bytes, compressed=True)
                 with (target / "filesystem-changes.log").open("wb") as changes:
                     subprocess.run(["docker", "diff", identifier], stdout=changes, check=True, timeout=30)
                 row["files"] = {}

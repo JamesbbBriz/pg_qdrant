@@ -1,5 +1,6 @@
 """Ownership, evidence loss and real Docker failure/cancellation regression tests."""
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -12,6 +13,72 @@ import unittest
 from unittest.mock import patch
 
 from scripts import ci_resources as resources
+
+
+class CompressedArchives(unittest.TestCase):
+    def export(self, payload, root, **budgets):
+        fixture = Path(root) / "fixture.tar"
+        fixture.write_bytes(payload)
+        actual_popen = subprocess.Popen
+        children = []
+        def producer(command, **options):
+            child = actual_popen([sys.executable, "-c",
+                "import pathlib,sys;sys.stdout.buffer.write(pathlib.Path(sys.argv[1]).read_bytes())", str(fixture)], **options)
+            children.append(child)
+            return child
+        with patch.object(resources.subprocess, "Popen", side_effect=producer):
+            result = resources.compressed_archive_path("exact-id", "/tmp/.", Path(root) / "out.tar.gz", **budgets)
+        self.assertEqual(children[0].returncode, 0)
+        return result
+
+    @staticmethod
+    def payload():
+        output = io.BytesIO()
+        with tarfile.open(fileobj=output, mode="w") as archive:
+            member = tarfile.TarInfo("cluster/data")
+            body = b"checkpoint\0" * 100000
+            member.size = len(body)
+            archive.addfile(member, io.BytesIO(body))
+        return output.getvalue()
+
+    def test_complete_archive_retains_raw_digest_and_every_member(self):
+        payload = self.payload()
+        with tempfile.TemporaryDirectory() as root:
+            result = self.export(payload, root, max_bytes=32768, max_source_bytes=2 * 1024**2)
+            self.assertEqual(result["uncompressed_bytes"], len(payload))
+            self.assertEqual(result["uncompressed_sha256"], hashlib.sha256(payload).hexdigest())
+            path = Path(root) / result["path"]
+            self.assertLess(path.stat().st_size, len(payload) // 10)
+            with tarfile.open(path) as archive:
+                self.assertEqual(archive.extractfile("cluster/data").read(), b"checkpoint\0" * 100000)
+
+    def test_both_byte_limits_refuse_publication(self):
+        for budgets, reason in (({"max_bytes": 1}, "compressed"),
+                                 ({"max_source_bytes": 1}, "uncompressed")):
+            with self.subTest(budgets=budgets), tempfile.TemporaryDirectory() as root:
+                with self.assertRaisesRegex(RuntimeError, reason):
+                    self.export(self.payload(), root, **budgets)
+                self.assertFalse((Path(root) / "out.tar.gz").exists())
+                self.assertTrue((Path(root) / "fixture.tar").exists())
+
+    def test_truncated_member_refuses_publication(self):
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaises((tarfile.TarError, EOFError)):
+                self.export(self.payload()[:4096], root)
+            self.assertFalse((Path(root) / "out.tar.gz").exists())
+
+    def test_stalled_stream_deadline_kills_only_its_producer(self):
+        actual_popen = subprocess.Popen
+        children = []
+        def producer(command, **options):
+            child = actual_popen([sys.executable, "-c", "import time;time.sleep(30)"], **options)
+            children.append(child)
+            return child
+        with tempfile.TemporaryDirectory() as root, patch.object(resources.subprocess, "Popen", side_effect=producer):
+            with self.assertRaisesRegex(RuntimeError, "time budget"):
+                resources.compressed_archive_path("exact-id", "/tmp/.", Path(root) / "out.tar.gz", timeout=.2)
+            self.assertFalse((Path(root) / "out.tar.gz").exists())
+            self.assertIsNotNone(children[0].poll())
 
 
 class ResourceGuards(unittest.TestCase):

@@ -59,15 +59,17 @@ def run(sql, ready, ticket_from, checks):
 
     def provision_native_storage(data, label, database_oid):
         # PG17 basebackup rejects long ordinary-file paths. Derived Edge files
-        # live outside PGDATA and are rebuilt, never restored through a symlink.
+        # and IPC live outside PGDATA. The actual indexes root remains an owned
+        # directory: the helper deliberately refuses a symlink at that root.
         target = root / ('native-' + label)
         target.mkdir(mode=0o700)
         ipc = data / 'pg_qdrant_p0'
-        ipc.mkdir(mode=0o700, exist_ok=True)
-        link = ipc / ('db-' + database_oid + '.indexes')
-        assert not link.exists() and not link.is_symlink(), link
-        link.symlink_to(target, target_is_directory=True)
-        return target
+        assert not ipc.exists() and not ipc.is_symlink(), ipc
+        ipc.symlink_to(target, target_is_directory=True)
+        indexes = ipc / ('db-' + database_oid + '.indexes')
+        indexes.mkdir(mode=0o700)
+        assert not indexes.is_symlink() and indexes.resolve().parent == target
+        return indexes.resolve()
 
     try:
         command('initdb', '-D', source, '--no-locale', '--encoding=UTF8', '--auth=trust')
@@ -128,7 +130,8 @@ def run(sql, ready, ticket_from, checks):
         report['copied_native_files'] = sum('.indexes/' in entry.get('Path', '')
                                           for entry in manifest['Files'])
         assert report['source_native_files'] > 0 and report['copied_native_files'] == 0
-        assert not (clone / 'pg_qdrant_p0' / ('db-' + database_oid + '.indexes')).exists()
+        assert not (clone / 'pg_qdrant_p0').exists()
+        assert not (clone / 'pg_qdrant_p0').is_symlink()
         preserved_incarnations = incarnations()
         assert preserved_incarnations['physical_docs:1'] != old_incarnations['physical_docs:1']
         report['source_at_backup'] = identities()

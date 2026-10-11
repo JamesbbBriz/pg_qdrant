@@ -30,6 +30,7 @@ the cache inside a source checkout. Its mounted runner path is `/pgq-cache`.
 | Compressed source snapshots | 2 GiB, 32 entries | SHA-256 manifests and archive receipts; dirty/failed inputs pinned; verified completed source views retired |
 | Registered images and explicit image pins | 80 GiB conservative full-image sum | Prefer two passed families and one failed family; older eligible families can retire to satisfy bytes; latest family, pins and container references protected |
 | Local evidence | 8 GiB admission threshold | Preserve failures/logs/receipts; refuse another invocation when full |
+| Failed-cluster diagnostic archive | 512 MiB compressed, 8 GiB uncompressed, 90 seconds | Gzip/raw-stream hashes and all tar bodies verified before exact-container retirement; incomplete exports retain the original |
 
 BuildKit GC is periodic, not a filesystem quota. Busy cache records can exceed
 its target during a build. Pre/post-build checks reject unresolved excess.
