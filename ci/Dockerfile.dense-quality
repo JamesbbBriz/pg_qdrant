@@ -1,0 +1,16 @@
+ARG PGQ_QUALITY_BASE
+FROM ${PGQ_QUALITY_BASE}
+USER root
+COPY scripts/quality_metrics.py scripts/run_quality.py scripts/quality_vectors.py scripts/prepare_dense_quality.py scripts/encode_quality.py /src/scripts/
+COPY ci/quality-sources.json ci/dense-quality-model.json ci/dense-quality-requirements.txt /src/ci/
+COPY crates/pg_qdrant/tests/run-p1.sh /src/crates/pg_qdrant/tests/
+COPY fixtures/ /opt/quality-fixtures/
+COPY model-assets/ /opt/quality-model/
+RUN python3 /src/scripts/prepare_dense_quality.py --root /opt/quality-model \
+    && PYTHONPATH=/opt/quality-model/wheels/pip-25.2-py3-none-any.whl python3 -m pip install \
+       --target /opt/quality-runtime --no-index --find-links /opt/quality-model/wheels \
+       --require-hashes --no-compile --no-deps -r /src/ci/dense-quality-requirements.txt
+COPY ci/run-dense-quality.sh /opt/quality/run.sh
+ENV PG_QDRANT_QUALITY_TEST=1 PG_QDRANT_QUALITY_FIXTURES=/opt/quality-fixtures PG_QDRANT_ARTIFACT_DIR=/src/artifacts/quality TOKENIZERS_PARALLELISM=false
+USER builder
+ENTRYPOINT ["bash", "/opt/quality/run.sh"]

@@ -1,0 +1,318 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "release_supported": false,
+  "full_benchmark": false,
+  "run_id": "3b44118f8c1f6381",
+  "measurement_source": {
+    "commit": "e291e9c80d846affd8fad6fc6297a4e933b07cee",
+    "ref": "feat/measured-dense-quality",
+    "dirty_diff_sha256": "f19c91cb0a9a7916510a7e6ac3b1d2d8958f863231f4f64699b393f7a43cb3fe",
+    "untracked_inputs": [
+      "ci/Dockerfile.dense-quality",
+      "ci/dense-quality-model.json",
+      "ci/dense-quality-requirements.txt",
+      "ci/dense-quality.yml",
+      "ci/run-dense-quality.sh",
+      "scripts/encode_quality.py",
+      "scripts/prepare_dense_quality.py",
+      "scripts/quality_vectors.py",
+      "scripts/tests/test_dense_quality.py"
+    ],
+    "source_sha256": "79cbf4ca0e6b28b9ac5cecf22be0042f9525825a6cecab76720c707c3cbb65b1",
+    "cargo_lock_sha256": "79666ddb27e6f87bc84f1711bef5667bfe23422617d08c6f9131057f3f074e9c"
+  },
+  "executable_source_sha256": {
+    "scripts/local_quality.py": "28ed32f7144b8abf178d02720bc1ad48ee8c9e3b20d44aa34cc3cd806007755f",
+    "scripts/run_quality.py": "5a1fe24d9d1b6badf09e19bc2dae1f5a901a6059ab97a98616f66c631bc90bc2",
+    "scripts/quality_vectors.py": "04badbb16605aacd98e7480e3df4c26e65f8a107287b9406669dd1760e22db2f",
+    "scripts/encode_quality.py": "6966042526dea7f892808d48dcaf8d948ffa82d3bf0138d61f614cbe754f11e0",
+    "scripts/prepare_dense_quality.py": "77a45a9edeb0e3c83e82fbbd795d227075dcbdea4b072ea37d5407a97a72a742",
+    "scripts/tests/test_dense_quality.py": "cc35864af5fd3aa5de2457264c8a8e6576bb39822e12fc196938323d85764945",
+    "crates/pg_qdrant/tests/run-p1.sh": "8a2f6303e4237da52e266dc60822488fecbab0e4e9645adc5ada876f6cd3b11f",
+    "ci/Dockerfile.dense-quality": "fdf9aa002f2718ef9bd340e3eb688e6e7cabb95b0491f65a6dd01f72a60ba1bb",
+    "ci/dense-quality.yml": "48cddce063abf7d7924a920c731438e02ef8379a2783eb8a137e6cfc4b2c6c27",
+    "ci/run-dense-quality.sh": "90498f82ac388e200a7aabef08d64284554ed624c8ee3a81b3f2964ed68aa35e",
+    "ci/dense-quality-model.json": "c0aaaff412035534b68ac775534ad6831c7a1d1a394512e457978cedf6ee77f7",
+    "ci/dense-quality-requirements.txt": "c9dbdb74161572605af2bd51fba5475f755fd15dea78b8e1860a51d2ad85fe7b"
+  },
+  "compiled_source_commit": "46389c1b188df7e34f68bdd8718a4d300673d05a",
+  "product_image": "sha256:f1abf9712a41e67af18b2115ea06f79fd0035e6814ba53a052d2bdee9597c4f6",
+  "runner_image": "sha256:b910c1f5d779e8efcc147e36bd01210edeb0d61b88ac2b246b61b4b84f37c3fa",
+  "outer_report_sha256": "64d0c5a9a07b76b86200e8e2f94ab8587884f01410e09b156aa532a5fb3f328d",
+  "act_log_sha256": "cdd5cd0d18a702e48a0e844dbefbffd1a2e5717ff70748671b66e675be4f84da",
+  "evidence_sha256": {
+    "p1-product-init.log": "36e443b96cec684cb24566c02afc0dd7cabf74d346badf6e2a44590868e0c0ec",
+    "p1-product-postgres.log": "420c08467f1a97a40c6aaeebac0ac91b9f1daa59df1160ea3887ba264fd986a7",
+    "quality-results.json": "710a59daa3b2a4c7e74fa2e71d74204b7e5a83be0647c6b517607345f1c83430",
+    "quality-summary.json": "bc3c242d4ea6a18d9a5b491a9b9132b9c54d566b823570f027507ad9b8db357f",
+    "encoding/manifest.json": "e5c2b07f14c3c49694a8b1b4d61e3b0a08e51eeeb19d1663b29bc31d49f096a2",
+    "encoding/scifact.json": "770c966f450ae0825dba17d885389cb783d4c2cce0edb9799073973bbd3f6f41",
+    "encoding/t2retrieval.json": "4858968b39f97c450de4c35d939ae6ea96753851fe7cb941028416ad9211fd6b"
+  },
+  "independently_verified_queries": 256,
+  "verified_vectors": 1034,
+  "installed_sha256": {
+    "pg_qdrant_p0_helper": "984739c5015d51163f0a3e6646189d3b4c58c3053379c2e3ce28e2ec42fe2bfc",
+    "pg_qdrant.so": "553567c78cb51a980bb8e0a9a122591e2c2fec5131d86414ed7132a0da81c21c",
+    "extension/pg_qdrant--0.0.1.sql": "937e22b6f4d1ec5f25c1dc2dbbad733ff6db0498cda22a982b9dab43f0e88311"
+  },
+  "encoding": {
+    "schema_version": 1,
+    "status": "encoded",
+    "release_supported": false,
+    "model_contract_sha256": "c0aaaff412035534b68ac775534ad6831c7a1d1a394512e457978cedf6ee77f7",
+    "model_id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+    "pooling": "attention-mask mean including special tokens",
+    "normalization": "unit",
+    "dimensions": 384,
+    "max_tokens": 128,
+    "batch_size": 8,
+    "runtime": {
+      "certifi": "2026.7.22",
+      "charset-normalizer": "3.5.2",
+      "colorama": "0.4.6",
+      "coloredlogs": "15.0.1",
+      "filelock": "4.0.12",
+      "flatbuffers": "25.12.19",
+      "fsspec": "2026.9.0",
+      "huggingface-hub": "0.35.3",
+      "humanfriendly": "10.0",
+      "idna": "3.20",
+      "mpmath": "1.3.0",
+      "numpy": "1.26.4",
+      "onnxruntime": "1.19.2",
+      "packaging": "26.3",
+      "pip": "25.2",
+      "protobuf": "7.36.2",
+      "pyreadline3": "3.5.6",
+      "PyYAML": "6.0.3",
+      "requests": "2.34.2",
+      "sympy": "1.14.0",
+      "tokenizers": "0.22.1",
+      "tqdm": "4.70.1",
+      "typing_extensions": "4.16.0",
+      "urllib3": "2.8.0"
+    },
+    "datasets": [
+      {
+        "dataset": "scifact",
+        "inputs": 532,
+        "truncated_inputs": 495,
+        "untruncated_tokens": 189625,
+        "encoded_tokens": 64804,
+        "fixture_sha256": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627",
+        "encoding_seconds": 18.76062839000224,
+        "output_sha256": "770c966f450ae0825dba17d885389cb783d4c2cce0edb9799073973bbd3f6f41",
+        "output_bytes": 4357488
+      },
+      {
+        "dataset": "t2retrieval",
+        "inputs": 502,
+        "truncated_inputs": 399,
+        "untruncated_tokens": 294686,
+        "encoded_tokens": 56984,
+        "fixture_sha256": "a0f9dcc584a8c9db88548ad629e4ab64f112ae4a4ab9c6826643ce5f71c45e28",
+        "encoding_seconds": 16.83655987900056,
+        "output_sha256": "4858968b39f97c450de4c35d939ae6ea96753851fe7cb941028416ad9211fd6b",
+        "output_bytes": 4111388
+      }
+    ],
+    "errors": [],
+    "pooling_verification": {
+      "scalar_goldens": 2,
+      "invalid_mask_refusals": 2,
+      "native_padding_probes": 2,
+      "maximum_absolute_batch_difference": 8.940696716308594e-08,
+      "scope": "scalar pooling goldens and native batch padding invariance; no cross-framework parity claim"
+    },
+    "load_seconds": 0.9978126989990415,
+    "total_seconds": 36.60836947799908,
+    "process_peak_rss_kib": 907448
+  },
+  "datasets": [
+    {
+      "dataset": "scifact",
+      "points": 500,
+      "queries_per_plan": 32,
+      "fixture_sha256": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627",
+      "aggregate_by_plan": {
+        "text": {
+          "recall_at_10": 0.90625,
+          "ndcg_at_10": 0.8263649413822141,
+          "mrr_at_10": 0.8052083333333333,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.14631461950011726,
+          "latency_p95_seconds": 0.1597535240034631
+        },
+        "dense": {
+          "recall_at_10": 0.859375,
+          "ndcg_at_10": 0.7793635183328304,
+          "mrr_at_10": 0.7760416666666666,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.16442829699917638,
+          "latency_p95_seconds": 0.18314528800328844
+        },
+        "rrf": {
+          "recall_at_10": 0.96875,
+          "ndcg_at_10": 0.8524305240356294,
+          "mrr_at_10": 0.81640625,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.19873736849876877,
+          "latency_p95_seconds": 0.22040656299941475
+        },
+        "dbsf": {
+          "recall_at_10": 0.9375,
+          "ndcg_at_10": 0.8469678307067723,
+          "mrr_at_10": 0.8203125,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.19364040349864808,
+          "latency_p95_seconds": 0.21424122899770737
+        }
+      },
+      "encoding": {
+        "dataset": "scifact",
+        "inputs": 532,
+        "truncated_inputs": 495,
+        "untruncated_tokens": 189625,
+        "encoded_tokens": 64804,
+        "fixture_sha256": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627",
+        "encoding_seconds": 18.76062839000224,
+        "output_sha256": "770c966f450ae0825dba17d885389cb783d4c2cce0edb9799073973bbd3f6f41",
+        "output_bytes": 4357488
+      },
+      "durable_model_batches": 50,
+      "registration_to_durable_seconds": 8.3918202140012,
+      "model_output_to_durable_seconds": 17.85421002200019
+    },
+    {
+      "dataset": "t2retrieval",
+      "points": 470,
+      "queries_per_plan": 32,
+      "fixture_sha256": "a0f9dcc584a8c9db88548ad629e4ab64f112ae4a4ab9c6826643ce5f71c45e28",
+      "aggregate_by_plan": {
+        "text": {
+          "recall_at_10": 0.8986945346320346,
+          "ndcg_at_10": 0.9028851971933058,
+          "mrr_at_10": 0.953125,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.17159593000178575,
+          "latency_p95_seconds": 0.20322070000111125
+        },
+        "dense": {
+          "recall_at_10": 0.8453463203463204,
+          "ndcg_at_10": 0.775464469444366,
+          "mrr_at_10": 0.8072916666666666,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.1917099655001948,
+          "latency_p95_seconds": 0.2209363250003662
+        },
+        "rrf": {
+          "recall_at_10": 0.9158820346320347,
+          "ndcg_at_10": 0.9042365173405905,
+          "mrr_at_10": 0.9322916666666666,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.22741764200145553,
+          "latency_p95_seconds": 0.25077911900007166
+        },
+        "dbsf": {
+          "recall_at_10": 0.9190070346320346,
+          "ndcg_at_10": 0.9330887535167511,
+          "mrr_at_10": 0.96875,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.22691075800139515,
+          "latency_p95_seconds": 0.26218569899720023
+        }
+      },
+      "encoding": {
+        "dataset": "t2retrieval",
+        "inputs": 502,
+        "truncated_inputs": 399,
+        "untruncated_tokens": 294686,
+        "encoded_tokens": 56984,
+        "fixture_sha256": "a0f9dcc584a8c9db88548ad629e4ab64f112ae4a4ab9c6826643ce5f71c45e28",
+        "encoding_seconds": 16.83655987900056,
+        "output_sha256": "4858968b39f97c450de4c35d939ae6ea96753851fe7cb941028416ad9211fd6b",
+        "output_bytes": 4111388
+      },
+      "durable_model_batches": 47,
+      "registration_to_durable_seconds": 13.515426366997417,
+      "model_output_to_durable_seconds": 48.548105234000104
+    }
+  ],
+  "latency_scope": "one psql process plus SQL/native query/source JOIN/result JSON per query, sequential, no warmup or repeats; not engine-only latency or production p95",
+  "metric_scope": "deterministic bounded subset, all selected query positive judgments retained; unjudged documents treated as non-relevant",
+  "absent_ablations": [
+    "learned_sparse",
+    "MaxSim",
+    "standalone_Qdrant",
+    "pgvector",
+    "pg_search",
+    "VectorChord"
+  ],
+  "unmeasured": [
+    "identifier_false_matches",
+    "authorized_filter_fill",
+    "document_diversity",
+    "representation_coverage",
+    "native_RSS",
+    "disk",
+    "update_optimize_recovery_durations"
+  ],
+  "cgroup_limits": {
+    "memory.max": "2147483648",
+    "memory.swap.max": "0",
+    "cpu.max": "200000 100000",
+    "pids.max": "128"
+  },
+  "acceptance_scope": "Bounded development evidence for P2-QUALITY; does not close any formal P1-P5 acceptance gate.",
+  "resource_retirement": {
+    "status": "passed",
+    "containers_removed": 2,
+    "copied_input_files_retired": 34,
+    "copied_input_bytes_retired": 527444348,
+    "source_view_retired": true,
+    "image_capacity": {
+      "removed": [],
+      "retained": [],
+      "errors": [],
+      "bytes": 21513386250,
+      "limit_bytes": 85899345920,
+      "reserved_bytes": 0
+    }
+  },
+  "interpretation_limits": [
+    "32 fixed queries per dataset and 500/470 selected points, not the full upstream corpus.",
+    "All selected positive judgments are retained; the reduced decoy domain changes retrieval difficulty.",
+    "128-token right truncation affected 495/532 SciFact inputs and 399/502 T2Retrieval inputs.",
+    "Dense-only metrics were lower than BM25 on both subsets; fusion observations do not establish a general improvement.",
+    "Latency includes one psql process and SQL/native/source JOIN/JSON for each sequential query, without warmup or repeated trials.",
+    "The selected installed native product was reused without recompilation; its binary identity differs from the harness source identity.",
+    "Runs use the source owner without tenant filters; this measurement does not establish permission or tenant-filter coverage.",
+    "Scalar pooling and native batch-padding probes do not establish cross-framework model parity."
+  ],
+  "prior_failed_run": {
+    "run_id": "a51081314b2fbf39",
+    "outer_status": "failed",
+    "reason": "Recorded multi-tag image retirement was rejected after successful SQL measurement and container retirement. Original failure evidence remains preserved.",
+    "retry_after_fix": "e291e9c80d846affd8fad6fc6297a4e933b07cee"
+  },
+  "observed_rank_variation": {
+    "comparison_run_id": "a51081314b2fbf39",
+    "comparison_outer_status": "failed",
+    "vector_outputs_identical": true,
+    "scope": "Three SciFact RRF queries changed equal-score hit order across fresh indexes; fixed inputs do not establish ranking repeatability.",
+    "changed_metric_query_count": 3,
+    "completed_retry_ndcg_at_10": 0.8524305240356294,
+    "completed_retry_mrr_at_10": 0.81640625
+  }
+}

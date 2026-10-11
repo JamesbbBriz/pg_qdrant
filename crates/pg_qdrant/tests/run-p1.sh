@@ -44,8 +44,10 @@ fi
 export PGHOST="$pgq_cluster/socket" PGPORT=55434 PGDATABASE=postgres PGUSER="$(id -un)"
 export PG_QDRANT_DISPOSABLE_DATA="$pgq_cluster/data"
 if [[ "${PG_QDRANT_QUALITY_TEST:-0}" == 1 ]]; then
+  pgq_encoding=()
+  if [[ -n "${PG_QDRANT_QUALITY_ENCODED:-}" ]]; then pgq_encoding=(--encoded "$PG_QDRANT_QUALITY_ENCODED"); fi
   python3 /src/scripts/run_quality.py --fixtures "${PG_QDRANT_QUALITY_FIXTURES:?}" \
-    --output "$pgq_artifacts/quality-results.json" | tee "$pgq_artifacts/quality-summary.json"
+    --output "$pgq_artifacts/quality-results.json" "${pgq_encoding[@]}" | tee "$pgq_artifacts/quality-summary.json"
 elif [[ "${PG_QDRANT_P1_STORAGE_TEST:-0}" == 1 ]]; then
   python3 /src/crates/pg_qdrant/tests/verify_p1_storage.py | tee "$pgq_artifacts/p1-storage-results.json"
 else

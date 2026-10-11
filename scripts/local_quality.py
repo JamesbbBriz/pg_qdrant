@@ -5,12 +5,14 @@ import hashlib
 import json
 from pathlib import Path
 import secrets
+import shutil
 import subprocess
 import sys
 
 from local_ci import ROOT, RUNNER, act_binary, snapshot
 from ci_build import act_cache_options
-from ci_cache import evidence_admission, finish_snapshot
+from ci_cache import checked_child, digest as cache_digest, evidence_admission, finish_snapshot, inventory
+from quality_vectors import validate_measurement
 from ci_images import complete_images, pin_image, release_alias
 from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight, guarded_run
 
@@ -19,30 +21,105 @@ def output(args):
     return subprocess.check_output(args, text=True, encoding="utf-8").strip()
 
 
+def retire_measurement_inputs(source, report):
+    """Retire verified successful input copies; keep original assets and evidence."""
+    expected = {"fixtures/" + name: digest for name, digest in report["fixtures"].items()}
+    expected.update({"model-assets/" + name: row["sha256"]
+                     for name, row in report["model_inputs"].items()})
+    tracked = {item["path"] for item in report["snapshot"]["files"]}
+    if tracked & set(expected):
+        raise ValueError("measurement input overlaps frozen source")
+    actual = {}
+    for folder in ("fixtures", "model-assets"):
+        base = checked_child(source, folder)
+        actual.update({folder + "/" + name: size for name, size in inventory(base).items()})
+    if set(actual) != set(expected):
+        raise ValueError("unrecorded or missing measurement input; retain for review")
+    for name, digest in expected.items():
+        if cache_digest(checked_child(source, name)) != digest:
+            raise ValueError("measurement input changed; retain for review")
+    # Validate the complete set before removing any file. Source and output
+    # manifests remain; authoritative fixtures/model assets live outside this view.
+    for name in expected:
+        checked_child(source, name).unlink()
+    return {"retired_files": len(expected), "retired_bytes": sum(actual.values()),
+            "sha256": expected}
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True, help="matching installed development product image")
     parser.add_argument("--fixtures", type=Path, default=ROOT / "artifacts/quality-fixtures")
+    parser.add_argument("--model-inputs", type=Path, help="optional checksum-pinned offline dense model and Linux runtime wheels")
     parser.add_argument("--act")
     args = parser.parse_args()
     evidence_admission(ROOT / "artifacts/local-ci")
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / ("quality-" + run_id)
     directory.mkdir(parents=True)
-    require_clean_start()
-    capacity = storage_preflight(directory, RUNNER, run_id,
-        "io.pg_qdrant.ci.quality", heavy=True)
     source = directory / "snapshot"
     source.mkdir(parents=True)
-    report = {"run_id": run_id, "kind": "bounded_quality_measurement", "release_supported": False, "storage_preflight": capacity,
-              "snapshot": snapshot(source), "status": "running"}
+    report = {"run_id": run_id, "kind": "bounded_quality_measurement", "release_supported": False,
+              "status": "running"}
+    code = 1
+    try:
+        require_clean_start()
+        report['storage_preflight'] = storage_preflight(directory, RUNNER, run_id,
+            'io.pg_qdrant.ci.quality', heavy=True)
+        report['snapshot'] = snapshot(source)
+        code = measure(args, run_id, directory, source, report)
+    except Exception as error:
+        report.update(status='failed', error=f'{type(error).__name__}: {error}')
+        print(report['error'], file=sys.stderr)
+        code = 1
+    finally:
+        report['resource_cleanup'] = finish_run(run_id, directory, 'io.pg_qdrant.ci.quality',
+            'io.pg_qdrant.ci.quality-runner', '/tmp/quality-evidence/.')
+        if report['resource_cleanup']['status'] != 'passed':
+            code = 1
+        else:
+            try:
+                if report.get('base_alias'):
+                    release_alias(report['base_alias'], report['product_image'], temporary_pin=report['temporary_image_pin'])
+                report['image_retention'] = complete_images(run_id, 'passed' if code == 0 else 'failed')
+                if report['image_retention']['errors']:
+                    code = 1
+            except Exception as error:
+                code = 1
+                report['image_retention_error'] = str(error)
+        if code != 0:
+            report['status'] = 'failed'
+        if report.get("snapshot"):
+            if code == 0:
+                try:
+                    report["measurement_input_retention"] = retire_measurement_inputs(source, report)
+                except Exception as error:
+                    code = 1
+                    report.update(status="failed", measurement_input_retention_error=str(error))
+            try:
+                report["snapshot_retention"] = finish_snapshot(source, report["snapshot"], code == 0)
+            except Exception as error:
+                code = 1
+                report.update(status="failed", snapshot_retention_error=str(error))
+        (directory / 'run-report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+        print('Evidence:', directory, flush=True)
+    return code
+
+
+def measure(args, run_id, directory, source, report):
     image = output(["docker", "image", "inspect", args.image, "--format", "{{.Id}}"])
+    image_data = json.loads(output(["docker", "image", "inspect", image]))[0]
+    variables = dict(row.split("=", 1) for row in image_data["Config"]["Env"])
+    if variables.get("PG_QDRANT_MANAGED_HELPER") != "1":
+        raise ValueError("a managed-helper product image is required")
     runner = output(["docker", "image", "inspect", RUNNER, "--format", "{{.Id}}"])
     report["temporary_image_pin"] = pin_image(image)
-    report.update(product_image=image, runner_image=runner, fixtures={})
+    report.update(product_image=image, compiled_source_commit=variables["PG_QDRANT_SOURCE_SHA"],
+                  runner_image=runner, fixtures={}, model_inputs={})
     expected = json.loads((source / "ci/quality-sources.json").read_text(encoding="utf-8"))
     (source / "fixtures").mkdir()
+    fixed_queries = {}
     for dataset in expected["datasets"]:
         name = dataset["dataset"] + ".json"
         data = (args.fixtures / name).read_bytes()
@@ -51,8 +128,25 @@ def main():
             raise ValueError("fixture identity mismatch: " + name)
         (source / "fixtures" / name).write_bytes(data)
         report["fixtures"][name] = digest
+        fixture = json.loads(data)
+        identities = [row['id'] for row in fixture['queries']]
+        if len(identities) != 32 or len(set(identities)) != 32:
+            raise ValueError("invalid fixed query identities: " + name)
+        fixed_queries[dataset['dataset']] = {'sha256': digest, 'query_ids': identities}
+    if args.model_inputs:
+        from prepare_dense_quality import entries, prepare, validate
+        contract = json.loads((source / "ci/dense-quality-model.json").read_bytes())
+        prepare(args.model_inputs, contract)
+        for name, row in entries(contract):
+            target = source / "model-assets" / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(args.model_inputs / name, target)
+            validate(target, row)  # Validate the copied bytes, including an acquisition race.
+            report["model_inputs"][name] = {"sha256": row["sha256"], "bytes": row["bytes"]}
+        report["kind"] = "bounded_dense_and_fusion_measurement"
     base = "pgq-quality-base-" + run_id
     subprocess.run(["docker", "tag", image, base], check=True)
+    report["base_alias"] = base
     if output(["docker", "image", "inspect", base, "--format", "{{.Id}}"]) != image:
         raise ValueError("base image identity changed")
     empty = directory / "empty-env"
@@ -60,42 +154,12 @@ def main():
     manifest = directory / "run-report.json"
     manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
     cache_mount, cache_environment = act_cache_options()
-    command = [act_binary(args.act), "workflow_dispatch", "-C", str(source), "-W", str(source / "ci/quality.yml"),
+    workflow = "ci/dense-quality.yml" if args.model_inputs else "ci/quality.yml"
+    command = [act_binary(args.act), "workflow_dispatch", "-C", str(source), "-W", str(source / workflow),
                "-j", "quality", "-P", "ubuntu-24.04=" + runner, "--pull=false", "--reuse", "--network", "none",
                "--container-daemon-socket", "/var/run/docker.sock", "--env-file", str(empty), "--secret-file", str(empty),
                "--env", "PGQ_RUN_ID=" + run_id, "--container-options",
                '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.quality-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"' + cache_mount, *cache_environment]
-    code = 1
-    try:
-        code = measure(command, directory, report, manifest, source, run_id)
-    except Exception as error:
-        report.update(status="failed", error=f"{type(error).__name__}: {error}")
-    finally:
-        report["resource_cleanup"] = finish_run(run_id, directory, "io.pg_qdrant.ci.quality",
-            "io.pg_qdrant.ci.quality-runner", "/tmp/quality-evidence/.")
-        if report["resource_cleanup"]["status"] != "passed":
-            code = 1
-        else:
-            try:
-                release_alias(base, image, temporary_pin=report["temporary_image_pin"])
-                report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
-                if report["image_retention"]["errors"]:
-                    code = 1
-            except Exception as error:
-                code = 1
-                report["image_retention_error"] = str(error)
-        if code != 0:
-            report["status"] = "failed"
-        try:
-            report["snapshot_retention"] = finish_snapshot(source, report["snapshot"], code == 0)
-        except Exception as error:
-            code = 1
-            report.update(status="failed", snapshot_retention_error=str(error))
-        manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    return code
-
-
-def measure(command, directory, report, manifest, source, run_id):
     print(directory, flush=True)
     with (directory / "act.log").open("wb") as log:
         try:
@@ -126,17 +190,16 @@ def measure(command, directory, report, manifest, source, run_id):
     for name, digest in report["fixtures"].items():
         if hashlib.sha256((source / "fixtures" / name).read_bytes()).hexdigest() != digest:
             raise ValueError("frozen fixture changed: " + name)
-    report["evidence_sha256"] = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-                                 for path in (directory / "evidence").iterdir() if path.is_file()}
+    for name, row in report["model_inputs"].items():
+        validate(source / "model-assets" / name, row)
+    report["evidence_sha256"] = {path.relative_to(directory / "evidence").as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                                 for path in (directory / "evidence").rglob("*") if path.is_file()}
     if result.returncode == 0:
         measured = json.loads((directory / "evidence/quality-results.json").read_text(encoding="utf-8"))
-        if measured["status"] != "measured" or measured["errors"] or len(measured["datasets"]) != 2:
-            raise ValueError("measurement is incomplete")
-        if any(d["status"] != "measured" or len(d["queries"]) != 32 for d in measured["datasets"]):
-            raise ValueError("expected 64 measured queries")
+        plans = ["text", "dense", "rrf", "dbsf"] if args.model_inputs else ["text"]
+        validate_measurement(measured, fixed_queries, plans)
     report["status"] = "measured" if result.returncode == 0 else "failed"
     manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print("Evidence:", directory)
     return result.returncode
 
 
