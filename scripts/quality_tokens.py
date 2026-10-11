@@ -9,10 +9,71 @@ import struct
 import time
 
 from prepare_dense_quality import CONTRACT, TOKEN_CONTRACT, prepare
+from quality_metrics import metrics
 
 WIDTH = 48
 CANDIDATES = 64
 TOKEN_PLANS = ['maxsim_text', 'maxsim_rrf', 'maxsim_dbsf']
+MATCHED_PLANS = ['matched_text', 'matched_rrf', 'matched_dbsf']
+
+
+def candidate_diagnostics(candidates, ranking, baseline, matched, relevance, documents):
+    """Partition observed relevant-hit losses without attributing truncation causes."""
+    positives = {key for key, grade in relevance.items() if grade > 0}
+    if (not positives or not positives <= set(documents)
+            or len(candidates) > CANDIDATES or len(set(candidates)) != len(candidates)
+            or not set(candidates) <= set(documents)):
+        raise ValueError('invalid diagnostic candidate or judgment domain')
+    for keys in (ranking, baseline, matched):
+        if len(keys) > 10 or len(set(keys)) != len(keys) or not set(keys) <= set(documents):
+            raise ValueError('invalid diagnostic ranking')
+    if not set(ranking) <= set(candidates):
+        raise ValueError('reranked hit escaped the diagnostic candidate domain')
+    candidate_set, final = set(candidates), set(ranking)
+    result = {'candidate_control_at_10': metrics(candidates[:10], relevance),
+              'candidate_control_keys': candidates[:10],
+              'relevant_not_recalled': sorted(positives-candidate_set),
+              'relevant_recalled_below_top10': sorted((positives & candidate_set)-final),
+              'relevant_token_lengths': {key: {field: documents[key][field]
+                  for field in ('untruncated_tokens', 'encoded_tokens')} for key in sorted(positives)}}
+    for name, keys in [('baseline100', baseline), ('matched64', matched),
+                       ('recorded_candidate_control', candidates[:10])]:
+        lost = (set(keys) & positives)-final
+        result[name] = {'lost_outside_candidates': sorted(lost-candidate_set),
+                        'lost_inside_candidates': sorted(lost & candidate_set),
+                        'gained': sorted((final & positives)-set(keys)),
+                        'metric_delta': {key: metrics(ranking, relevance)[key]-value
+                            for key, value in metrics(keys, relevance).items()}}
+    # The candidate list is a separate SQL observation; native fusion can choose
+    # different equal-score candidates on another call. Keep the two controls.
+    result['scope'] = 'observed candidate-domain partition; separate SQL calls, no tie-order or causal truncation guarantee'
+    return result
+
+
+def summarize_diagnostics(rows):
+    """Aggregate every selected query, preserving empty length strata as empty."""
+    result = {}
+    for plan in TOKEN_PLANS:
+        selected = [row['candidate_diagnostics'] for row in rows if row['plan'] == plan]
+        if not selected:
+            raise ValueError('missing reranking diagnostics')
+        lengths = [any(v['untruncated_tokens'] > v['encoded_tokens']
+                       for v in row['relevant_token_lengths'].values()) for row in selected]
+        groups = {'all': selected,
+                  'any_relevant_document_truncated': [row for row, flag in zip(selected, lengths) if flag],
+                  'no_relevant_document_truncated': [row for row, flag in zip(selected, lengths) if not flag]}
+        result[plan] = {}
+        for group, samples in groups.items():
+            summary = {'queries': len(samples), 'controls': {}}
+            for control in ('baseline100', 'matched64', 'recorded_candidate_control'):
+                summary['controls'][control] = {
+                    field: sum(len(row[control][field]) for row in samples)
+                    for field in ('lost_outside_candidates', 'lost_inside_candidates', 'gained')}
+                summary['controls'][control]['mean_metric_delta'] = {
+                    metric: sum(row[control]['metric_delta'][metric] for row in samples)/len(samples) if samples else None
+                    for metric in ('recall_at_10', 'ndcg_at_10', 'mrr_at_10')}
+            result[plan][group] = summary
+    return result
 
 
 def prefixed_ids(ids, prefix, maximum):
