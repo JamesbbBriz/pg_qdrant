@@ -21,13 +21,13 @@ step logs and snapshot manifest are exported under `artifacts/local-ci/<run>/`.
 A dirty snapshot is explicitly identified and cannot be used for a release.
 
 Each invocation has unique image tags, labeled test containers and a unique
-network. Existing containers and databases are untouched. Successful test
-containers are removed by inspected ID after evidence collection. Failed test
-containers are retained with their IDs and states in the report for diagnosis;
-remove only those inspected IDs after preserving any required evidence. The
-wrapper exports the runner's artifacts before removing its exact labeled ID.
-Export or cleanup failure fails the run. Automatic cancellation of superseded
-local runs is not implemented; avoid overlapping heavy builds on a small host.
+network. Existing containers and databases are untouched. Owned test containers
+are retired by inspected ID after verified diagnostic export, including failed
+tests. A failed or oversized export preserves the original resource and fails
+the run. The wrapper also exports the runner's artifacts before removing its
+exact labeled ID. An OS-held lock prevents overlapping supported launchers.
+Native builds, source snapshots, local image inputs and registered images follow
+the byte budgets and refusal rules in [build-cache.md](build-cache.md).
 
 The full pipeline includes actual 768 MiB kernel OOM experiments in isolated
 containers with no host mounts, swap, network or extra capabilities, as well as

@@ -14,7 +14,9 @@ import sys
 import time
 
 from ci_images import complete_images
-from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight
+from ci_cache import archive_snapshot, evidence_admission, finish_snapshot
+from ci_build import act_cache_options
+from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight, storage_guard
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = "pg-qdrant-act-runner:29.8.0-node24"
@@ -58,6 +60,7 @@ def snapshot(destination):
               "source_sha256": hashlib.sha256(manifest).hexdigest(), "files": files,
               "cargo_lock_sha256": hashlib.sha256((destination / "Cargo.lock").read_bytes()).hexdigest()}
     (destination / "ci-input.json").write_text(json.dumps(report, indent=2) + "\n")
+    archive_snapshot(destination, report)
     return report
 
 
@@ -78,9 +81,11 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=["full", "engine", "ledger", "static", "lifecycle_failure"], default="full")
+    parser.add_argument("--profile", choices=["full", "engine", "ledger", "static", "lifecycle_failure", "compiler_benchmark"], default="full")
     parser.add_argument("--act", default=os.environ.get("ACT_BINARY"))
+    parser.add_argument("--compiler", choices=["llvm-1.96", "llvm-1.99", "llvm-nightly-2", "cranelift-nightly"], default="llvm-1.99")
     args = parser.parse_args()
+    evidence_admission(ROOT / "artifacts/local-ci")
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / run_id
     source = directory / "snapshot"
@@ -108,23 +113,25 @@ def main():
                             .replace("  verify:", "  verify_" + run_id + ":"))
         empty_env = directory / "empty-env"
         empty_env.write_text("")
+        cache_mount, cache_environment = act_cache_options()
         command = [act, "workflow_dispatch", "-C", str(source), "-W", str(workflow),
                    "-j", "verify_" + run_id, "-P", "ubuntu-24.04=" + image,
                    "--pull=false", "--reuse", "--network", network,
                    "--container-daemon-socket", "/var/run/docker.sock",
                    "--env-file", str(empty_env), "--secret-file", str(empty_env),
                    "--container-options", "--label " + MANAGED + "=1 --label io.pg_qdrant.ci.runner=" + run_id
-                   + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"',
-                   "--env", "PGQ_RUN_ID=" + run_id, "--env", "PGQ_PROFILE=" + args.profile]
+                   + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"' + cache_mount,
+                   "--env", "PGQ_RUN_ID=" + run_id, "--env", "PGQ_PROFILE=" + args.profile, "--env", "PGQ_COMPILER=" + args.compiler, *cache_environment]
         report["command"] = command
         with (directory / "act.log").open("wb") as log:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             try:
-                for chunk in iter(lambda: process.stdout.read1(65536), b""):
-                    log.write(chunk)
-                    log.flush()
-                    print(chunk.decode(errors="replace"), end="", flush=True)
-                code = process.wait()
+                with storage_guard(process, directory, heavy=args.profile not in ("static", "lifecycle_failure")):
+                    for chunk in iter(lambda: process.stdout.read1(65536), b""):
+                        log.write(chunk)
+                        log.flush()
+                        print(chunk.decode(errors="replace"), end="", flush=True)
+                    code = process.wait()
             finally:
                 if process.poll() is None:
                     process.terminate()
@@ -172,6 +179,12 @@ def main():
                 code = 1
                 report["network_cleanup_error"] = result.stderr
         report.update(status="passed" if code == 0 else "failed", duration_seconds=round(time.monotonic() - started, 3))
+        if report.get("snapshot"):
+            try:
+                report["snapshot_retention"] = finish_snapshot(source, report["snapshot"], code == 0)
+            except Exception as error:
+                code = 1
+                report.update(status="failed", snapshot_retention_error=str(error))
         (directory / "run-report.json").write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps({key: value for key, value in report.items() if key != "snapshot"}, indent=2), flush=True)
         print("Evidence: " + str(directory), flush=True)

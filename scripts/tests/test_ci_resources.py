@@ -1,5 +1,6 @@
 """Ownership, evidence loss and real Docker failure/cancellation regression tests."""
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -14,7 +15,97 @@ from unittest.mock import patch
 from scripts import ci_resources as resources
 
 
+class CompressedArchives(unittest.TestCase):
+    def export(self, payload, root, **budgets):
+        fixture = Path(root) / "fixture.tar"
+        fixture.write_bytes(payload)
+        actual_popen = subprocess.Popen
+        children = []
+        def producer(command, **options):
+            child = actual_popen([sys.executable, "-c",
+                "import pathlib,sys;sys.stdout.buffer.write(pathlib.Path(sys.argv[1]).read_bytes())", str(fixture)], **options)
+            children.append(child)
+            return child
+        with patch.object(resources.subprocess, "Popen", side_effect=producer):
+            result = resources.compressed_archive_path("exact-id", "/tmp/.", Path(root) / "out.tar.gz", **budgets)
+        self.assertEqual(children[0].returncode, 0)
+        return result
+
+    @staticmethod
+    def payload():
+        output = io.BytesIO()
+        with tarfile.open(fileobj=output, mode="w") as archive:
+            member = tarfile.TarInfo("cluster/data")
+            body = b"checkpoint\0" * 100000
+            member.size = len(body)
+            archive.addfile(member, io.BytesIO(body))
+        return output.getvalue()
+
+    def test_complete_archive_retains_raw_digest_and_every_member(self):
+        payload = self.payload()
+        with tempfile.TemporaryDirectory() as root:
+            result = self.export(payload, root, max_bytes=32768, max_source_bytes=2 * 1024**2)
+            self.assertEqual(result["uncompressed_bytes"], len(payload))
+            self.assertEqual(result["uncompressed_sha256"], hashlib.sha256(payload).hexdigest())
+            path = Path(root) / result["path"]
+            self.assertLess(path.stat().st_size, len(payload) // 10)
+            with tarfile.open(path) as archive:
+                self.assertEqual(archive.extractfile("cluster/data").read(), b"checkpoint\0" * 100000)
+
+    def test_both_byte_limits_refuse_publication(self):
+        for budgets, reason in (({"max_bytes": 1}, "compressed"),
+                                 ({"max_source_bytes": 1}, "uncompressed")):
+            with self.subTest(budgets=budgets), tempfile.TemporaryDirectory() as root:
+                with self.assertRaisesRegex(RuntimeError, reason):
+                    self.export(self.payload(), root, **budgets)
+                self.assertFalse((Path(root) / "out.tar.gz").exists())
+                self.assertTrue((Path(root) / "fixture.tar").exists())
+
+    def test_truncated_member_refuses_publication(self):
+        with tempfile.TemporaryDirectory() as root:
+            with self.assertRaises((tarfile.TarError, EOFError)):
+                self.export(self.payload()[:4096], root)
+            self.assertFalse((Path(root) / "out.tar.gz").exists())
+
+    def test_stalled_stream_deadline_kills_only_its_producer(self):
+        actual_popen = subprocess.Popen
+        children = []
+        def producer(command, **options):
+            child = actual_popen([sys.executable, "-c", "import time;time.sleep(30)"], **options)
+            children.append(child)
+            return child
+        with tempfile.TemporaryDirectory() as root, patch.object(resources.subprocess, "Popen", side_effect=producer):
+            with self.assertRaisesRegex(RuntimeError, "time budget"):
+                resources.compressed_archive_path("exact-id", "/tmp/.", Path(root) / "out.tar.gz", timeout=.2)
+            self.assertFalse((Path(root) / "out.tar.gz").exists())
+            self.assertIsNotNone(children[0].poll())
+
+
 class ResourceGuards(unittest.TestCase):
+    def test_retry_cannot_remove_the_failed_cluster_source_cap(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(resources, "docker") as docker:
+            for budget in (0, 33 * 1024**3):
+                receipt = resources.retire_owned(resources.LABELS[0], "a" * 16, Path(root),
+                                                failed_cluster_source_bytes=budget)
+                self.assertEqual(receipt["status"], "failed")
+                self.assertIn("32 GiB", receipt["error"])
+            docker.assert_not_called()
+
+    def test_runtime_capacity_guard_terminates_only_its_child(self):
+        with tempfile.TemporaryDirectory() as root:
+            process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+            try:
+                with patch.object(resources, "storage_paths", return_value={Path(root): 1}), \
+                     patch.object(resources.shutil, "disk_usage", return_value=type("Usage", (), {"free": 0})()), \
+                     self.assertRaisesRegex(RuntimeError, "runtime storage"):
+                    with resources.storage_guard(process, Path(root), heavy=False):
+                        process.wait(timeout=5)
+                self.assertIsNotNone(process.poll())
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+
     def test_competing_process_is_refused_and_killed_owner_releases_lock(self):
         with tempfile.TemporaryDirectory() as root:
             path = str(Path(root) / "run.lock")
@@ -206,6 +297,33 @@ class RealDockerRetirement(unittest.TestCase):
         self.assertEqual(receipt["status"], "passed")
         self.assertTrue(receipt["containers"][0]["stopped_for_cleanup"])
         self.assertTrue(receipt["containers"][0]["removed"])
+
+    def test_preview_package_tree_is_compressed_bounded_and_complete(self):
+        label = "io.pg_qdrant.ci.preview"
+        identifier = resources.docker("create", "--name", "pgq-preview-archive-" + self.run_id,
+            "--label", resources.LABELS[0] + "=" + self.run_id, "--label", label + "=" + self.run_id,
+            "--network=none", "--memory=128m", "--pids-limit=32", self.image, "sh", "-c",
+            "mkdir -p /package-output/stage; printf manifest > /package-output/manifest.json; "
+            "dd if=/dev/zero of=/package-output/stage/binary bs=1048576 count=4 2>/dev/null")
+        self.ids.append(identifier)
+        resources.docker("start", identifier)
+        self.assertEqual(resources.docker("wait", identifier), "0")
+        refused = resources.retire_owned(label, self.run_id, self.directory, max_bytes=1)
+        self.assertEqual(refused["status"], "failed")
+        self.assertFalse(refused["containers"][0]["removed"])
+        self.assertEqual(resources.inspect_owned(identifier, label, self.run_id)["Id"], identifier)
+        receipt = resources.retire_owned(label, self.run_id, self.directory, max_bytes=32768)
+        self.assertEqual(receipt["status"], "passed")
+        row = receipt["containers"][0]
+        self.assertTrue(row["removed"])
+        exported = row["artifacts"]
+        self.assertGreater(exported["uncompressed_bytes"], 4 * 1024**2)
+        self.assertEqual(exported["uncompressed_limit_bytes"], 2 * 1024**3)
+        self.assertLessEqual(exported["bytes"], 32768)
+        with tarfile.open(self.directory / identifier / exported["path"]) as archive:
+            files = {m.name.rsplit("/", 1)[-1]: m for m in archive if m.isfile()}
+            self.assertEqual(archive.extractfile(files["manifest.json"]).read(), b"manifest")
+            self.assertEqual(archive.extractfile(files["binary"]).read(), b"\0" * (4 * 1024**2))
 
     def test_referenced_runner_volume_is_retained_and_exact_retry_recovers(self):
         name = "pgq-lifecycle-volume-" + self.run_id

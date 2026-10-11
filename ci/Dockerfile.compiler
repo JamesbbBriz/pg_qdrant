@@ -1,0 +1,15 @@
+ARG INPUT_IMAGE
+FROM ${INPUT_IMAGE}
+ARG PGQ_TOOLCHAIN
+ARG PGQ_CRANELIFT=0
+ARG PGQ_RUSTFLAGS=
+RUN rustup toolchain install "${PGQ_TOOLCHAIN}" --profile minimal --component rustfmt \
+    && if [ "${PGQ_CRANELIFT}" = 1 ]; then \
+         rustup component add rustc-codegen-cranelift-preview --toolchain "${PGQ_TOOLCHAIN}"; \
+       fi
+ENV RUSTUP_TOOLCHAIN=${PGQ_TOOLCHAIN}
+ENV RUSTFLAGS=${PGQ_RUSTFLAGS}
+COPY ci/compiler-probe.rs /tmp/pgq-compiler-probe.rs
+RUN rustc -Vv && cargo -V && cargo pgrx --version \
+    && rustc ${RUSTFLAGS} /tmp/pgq-compiler-probe.rs -o /tmp/pgq-compiler-probe \
+    && /tmp/pgq-compiler-probe

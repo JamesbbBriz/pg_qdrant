@@ -1,0 +1,12 @@
+# This policy belongs only to the dedicated pg_qdrant builder.
+[worker.oci]
+  gc = true
+  reservedSpace = "2GB"
+  maxUsedSpace = "24GB"
+  minFreeSpace = "40GB"
+
+[[worker.oci.gcpolicy]]
+  all = true
+  reservedSpace = "2GB"
+  maxUsedSpace = "24GB"
+  minFreeSpace = "40GB"

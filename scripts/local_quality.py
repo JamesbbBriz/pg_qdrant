@@ -9,8 +9,10 @@ import subprocess
 import sys
 
 from local_ci import ROOT, RUNNER, act_binary, snapshot
+from ci_build import act_cache_options
+from ci_cache import evidence_admission, finish_snapshot
 from ci_images import complete_images, pin_image, release_alias
-from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight
+from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight, guarded_run
 
 
 def output(args):
@@ -24,6 +26,7 @@ def main():
     parser.add_argument("--fixtures", type=Path, default=ROOT / "artifacts/quality-fixtures")
     parser.add_argument("--act")
     args = parser.parse_args()
+    evidence_admission(ROOT / "artifacts/local-ci")
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / ("quality-" + run_id)
     directory.mkdir(parents=True)
@@ -36,7 +39,7 @@ def main():
               "snapshot": snapshot(source), "status": "running"}
     image = output(["docker", "image", "inspect", args.image, "--format", "{{.Id}}"])
     runner = output(["docker", "image", "inspect", RUNNER, "--format", "{{.Id}}"])
-    pin_image(image)
+    report["temporary_image_pin"] = pin_image(image)
     report.update(product_image=image, runner_image=runner, fixtures={})
     expected = json.loads((source / "ci/quality-sources.json").read_text(encoding="utf-8"))
     (source / "fixtures").mkdir()
@@ -56,11 +59,12 @@ def main():
     empty.write_bytes(b"")
     manifest = directory / "run-report.json"
     manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    cache_mount, cache_environment = act_cache_options()
     command = [act_binary(args.act), "workflow_dispatch", "-C", str(source), "-W", str(source / "ci/quality.yml"),
                "-j", "quality", "-P", "ubuntu-24.04=" + runner, "--pull=false", "--reuse", "--network", "none",
                "--container-daemon-socket", "/var/run/docker.sock", "--env-file", str(empty), "--secret-file", str(empty),
                "--env", "PGQ_RUN_ID=" + run_id, "--container-options",
-               '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.quality-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"']
+               '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.quality-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"' + cache_mount, *cache_environment]
     code = 1
     try:
         code = measure(command, directory, report, manifest, source, run_id)
@@ -73,7 +77,7 @@ def main():
             code = 1
         else:
             try:
-                release_alias(base, image)
+                release_alias(base, image, temporary_pin=report["temporary_image_pin"])
                 report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
                 if report["image_retention"]["errors"]:
                     code = 1
@@ -82,6 +86,11 @@ def main():
                 report["image_retention_error"] = str(error)
         if code != 0:
             report["status"] = "failed"
+        try:
+            report["snapshot_retention"] = finish_snapshot(source, report["snapshot"], code == 0)
+        except Exception as error:
+            code = 1
+            report.update(status="failed", snapshot_retention_error=str(error))
         manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")
     return code
 
@@ -90,7 +99,7 @@ def measure(command, directory, report, manifest, source, run_id):
     print(directory, flush=True)
     with (directory / "act.log").open("wb") as log:
         try:
-            result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+            result = guarded_run(command, directory, log, timeout=1200)
         except subprocess.TimeoutExpired:
             report.update(status="failed", act_exit=124, reason="act deadline; diagnostic retirement required")
             manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")

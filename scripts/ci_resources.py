@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import gzip
 from contextlib import contextmanager
 import json
 import os
@@ -12,6 +13,7 @@ import shutil
 import tarfile
 import tempfile
 import time
+import threading
 
 MANAGED = "io.pg_qdrant.ci.lifecycle"
 LABELS = ("io.pg_qdrant.ci", "io.pg_qdrant.ci.runner",
@@ -61,6 +63,80 @@ def check_free_space(host_free, docker_free, *, heavy):
     return {"free_bytes": measured, "required_bytes": required}
 
 
+def storage_paths(directory, heavy):
+    """Watch evidence/cache and the repository's backing host filesystem."""
+    from ci_cache import cache_root
+    floor = (10 if heavy else 2) * 1024**3
+    paths = {Path(directory).resolve(): floor, cache_root().resolve(): floor}
+    if os.name == "nt" and heavy:
+        common = subprocess.check_output(["git", "rev-parse", "--git-common-dir"],
+            cwd=Path(__file__).resolve().parents[1], text=True).strip()
+        paths[Path(common).resolve()] = 40 * 1024**3
+        settings = Path(os.environ["APPDATA"]) / "Docker/settings-store.json"
+        if settings.is_file():
+            data = json.loads(settings.read_text(encoding="utf-8"))
+            folder = data.get("DataFolder") or data.get("dataFolder")
+            if folder:
+                paths[Path(folder).resolve()] = 40 * 1024**3
+        default_disk = Path(os.environ["LOCALAPPDATA"]) / "Docker/wsl/disk"
+        if default_disk.exists():
+            paths[default_disk.resolve()] = 40 * 1024**3
+        explicit = os.environ.get("PGQ_DOCKER_STORAGE_PATH")
+        if explicit:
+            paths[Path(explicit).resolve()] = 40 * 1024**3
+    return paths
+
+
+@contextmanager
+def storage_guard(process, directory, *, heavy):
+    """Periodic cancellation guard, not an operating-system filesystem quota."""
+    paths = storage_paths(directory, heavy)
+    finished = threading.Event()
+    failures = []
+    def watch():
+        while not finished.is_set() and process.poll() is None:
+            try:
+                for path, required in paths.items():
+                    if shutil.disk_usage(path).free < required:
+                        raise RuntimeError("runtime storage reserve reached: " + str(path.anchor))
+            except Exception as error:
+                failures.append(str(error))
+                process.terminate()
+                if heavy:
+                    # The run lock permits only this workload. Stop its exact,
+                    # inspected dedicated builder, never the shared Docker daemon.
+                    from ci_build import CONTAINER, BUILDKIT
+                    try:
+                        data = json.loads(docker("inspect", CONTAINER))[0]
+                        if data["Config"]["Image"] == BUILDKIT:
+                            docker("stop", "--time", "5", data["Id"], timeout=15)
+                    except Exception as stop_error:
+                        failures.append("builder cancellation: " + str(stop_error))
+                return
+            finished.wait(1)
+    thread = threading.Thread(target=watch, daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        finished.set()
+        thread.join(timeout=50)
+    if failures:
+        raise RuntimeError("; ".join(failures))
+
+
+def guarded_run(command, directory, log, *, heavy=True, timeout=1200):
+    with subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT) as process:
+        with storage_guard(process, directory, heavy=heavy):
+            try:
+                code = process.wait(timeout=timeout)
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                    process.wait(timeout=30)
+    return subprocess.CompletedProcess(command, code)
+
+
 def storage_preflight(directory, image, run_id, child_label, *, heavy):
     """Measure the evidence filesystem and a disposable Docker writable layer."""
     if child_label not in LABELS or not re.fullmatch(r"[a-f0-9]{16}", run_id):
@@ -102,8 +178,12 @@ def require_clean_start():
                            "evidence export and cleanup before starting another run")
 
 
-def archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024, timeout=90):
+def archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024, timeout=90, *,
+                 compressed=False, max_source_bytes=8 * 1024**3):
     """Copy a bounded tar stream without extracting untrusted member paths."""
+    if compressed:
+        return compressed_archive_path(identifier, source, destination, max_bytes, timeout,
+                                       max_source_bytes=max_source_bytes)
     destination = Path(destination)
     partial = destination.with_suffix(destination.suffix + ".partial")
     with partial.open("wb") as stream, destination.with_suffix(".stderr").open("wb") as errors:
@@ -143,6 +223,83 @@ def archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024, t
     return {"path": destination.name, "bytes": destination.stat().st_size, "sha256": digest}
 
 
+def compressed_archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024,
+                            timeout=90, *, max_source_bytes=8 * 1024**3):
+    """Preserve large failed clusters with both compressed and raw byte limits."""
+    if max_bytes <= 0 or max_source_bytes <= 0 or timeout <= 0:
+        raise ValueError("archive budgets must be positive")
+    destination = Path(destination)
+    partial = destination.with_suffix(destination.suffix + ".partial")
+    raw_hash = hashlib.sha256()
+    raw_bytes = 0
+    failures = []
+    finished = threading.Event()
+    with partial.open("wb") as stream, destination.with_suffix(".stderr").open("wb") as errors:
+        process = subprocess.Popen(["docker", "cp", identifier + ":" + source, "-"],
+                                   stdout=subprocess.PIPE, stderr=errors)
+        def deadline_guard():
+            if not finished.wait(timeout):
+                failures.append("diagnostic export exceeded time budget")
+                if process.poll() is None:
+                    process.kill()
+        guard = threading.Thread(target=deadline_guard, daemon=True)
+        guard.start()
+        try:
+            with gzip.GzipFile(fileobj=stream, mode="wb", filename="", mtime=0, compresslevel=1) as output:
+                for chunk in iter(lambda: process.stdout.read1(65536), b""):
+                    raw_bytes += len(chunk)
+                    if raw_bytes > max_source_bytes:
+                        raise RuntimeError("diagnostic export exceeded uncompressed byte budget")
+                    raw_hash.update(chunk)
+                    output.write(chunk)
+                    if stream.tell() > max_bytes:
+                        raise RuntimeError("diagnostic export exceeded compressed byte budget")
+            code = process.wait(timeout=10)
+            if failures:
+                raise RuntimeError(failures[0])
+            if code:
+                errors.flush()
+                if "Could not find the file" in destination.with_suffix(".stderr").read_text(errors="replace"):
+                    raise FileNotFoundError("diagnostic path absent: " + source)
+                raise RuntimeError("diagnostic export failed: " + source)
+        finally:
+            finished.set()
+            guard.join(timeout=10)
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=10)
+            process.stdout.close()
+    if partial.stat().st_size > max_bytes:
+        raise RuntimeError("diagnostic export exceeded compressed byte budget")
+    # Check the complete gzip stream, including its CRC/footer, before the
+    # ordinary tar member/body validation and any original-container removal.
+    observed = hashlib.sha256()
+    observed_bytes = 0
+    with gzip.open(partial, "rb") as stream:
+        for chunk in iter(lambda: stream.read(65536), b""):
+            observed_bytes += len(chunk)
+            if observed_bytes > max_source_bytes:
+                raise RuntimeError("diagnostic archive exceeds uncompressed byte budget")
+            observed.update(chunk)
+    if observed_bytes != raw_bytes or observed.digest() != raw_hash.digest():
+        raise RuntimeError("diagnostic compressed stream changed")
+    with tarfile.open(partial) as archive:
+        for member in archive:
+            if member.isfile():
+                count = 0
+                with archive.extractfile(member) as body:
+                    for chunk in iter(lambda: body.read(65536), b""):
+                        count += len(chunk)
+                if count != member.size:
+                    raise RuntimeError("truncated diagnostic archive")
+    partial.replace(destination)
+    with destination.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    return {"path": destination.name, "bytes": destination.stat().st_size, "sha256": digest,
+            "uncompressed_bytes": raw_bytes, "uncompressed_sha256": raw_hash.hexdigest(),
+            "limit_bytes": max_bytes, "uncompressed_limit_bytes": max_source_bytes}
+
+
 def runner_volumes(data):
     """Only act's exact per-container workspace/env volumes; never toolcache/data."""
     name = data["Name"].lstrip("/")
@@ -150,7 +307,8 @@ def runner_volumes(data):
             if mount["Type"] == "volume" and mount["Name"] in (name, name + "-env")]
 
 
-def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024 * 1024):
+def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024 * 1024,
+                 failed_cluster_source_bytes=8 * 1024**3):
     """Export failures before removal; errors retain the container and fail cleanup."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -175,6 +333,8 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
             save()
 
     try:
+        if not 0 < failed_cluster_source_bytes <= 32 * 1024**3:
+            raise ValueError("failed-cluster source budget must be positive and at most 32 GiB")
         if label not in LABELS or not re.fullmatch(r"[a-f0-9]{16}", run_id):
             raise ValueError("invalid run ownership")
         if previous and (previous["run_id"] != run_id or previous["label"] != label):
@@ -211,15 +371,24 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
                                    check=True, timeout=30)
                 if not runner:
                     source = "/src/artifacts/."
+                    package_archive = False
                     if label == "io.pg_qdrant.ci.preview":
-                        source = "/package-output/." if "preview-archive-" in data["Name"] else "/preview-evidence/."
+                        package_archive = "preview-archive-" in data["Name"]
+                        source = "/package-output/." if package_archive else "/preview-evidence/."
                     try:
-                        row["artifacts"] = archive_path(identifier, source, target / "artifacts.tar", max_bytes)
+                        # The package output contains both deterministic archives
+                        # and their expanded installation tree. Preserve every
+                        # member with independent raw and compressed byte bounds.
+                        name = "artifacts.tar.gz" if package_archive else "artifacts.tar"
+                        row["artifacts"] = archive_path(identifier, source, target / name, max_bytes,
+                            compressed=package_archive, max_source_bytes=2 * 1024**3)
                     except FileNotFoundError:
                         row["artifacts_absent"] = source  # Early startup may not create its output directory.
                 # Failed test clusters live under /tmp. Preserve them independently of step collectors.
                 if not runner and (data["State"].get("ExitCode") != 0 or row.get("stopped_for_cleanup")):
-                    row["failure_tmp"] = archive_path(identifier, "/tmp/.", target / "failure-tmp.tar", max_bytes)
+                    row["failure_tmp"] = archive_path(identifier, "/tmp/.", target / "failure-tmp.tar.gz",
+                        max_bytes, timeout=90 if failed_cluster_source_bytes <= 8 * 1024**3 else 180,
+                        compressed=True, max_source_bytes=failed_cluster_source_bytes)
                 with (target / "filesystem-changes.log").open("wb") as changes:
                     subprocess.run(["docker", "diff", identifier], stdout=changes, check=True, timeout=30)
                 row["files"] = {}
@@ -250,7 +419,8 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
     return receipt
 
 
-def finish_run(run_id, directory, child_label, runner_label, evidence_path):
+def finish_run(run_id, directory, child_label, runner_label, evidence_path, *,
+               failed_cluster_source_bytes=8 * 1024**3):
     """Always export the runner before touching child resources, including on timeout."""
     directory = Path(directory) / "resources"
     directory.mkdir(parents=True, exist_ok=True)
@@ -268,7 +438,8 @@ def finish_run(run_id, directory, child_label, runner_label, evidence_path):
             except Exception:
                 # Early interruption may precede the always-collector. Preserve the workspace instead.
                 result["runner_workspace"] = archive_path(data["Id"], "/tmp/.", directory / "runner-workspace.tar")
-        result["tests"] = retire_owned(child_label, run_id, directory)
+        result["tests"] = retire_owned(child_label, run_id, directory,
+                                        failed_cluster_source_bytes=failed_cluster_source_bytes)
         if result["tests"]["status"] != "passed":
             raise RuntimeError("test diagnostics or retirement incomplete; runner retained")
         result["runner"] = retire_owned(runner_label, run_id, directory, runner=True)
@@ -287,12 +458,15 @@ if __name__ == "__main__":
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--kind", choices=("verify", "preview", "quality"), default="verify")
+    parser.add_argument("--failed-cluster-gib", type=int, choices=(8, 16, 32), default=8,
+                        help="reviewed retry limit for raw failed-cluster data; compressed output stays capped")
     args = parser.parse_args()
     kind_labels = {"verify": (LABELS[0], LABELS[1], "/tmp/pgq-ci-evidence/."),
                    "preview": (LABELS[2], LABELS[3], "/tmp/preview-evidence/."),
                    "quality": (LABELS[4], LABELS[5], "/tmp/quality-evidence/.")}
     child, runner, evidence = kind_labels[args.kind]
     with local_run_lock():
-        result = finish_run(args.run_id, args.directory, child, runner, evidence)
+        result = finish_run(args.run_id, args.directory, child, runner, evidence,
+                            failed_cluster_source_bytes=args.failed_cluster_gib * 1024**3)
     print(json.dumps(result, indent=2))
     raise SystemExit(0 if result["status"] == "passed" else 1)

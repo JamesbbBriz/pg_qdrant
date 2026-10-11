@@ -30,7 +30,7 @@
     },
     {
       "path": "rust-toolchain.toml",
-      "sha256": "2c388180d0d5476ed0d69975b382feaf709bb072d51a342add3030cfb3d1bdb2"
+      "sha256": "2ad6f15416572b4836585087f1d4abc53b8fa2dbd616f8dacfaa587ed6714228"
     }
   ],
   "packages": [

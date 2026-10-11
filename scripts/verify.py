@@ -67,7 +67,7 @@ def cleanup(run_id, report, remove):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=["full", "engine", "ledger", "static", "lifecycle_failure"], default="full")
+    parser.add_argument("--profile", choices=["full", "engine", "ledger", "static", "lifecycle_failure", "compiler_benchmark"], default="full")
     args = parser.parse_args()
     artifacts = ROOT / "artifacts"
     artifacts.mkdir(exist_ok=True)

@@ -1,6 +1,8 @@
 # Physical source backup and native replay
 
-Status: matching-build development recovery slice, verified in scoped local act. Full L12, P3-RECOVERY and
+Status: matching-build development recovery slice. The earlier scoped evidence
+predates the helper's storage-root symlink refusal; the corrected layout below
+requires new local act evidence. Full L12, P3-RECOVERY and
 release support remain open. This test uses matching Linux PostgreSQL 17
 extension/helper binaries and a standalone restored primary. It does not
 establish PITR, replication, failover, cross-version upgrades or production
@@ -38,16 +40,19 @@ the default layout is therefore unsupported. No source or backup assertion is
 skipped to hide this failure.
 
 For this development procedure, the database administrator provisions the
-`.indexes` path as a symlink to a private directory outside PGDATA **before the
-first helper starts**. The server account owns both directories with mode 0700.
+`PGDATA/pg_qdrant_p0` IPC directory as a symlink to a private directory outside
+PGDATA **before the first helper starts**. Its `db-<database_oid>.indexes`
+child is a real directory; the helper continues to reject a symlink at the
+index storage root. The server account owns both directories with mode 0700.
 Obtain the database OID from `pg_database`; do not select storage from ordinary
 SQL user input. Existing live storage requires a separately planned stopped
 migration; the test does not move or delete it. PostgreSQL base backup warns
 and skips this ordinary symlink. The backup contains the complete PostgreSQL
 ledger and zero Edge files.
 
-Before the restored helper starts, provision that clone
-`.indexes` symlink to a **different, empty, private external directory**. Never
+Before the restored helper starts, provision the clone's IPC symlink to a
+**different, empty, private external directory** and create its real indexes
+child with mode 0700. Never
 point two clusters at the same native storage or reuse the original target.
 The clone then reconstructs derived points from its recovered PostgreSQL
 state. This is an explicit operator-managed development layout, not automatic
@@ -86,14 +91,15 @@ owners; they check BM25 and all three BYOV kinds. Further clone DML/key reuse
 must reach fresh durable receipts without changing results in the still-running
 original cluster.
 
-Scoped local act run `393b0ec17909c944` passed all four recovery groups with
+Historical scoped local act run `393b0ec17909c944` passed all four recovery groups with
 matching installed binaries from `cffdae8f18b520299e4b09c439ada999dd0e079f`
 and hashed test inputs. The 25 MB fixture had 1,052 verified backup files and
 114 external native files; zero native files entered the backup. Old copied
 ACKs reported zero pending events but `applied=false` and `durable=false`
 until the clone established its new owner and rebuilt. All three BYOV queries
 returned the expected source key. These fixture measurements are not a
-performance claim.
+performance claim. They do not qualify the later storage-root checks or the
+corrected IPC-directory layout.
 
 The product gate invokes this test. Its report records the backup manifest
 digest, source/clone owner identities, tickets, native model results and cluster

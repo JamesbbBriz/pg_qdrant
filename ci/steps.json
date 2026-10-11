@@ -286,6 +286,14 @@
         "requires": [],
         "command": "docker create --label io.pg_qdrant.ci.lifecycle=1 --label io.pg_qdrant.ci=${PGQ_RUN_ID} --name pgq-lifecycle-success-${PGQ_RUN_ID} --network=none --memory=128m --pids-limit=32 pg-qdrant-act-runner:29.8.0-node24 sh -c \"mkdir -p /src/artifacts; echo success > /src/artifacts/result\"\ndocker start --attach pgq-lifecycle-success-${PGQ_RUN_ID}\n"
       }
+    ],
+    "compiler_benchmark": [
+      {
+        "id": "compiler_benchmark",
+        "name": "Measure native compiler, source invalidation and cache reuse",
+        "requires": [],
+        "command": "python3 scripts/benchmark_compiler.py"
+      }
     ]
   }
 }
