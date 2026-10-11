@@ -96,7 +96,22 @@ def retire_images(state, save, *, retire_runs=()):
                 if references:
                     receipt["retained"].append({"id": identifier, "reason": "container reference"})
                     continue
-                # No force: Docker independently refuses concurrent references/multiple tags.
+                tags = list(image["tags"])
+                if any(not tag.startswith(("pgq-", "pg-qdrant-")) or "/" in tag for tag in tags):
+                    raise RuntimeError("non-project image tag; retain for review")
+                # Retire recorded local aliases individually. Save each acknowledged
+                # deletion so a later failure retains a truthful remaining tag set.
+                for tag in tags[:-1]:
+                    current = json.loads(docker("image", "inspect", tag))[0]
+                    if (current["Id"] != identifier
+                            or current["Config"].get("Labels", {}).get(IMAGE_RUN) != run["run_id"]
+                            or sorted(current.get("RepoTags") or []) != image["tags"]
+                            or docker("ps", "-aq", "--filter", "ancestor=" + identifier).split()):
+                        raise RuntimeError("image changed during alias retirement; retain for review")
+                    docker("image", "rm", "--no-prune", tag, timeout=90)
+                    image["tags"].remove(tag)
+                    save()
+                # No force: exact-ID deletion independently refuses new aliases/references.
                 docker("image", "rm", "--no-prune", identifier, timeout=90)
                 image["removed"] = True
                 receipt["removed"].append(identifier)

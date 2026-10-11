@@ -55,6 +55,46 @@ class ImagePolicy(unittest.TestCase):
         with self.assertRaises(ValueError):
             images.complete_images("foreign", "passed")
 
+    def test_multitag_retirement_records_partial_failure_and_refuses_new_alias(self):
+        state = {"runs": self.runs(), "pins": ["sha256:"+"2"*64]}
+        image = state["runs"][0]["images"][0]
+        image["tags"] = ["pgq-fixture-a:latest", "pgq-fixture-b:latest", "pgq-fixture-c:latest"]
+        tags = list(image["tags"])
+        removed = []
+        fail = True
+        present = True
+        def docker(*args, **kwargs):
+            nonlocal present
+            if args[:2] == ("image", "ls"):
+                return image["id"] if present else ""
+            if args[:2] == ("image", "inspect"):
+                return json.dumps([{"Id": image["id"], "Config": {"Labels": {images.IMAGE_RUN: "1"*16}},
+                                    "RepoTags": list(tags)}])
+            if args[:2] == ("image", "rm"):
+                target = args[-1]
+                if target == "pgq-fixture-b:latest" and fail:
+                    raise RuntimeError("interrupted alias retirement")
+                removed.append(target)
+                if target == image["id"]: present = False
+                else: tags.remove(target)
+            return ""
+        with patch.object(images, "docker", side_effect=docker):
+            result = images.retire_images(state, lambda: None)
+            self.assertEqual(len(result["errors"]), 1)
+            self.assertEqual(image["tags"], ["pgq-fixture-b:latest", "pgq-fixture-c:latest"])
+            self.assertNotIn("removed", image)
+            fail = False
+            tags.append("business:latest")
+            result = images.retire_images(state, lambda: None)
+            self.assertEqual(len(result["errors"]), 1)
+            self.assertEqual(removed, ["pgq-fixture-a:latest"])
+            tags.remove("business:latest")
+            result = images.retire_images(state, lambda: None)
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(result["removed"], [image["id"]])
+        self.assertEqual(removed, ["pgq-fixture-a:latest", "pgq-fixture-b:latest", image["id"]])
+        self.assertTrue(image["removed"])
+
     def test_retry_recognizes_completed_daemon_deletion(self):
         state = {"runs": self.runs(), "pins": ["sha256:"+"2"*64]}
         with patch.object(images, "docker", return_value="") as calls:
@@ -158,6 +198,10 @@ class RealImagePolicy(unittest.TestCase):
                     owned.append(identifier)
                     state["runs"].append({"run_id": run_id, "completed": n, "status": "passed",
                         "images": [{"id": identifier, "tags": [tag+":latest"]}]})
+                extra = "pgq-retention-fixture-" + nonce + "-extra"
+                resources.docker("image", "tag", owned[2], extra)
+                state["runs"][2]["images"][0]["tags"].append(extra + ":latest")
+                state["runs"][2]["images"][0]["tags"].sort()
                 state["pins"] = [owned[0]]
                 ledger = path / "ledger.json"
                 images.save_state(ledger, state)
@@ -182,6 +226,7 @@ class RealImagePolicy(unittest.TestCase):
                 for identifier in (owned[0], owned[1], owned[3], owned[4]):
                     self.assertEqual(resources.docker("image", "inspect", identifier, "--format", "{{.Id}}"), identifier)
                 self.assertTrue(images.read_state(path/"ledger.json")["runs"][2]["images"][0]["removed"])
+                self.assertNotIn(owned[2], resources.docker("image", "ls", "-aq", "--no-trunc").split())
             finally:
                 if sentinel:
                     data = resources.inspect_owned(sentinel, resources.LABELS[0], nonce)
@@ -191,4 +236,9 @@ class RealImagePolicy(unittest.TestCase):
                     if observed.returncode == 0:
                         data = json.loads(observed.stdout)[0]
                         self.assertIn(data["Config"]["Labels"][images.IMAGE_RUN], [r["run_id"] for r in state["runs"]])
+                        tags = sorted(data.get("RepoTags") or [])
+                        self.assertTrue(all(tag.startswith("pgq-retention-fixture-" + nonce + "-") for tag in tags))
+                        for tag in tags[:-1]:
+                            self.assertEqual(resources.docker("image", "inspect", tag, "--format", "{{.Id}}"), identifier)
+                            resources.docker("image", "rm", "--no-prune", tag, timeout=90)
                         resources.docker("image", "rm", "--no-prune", identifier, timeout=90)
