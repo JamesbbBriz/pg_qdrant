@@ -33,6 +33,15 @@ def native_metrics(log):
             "compiled_crates": re.findall(r"^" + prefix + r" [\d.]+\s+Compiling ([^\n]+)", text, flags=re.M)}
 
 
+def compilation_recipe(dockerfile):
+    # Artifact export and later auditing are timed separately from compiler work.
+    text = dockerfile.replace("\r\n", "\n")
+    match = re.search(r"RUN --mount=type=cache,id=\$\{PGQ_TARGET_CACHE\}.*?--cargo=--locked", text, re.S)
+    if not match:
+        raise ValueError("native compilation recipe missing")
+    return hashlib.sha256(match[0].encode()).hexdigest()
+
+
 def main():
     run_id = os.environ["PGQ_RUN_ID"]
     selected = os.environ.get("PGQ_COMPILER", "llvm-1.96")
@@ -50,6 +59,8 @@ def main():
     report["native_inputs"] = {item["path"]: item["sha256"] for item in report["snapshot"]["files"]
         if item["path"].startswith("crates/") or item["path"] in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml")}
     report["native_recipe_sha256"] = hashlib.sha256((ROOT / "Dockerfile.p0").read_bytes().split(b"COPY . .", 1)[0]).hexdigest()
+    report["compilation_recipe_sha256"] = compilation_recipe((ROOT / "Dockerfile.p0").read_text())
+    report["builder_limits"] = {"cpus": 2, "memory_bytes": 8 * 1024**3, "cargo_jobs": 2, "incremental": False}
     image = "pgq-compiler-" + selected + "-" + run_id
     compiler_image = image + "-tools"
     if candidate["toolchain"] != "1.96.0":

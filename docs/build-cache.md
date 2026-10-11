@@ -9,6 +9,9 @@ compiler version, flags, features, profiles and dependency fingerprints.
 
 The mutable target cache never enters a running PostgreSQL process. Existing
 native CPU/fault probes use immutable artifacts copied into their test image.
+Only the runtime binaries and all Edge C-object/pgrx audit directories are
+exported, with a two-GiB admission limit and per-file checksums. Cargo dependency
+archives and completed test executables stay in the bounded target cache.
 The target path links to that immutable copy; moving it between image layers
 would duplicate large debug artifacts in the exported image.
 Post-build dependency auditing uses the same registry mount. An immutable copy

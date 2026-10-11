@@ -60,6 +60,7 @@ FROM ${PG_QDRANT_BUILD_TOOLS} AS verification
 WORKDIR /src
 COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
 COPY crates/ crates/
+COPY scripts/export_native_artifacts.py /opt/pgq-export-native.py
 # Cargo fingerprints distinguish profiles, features, rustflags and crate inputs.
 ARG P0_FAULTS=0
 ARG P0_HELPER=0
@@ -95,7 +96,10 @@ RUN --mount=type=cache,id=${PGQ_TARGET_CACHE},target=/src/target,sharing=locked 
     && cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml \
          --no-default-features --features "${pgq_features}" \
          --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked \
-    && cp -a target /opt/pgq-verified-target
+    && pgq_export_helper= \
+    && if [ "${P0_HELPER}" = 1 ]; then pgq_export_helper=--helper; fi \
+    && python3 /opt/pgq-export-native.py --target target \
+         --destination /opt/pgq-verified-target ${pgq_export_helper}
 # Immutable image artifacts keep existing CPU and fault probes independent of
 # the mutable compiler cache, which is never mounted into a database process.
 RUN ln -s /opt/pgq-verified-target /src/target

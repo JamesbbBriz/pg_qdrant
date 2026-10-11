@@ -10,7 +10,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import ci_cache as cache
 import ci_build
-from benchmark_compiler import native_metrics
+from benchmark_compiler import compilation_recipe, native_metrics
 from ci_resources import docker
 
 
@@ -182,6 +182,12 @@ class BoundedCache(unittest.TestCase):
 
 
 class OciIdentity(unittest.TestCase):
+    def test_compiler_recipe_ignores_export_but_detects_compile_command_changes(self):
+        recipe = 'RUN --mount=type=cache,id=${PGQ_TARGET_CACHE},target=/src/target cargo test && cargo pgrx install --cargo=--locked'
+        self.assertEqual(compilation_recipe(recipe + ' && cp target /image'),
+                         compilation_recipe(recipe + ' && python3 export_native_artifacts.py'))
+        self.assertNotEqual(compilation_recipe(recipe), compilation_recipe(recipe.replace('cargo test', 'cargo check')))
+
     def test_docker_config_manifest_and_index_ids_anchor_exact_linux_image(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
