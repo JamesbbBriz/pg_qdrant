@@ -31,7 +31,7 @@ the cache inside a source checkout. Its mounted runner path is `/pgq-cache`.
 | Compressed source snapshots | 2 GiB, 32 entries | SHA-256 manifests and archive receipts; dirty/failed inputs pinned; verified completed source views retired |
 | Registered images and explicit image pins | 80 GiB conservative full-image sum | Prefer two passed families and one failed family; older eligible families can retire to satisfy bytes; latest family, pins and container references protected |
 | Local evidence | 8 GiB admission threshold | Preserve failures/logs/receipts; refuse another invocation when full |
-| Failed-cluster diagnostic archive | 512 MiB compressed, 8 GiB uncompressed, 90 seconds | Gzip/raw-stream hashes and all tar bodies verified before exact-container retirement; incomplete exports retain the original |
+| Failed-cluster diagnostic archive | 512 MiB compressed, 8 GiB uncompressed, 90-second transfer deadline | Gzip/raw-stream hashes and all tar bodies verified before exact-container retirement; incomplete exports retain the original |
 
 BuildKit GC is periodic, not a filesystem quota. Busy cache records can exceed
 its target during a build. Pre/post-build checks reject unresolved excess.
@@ -67,7 +67,8 @@ retirement for review. No global Docker prune or force removal is used.
 For an exact failed run whose raw cluster exceeds the default diagnostic limit,
 review its retained resources, then retry `scripts/ci_resources.py` with
 `--failed-cluster-gib 16` or `32`. Compressed output remains limited to 512 MiB;
-the explicit retry allows at most 32 GiB of raw data and 180 seconds. It does
+the explicit retry allows at most 32 GiB of raw data and a 180-second transfer
+deadline. Archive validation follows the transfer and remains byte-bounded. It does
 not change normal launcher limits or turn the failed test into a pass.
 
 ## Compiler measurement
@@ -90,8 +91,12 @@ native build layer and distinguish compiler work from layer reuse. Intermediate
 measurements use cache-only output; only the final image is loaded for SQL tests.
 Empty-target repetitions share registry downloads.
 Candidate compiler installation is recorded separately from native timings.
-The final extension-install timestamp separates compilation and installation
-from copying immutable artifacts into the image. Compare native recipe and crate
+`cargo_build_seconds` sums Cargo's completed build durations in the native RUN;
+it includes compilation/linking but excludes the subsequent test executables.
+`compile_install_seconds` retains the RUN timestamp of the final extension
+installation and includes earlier tests and probes. The full native-layer and
+wall times also include auditing, export or cache maintenance as applicable.
+Compare native recipe and crate
 input hashes before comparing compiler timings; later audit/export changes can
 change total wall time without changing compiler work.
 The compiler probe requires panic unwinding across a callback, destructor cleanup
@@ -103,3 +108,29 @@ Select a default only after measuring compatible candidates on the same source,
 CPU/memory budget and lockfile. Compiler feedback (`cargo check`), native code
 generation, linking and runtime test time are different workloads; a faster
 code generator need not be the fastest end-to-end configuration.
+
+## Measured default
+
+The local comparison selects LLVM Rust `1.99.0` with panic unwinding. All three
+LLVM candidates built the same source at `e9d3907` with two CPUs, eight GiB and
+two Cargo jobs. The [measurement record](evidence/compiler-comparison.json)
+binds exact source, dependency, image and log hashes; complete product
+qualification still requires the separate 37-gate local regression.
+
+| Compiler | Cold Cargo build median, two trials | Cargo build after one Rust edit | Unchanged build wall median |
+| --- | ---: | ---: | ---: |
+| LLVM 1.96.0 | 258.15 s | 11.95 s | 8.75 s |
+| LLVM 1.99.0 | 250.70 s | 11.18 s | 8.34 s |
+| LLVM nightly-2026-10-11, `-Zthreads=2` | 294.39 s | 10.90 s | 9.60 s |
+
+The single edited-source trial differs by only 0.28 seconds between 1.99 and
+the dated nightly, while 1.99 has the lower cold-build median. This supports
+the practical default selection; it does not establish a universal fastest
+compiler or a statistically conclusive edited-source winner. No third-party
+crates recompiled after the declared protocol edit. Unchanged and README-only
+builds reused the native layer.
+
+The dated Cranelift preview failed the actual callback-unwinding probe with
+exit 101 and is not selected. No panic-abort workaround is used. The workspace
+minimum Rust version remains 1.96; historical evidence retains its original
+compiler and does not qualify the new default automatically.

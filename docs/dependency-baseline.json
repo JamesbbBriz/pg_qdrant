@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "status": "query_local_lexical_combined_local_build_full_act_regression_pending",
-  "reviewed_on": "2026-10-08",
+  "status": "measured_rust_1_99_default_full_local_regression_required",
+  "reviewed_on": "2026-10-11",
   "platform_candidate": {
     "os": "linux",
     "architecture": "x86_64",
@@ -62,10 +62,11 @@
     }
   ],
   "rust_toolchain": {
-    "exact_version": "1.96.0",
+    "exact_version": "1.99.0",
     "minimum_from_pgrx": "1.96",
-    "freeze_gate": "P0 Linux build and full dependency resolution",
-    "verification_status": "combined_linux_pg17_build_verified"
+    "freeze_gate": "Pinned-source compiler comparison and complete local regression",
+    "verification_status": "measured_linux_build_and_p0_verified_full_regression_required",
+    "measurement_evidence": "docs/evidence/compiler-comparison.json"
   },
   "observed_upstream_dependency": {
     "name": "charabia",

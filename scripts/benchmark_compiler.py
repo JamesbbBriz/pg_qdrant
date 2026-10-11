@@ -22,14 +22,28 @@ def native_metrics(log):
     layer = re.search(r"^(#\d+) .* RUN --mount=.*target=/src/target", text, flags=re.M)
     if not layer:
         return {"native_layer_cached": False, "native_seconds": None,
-                "compile_install_seconds": None, "compiled_crates": []}
+                "compile_install_seconds": None, "cargo_build_seconds": None,
+                "cargo_invocation_seconds": [], "compiled_crates": []}
     prefix = re.escape(layer[1])
     cached = bool(re.search(r"^" + prefix + r" CACHED$", text, flags=re.M))
     elapsed = re.search(r"^" + prefix + r" DONE ([\d.]+)s$", text, flags=re.M)
     installed = re.search(r"^" + prefix + r" ([\d.]+)\s+Finished installing pg_qdrant$", text, flags=re.M)
+    durations = re.findall(r"^" + prefix + r" [\d.]+\s+Finished `[^`]+` profile .*?target\(s\) in (.+)$",
+                           text, flags=re.M)
+    seconds = []
+    for duration in durations:
+        if not re.fullmatch(r"(?:\d+(?:\.\d+)?(?:ms|h|m|s)\s*)+", duration):
+            raise ValueError("unrecognized Cargo build duration: " + duration)
+        units = {"h": 3600, "m": 60, "s": 1, "ms": 0.001}
+        seconds.append(sum(float(value) * units[unit]
+                           for value, unit in re.findall(r"([\d.]+)(ms|h|m|s)", duration)))
+    # Cargo's completed build durations exclude the subsequent executable tests.
+    # The install timestamp, by contrast, includes earlier tests in this RUN.
     return {"native_layer_cached": cached,
             "native_seconds": 0.0 if cached else float(elapsed[1]) if elapsed else None,
             "compile_install_seconds": 0.0 if cached else float(installed[1]) if installed else None,
+            "cargo_build_seconds": 0.0 if cached else round(sum(seconds), 6) if seconds else None,
+            "cargo_invocation_seconds": seconds,
             "compiled_crates": re.findall(r"^" + prefix + r" [\d.]+\s+Compiling ([^\n]+)", text, flags=re.M)}
 
 
@@ -44,7 +58,7 @@ def compilation_recipe(dockerfile):
 
 def main():
     run_id = os.environ["PGQ_RUN_ID"]
-    selected = os.environ.get("PGQ_COMPILER", "llvm-1.96")
+    selected = os.environ.get("PGQ_COMPILER", "llvm-1.99")
     candidates = json.loads((ROOT / "ci/compiler-candidates.json").read_text())["candidates"]
     candidate = next(value for value in candidates if value["name"] == selected)
     directory = ROOT / "artifacts/compiler-benchmark"

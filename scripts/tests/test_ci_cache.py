@@ -220,7 +220,26 @@ class OciIdentity(unittest.TestCase):
         self.assertTrue(cached["native_layer_cached"])
         self.assertEqual(cached["native_seconds"], 0.0)
         self.assertEqual(cached["compile_install_seconds"], 0.0)
+        self.assertEqual(cached["cargo_build_seconds"], 0.0)
+        self.assertIsNone(built["cargo_build_seconds"])
         self.assertIsNone(native_metrics("failed before native work")["native_seconds"])
+
+    def test_cargo_build_durations_exclude_test_runtime_and_other_layers(self):
+        log = "#9 [verification 4/9] RUN --mount=type=cache,target=/src/target cargo test\n"
+        result = native_metrics(log +
+            "#9 102.2 \x1b[32m    Finished\x1b[0m `test` profile [unoptimized] target(s) in 1m 41s\n"
+            "#9 120.0 test long_native_operation ... ok\n"
+            "#9 125.0 Finished `dev` profile [unoptimized] target(s) in 120ms\n"
+            "#8 9.0 Finished `dev` profile [unoptimized] target(s) in 9s\n"
+            "#9 126.0 Finished installing pg_qdrant\n#9 DONE 140.0s\n")
+        self.assertEqual(result["cargo_invocation_seconds"], [101.0, 0.12])
+        self.assertEqual(result["cargo_build_seconds"], 101.12)
+        self.assertEqual(result["compile_install_seconds"], 126.0)
+
+    def test_unknown_cargo_duration_cannot_silently_become_zero(self):
+        log = "#9 [verification 4/9] RUN --mount=type=cache,target=/src/target cargo test\n"
+        with self.assertRaisesRegex(ValueError, "Cargo build duration"):
+            native_metrics(log + "#9 10.0 Finished `dev` profile target(s) in 10unknown\n")
 
 
 @unittest.skipUnless(os.environ.get("PGQ_RUN_ID"), "requires local act Docker runner")

@@ -83,7 +83,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", choices=["full", "engine", "ledger", "static", "lifecycle_failure", "compiler_benchmark"], default="full")
     parser.add_argument("--act", default=os.environ.get("ACT_BINARY"))
-    parser.add_argument("--compiler", choices=["llvm-1.96", "llvm-1.99", "llvm-nightly-2", "cranelift-nightly"], default="llvm-1.96")
+    parser.add_argument("--compiler", choices=["llvm-1.96", "llvm-1.99", "llvm-nightly-2", "cranelift-nightly"], default="llvm-1.99")
     args = parser.parse_args()
     evidence_admission(ROOT / "artifacts/local-ci")
     run_id = secrets.token_hex(8)

@@ -10,7 +10,7 @@ distribution remain open; successful probes do not constitute a release.
 
 | Input | Selected value | Evidence boundary |
 | --- | --- | --- |
-| Rust | 1.96.0 | Combined engine/PG17 build and scoped SQL probes verified at the recorded CI revision |
+| Rust | 1.99.0 | Measured local default; see compiler evidence and the required full regression below |
 | Qdrant Edge | 0.8.0 | Published archive checksum matches Cargo.lock; no declared crate features |
 | pgrx / cargo-pgrx | 0.19.3 / 0.19.3 | Matching library and build tool; no substitution with a network client |
 | PostgreSQL | 17, headers/package 17.11 | Other PostgreSQL majors are outside the tested target |
@@ -391,14 +391,14 @@ retirement, image retention keeps the two latest successful build families and
 the latest failed family. Older recorded families are removed only when the
 exact image labels and tags still match and no container references them.
 There is no daemon-wide prune. Reused preview/quality source images are pinned
-automatically; pins and container references can exceed the normal limit.
+automatically; protected resources can prevent admission under the byte budget.
 Temporary preview/quality aliases are removed after their containers. Image
 removal uses no force and no ancestor pruning, with a 90-second client deadline.
 A timeout fails the run; a later retry checks inventory because the daemon may
 have completed deletion after the client exited.
 Legacy images, incomplete runs, shared build caches and unrecorded images stay
-outside this automatic policy. The local ledger is `pg-qdrant-ci-images.json`
-in the OS temporary directory; losing it retains unrecorded images for review.
+outside this automatic policy. The local ledger is `images.json` under the
+dedicated cache root; losing it retains unrecorded images for review.
 
 ```sh
 python3 scripts/ci_images.py status

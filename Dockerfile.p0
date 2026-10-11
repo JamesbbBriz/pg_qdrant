@@ -51,7 +51,7 @@ RUN curl --fail --silent --show-error \
     -o /tmp/rustup-init \
     && echo "${RUSTUP_SHA256}  /tmp/rustup-init" | sha256sum --check \
     && chmod 755 /tmp/rustup-init \
-    && /tmp/rustup-init -y --profile minimal --default-toolchain 1.96.0 --no-modify-path \
+    && /tmp/rustup-init -y --profile minimal --default-toolchain 1.99.0 --no-modify-path \
     && rustup component add rustfmt clippy \
     && rm /tmp/rustup-init
 RUN cargo install cargo-pgrx --version 0.19.3 --locked
@@ -64,12 +64,12 @@ COPY scripts/export_native_artifacts.py /opt/pgq-export-native.py
 # Cargo fingerprints distinguish profiles, features, rustflags and crate inputs.
 ARG P0_FAULTS=0
 ARG P0_HELPER=0
-ARG PGQ_TARGET_CACHE=pgq-rust-1.96-pg17-pgrx0.19.3-v1
-ARG PGQ_RUSTFLAGS=
+ARG PGQ_TARGET_CACHE=pgq-rust-1.99-pg17-pgrx0.19.3-v1
+ARG PGQ_RUSTFLAGS=-Cpanic=unwind
 ENV RUSTFLAGS=${PGQ_RUSTFLAGS}
 ENV CARGO_INCREMENTAL=0
 RUN --mount=type=cache,id=${PGQ_TARGET_CACHE},target=/src/target,sharing=locked \
-    --mount=type=cache,id=pgq-registry-1.96-v1,target=/opt/cargo/registry,sharing=locked \
+    --mount=type=cache,id=pgq-registry-1.99-v1,target=/opt/cargo/registry,sharing=locked \
     cargo fmt --all -- --check \
     && cargo test --locked -p pg-qdrant-protocol \
     && cargo run --locked -p pg-qdrant-edge-probe -- --cpu-check >/tmp/cpu-admission.json \
@@ -104,7 +104,7 @@ RUN --mount=type=cache,id=${PGQ_TARGET_CACHE},target=/src/target,sharing=locked 
 # the mutable compiler cache, which is never mounted into a database process.
 RUN ln -s /opt/pgq-verified-target /src/target
 COPY . .
-RUN --mount=type=cache,id=pgq-registry-1.96-v1,target=/opt/cargo/registry,sharing=locked \
+RUN --mount=type=cache,id=pgq-registry-1.99-v1,target=/opt/cargo/registry,sharing=locked \
     python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check \
     && cp -a /opt/cargo/registry /opt/pgq-verified-registry
 # Retain verified sources for offline notice collection without downloading the

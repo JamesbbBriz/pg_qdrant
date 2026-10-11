@@ -1,0 +1,425 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "local_compiler_and_cache_measurement",
+  "measured_on": "2026-10-11",
+  "selected_default": "llvm-1.99",
+  "selection_reason": "Lowest measured cold-build median among tested compatible candidates; changed-source compilation is near the dated nightly in a single sample.",
+  "qualification_requires": "complete_37_gate_local_regression",
+  "release_supported": false,
+  "timing_definitions": {
+    "cargo_build_seconds": "Sum of Cargo Finished-profile durations; includes compiler/linker work, excludes subsequent executable tests.",
+    "compile_install_seconds": "Native RUN timestamp of extension installation; includes prior tests and probes.",
+    "wall_seconds": "Build invocation including auditing, cache maintenance and export when requested."
+  },
+  "limitations": [
+    "Two empty-target trials and one source-change trial per compatible compiler; no statistically conclusive source-change winner.",
+    "Unchanged/docs trials reuse a build layer and measure cache feedback, not compiler throughput.",
+    "Source changes add one declared protocol constant; other source edits, cargo check and release profiles may differ.",
+    "Completed Cargo durations were derived from hash-verified original logs after measurement; original reports and failures remain unchanged.",
+    "All candidates use the same native inputs and base tools image; derived compiler images contain the baseline toolchain as well.",
+    "Cranelift result applies only to the tested dated preview and probe, not every possible build of that backend."
+  ],
+  "candidates": [
+    {
+      "run_id": "61ed63e2dbdcf848",
+      "candidate": {
+        "name": "llvm-1.99",
+        "toolchain": "1.99.0",
+        "rustflags": "-Cpanic=unwind",
+        "cranelift": false
+      },
+      "status": "measured",
+      "report_sha256": "0de5d5c677ebef6bde5a5d848609e8f43c5602342a6755a3618d613d08500041",
+      "qualification": "pending_full_regression",
+      "release_supported": false,
+      "commit": "e9d3907162e9efe6b4764e839f9bdcaec4b8bc03",
+      "source_sha256": "f66636bf16b8e94a4fd30dfc92efd1cc1d854308c7cb75762b33b7c2c8c6afaf",
+      "cargo_lock_sha256": "79666ddb27e6f87bc84f1711bef5667bfe23422617d08c6f9131057f3f074e9c",
+      "tools_image_id": "sha256:2184b9bb850d86ac7f78eb36c081fd971486f23e476f5bb822a7a2fb1ba277bb",
+      "compiler_image_id": "sha256:f0437ba4838bc590031ae3d488a3a608cb34c7dfc53b92928663f4d90c4baf11",
+      "compilation_recipe_sha256": "2dbedbb505e1bc57d961b92b6b71a871209e49f2922fc46ce5c27bb4692b22f0",
+      "builder_limits": {
+        "cpus": 2,
+        "memory_bytes": 8589934592,
+        "cargo_jobs": 2,
+        "incremental": false
+      },
+      "cold_median_cargo_build_seconds": 250.7,
+      "runs": [
+        {
+          "kind": "cold_1",
+          "wall_seconds": 381.105,
+          "compile_install_seconds": 323.4,
+          "native_seconds": 324.3,
+          "cargo_build_seconds": 253.55,
+          "cargo_invocation_seconds": [
+            4.03,
+            101.0,
+            11.07,
+            56.36,
+            3.85,
+            0.12,
+            0.12,
+            77.0
+          ],
+          "log_sha256": "6395b7b3e9055dffdb07097239e7d5d77493a9f22dedc35b3e98fa22985555c5",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 684
+        },
+        {
+          "kind": "cold_2",
+          "wall_seconds": 380.261,
+          "compile_install_seconds": 323.9,
+          "native_seconds": 334.9,
+          "cargo_build_seconds": 247.85,
+          "cargo_invocation_seconds": [
+            3.94,
+            99.0,
+            11.75,
+            54.32,
+            2.59,
+            0.13,
+            0.12,
+            76.0
+          ],
+          "log_sha256": "6340f76d47f9b8bc487cb51ae195d9b6db9b9933173642c826d126eda331994f",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 684
+        },
+        {
+          "kind": "warm_1",
+          "wall_seconds": 8.751,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "7d5cf4b4f4f2814e2b593d095e04dba1fbdeb19e2de1fde2ced2dd12c681d48f",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "warm_2",
+          "wall_seconds": 7.932,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "a3b5b643fa79e01a512b2e29ca7adf779121af2e9a3181927beeb5b9bb302c3f",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "docs_only",
+          "wall_seconds": 12.901,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "59f93ef5fec20d807a36993f620d2f2d03a6b299c35d188b662ce5304840d2d6",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "rust_change",
+          "wall_seconds": 184.284,
+          "compile_install_seconds": 48.0,
+          "native_seconds": 58.8,
+          "cargo_build_seconds": 11.18,
+          "cargo_invocation_seconds": [
+            1.18,
+            0.29,
+            0.12,
+            3.17,
+            2.63,
+            0.12,
+            0.12,
+            3.55
+          ],
+          "log_sha256": "6926f32e9125ea42c42c29655da7c11939af10a6e6af0a23c53f9323d7a1fb6c",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 0
+        }
+      ],
+      "sql": [
+        {
+          "kind": "p0",
+          "exit_code": 0,
+          "log_sha256": "67d4eaf200674bececb98a97a160355443b9167e1fa977b6d811647151c110e0"
+        }
+      ]
+    },
+    {
+      "run_id": "6c6042d4b6f08246",
+      "candidate": {
+        "name": "llvm-1.96",
+        "toolchain": "1.96.0",
+        "rustflags": "-Cpanic=unwind",
+        "cranelift": false
+      },
+      "status": "measured",
+      "report_sha256": "673e194547096e33e190f365f5f969698ce1f98679ec964b60f85474359677e6",
+      "qualification": "pending_full_regression",
+      "release_supported": false,
+      "commit": "e9d3907162e9efe6b4764e839f9bdcaec4b8bc03",
+      "source_sha256": "f66636bf16b8e94a4fd30dfc92efd1cc1d854308c7cb75762b33b7c2c8c6afaf",
+      "cargo_lock_sha256": "79666ddb27e6f87bc84f1711bef5667bfe23422617d08c6f9131057f3f074e9c",
+      "tools_image_id": "sha256:2184b9bb850d86ac7f78eb36c081fd971486f23e476f5bb822a7a2fb1ba277bb",
+      "compiler_image_id": "sha256:2184b9bb850d86ac7f78eb36c081fd971486f23e476f5bb822a7a2fb1ba277bb",
+      "compilation_recipe_sha256": "2dbedbb505e1bc57d961b92b6b71a871209e49f2922fc46ce5c27bb4692b22f0",
+      "builder_limits": {
+        "cpus": 2,
+        "memory_bytes": 8589934592,
+        "cargo_jobs": 2,
+        "incremental": false
+      },
+      "cold_median_cargo_build_seconds": 258.15,
+      "runs": [
+        {
+          "kind": "cold_1",
+          "wall_seconds": 345.851,
+          "compile_install_seconds": 311.0,
+          "native_seconds": 311.9,
+          "cargo_build_seconds": 257.09,
+          "cargo_invocation_seconds": [
+            4.53,
+            103.0,
+            9.93,
+            57.58,
+            2.75,
+            0.14,
+            0.16,
+            79.0
+          ],
+          "log_sha256": "48c6446188984630581f60f853fab96d750fd38fc292f4fbf8d8f24f2a416120",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 684
+        },
+        {
+          "kind": "cold_2",
+          "wall_seconds": 365.801,
+          "compile_install_seconds": 316.8,
+          "native_seconds": 319.3,
+          "cargo_build_seconds": 259.21,
+          "cargo_invocation_seconds": [
+            4.29,
+            106.0,
+            9.73,
+            57.26,
+            2.64,
+            0.15,
+            0.14,
+            79.0
+          ],
+          "log_sha256": "866ca49a91d8cb7e148ac30c2433cf931fe2e97e25634400266ff123e352b6e7",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 684
+        },
+        {
+          "kind": "warm_1",
+          "wall_seconds": 8.982,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "6253d103c218e8e76a134bed48ef0f4e3edfa80d755d80c3c3683e0b3a3fed0c",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "warm_2",
+          "wall_seconds": 8.511,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "82085412fa35ddc42cf023e2c373a5c24411a45c04abc122be3f5d1fe5b7d733",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "docs_only",
+          "wall_seconds": 14.931,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "9b9add71fb7ed5e98e2f4e21fe8feb5344d5aba4cedfdcdec1c7c15618cd8b3d",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "rust_change",
+          "wall_seconds": 176.143,
+          "compile_install_seconds": 49.69,
+          "native_seconds": 50.4,
+          "cargo_build_seconds": 11.95,
+          "cargo_invocation_seconds": [
+            1.39,
+            0.33,
+            0.15,
+            3.17,
+            2.66,
+            0.15,
+            0.16,
+            3.94
+          ],
+          "log_sha256": "f54e843f6695ef070adf704147a29efff1c1f901874a079934c927373c209374",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 0
+        }
+      ],
+      "sql": [
+        {
+          "kind": "p0",
+          "exit_code": 0,
+          "log_sha256": "276a8a6c0d4ef27588d22a132d12b88d7b1888de7f5906442be001610253ee94"
+        }
+      ]
+    },
+    {
+      "run_id": "bb497e7cfabbdd83",
+      "candidate": {
+        "name": "llvm-nightly-2",
+        "toolchain": "nightly-2026-10-11",
+        "rustflags": "-Zthreads=2 -Cpanic=unwind",
+        "cranelift": false
+      },
+      "status": "measured",
+      "report_sha256": "0250d0cab9dde920e0b9895daccc40048d5678e08a8514566ec3f51da7aafcd9",
+      "qualification": "pending_full_regression",
+      "release_supported": false,
+      "commit": "e9d3907162e9efe6b4764e839f9bdcaec4b8bc03",
+      "source_sha256": "f66636bf16b8e94a4fd30dfc92efd1cc1d854308c7cb75762b33b7c2c8c6afaf",
+      "cargo_lock_sha256": "79666ddb27e6f87bc84f1711bef5667bfe23422617d08c6f9131057f3f074e9c",
+      "tools_image_id": "sha256:2184b9bb850d86ac7f78eb36c081fd971486f23e476f5bb822a7a2fb1ba277bb",
+      "compiler_image_id": "sha256:3c840c2d418d2078af38b230cbda31e332699347d280bc2c1bdecc9f318065d6",
+      "compilation_recipe_sha256": "2dbedbb505e1bc57d961b92b6b71a871209e49f2922fc46ce5c27bb4692b22f0",
+      "builder_limits": {
+        "cpus": 2,
+        "memory_bytes": 8589934592,
+        "cargo_jobs": 2,
+        "incremental": false
+      },
+      "cold_median_cargo_build_seconds": 294.385,
+      "runs": [
+        {
+          "kind": "cold_1",
+          "wall_seconds": 451.622,
+          "compile_install_seconds": 375.2,
+          "native_seconds": 382.6,
+          "cargo_build_seconds": 296.86,
+          "cargo_invocation_seconds": [
+            4.85,
+            116.0,
+            12.96,
+            68.0,
+            2.79,
+            0.13,
+            0.13,
+            92.0
+          ],
+          "log_sha256": "71d6746fff73975870315ccb1e20494910cad2c39c1d980f9024a50cb35ae092",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 684
+        },
+        {
+          "kind": "cold_2",
+          "wall_seconds": 441.507,
+          "compile_install_seconds": 375.4,
+          "native_seconds": 404.5,
+          "cargo_build_seconds": 291.91,
+          "cargo_invocation_seconds": [
+            4.96,
+            114.0,
+            11.9,
+            65.0,
+            2.79,
+            0.13,
+            0.13,
+            93.0
+          ],
+          "log_sha256": "02b97875c3e3e602af009143a70237660cab75a5d54cddefcbdbdf255cdb7bdc",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 684
+        },
+        {
+          "kind": "warm_1",
+          "wall_seconds": 9.918,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "2d48364579bc58f3f43a98ed7e0f86b5218caa94dc358281544b48e3b86ca837",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "warm_2",
+          "wall_seconds": 9.282,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "acfd3435db06e142d20168c7c291beda1eb85534db803f7b2ccd0d678d84973a",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "docs_only",
+          "wall_seconds": 30.816,
+          "compile_install_seconds": 0.0,
+          "native_seconds": 0.0,
+          "cargo_build_seconds": 0.0,
+          "cargo_invocation_seconds": [],
+          "log_sha256": "d1282ae06ccf753d60e254c0eccaa519d95f6aa4380c79c376ac3bfb490a13db",
+          "native_layer_cached": true,
+          "dependency_crates_recompiled_count": 0
+        },
+        {
+          "kind": "rust_change",
+          "wall_seconds": 257.207,
+          "compile_install_seconds": 47.77,
+          "native_seconds": 63.4,
+          "cargo_build_seconds": 10.9,
+          "cargo_invocation_seconds": [
+            1.39,
+            0.4,
+            0.12,
+            3.0,
+            2.61,
+            0.12,
+            0.13,
+            3.13
+          ],
+          "log_sha256": "41f0d76d02ad8b7ec2553653bd4c5757d9e04e8c7736f87ee2f22f009635683c",
+          "native_layer_cached": false,
+          "dependency_crates_recompiled_count": 0
+        }
+      ],
+      "sql": [
+        {
+          "kind": "p0",
+          "exit_code": 0,
+          "log_sha256": "6bde31b8b2e21ead752beb08824fdd0a8ee42a8000d28ab306aaf6bf8b84e93f"
+        }
+      ]
+    },
+    {
+      "run_id": "dc1f8eb3fa8f9778",
+      "candidate": {
+        "name": "cranelift-nightly",
+        "toolchain": "nightly-2026-10-11",
+        "rustflags": "-Zcodegen-backend=cranelift -Cpanic=unwind",
+        "cranelift": true
+      },
+      "status": "failed",
+      "report_sha256": "a102cfc3ee11b0cf06918db856e20959ee323192f515803a94d0f18c499166c2",
+      "qualification": "not_qualified",
+      "release_supported": false,
+      "reason": "compiler compatibility probe failed",
+      "probe_exit_code": 101,
+      "compiler_install_log_sha256": "9e44391980c313ea16935f77efa3f360a14a9915688ff171b64eb62a335bc596",
+      "probe_source_sha256": "3e95bd410453a52182ab0a6f1fe54b41324ae4547b20804e8f408912ddd441c2"
+    }
+  ]
+}
