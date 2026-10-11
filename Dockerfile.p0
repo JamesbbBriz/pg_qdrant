@@ -130,10 +130,12 @@ RUN mkdir -p /src/artifacts \
          set -- "$@" --helper "$("${PGRX_PG_CONFIG_PATH}" --bindir)/pg_qdrant_p0_helper"; \
        fi \
     && if [ "${P0_FAULTS}" = 1 ]; then pgq_profile="${pgq_profile}-fault"; fi \
-    && for pgq_trace in target/debug/build/pgrx-pg-sys-*/stderr; do \
+    && for pgq_trace in target/debug/build/pgrx-pg-sys-*/stderr \
+         target/debug/build/pgrx-pg-sys/*/run/stderr; do \
          if [ -f "${pgq_trace}" ]; then set -- "$@" --pgrx-build-stderr "${pgq_trace}"; fi; \
        done \
-    && for pgq_binding in target/debug/build/pgrx-pg-sys-*/out/pg17.rs; do \
+    && for pgq_binding in target/debug/build/pgrx-pg-sys-*/out/pg17.rs \
+         target/debug/build/pgrx-pg-sys/*/out/pg17.rs; do \
          if [ -f "${pgq_binding}" ]; then set -- "$@" --bindings-artifact "${pgq_binding}"; fi; \
        done \
     && python3 scripts/native_build_report.py "$@" --profile "${pgq_profile}" \

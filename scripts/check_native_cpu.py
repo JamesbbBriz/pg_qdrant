@@ -48,12 +48,16 @@ def inspect_object(path: Path) -> dict:
     }
 
 
+def native_build_directories(build_root: Path) -> list[Path]:
+    roots = [*build_root.glob("qdrant-edge-*"), build_root / "qdrant-edge"]
+    return sorted({obj.parent for root in roots for obj in root.rglob("*-sse.o")})
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-root", type=Path, default=Path("target/debug/build"))
     args = parser.parse_args()
-    directories = sorted(path for path in args.build_root.glob("qdrant-edge-*/out")
-                         if list(path.glob("*-sse.o")))
+    directories = native_build_directories(args.build_root)
     if not 1 <= len(directories) <= 8:
         raise ValueError("Expected one to eight selected Edge native build directories")
     records = []

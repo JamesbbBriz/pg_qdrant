@@ -25,8 +25,10 @@ def export(target, destination, *, helper=False, maximum=MAX_BYTES):
     # Preserve every Edge C-object directory and every pgrx bindings/trace
     # directory used by the unchanged native CPU and build-report checks.
     audit = []
-    for pattern in ("qdrant-edge-*", "pgrx-pg-sys-*"):
-        directories = sorted(build.glob(pattern))
+    for package in ("qdrant-edge", "pgrx-pg-sys"):
+        # Cargo supports both build/package-hash and build/package/hash.
+        directories = sorted([*build.glob(package + "-*"),
+                              *([build / package] if (build / package).exists() else [])])
         if not directories:
             raise ValueError("required native audit directories missing")
         for directory in directories:

@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from export_native_artifacts import export
+from check_native_cpu import native_build_directories
 
 
 class NativeArtifacts(unittest.TestCase):
@@ -42,6 +43,32 @@ class NativeArtifacts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing"):
             export(self.target, destination, helper=True)
         self.assertFalse(destination.exists())
+
+    def test_mixed_cargo_layouts_retain_every_native_object_binding_and_trace(self):
+        modern = ["debug/build/qdrant-edge/abc/out/native-sse.o",
+                  "debug/build/qdrant-edge/abc/out/native-avx2.o",
+                  "debug/build/qdrant-edge/def/out/native-sse.o",
+                  "debug/build/qdrant-edge/def/out/native-avx2.o",
+                  "debug/build/pgrx-pg-sys/123/run/stderr",
+                  "debug/build/pgrx-pg-sys/123/out/pg17.rs"]
+        for name in modern:
+            path = self.target / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(name.encode())
+        destination = self.root / "exported"
+        report = export(self.target, destination, helper=True)
+        paths = {item["path"] for item in report["files"]}
+        self.assertEqual(len(paths), 12)
+        self.assertTrue(set(modern) <= paths)
+        self.assertIn("debug/build/pgrx-pg-sys-1/stderr", paths)
+        self.assertEqual(native_build_directories(destination / "debug/build"),
+                         sorted(destination / path for path in (
+                             "debug/build/qdrant-edge-1/out",
+                             "debug/build/qdrant-edge/abc/out",
+                             "debug/build/qdrant-edge/def/out")))
+        with self.assertRaisesRegex(RuntimeError, "byte budget"):
+            export(self.target, self.root / "too-small", helper=True, maximum=report["bytes"] - 1)
+        self.assertFalse((self.root / "too-small").exists())
 
     @unittest.skipIf(sys.platform == "win32", "real symlink fixture requires the supported Linux act environment")
     def test_audit_link_does_not_export_external_content(self):

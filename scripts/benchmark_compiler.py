@@ -144,7 +144,7 @@ def main():
             report_path.write_text(json.dumps(report, indent=2) + "\n")
             print(json.dumps(row), flush=True)
             if code:
-                report.update(status="failed", reason="native compile/test failed")
+                report.update(status="failed", reason="native build or audit failed")
                 return code
             if step in ("warm_1", "warm_2", "docs_only") and not row["native_layer_cached"]:
                 report.update(status="failed", reason="unchanged native inputs missed their verified build layer")
