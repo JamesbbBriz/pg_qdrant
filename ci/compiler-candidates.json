@@ -1,0 +1,10 @@
+{
+  "target": "x86_64-unknown-linux-gnu",
+  "panic": "unwind",
+  "candidates": [
+    {"name": "llvm-1.96", "toolchain": "1.96.0", "rustflags": "-Cpanic=unwind", "cranelift": false},
+    {"name": "llvm-1.99", "toolchain": "1.99.0", "rustflags": "-Cpanic=unwind", "cranelift": false},
+    {"name": "llvm-nightly-2", "toolchain": "nightly-2026-10-11", "rustflags": "-Zthreads=2 -Cpanic=unwind", "cranelift": false},
+    {"name": "cranelift-nightly", "toolchain": "nightly-2026-10-11", "rustflags": "-Zcodegen-backend=cranelift -Cpanic=unwind", "cranelift": true}
+  ]
+}

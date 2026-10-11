@@ -62,7 +62,7 @@ def snapshot_transport_failure(lines, probe=snapshot_error_body):
 
 
 def run(command, start=subprocess.Popen, sleep=time.sleep):
-    if command[:2] != ['docker', 'build']:
+    if command[:2] != ['docker', 'build'] and command[:3] != ['docker', 'buildx', 'build']:
         raise ValueError('Only docker build is supported')
     for attempt in range(1, 4):
         print(f'Immutable build attempt {attempt}/3', flush=True)
@@ -85,4 +85,5 @@ def run(command, start=subprocess.Popen, sleep=time.sleep):
 
 
 if __name__ == '__main__':
-    raise SystemExit(run(sys.argv[1:]))
+    from ci_build import run as cached_run
+    raise SystemExit(cached_run(sys.argv[1:], run))

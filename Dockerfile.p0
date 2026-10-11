@@ -1,4 +1,5 @@
 # P0 build/test environment. This is not a production database image.
+ARG PG_QDRANT_BUILD_TOOLS=build-tools
 FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55 AS build-tools
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -55,22 +56,27 @@ RUN curl --fail --silent --show-error \
     && rm /tmp/rustup-init
 RUN cargo install cargo-pgrx --version 0.19.3 --locked
 
-FROM build-tools AS verification
+FROM ${PG_QDRANT_BUILD_TOOLS} AS verification
 WORKDIR /src
-COPY . .
-RUN cargo fmt --all -- --check \
-    && python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check \
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY crates/ crates/
+# Cargo fingerprints distinguish profiles, features, rustflags and crate inputs.
+ARG P0_FAULTS=0
+ARG P0_HELPER=0
+ARG PGQ_TARGET_CACHE=pgq-rust-1.96-pg17-pgrx0.19.3-v1
+ARG PGQ_RUSTFLAGS=
+ENV RUSTFLAGS=${PGQ_RUSTFLAGS}
+ENV CARGO_INCREMENTAL=0
+RUN --mount=type=cache,id=${PGQ_TARGET_CACHE},target=/src/target,sharing=locked \
+    --mount=type=cache,id=pgq-registry-1.96-v1,target=/opt/cargo/registry,sharing=locked \
+    cargo fmt --all -- --check \
     && cargo test --locked -p pg-qdrant-protocol \
     && cargo run --locked -p pg-qdrant-edge-probe -- --cpu-check >/tmp/cpu-admission.json \
     && cargo test --locked -p pg-qdrant-edge-probe -- --test-threads=1 \
     && cargo test --locked -p pg-qdrant-helper --test supervisor_child \
     && cargo test --locked -p pg-qdrant-helper --bin pg_qdrant_p0_helper \
-    && cargo run --locked -p pg-qdrant-edge-probe >/tmp/edge-probe.json
-
-# Fault injection and the helper comparison are explicit P0-only image choices.
-ARG P0_FAULTS=0
-ARG P0_HELPER=0
-RUN pgq_features=pg17 \
+    && cargo run --locked -p pg-qdrant-edge-probe >/tmp/edge-probe.json \
+    && pgq_features=pg17 \
     && if [ "${P0_FAULTS}" = 1 ]; then \
          pgq_features="${pgq_features} p0-fault-injection" \
          && cargo test --locked -p pg-qdrant-edge-probe \
@@ -88,7 +94,18 @@ RUN pgq_features=pg17 \
        fi \
     && cargo pgrx install --manifest-path crates/pg_qdrant/Cargo.toml \
          --no-default-features --features "${pgq_features}" \
-         --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked
+         --pg-config "${PGRX_PG_CONFIG_PATH}" --cargo=--locked \
+    && cp -a target /opt/pgq-verified-target
+# Immutable image artifacts keep existing CPU and fault probes independent of
+# the mutable compiler cache, which is never mounted into a database process.
+RUN ln -s /opt/pgq-verified-target /src/target
+COPY . .
+RUN --mount=type=cache,id=pgq-registry-1.96-v1,target=/opt/cargo/registry,sharing=locked \
+    python3 scripts/dependency_report.py --comparison-output docs/dependency-profiles.json --check \
+    && cp -a /opt/cargo/registry /opt/pgq-verified-registry
+# Retain verified sources for offline notice collection without downloading the
+# same locked dependency graph again after a documentation-only change.
+RUN rm -rf /opt/cargo/registry && ln -s /opt/pgq-verified-registry /opt/cargo/registry
 ENV PG_QDRANT_MANAGED_HELPER=${P0_HELPER}
 RUN mkdir -p /src/artifacts \
     && target/debug/pg-qdrant-edge-probe --cpu-check >/src/artifacts/cpu-admission.json \

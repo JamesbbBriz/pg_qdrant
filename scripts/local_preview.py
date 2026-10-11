@@ -9,8 +9,10 @@ import subprocess
 import sys
 
 from local_ci import ROOT, RUNNER, act_binary, snapshot
+from ci_build import act_cache_options
+from ci_cache import evidence_admission, finish_snapshot
 from ci_images import complete_images, pin_image, release_alias
-from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight
+from ci_resources import MANAGED, require_clean_start, finish_run, local_run_lock, storage_preflight, guarded_run
 
 
 def output(arguments):
@@ -28,6 +30,7 @@ def main():
     args = parser.parse_args()
     if bool(args.source_snapshot) != bool(args.image):
         raise ValueError("--source-snapshot is required only with --image")
+    evidence_admission(ROOT / "artifacts/local-ci")
     run_id = secrets.token_hex(8)
     directory = ROOT / "artifacts/local-ci" / ("preview-" + run_id)
     directory.mkdir(parents=True)
@@ -66,17 +69,18 @@ def main():
     empty.write_bytes(b"")
     manifest = directory / "run-report.json"
     manifest.write_text(json.dumps(report, indent=2), encoding="utf-8", newline="\n")
+    cache_mount, cache_environment = act_cache_options()
     command = [act_binary(args.act), "workflow_dispatch", "-C", str(source), "-W", str(source / "ci/preview.yml"),
                "-j", "preview", "-P", "ubuntu-24.04=" + runner, "--pull=false", "--reuse", "--network", "none",
                "--container-daemon-socket", "/var/run/docker.sock", "--env-file", str(empty), "--secret-file", str(empty),
                "--env", "PGQ_RUN_ID=" + run_id, "--env", "PGQ_BUILD_PRODUCT=" + ("1" if args.build else "0"),
                "--env", "PGQ_SOURCE_COMMIT=" + compiled["commit"], "--container-options",
-               '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.preview-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"']
+               '--label ' + MANAGED + '=1 --label io.pg_qdrant.ci.preview-runner=' + run_id + ' --mount "type=bind,source=' + source.as_posix() + ',target=/pgq-input,readonly"' + cache_mount, *cache_environment]
     print(directory, flush=True)
     code = 1
     try:
         with (directory / "act.log").open("wb") as log:
-            result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=1200)
+            result = guarded_run(command, directory, log, timeout=1200)
         report["act_exit"] = code = result.returncode
         if args.build:
             built = subprocess.run(["docker", "image", "inspect", base, "--format", "{{.Id}}"],
@@ -136,6 +140,11 @@ def main():
         report["status"] = "passed" if code == 0 else "failed"
         if (directory / "act.log").is_file():
             report["act_log_sha256"] = hashlib.sha256((directory / "act.log").read_bytes()).hexdigest()
+        try:
+            report["snapshot_retention"] = finish_snapshot(source, report["snapshot"], code == 0)
+        except Exception as error:
+            code = 1
+            report.update(status="failed", snapshot_retention_error=str(error))
         manifest.write_text(json.dumps(report, indent=2), encoding="utf-8", newline="\n")
         print("Evidence:", directory)
     return code

@@ -72,6 +72,45 @@ class ImagePolicy(unittest.TestCase):
         with self.assertRaises(ValueError):
             images.release_alias("business:latest", "expected")
 
+    def test_pinned_images_count_toward_bytes_and_refuse_new_build(self):
+        identifier = "sha256:" + "1" * 64
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "images.json"
+            images.save_state(path, {"runs": [], "pins": [identifier]})
+            def docker(*args, **kwargs):
+                if args[:2] == ("image", "ls"):
+                    return identifier
+                return json.dumps([{"Id": identifier, "Size": 80}])
+            with patch.object(images, "docker", side_effect=docker) as calls:
+                with self.assertRaisesRegex(RuntimeError, "byte budget"):
+                    images.enforce_image_budget(path=path, maximum=100, reserve=21)
+            self.assertFalse(any(call.args[:2] == ("image", "rm") for call in calls.call_args_list))
+
+    def test_active_uncompleted_run_is_included_in_admission(self):
+        identifier = "sha256:" + "1" * 64
+        def docker(*args, **kwargs):
+            if args[:2] == ("image", "ls"):
+                return identifier
+            return json.dumps([{"Id": identifier, "Size": 80}])
+        with patch.object(images, "docker", side_effect=docker):
+            self.assertEqual(images.image_bytes({"runs": [], "pins": []}, "1"*16), 80)
+
+    def test_new_pin_cannot_bypass_byte_limit_or_change_existing_pins(self):
+        old = "sha256:" + "1" * 64
+        new = "sha256:" + "2" * 64
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root) / "images.json"
+            images.save_state(path, {"runs": [], "pins": [old]})
+            def docker(*args, **kwargs):
+                if args[:2] == ("image", "ls"):
+                    return old + "\n" + new
+                return json.dumps([{"Id": args[2], "Size": 60}])
+            with patch.object(images, "docker", side_effect=docker) as calls:
+                with self.assertRaisesRegex(RuntimeError, "pin exceeds"):
+                    images.pin_image(new, path=path, maximum=100)
+            self.assertEqual(images.read_state(path)["pins"], [old])
+            self.assertFalse(any(call.args[:2] == ("image", "rm") for call in calls.call_args_list))
+
 
 @unittest.skipUnless(os.environ.get("PGQ_RUN_ID"), "requires the local act Docker runner")
 class RealImagePolicy(unittest.TestCase):

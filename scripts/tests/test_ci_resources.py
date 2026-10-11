@@ -15,6 +15,21 @@ from scripts import ci_resources as resources
 
 
 class ResourceGuards(unittest.TestCase):
+    def test_runtime_capacity_guard_terminates_only_its_child(self):
+        with tempfile.TemporaryDirectory() as root:
+            process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+            try:
+                with patch.object(resources, "storage_paths", return_value={Path(root): 1}), \
+                     patch.object(resources.shutil, "disk_usage", return_value=type("Usage", (), {"free": 0})()), \
+                     self.assertRaisesRegex(RuntimeError, "runtime storage"):
+                    with resources.storage_guard(process, Path(root), heavy=False):
+                        process.wait(timeout=5)
+                self.assertIsNotNone(process.poll())
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+
     def test_competing_process_is_refused_and_killed_owner_releases_lock(self):
         with tempfile.TemporaryDirectory() as root:
             path = str(Path(root) / "run.lock")

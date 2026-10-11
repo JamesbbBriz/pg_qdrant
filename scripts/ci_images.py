@@ -4,13 +4,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
-import tempfile
 import time
 
 from ci_resources import docker, local_run_lock
+from ci_cache import cache_root
 
 IMAGE_RUN = "io.pg_qdrant.ci.image-run"
-STATE = Path(tempfile.gettempdir()) / "pg-qdrant-ci-images.json"
+STATE = cache_root() / "images.json"
+MAX_IMAGE_BYTES = 80 * 1024**3
 
 
 def read_state(path):
@@ -18,18 +19,21 @@ def read_state(path):
 
 
 def save_state(path, state):
+    path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".pending")
     temporary.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     temporary.replace(path)
 
 
-def pin_image(identifier, *, path=STATE):
+def pin_image(identifier, *, path=STATE, maximum=MAX_IMAGE_BYTES):
     """A caller explicitly reusing a compiled image keeps that exact ID."""
     if not re.fullmatch(r"sha256:[a-f0-9]{64}", identifier):
         raise ValueError("pin requires an exact image ID")
     state = read_state(path)
     if identifier not in state["pins"]:
         state["pins"].append(identifier)
+        if image_bytes(state) > maximum:
+            raise RuntimeError("image pin exceeds byte budget; existing pins retained")
         save_state(path, state)
 
 
@@ -53,9 +57,9 @@ def release_alias(alias, identifier):
     docker("image", "rm", "--no-prune", alias, timeout=90)
 
 
-def retire_images(state, save):
+def retire_images(state, save, *, retire_runs=()):
     receipt = {"removed": [], "retained": [], "errors": []}
-    keep = retained_runs(state["runs"])
+    keep = retained_runs(state["runs"]) - set(retire_runs)
     for run in state["runs"]:
         if run["run_id"] in keep:
             continue
@@ -93,6 +97,41 @@ def retire_images(state, save):
     return receipt
 
 
+def image_bytes(state, active_run=None):
+    """Conservative sum of unique full image sizes, including explicit pins.
+
+    Shared Docker layers are counted more than once; this is not reclaimed space.
+    Unregistered historical resources are outside automatic deletion authority.
+    """
+    identifiers = set(state["pins"])
+    identifiers.update(image["id"] for run in state["runs"] for image in run["images"] if not image.get("removed"))
+    if active_run:
+        identifiers.update(docker("image", "ls", "-aq", "--no-trunc",
+            "--filter", "label=" + IMAGE_RUN + "=" + active_run).split())
+    present = set(docker("image", "ls", "-aq", "--no-trunc").split())
+    return sum(json.loads(docker("image", "inspect", identifier))[0]["Size"]
+               for identifier in identifiers if identifier in present)
+
+
+def enforce_image_budget(*, path=STATE, reserve=0, maximum=MAX_IMAGE_BYTES, active_run=None):
+    state = read_state(path)
+    receipt = {"removed": [], "retained": [], "errors": []}
+    save = lambda: save_state(path, state)
+    for run in sorted(state["runs"], key=lambda item: item["completed"]):
+        if image_bytes(state, active_run) + reserve <= maximum:
+            break
+        # The latest completed family remains available for diagnosis/rollback.
+        if run is max(state["runs"], key=lambda item: item["completed"]):
+            continue
+        result = retire_images(state, save, retire_runs=(run["run_id"],))
+        for key in receipt:
+            receipt[key].extend(result[key])
+    receipt.update(bytes=image_bytes(state, active_run), limit_bytes=maximum, reserved_bytes=reserve)
+    if receipt["errors"] or receipt["bytes"] + reserve > maximum:
+        raise RuntimeError("image byte budget exhausted; protected images retained: " + json.dumps(receipt))
+    return receipt
+
+
 def complete_images(run_id, status, *, path=STATE):
     """Call under the launcher lock, only after successful diagnostic retirement."""
     if not re.fullmatch(r"[a-f0-9]{16}", run_id) or status not in ("passed", "failed"):
@@ -111,7 +150,9 @@ def complete_images(run_id, status, *, path=STATE):
                               "completed": time.time(), "images": images})
     save = lambda: save_state(path, state)
     save()
-    return retire_images(state, save)
+    receipt = retire_images(state, save)
+    receipt["capacity"] = enforce_image_budget(path=path)
+    return receipt
 
 
 if __name__ == "__main__":
@@ -127,7 +168,8 @@ if __name__ == "__main__":
                 parser.error("--image is required")
             identifier = json.loads(docker("image", "inspect", args.image))[0]["Id"]
             if args.action == "pin" and identifier not in state["pins"]:
-                state["pins"].append(identifier)
+                pin_image(identifier)
+                state = read_state(STATE)
             elif args.action == "unpin" and identifier in state["pins"]:
                 state["pins"].remove(identifier)
             save_state(STATE, state)

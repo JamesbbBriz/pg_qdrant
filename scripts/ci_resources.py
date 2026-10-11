@@ -12,6 +12,7 @@ import shutil
 import tarfile
 import tempfile
 import time
+import threading
 
 MANAGED = "io.pg_qdrant.ci.lifecycle"
 LABELS = ("io.pg_qdrant.ci", "io.pg_qdrant.ci.runner",
@@ -59,6 +60,80 @@ def check_free_space(host_free, docker_free, *, heavy):
         raise RuntimeError("insufficient free space for local CI: " + json.dumps(
             {"free_bytes": measured, "required_bytes": required}))
     return {"free_bytes": measured, "required_bytes": required}
+
+
+def storage_paths(directory, heavy):
+    """Watch evidence/cache and the repository's backing host filesystem."""
+    from ci_cache import cache_root
+    floor = (10 if heavy else 2) * 1024**3
+    paths = {Path(directory).resolve(): floor, cache_root().resolve(): floor}
+    if os.name == "nt" and heavy:
+        common = subprocess.check_output(["git", "rev-parse", "--git-common-dir"],
+            cwd=Path(__file__).resolve().parents[1], text=True).strip()
+        paths[Path(common).resolve()] = 40 * 1024**3
+        settings = Path(os.environ["APPDATA"]) / "Docker/settings-store.json"
+        if settings.is_file():
+            data = json.loads(settings.read_text(encoding="utf-8"))
+            folder = data.get("DataFolder") or data.get("dataFolder")
+            if folder:
+                paths[Path(folder).resolve()] = 40 * 1024**3
+        default_disk = Path(os.environ["LOCALAPPDATA"]) / "Docker/wsl/disk"
+        if default_disk.exists():
+            paths[default_disk.resolve()] = 40 * 1024**3
+        explicit = os.environ.get("PGQ_DOCKER_STORAGE_PATH")
+        if explicit:
+            paths[Path(explicit).resolve()] = 40 * 1024**3
+    return paths
+
+
+@contextmanager
+def storage_guard(process, directory, *, heavy):
+    """Periodic cancellation guard, not an operating-system filesystem quota."""
+    paths = storage_paths(directory, heavy)
+    finished = threading.Event()
+    failures = []
+    def watch():
+        while not finished.is_set() and process.poll() is None:
+            try:
+                for path, required in paths.items():
+                    if shutil.disk_usage(path).free < required:
+                        raise RuntimeError("runtime storage reserve reached: " + str(path.anchor))
+            except Exception as error:
+                failures.append(str(error))
+                process.terminate()
+                if heavy:
+                    # The run lock permits only this workload. Stop its exact,
+                    # inspected dedicated builder, never the shared Docker daemon.
+                    from ci_build import CONTAINER, BUILDKIT
+                    try:
+                        data = json.loads(docker("inspect", CONTAINER))[0]
+                        if data["Config"]["Image"] == BUILDKIT:
+                            docker("stop", "--time", "5", data["Id"], timeout=15)
+                    except Exception as stop_error:
+                        failures.append("builder cancellation: " + str(stop_error))
+                return
+            finished.wait(1)
+    thread = threading.Thread(target=watch, daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        finished.set()
+        thread.join(timeout=50)
+    if failures:
+        raise RuntimeError("; ".join(failures))
+
+
+def guarded_run(command, directory, log, *, heavy=True, timeout=1200):
+    with subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT) as process:
+        with storage_guard(process, directory, heavy=heavy):
+            try:
+                code = process.wait(timeout=timeout)
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                    process.wait(timeout=30)
+    return subprocess.CompletedProcess(command, code)
 
 
 def storage_preflight(directory, image, run_id, child_label, *, heavy):
