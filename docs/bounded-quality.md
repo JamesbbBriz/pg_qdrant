@@ -330,3 +330,62 @@ queries with any truncated relevant document from queries with none; empty
 strata have zero queries and null means. Length association does not prove that
 truncation caused a loss. Full-document encoding, matched-model length ablations,
 Chinese token quality, learned sparse and external comparators remain required.
+
+### Completed matched-budget measurement
+
+Run `quality-d809382a56eb281c` measured all 448 ranked SQL queries: 320 English
+queries across ten plans and 128 Chinese controls. The clean harness source is
+`1e52a0b469f034d72e1b8a171c10eac4e6d68153`; native product source remains
+`46389c1`. The [aggregate receipt](evidence/matched-token-quality.json) records
+the exact frozen source, executable/model hashes, binaries and resource limits.
+All 33 Linux model-contract tests passed without skips. Independent verification
+recomputed all ranking metrics, 1,034 dense vectors, 532 token matrices, every
+candidate score for 96 MaxSim calls and all 96 diagnostic partitions.
+
+| SciFact plan and candidate limit | Recall@10 | NDCG@10 | MRR@10 | SQL p50 / p95 ms |
+|---|---:|---:|---:|---:|
+| BM25, 100 | 0.906250 | 0.826365 | 0.805208 | 227.55 / 256.21 |
+| Dense, 100 | 0.859375 | 0.779364 | 0.776042 | 245.00 / 267.52 |
+| RRF, 100 | 0.968750 | 0.853580 | 0.819010 | 244.48 / 267.66 |
+| DBSF, 100 | 0.937500 | 0.846968 | 0.820312 | 244.75 / 266.22 |
+| BM25, 64 | 0.906250 | 0.826365 | 0.805208 | 194.49 / 207.68 |
+| RRF, 64 | 0.968750 | 0.865114 | 0.834635 | 210.85 / 244.94 |
+| DBSF, 64 | 0.906250 | 0.835836 | 0.815104 | 214.85 / 232.11 |
+| BM25 then MaxSim, 64 | 0.875000 | 0.838796 | 0.832589 | 280.90 / 342.69 |
+| RRF then MaxSim, 64 | 0.906250 | 0.849928 | 0.837798 | 306.40 / 379.25 |
+| DBSF then MaxSim, 64 | 0.906250 | 0.849928 | 0.837798 | 306.78 / 397.69 |
+
+Each row includes all 32 fixed English queries and every selected positive
+judgment. The following counts compare each MaxSim top ten against its actual
+64-candidate SQL control. Counts refer to relevant query-document pairs, rather
+than unique documents or query counts. Losses are disjoint; gains can offset
+them. Candidate membership comes from the separate recorded recall call.
+
+| MaxSim recall route | Lost outside observed candidates | Lost inside observed candidates | Gained | Mean Recall@10 delta | Mean NDCG@10 delta | Mean MRR@10 delta |
+|---|---:|---:|---:|---:|---:|---:|
+| TEXT | 0 | 1 | 0 | -0.031250 | +0.012431 | +0.027381 |
+| RRF | 0 | 2 | 0 | -0.062500 | -0.015186 | +0.003162 |
+| DBSF | 0 | 1 | 1 | +0.000000 | +0.014091 | +0.022693 |
+
+The receipt also includes the 100-candidate and recorded-domain comparisons,
+plus complete strata for queries with and without truncated relevant documents.
+All 32 queries have a truncated relevant document on each route. The empty
+untruncated stratum retains null means; there is no untruncated comparison group.
+For RRF, the matched SQL control and recorded-domain control differ in order on
+16 queries, including one top-ten membership difference. Both controls match on
+the BM25 and DBSF routes. These observations illustrate why the two controls
+remain separate.
+
+The independent native-score check covered 6,117 query-candidate pairs;
+maximum absolute error was `8.878469010653589e-06`, within the unchanged
+`5e-5` tolerance. All 500 token outputs became durable; stale-query and late-output
+refusals and subsequent representation restoration passed. The two owned run
+containers, runner volumes, materialized source view and 46 verified temporary
+input copies were retired. Reusable model assets remain unchanged under the
+1 GiB admission policy.
+
+These are separate-call observations on a small English subset with 128-token
+document encoding. They establish neither full-corpus exact retrieval nor a
+causal explanation based on truncation. They do not justify changing the default
+plan. All formal P1-P5 gates remain open; full-length and learned-sparse ablations,
+Chinese token quality and external comparators remain required.
