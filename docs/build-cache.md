@@ -48,6 +48,12 @@ The image budget counts shared layers conservatively more than once; it does
 not report physically reclaimed bytes. A pinned or referenced resource that
 prevents admission is retained and the next build fails visibly.
 
+Preview and measurement launchers record whether they added a reuse pin under
+the shared run lock. After successful diagnostic retirement they release that
+temporary pin with their exact alias. A pre-existing manual pin stays protected;
+failed diagnostic retirement keeps the pin for recovery. Completed reuse does
+not permanently protect every historical product image.
+
 Inspect or trim a cache under the run lock:
 
 ```sh
@@ -120,8 +126,13 @@ code generator need not be the fastest end-to-end configuration.
 The local comparison selects LLVM Rust `1.99.0` with panic unwinding. All three
 LLVM candidates built the same source at `e9d3907` with two CPUs, eight GiB and
 two Cargo jobs. The [measurement record](evidence/compiler-comparison.json)
-binds exact source, dependency, image and log hashes; complete product
-qualification still requires the separate 37-gate local regression.
+binds exact source, dependency, image and log hashes. The selected native
+configuration at `46389c1` passed the separate 37-gate local regression
+`ea765ff365066519`, including 196 installed P1 checks and 15 crash cuts.
+The installed package preview `b5371ebdf40310ee` passed four checks with native
+code at `46389c1` and packaging tools at `1337587`. The record keeps those
+identities separate from the earlier compiler timings and later retention
+changes. Formal P1-P5 acceptance and release support remain open.
 
 | Compiler | Cold Cargo build median, two trials | Cargo build after one Rust edit | Unchanged build wall median |
 | --- | ---: | ---: | ---: |

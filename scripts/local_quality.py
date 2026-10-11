@@ -39,7 +39,7 @@ def main():
               "snapshot": snapshot(source), "status": "running"}
     image = output(["docker", "image", "inspect", args.image, "--format", "{{.Id}}"])
     runner = output(["docker", "image", "inspect", RUNNER, "--format", "{{.Id}}"])
-    pin_image(image)
+    report["temporary_image_pin"] = pin_image(image)
     report.update(product_image=image, runner_image=runner, fixtures={})
     expected = json.loads((source / "ci/quality-sources.json").read_text(encoding="utf-8"))
     (source / "fixtures").mkdir()
@@ -77,7 +77,7 @@ def main():
             code = 1
         else:
             try:
-                release_alias(base, image)
+                release_alias(base, image, temporary_pin=report["temporary_image_pin"])
                 report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
                 if report["image_retention"]["errors"]:
                     code = 1

@@ -61,7 +61,7 @@ def main():
     report["runner_image"] = runner
     base = "pgq-preview-base-" + run_id
     if image_data:
-        pin_image(image_data["Id"])
+        report["temporary_image_pin"] = pin_image(image_data["Id"])
         subprocess.run(["docker", "tag", image_data["Id"], base], check=True)
         if output(["docker", "image", "inspect", base, "--format", "{{.Id}}"]) != image_data["Id"]:
             raise ValueError("base image changed")
@@ -130,7 +130,7 @@ def main():
         else:
             try:
                 if image_data:
-                    release_alias(base, image_data["Id"])
+                    release_alias(base, image_data["Id"], temporary_pin=report["temporary_image_pin"])
                 report["image_retention"] = complete_images(run_id, "passed" if code == 0 else "failed")
                 if report["image_retention"]["errors"]:
                     code = 1

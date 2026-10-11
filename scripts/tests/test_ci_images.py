@@ -72,6 +72,28 @@ class ImagePolicy(unittest.TestCase):
         with self.assertRaises(ValueError):
             images.release_alias("business:latest", "expected")
 
+    def test_reuse_releases_only_new_pin_after_alias_retirement(self):
+        identifier = "sha256:" + "1" * 64
+        for already_pinned in (False, True):
+            with self.subTest(already_pinned=already_pinned), tempfile.TemporaryDirectory() as root:
+                path = Path(root) / "images.json"
+                images.save_state(path, {"runs": [], "pins": [identifier] if already_pinned else []})
+                def docker(*args, **kwargs):
+                    if args[:2] == ("image", "ls"):
+                        return identifier
+                    if args[:2] == ("image", "inspect"):
+                        return json.dumps([{"Id": identifier, "Size": 1}])
+                    return ""
+                with patch.object(images, "docker", side_effect=docker):
+                    added = images.pin_image(identifier, path=path)
+                    self.assertIs(added, not already_pinned)
+                    with patch.object(images, "docker", side_effect=RuntimeError("alias export changed")):
+                        with self.assertRaises(RuntimeError):
+                            images.release_alias("pgq-quality-base-"+"1"*16, identifier, temporary_pin=added, path=path)
+                    self.assertEqual(images.read_state(path)["pins"], [identifier])
+                    images.release_alias("pgq-quality-base-"+"1"*16, identifier, temporary_pin=added, path=path)
+                self.assertEqual(images.read_state(path)["pins"], [identifier] if already_pinned else [])
+
     def test_pinned_images_count_toward_bytes_and_refuse_new_build(self):
         identifier = "sha256:" + "1" * 64
         with tempfile.TemporaryDirectory() as root:
@@ -137,6 +159,20 @@ class RealImagePolicy(unittest.TestCase):
                     state["runs"].append({"run_id": run_id, "completed": n, "status": "passed",
                         "images": [{"id": identifier, "tags": [tag+":latest"]}]})
                 state["pins"] = [owned[0]]
+                ledger = path / "ledger.json"
+                images.save_state(ledger, state)
+                for identifier, expected_new in ((owned[0], False), (owned[4], True)):
+                    alias = "pgq-quality-base-" + secrets.token_hex(8)
+                    resources.docker("image", "tag", identifier, alias)
+                    try:
+                        added = images.pin_image(identifier, path=ledger)
+                        self.assertIs(added, expected_new)
+                        images.release_alias(alias, identifier, temporary_pin=added, path=ledger)
+                        self.assertEqual(images.read_state(ledger)["pins"], [owned[0]])
+                        self.assertEqual(resources.docker("image", "inspect", identifier, "--format", "{{.Id}}"), identifier)
+                    finally:
+                        if subprocess.run(["docker", "image", "inspect", alias], capture_output=True).returncode == 0:
+                            resources.docker("image", "rm", "--no-prune", alias)
                 sentinel = resources.docker("create", "--network=none", "--label", resources.LABELS[0]+"="+nonce,
                     owned[1], "true")
                 result = images.retire_images(state, lambda: images.save_state(path/"ledger.json", state))

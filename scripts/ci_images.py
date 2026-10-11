@@ -26,7 +26,7 @@ def save_state(path, state):
 
 
 def pin_image(identifier, *, path=STATE, maximum=MAX_IMAGE_BYTES):
-    """A caller explicitly reusing a compiled image keeps that exact ID."""
+    """Protect an exact image; return whether this caller added the protection."""
     if not re.fullmatch(r"sha256:[a-f0-9]{64}", identifier):
         raise ValueError("pin requires an exact image ID")
     state = read_state(path)
@@ -35,6 +35,8 @@ def pin_image(identifier, *, path=STATE, maximum=MAX_IMAGE_BYTES):
         if image_bytes(state) > maximum:
             raise RuntimeError("image pin exceeds byte budget; existing pins retained")
         save_state(path, state)
+        return True
+    return False
 
 
 def retained_runs(runs):
@@ -47,14 +49,21 @@ def retained_runs(runs):
     return keep
 
 
-def release_alias(alias, identifier):
+def release_alias(alias, identifier, *, temporary_pin=False, path=STATE):
     """Remove only the temporary tag created by a launcher, after its containers."""
+    if type(temporary_pin) is not bool:
+        raise ValueError("temporary pin ownership must be explicit")
     if not re.fullmatch(r"pgq-(preview|quality)-base-[a-f0-9]{16}", alias):
         raise ValueError("invalid temporary image alias")
     data = json.loads(docker("image", "inspect", alias))[0]
     if data["Id"] != identifier:
         raise RuntimeError("temporary alias changed; retain for review")
     docker("image", "rm", "--no-prune", alias, timeout=90)
+    if temporary_pin:
+        state = read_state(path)
+        if identifier in state["pins"]:
+            state["pins"].remove(identifier)
+            save_state(path, state)
 
 
 def retire_images(state, save, *, retire_runs=()):
