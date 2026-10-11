@@ -63,6 +63,12 @@ into an empty directory with
 Unknown files, interrupted writes, changed hashes and links stop automated
 retirement for review. No global Docker prune or force removal is used.
 
+For an exact failed run whose raw cluster exceeds the default diagnostic limit,
+review its retained resources, then retry `scripts/ci_resources.py` with
+`--failed-cluster-gib 16` or `32`. Compressed output remains limited to 512 MiB;
+the explicit retry allows at most 32 GiB of raw data and 180 seconds. It does
+not change normal launcher limits or turn the failed test into a pass.
+
 ## Compiler measurement
 
 `python scripts/local_ci.py --profile compiler_benchmark --compiler <candidate>`

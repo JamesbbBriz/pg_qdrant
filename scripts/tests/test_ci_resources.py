@@ -82,6 +82,15 @@ class CompressedArchives(unittest.TestCase):
 
 
 class ResourceGuards(unittest.TestCase):
+    def test_retry_cannot_remove_the_failed_cluster_source_cap(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(resources, "docker") as docker:
+            for budget in (0, 33 * 1024**3):
+                receipt = resources.retire_owned(resources.LABELS[0], "a" * 16, Path(root),
+                                                failed_cluster_source_bytes=budget)
+                self.assertEqual(receipt["status"], "failed")
+                self.assertIn("32 GiB", receipt["error"])
+            docker.assert_not_called()
+
     def test_runtime_capacity_guard_terminates_only_its_child(self):
         with tempfile.TemporaryDirectory() as root:
             process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])

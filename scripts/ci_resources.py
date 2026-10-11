@@ -178,10 +178,12 @@ def require_clean_start():
                            "evidence export and cleanup before starting another run")
 
 
-def archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024, timeout=90, *, compressed=False):
+def archive_path(identifier, source, destination, max_bytes=512 * 1024 * 1024, timeout=90, *,
+                 compressed=False, max_source_bytes=8 * 1024**3):
     """Copy a bounded tar stream without extracting untrusted member paths."""
     if compressed:
-        return compressed_archive_path(identifier, source, destination, max_bytes, timeout)
+        return compressed_archive_path(identifier, source, destination, max_bytes, timeout,
+                                       max_source_bytes=max_source_bytes)
     destination = Path(destination)
     partial = destination.with_suffix(destination.suffix + ".partial")
     with partial.open("wb") as stream, destination.with_suffix(".stderr").open("wb") as errors:
@@ -305,7 +307,8 @@ def runner_volumes(data):
             if mount["Type"] == "volume" and mount["Name"] in (name, name + "-env")]
 
 
-def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024 * 1024):
+def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024 * 1024,
+                 failed_cluster_source_bytes=8 * 1024**3):
     """Export failures before removal; errors retain the container and fail cleanup."""
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -330,6 +333,8 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
             save()
 
     try:
+        if not 0 < failed_cluster_source_bytes <= 32 * 1024**3:
+            raise ValueError("failed-cluster source budget must be positive and at most 32 GiB")
         if label not in LABELS or not re.fullmatch(r"[a-f0-9]{16}", run_id):
             raise ValueError("invalid run ownership")
         if previous and (previous["run_id"] != run_id or previous["label"] != label):
@@ -375,7 +380,8 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
                 # Failed test clusters live under /tmp. Preserve them independently of step collectors.
                 if not runner and (data["State"].get("ExitCode") != 0 or row.get("stopped_for_cleanup")):
                     row["failure_tmp"] = archive_path(identifier, "/tmp/.", target / "failure-tmp.tar.gz",
-                                                      max_bytes, compressed=True)
+                        max_bytes, timeout=90 if failed_cluster_source_bytes <= 8 * 1024**3 else 180,
+                        compressed=True, max_source_bytes=failed_cluster_source_bytes)
                 with (target / "filesystem-changes.log").open("wb") as changes:
                     subprocess.run(["docker", "diff", identifier], stdout=changes, check=True, timeout=30)
                 row["files"] = {}
@@ -406,7 +412,8 @@ def retire_owned(label, run_id, directory, *, runner=False, max_bytes=512 * 1024
     return receipt
 
 
-def finish_run(run_id, directory, child_label, runner_label, evidence_path):
+def finish_run(run_id, directory, child_label, runner_label, evidence_path, *,
+               failed_cluster_source_bytes=8 * 1024**3):
     """Always export the runner before touching child resources, including on timeout."""
     directory = Path(directory) / "resources"
     directory.mkdir(parents=True, exist_ok=True)
@@ -424,7 +431,8 @@ def finish_run(run_id, directory, child_label, runner_label, evidence_path):
             except Exception:
                 # Early interruption may precede the always-collector. Preserve the workspace instead.
                 result["runner_workspace"] = archive_path(data["Id"], "/tmp/.", directory / "runner-workspace.tar")
-        result["tests"] = retire_owned(child_label, run_id, directory)
+        result["tests"] = retire_owned(child_label, run_id, directory,
+                                        failed_cluster_source_bytes=failed_cluster_source_bytes)
         if result["tests"]["status"] != "passed":
             raise RuntimeError("test diagnostics or retirement incomplete; runner retained")
         result["runner"] = retire_owned(runner_label, run_id, directory, runner=True)
@@ -443,12 +451,15 @@ if __name__ == "__main__":
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--kind", choices=("verify", "preview", "quality"), default="verify")
+    parser.add_argument("--failed-cluster-gib", type=int, choices=(8, 16, 32), default=8,
+                        help="reviewed retry limit for raw failed-cluster data; compressed output stays capped")
     args = parser.parse_args()
     kind_labels = {"verify": (LABELS[0], LABELS[1], "/tmp/pgq-ci-evidence/."),
                    "preview": (LABELS[2], LABELS[3], "/tmp/preview-evidence/."),
                    "quality": (LABELS[4], LABELS[5], "/tmp/quality-evidence/.")}
     child, runner, evidence = kind_labels[args.kind]
     with local_run_lock():
-        result = finish_run(args.run_id, args.directory, child, runner, evidence)
+        result = finish_run(args.run_id, args.directory, child, runner, evidence,
+                            failed_cluster_source_bytes=args.failed_cluster_gib * 1024**3)
     print(json.dumps(result, indent=2))
     raise SystemExit(0 if result["status"] == "passed" else 1)
