@@ -213,8 +213,8 @@ def measure(args, run_id, directory, source, report):
         measured = json.loads((directory / "evidence/quality-results.json").read_text(encoding="utf-8"))
         plans = ["text", "dense", "rrf", "dbsf"] if args.model_inputs else ["text"]
         if args.tokens:
-            from quality_tokens import TOKEN_PLANS
-            plans = {'scifact': plans + TOKEN_PLANS, 't2retrieval': plans}
+            from quality_tokens import MATCHED_PLANS, TOKEN_PLANS
+            plans = {'scifact': plans + MATCHED_PLANS + TOKEN_PLANS, 't2retrieval': plans}
         validate_measurement(measured, fixed_queries, plans)
     report["status"] = "measured" if result.returncode == 0 else "failed"
     manifest.write_text(json.dumps(report, indent=2), encoding="utf-8")

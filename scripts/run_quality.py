@@ -37,7 +37,7 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
     if os.environ.get('PG_QDRANT_QUALITY_TOKENS') == '1':
         if encoded_directory is None:
             raise ValueError('token measurement requires the dense comparison inputs')
-        from quality_tokens import CANDIDATES, TOKEN_PLANS, load_tokens, install_outputs, verify_freshness, verify_reranking
+        from quality_tokens import CANDIDATES, TOKEN_PLANS, MATCHED_PLANS, candidate_diagnostics, summarize_diagnostics, load_tokens, install_outputs, verify_freshness, verify_reranking
         token_bytes = (pathlib.Path(__file__).resolve().parents[1]/'ci/token-quality-model.json').read_bytes()
         model = json.loads(token_bytes)
         tokenizer_sha = next(r['sha256'] for r in model['files'] if r['path']=='tokenizer.json')
@@ -47,7 +47,7 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
             vector_field='token_output',fingerprint_field='token_source',incarnation_field='token_incarnation',
             model_id_field='token_model',model_version_field='token_version')
         report['token_contract']=token_contract
-        report['token_quality_scope']='English SciFact only, document128/query48, three exact MaxSim reranks within at most64 recalled candidates; Chinese and whole-corpus MaxSim unmeasured'
+        report['token_quality_scope']='English SciFact only, document128/query48, three MaxSim routes and three matched64 controls; recorded recall-domain controls and loss partitions; Chinese and whole-corpus MaxSim unmeasured'
     if encoded_directory is not None:
         from quality_vectors import load_vectors
         model_bytes = (pathlib.Path(__file__).resolve().parents[1]/'ci/dense-quality-model.json').read_bytes()
@@ -158,15 +158,18 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
                 dataset['index_status']=ready(table,timeout=300)
             dataset['capabilities_sha256']=hashlib.sha256(sql('SELECT qdrant.capabilities()').encode()).hexdigest()
             plans=['text'] if vectors is None else ['text','dense','rrf','dbsf']
-            if tokens is not None: plans+=TOKEN_PLANS
+            if tokens is not None: plans+=MATCHED_PLANS+TOKEN_PLANS
             dataset['explain']={}
             for q in fixture['queries']:
                 for plan in plans:
                     reranking=plan.startswith('maxsim_')
-                    mode='semantic' if plan=='dense' else 'hybrid' if plan in ['rrf','dbsf'] else 'text'
-                    query_vectors={} if plan in ['text','maxsim_text'] else {'dense':{'model_id':dense_contract['model_id'],
+                    base_plan=plan.removeprefix('matched_').removeprefix('maxsim_')
+                    mode='semantic' if base_plan=='dense' else 'hybrid' if base_plan in ['rrf','dbsf'] else 'text'
+                    query_vectors={} if base_plan=='text' else {'dense':{'model_id':dense_contract['model_id'],
                         'model_version':dense_contract['model_version'],'vector':vectors['queries'][q['id']]['vector']}}
-                    options={'fusion':plan,'candidate_limit':100} if mode=='hybrid' else {}
+                    options={'candidate_limit':100}
+                    if mode=='hybrid': options['fusion']=base_plan
+                    if plan.startswith('matched_'): options['candidate_limit']=CANDIDATES
                     candidates=None
                     if reranking:
                         recall='text' if plan=='maxsim_text' else 'hybrid'
@@ -190,7 +193,13 @@ def run(sql, ready, output, fixtures, installed_sha256, encoded_directory=None):
                         result['maxsim_verification']=verify_reranking(tokens['queries'][q['id']]['vector'],
                             {key:row['vector'] for key,row in tokens['documents'].items()},candidates,hits)
                         result['candidate_recall']=sum(key in q['relevance'] for key in candidates)/len(q['relevance'])
+                        controls={row['plan']: [h['key'] for h in row['ranking']]
+                                  for row in dataset['queries'] if row['query_id']==q['id']}
+                        result['candidate_diagnostics']=candidate_diagnostics(candidates,ranked,
+                            controls[base_plan],controls['matched_'+base_plan],q['relevance'],tokens['documents'])
                     dataset['queries'].append(result);persist()
+            if tokens is not None:
+                dataset['candidate_diagnostics_summary']=summarize_diagnostics(dataset['queries'])
             samples=dataset['queries'];latencies=sorted(q['latency_seconds'] for q in samples)
             dataset['aggregate']={m:statistics.mean(q[m] for q in samples) for m in ['recall_at_10','ndcg_at_10','mrr_at_10']}
             dataset['aggregate'].update(queries=len(samples),zero_results=sum(not q['ranking'] for q in samples),latency_p50_seconds=statistics.median(latencies),latency_p95_seconds=latencies[math.ceil(.95*len(latencies))-1])

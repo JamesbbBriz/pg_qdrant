@@ -306,3 +306,27 @@ membership. Their score sequences and common-hit scores match within `1e-8`.
 Six RRF candidate sets used by MaxSim also changed; the final MaxSim rankings
 matched in these two runs. These observations do not establish native fusion
 tie-order or candidate-set repeatability.
+
+### Matched candidate budgets and loss diagnosis
+
+The token harness additionally runs `matched_text`, `matched_rrf` and
+`matched_dbsf`: actual SQL top-ten queries with candidate limit 64, matching
+the three precision routes. All original controls now explicitly request 100
+candidates, including text and dense; earlier text/dense controls used the SQL
+default of 50. The original measurements above remain historical observations.
+English coverage becomes ten plans for all 32 fixed queries; the four Chinese
+controls remain required. No query or positive judgment is removed.
+
+Each MaxSim result records a separate native recall observation of up to 64
+identities. Its first ten identities form a recorded-domain control, distinct
+from the independently executed matched SQL query. Relevant top-ten losses are
+partitioned into documents absent from that observed candidate set and documents
+present but ranked below ten after MaxSim. Gains and metric deltas are also
+recorded. Fusion ties can vary between calls: matching budgets alone does not
+prove identical candidate domains, and these partitions describe observations.
+
+All selected queries contribute to diagnostics. Separate strata distinguish
+queries with any truncated relevant document from queries with none; empty
+strata have zero queries and null means. Length association does not prove that
+truncation caused a loss. Full-document encoding, matched-model length ablations,
+Chinese token quality, learned sparse and external comparators remain required.

@@ -11,11 +11,54 @@ from unittest.mock import Mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from prepare_dense_quality import TOKEN_CONTRACT, entries
-from quality_tokens import checked_matrix, check_score_order, durable, kept_positions, load_tokens, prefixed_ids
+from quality_tokens import TOKEN_PLANS, candidate_diagnostics, summarize_diagnostics, checked_matrix, check_score_order, durable, kept_positions, load_tokens, prefixed_ids
 from quality_vectors import validate_measurement
 
 
 class TokenQuality(unittest.TestCase):
+    def diagnostic_example(self):
+        documents={key: dict(untruncated_tokens=200,encoded_tokens=128) for key in ['a','b','c','x']}
+        return candidate_diagnostics(['a','c','x'],['c','x'],['a','b','x'],['a','x'],
+                                     {'a':1,'b':1,'c':1},documents)
+
+    def test_losses_partition_recall_omissions_and_reranking_without_hiding_gains(self):
+        result=self.diagnostic_example()
+        self.assertEqual(result['baseline100']['lost_outside_candidates'],['b'])
+        self.assertEqual(result['baseline100']['lost_inside_candidates'],['a'])
+        self.assertEqual(result['baseline100']['gained'],['c'])
+        self.assertAlmostEqual(result['baseline100']['metric_delta']['recall_at_10'],-1/3)
+        self.assertEqual(result['matched64']['lost_outside_candidates'],[])
+        self.assertEqual(result['matched64']['lost_inside_candidates'],['a'])
+        self.assertEqual(result['matched64']['gained'],['c'])
+        self.assertEqual(result['matched64']['metric_delta']['recall_at_10'],0)
+        self.assertEqual(result['relevant_not_recalled'],['b'])
+        self.assertEqual(result['relevant_recalled_below_top10'],['a'])
+
+    def test_diagnostic_domains_refuse_escaped_duplicate_or_unknown_hits(self):
+        documents={key: dict(untruncated_tokens=8,encoded_tokens=8) for key in ['a','b']}
+        for candidates,ranking,baseline,matched in [(['a'],['b'],['a'],['a']),
+            (['a','a'],['a'],['a'],['a']),(['outside'],[],[],[]),
+            (['a'],['a'],['a','a'],['a']),(['a'],['a'],['a'],['outside'])]:
+            with self.assertRaises(ValueError):
+                candidate_diagnostics(candidates,ranking,baseline,matched,{'a':1},documents)
+        zero=candidate_diagnostics([],[],['a'],['a'],{'a':1},documents)
+        self.assertEqual(zero['matched64']['lost_outside_candidates'],['a'])
+        self.assertEqual(zero['candidate_control_at_10']['recall_at_10'],0)
+
+    def test_truncation_strata_keep_all_queries_and_do_not_fabricate_empty_means(self):
+        truncated=self.diagnostic_example()
+        full=copy.deepcopy(truncated)
+        for row in full['relevant_token_lengths'].values(): row.update(untruncated_tokens=8,encoded_tokens=8)
+        rows=[dict(plan=plan,candidate_diagnostics=value) for plan in TOKEN_PLANS for value in [truncated,full]]
+        result=summarize_diagnostics(rows)
+        for plan in TOKEN_PLANS:
+            self.assertEqual(result[plan]['all']['queries'],2)
+            self.assertEqual(result[plan]['any_relevant_document_truncated']['queries'],1)
+            self.assertEqual(result[plan]['no_relevant_document_truncated']['queries'],1)
+        single=summarize_diagnostics([row for row in rows if row['candidate_diagnostics'] is truncated])
+        self.assertIsNone(single['maxsim_text']['no_relevant_document_truncated']['controls']['matched64']['mean_metric_delta']['recall_at_10'])
+        with self.assertRaises(ValueError): summarize_diagnostics(rows[:1])
+
     def test_locked_token_assets_fit_existing_shared_budget(self):
         contract = json.loads(TOKEN_CONTRACT.read_bytes())
         rows = entries(contract)
