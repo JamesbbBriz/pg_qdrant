@@ -7,11 +7,15 @@ jobs:
       - name: Copy frozen code, fixtures and pinned model inputs
         run: mkdir -p /tmp/quality-input && cp -a /pgq-input/. /tmp/quality-input/
       - name: Test checksum, identity and measurement refusal paths
-        run: cd /tmp/quality-input && python3 -m unittest discover -s scripts/tests -p 'test_dense_quality.py' -v
+        run: |
+          cd /tmp/quality-input
+          python3 -m unittest discover -s scripts/tests -p 'test_dense_quality.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_token_quality.py' -v
       - name: Add optional offline encoding runtime to the selected product
         run: |
           python3 /tmp/quality-input/scripts/retry_snapshot_build.py docker build --label io.pg_qdrant.ci.image-run=${PGQ_RUN_ID} --network=none --file /tmp/quality-input/ci/Dockerfile.dense-quality \
             --build-arg PGQ_QUALITY_BASE="pgq-quality-base-${PGQ_RUN_ID}" \
+            --build-arg PGQ_QUALITY_TOKENS="${PGQ_QUALITY_TOKENS:-0}" \
             --tag "pgq-quality-${PGQ_RUN_ID}" /tmp/quality-input
       - name: Encode real model vectors then measure installed SQL plans
         run: |

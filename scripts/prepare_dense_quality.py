@@ -10,6 +10,7 @@ import urllib.request
 from urllib.parse import urlsplit
 
 CONTRACT = Path(__file__).resolve().parents[1] / 'ci/dense-quality-model.json'
+TOKEN_CONTRACT = CONTRACT.with_name('token-quality-model.json')
 MAX_ASSET_BYTES = 1024 ** 3
 
 
@@ -38,19 +39,25 @@ def asset_admission(root, rows):
 def entries(contract):
     revision = contract['revision']
     model = contract['model_id']
+    token_model = model == 'mixedbread-ai/mxbai-edge-colbert-v0-17m'
+    supported = (contract['dimensions'] == 48 and contract['normalization'] == 'unit'
+        and contract['max_tokens'] == 128 and contract.get('query_tokens') == 48
+        and contract['pooling'] == 'per-token' and contract.get('datasets') == ['scifact']) if token_model else (
+        model == 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
+        and contract['dimensions'] == 384 and contract['normalization'] == 'unit'
+        and contract['max_tokens'] == 128 and contract['pooling'] == 'attention-mask mean')
     if (contract['schema_version'] != 1 or contract['release_supported'] is not False
             or not re.fullmatch('[a-f0-9]{40}', revision)
-            or model != 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
-            or contract['dimensions'] != 384 or contract['normalization'] != 'unit'
-            or contract['max_tokens'] != 128 or contract['pooling'] != 'attention-mask mean'
-            or not 1 <= len(contract['files']) <= 16 or not 1 <= len(contract['runtime_wheels']) <= 48):
+            or not supported
+            or not 1 <= len(contract['files']) <= 16 or not 0 <= len(contract['runtime_wheels']) <= 48
+            or (not token_model and not contract['runtime_wheels'])):
         raise ValueError('unsupported optional model contract')
     result = []
     for row in contract['files']:
         name = row['path']
         if row['url'] != f'https://huggingface.co/{model}/resolve/{revision}/{name}':
             raise ValueError('model URL must identify the fixed publisher revision')
-        result.append(('minilm/' + name, row))
+        result.append((('colbert17m/' if token_model else 'minilm/') + name, row))
     for row in contract['runtime_wheels']:
         url = urlsplit(row['url'])
         if (url.scheme != 'https' or url.netloc != 'files.pythonhosted.org'
@@ -120,9 +127,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--download', action='store_true', help='download only absent checksum-pinned assets')
+    parser.add_argument('--tokens', action='store_true', help='also prepare the fixed English token model in the same bounded cache')
     args = parser.parse_args()
     contract = json.loads(CONTRACT.read_bytes())
     files = prepare(args.root, contract, args.download)
+    if args.tokens:
+        files.update(prepare(args.root, json.loads(TOKEN_CONTRACT.read_bytes()), args.download))
     print(json.dumps({'status': 'inputs_verified', 'files': files, 'evaluation_executed': False}))
 
 

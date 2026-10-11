@@ -1,0 +1,503 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "release_supported": false,
+  "full_benchmark": false,
+  "run_id": "3f43dc40f6f67425",
+  "measurement_source": {
+    "commit": "af63c368726699d17cef48bb0e794c2b51685fe8",
+    "ref": "codex/measured-maxsim-quality",
+    "dirty_diff_sha256": "ad73a5a6871b5c37ba07dd279b28a65bf5870efa318155b39a2cdfbeed2272b4",
+    "untracked_inputs": [
+      "ci/token-quality-model.json",
+      "docs/evidence/bounded-token-quality.json",
+      "scripts/quality_tokens.py",
+      "scripts/tests/test_token_quality.py"
+    ],
+    "source_sha256": "33ade542a747cab244ebdd81dd411f6ac815af2c3ccb027763c14904d83a36da",
+    "cargo_lock_sha256": "79666ddb27e6f87bc84f1711bef5667bfe23422617d08c6f9131057f3f074e9c"
+  },
+  "executable_source_sha256": {
+    "scripts/local_quality.py": "46dc3e5b86c2a334d05fcbc35af2b0f2b08e2b56b2def21b1549c7cf047b7676",
+    "scripts/run_quality.py": "fbd0f14f28f7273e8778ecdc8ad7dee5f6245bddf6322cfba0d7f701c9896369",
+    "scripts/quality_vectors.py": "82a1b00eb58a77ae1c89284f36bef84098a3542e99075504941b9b93298ad2d2",
+    "scripts/encode_quality.py": "6966042526dea7f892808d48dcaf8d948ffa82d3bf0138d61f614cbe754f11e0",
+    "scripts/prepare_dense_quality.py": "5a75c6ccc0dba6aa8bb2e2ec1f545ed592cbf5d8985a1a6917d51e60d65a5559",
+    "scripts/tests/test_dense_quality.py": "cc35864af5fd3aa5de2457264c8a8e6576bb39822e12fc196938323d85764945",
+    "crates/pg_qdrant/tests/run-p1.sh": "8a2f6303e4237da52e266dc60822488fecbab0e4e9645adc5ada876f6cd3b11f",
+    "ci/Dockerfile.dense-quality": "2c690abdb2a3c2b12ede62908fae80cbf5dd32a15cff56397b430b2b7b6ecf49",
+    "ci/dense-quality.yml": "3fd7af518ac234bdae01bdd3448c9bb7cb1d25aa21fd62339f97fb9c54652cf1",
+    "ci/run-dense-quality.sh": "140be60375466e93490a950e81a709920b00cd79ce991428523b3c33fccc5cb6",
+    "ci/dense-quality-model.json": "c0aaaff412035534b68ac775534ad6831c7a1d1a394512e457978cedf6ee77f7",
+    "ci/dense-quality-requirements.txt": "c9dbdb74161572605af2bd51fba5475f755fd15dea78b8e1860a51d2ad85fe7b",
+    "scripts/quality_tokens.py": "c73bf36ee9f08052f0805c7b254b397225c84d7707aa8528a2561ff993e9c24a",
+    "scripts/tests/test_token_quality.py": "de4b9966f3684d53758adb2d8108a0633c8ac80912cd59c65d12dc4c6ff550dd",
+    "ci/token-quality-model.json": "5a850bb4c0678db9af27d2356e8cc4363d592a840566ef06e228d26a715dd7ee"
+  },
+  "compiled_source_commit": "46389c1b188df7e34f68bdd8718a4d300673d05a",
+  "product_image": "sha256:f1abf9712a41e67af18b2115ea06f79fd0035e6814ba53a052d2bdee9597c4f6",
+  "runner_image": "sha256:eb3a044c234e57d40dbc00c36153af7fdaf8082a28e69ae50adcce0c8dd18d75",
+  "outer_report_sha256": "da45eab9d48eb15eda0ebc58641c1b4e00b55ffaa8665a17504bdb3df439861b",
+  "act_log_sha256": "f9f24396ca7c7ff23aa7fc84b5f65831e3ab5d60faaecc87568a7770e72fbc5c",
+  "evidence_sha256": {
+    "p1-product-init.log": "2bcf979f76084e2943ed60ca87f21e2bcb2e645f6dddbb6fa179c743fa1c0446",
+    "p1-product-postgres.log": "8e7c02e74436ebbf9b254d2dfdabd7db8adf64e15d0b329b76f036ed6cc8a54a",
+    "quality-results.json": "7e4d6c31ab3388bb0463e8ba967da237dd554ce8d45437aea750fd0ff2ae4e2e",
+    "quality-summary.json": "12aa2d8bb9425afdcf675f86ada4a1336537e6dac7d069b90a162bbbf8564886",
+    "encoding/manifest.json": "987511ebb1bde555520585a05da127d43783fdc91024a3795313b2d7754e6e47",
+    "encoding/scifact.json": "770c966f450ae0825dba17d885389cb783d4c2cce0edb9799073973bbd3f6f41",
+    "encoding/t2retrieval.json": "4858968b39f97c450de4c35d939ae6ea96753851fe7cb941028416ad9211fd6b",
+    "encoding/tokens/manifest.json": "0fb470e384b1cccbd24ebf6371de319c329dd46be6f0a85669cc2026750a509b",
+    "encoding/tokens/scifact.f32": "2ab5422c06745a315e9836e02c7fbd580f3cb6e0894a924bcb1e5da65c4e5843",
+    "encoding/tokens/scifact.json": "11fc8f151ca8ac0e5fd04ea166e4e69f9f16249865ca3eff590beec4fef8522f"
+  },
+  "independently_verified_queries": 352,
+  "verified_vectors": 1034,
+  "installed_sha256": {
+    "pg_qdrant_p0_helper": "984739c5015d51163f0a3e6646189d3b4c58c3053379c2e3ce28e2ec42fe2bfc",
+    "pg_qdrant.so": "553567c78cb51a980bb8e0a9a122591e2c2fec5131d86414ed7132a0da81c21c",
+    "extension/pg_qdrant--0.0.1.sql": "937e22b6f4d1ec5f25c1dc2dbbad733ff6db0498cda22a982b9dab43f0e88311"
+  },
+  "encoding": {
+    "schema_version": 1,
+    "status": "encoded",
+    "release_supported": false,
+    "model_contract_sha256": "c0aaaff412035534b68ac775534ad6831c7a1d1a394512e457978cedf6ee77f7",
+    "model_id": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+    "pooling": "attention-mask mean including special tokens",
+    "normalization": "unit",
+    "dimensions": 384,
+    "max_tokens": 128,
+    "batch_size": 8,
+    "runtime": {
+      "certifi": "2026.7.22",
+      "charset-normalizer": "3.5.2",
+      "colorama": "0.4.6",
+      "coloredlogs": "15.0.1",
+      "filelock": "4.0.12",
+      "flatbuffers": "25.12.19",
+      "fsspec": "2026.9.0",
+      "huggingface-hub": "0.35.3",
+      "humanfriendly": "10.0",
+      "idna": "3.20",
+      "mpmath": "1.3.0",
+      "numpy": "1.26.4",
+      "onnxruntime": "1.19.2",
+      "packaging": "26.3",
+      "pip": "25.2",
+      "protobuf": "7.36.2",
+      "pyreadline3": "3.5.6",
+      "PyYAML": "6.0.3",
+      "requests": "2.34.2",
+      "sympy": "1.14.0",
+      "tokenizers": "0.22.1",
+      "tqdm": "4.70.1",
+      "typing_extensions": "4.16.0",
+      "urllib3": "2.8.0"
+    },
+    "datasets": [
+      {
+        "dataset": "scifact",
+        "inputs": 532,
+        "truncated_inputs": 495,
+        "untruncated_tokens": 189625,
+        "encoded_tokens": 64804,
+        "fixture_sha256": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627",
+        "encoding_seconds": 20.55128582999896,
+        "output_sha256": "770c966f450ae0825dba17d885389cb783d4c2cce0edb9799073973bbd3f6f41",
+        "output_bytes": 4357488
+      },
+      {
+        "dataset": "t2retrieval",
+        "inputs": 502,
+        "truncated_inputs": 399,
+        "untruncated_tokens": 294686,
+        "encoded_tokens": 56984,
+        "fixture_sha256": "a0f9dcc584a8c9db88548ad629e4ab64f112ae4a4ab9c6826643ce5f71c45e28",
+        "encoding_seconds": 18.537783873005537,
+        "output_sha256": "4858968b39f97c450de4c35d939ae6ea96753851fe7cb941028416ad9211fd6b",
+        "output_bytes": 4111388
+      }
+    ],
+    "errors": [],
+    "pooling_verification": {
+      "scalar_goldens": 2,
+      "invalid_mask_refusals": 2,
+      "native_padding_probes": 2,
+      "maximum_absolute_batch_difference": 8.940696716308594e-08,
+      "scope": "scalar pooling goldens and native batch padding invariance; no cross-framework parity claim"
+    },
+    "load_seconds": 0.9362023329958902,
+    "total_seconds": 40.039758443999744,
+    "process_peak_rss_kib": 914084
+  },
+  "token_verification": {
+    "queries": 96,
+    "scored_pairs": 6117,
+    "maximum_score_error": 8.878469010653589e-06,
+    "token_matrices": 532,
+    "stored_tokens": 58509,
+    "encoding": {
+      "schema_version": 1,
+      "status": "encoded",
+      "release_supported": false,
+      "errors": [],
+      "model_contract_sha256": "5a850bb4c0678db9af27d2356e8cc4363d592a840566ef06e228d26a715dd7ee",
+      "model_id": "mixedbread-ai/mxbai-edge-colbert-v0-17m",
+      "revision": "592c6417c1c6687572043408ed1ae5196bce16b1",
+      "dimensions": 48,
+      "document_length": 128,
+      "query_length": 48,
+      "batch_size": 8,
+      "runtime": {
+        "certifi": "2026.7.22",
+        "charset-normalizer": "3.5.2",
+        "colorama": "0.4.6",
+        "coloredlogs": "15.0.1",
+        "filelock": "4.0.12",
+        "flatbuffers": "25.12.19",
+        "fsspec": "2026.9.0",
+        "huggingface-hub": "0.35.3",
+        "humanfriendly": "10.0",
+        "idna": "3.20",
+        "mpmath": "1.3.0",
+        "numpy": "1.26.4",
+        "onnxruntime": "1.19.2",
+        "packaging": "26.3",
+        "pip": "25.2",
+        "protobuf": "7.36.2",
+        "pyreadline3": "3.5.6",
+        "PyYAML": "6.0.3",
+        "requests": "2.34.2",
+        "sympy": "1.14.0",
+        "tokenizers": "0.22.1",
+        "tqdm": "4.70.1",
+        "typing_extensions": "4.16.0",
+        "urllib3": "2.8.0"
+      },
+      "outputs": {
+        "scifact.json": {
+          "bytes": 90136,
+          "sha256": "11fc8f151ca8ac0e5fd04ea166e4e69f9f16249865ca3eff590beec4fef8522f"
+        },
+        "scifact.f32": {
+          "bytes": 11233728,
+          "sha256": "2ab5422c06745a315e9836e02c7fbd580f3cb6e0894a924bcb1e5da65c4e5843"
+        }
+      },
+      "native_padding_verification": {
+        "probes": 4,
+        "maximum_absolute_difference": 1.7881393432617188e-07,
+        "scope": "pinned ONNX batch invariance and checked unit outputs; no PyTorch parity claim"
+      },
+      "load_seconds": 0.18129444999794941,
+      "fixture_sha256": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627",
+      "inputs": 532,
+      "truncated_inputs": 488,
+      "encoded_tokens": 64502,
+      "stored_tokens": 58509,
+      "untruncated_tokens": 155331,
+      "encoding_seconds": 3.8233003719942644,
+      "total_seconds": 4.006422655998904,
+      "process_peak_rss_kib": 206440
+    },
+    "model_freshness": {
+      "negative_checks": [
+        "stale_query",
+        "late_model_output"
+      ],
+      "restored_after_exact_source_and_output": true,
+      "durable": true,
+      "scope": "one real source edit, rejected late model write, exact source restoration and both representations reinstalled"
+    },
+    "token_outputs": {
+      "rows": 500,
+      "durable_batches": 500,
+      "seconds": 152.82594928999606,
+      "generation": "dde69f9a-7809-4ff9-9f43-fa75301f14dc"
+    },
+    "candidate_recall_by_plan": {
+      "maxsim_text": 0.9375,
+      "maxsim_rrf": 0.96875,
+      "maxsim_dbsf": 0.96875
+    }
+  },
+  "datasets": [
+    {
+      "dataset": "scifact",
+      "points": 500,
+      "queries_per_plan": 32,
+      "fixture_sha256": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627",
+      "aggregate_by_plan": {
+        "text": {
+          "recall_at_10": 0.90625,
+          "ndcg_at_10": 0.8263649413822141,
+          "mrr_at_10": 0.8052083333333333,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.19148697099808487,
+          "latency_p95_seconds": 0.20682631299860077
+        },
+        "dense": {
+          "recall_at_10": 0.859375,
+          "ndcg_at_10": 0.7793635183328304,
+          "mrr_at_10": 0.7760416666666666,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.21611603050041595,
+          "latency_p95_seconds": 0.27953082799649565
+        },
+        "rrf": {
+          "recall_at_10": 0.96875,
+          "ndcg_at_10": 0.8535802560798724,
+          "mrr_at_10": 0.8190104166666666,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.24226943399844458,
+          "latency_p95_seconds": 0.29759094099426875
+        },
+        "dbsf": {
+          "recall_at_10": 0.9375,
+          "ndcg_at_10": 0.8469678307067723,
+          "mrr_at_10": 0.8203125,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.2487671915005194,
+          "latency_p95_seconds": 0.26593822699942393
+        },
+        "maxsim_text": {
+          "recall_at_10": 0.875,
+          "ndcg_at_10": 0.8387962000700887,
+          "mrr_at_10": 0.8325892857142857,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.2844245945016155,
+          "latency_p95_seconds": 0.33705158199882135
+        },
+        "maxsim_rrf": {
+          "recall_at_10": 0.90625,
+          "ndcg_at_10": 0.8499276746672144,
+          "mrr_at_10": 0.8377976190476191,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.31005474149787915,
+          "latency_p95_seconds": 0.3597437029966386
+        },
+        "maxsim_dbsf": {
+          "recall_at_10": 0.90625,
+          "ndcg_at_10": 0.8499276746672144,
+          "mrr_at_10": 0.8377976190476191,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.31234061299983296,
+          "latency_p95_seconds": 0.374631312006386
+        }
+      },
+      "encoding": {
+        "dataset": "scifact",
+        "inputs": 532,
+        "truncated_inputs": 495,
+        "untruncated_tokens": 189625,
+        "encoded_tokens": 64804,
+        "fixture_sha256": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627",
+        "encoding_seconds": 20.55128582999896,
+        "output_sha256": "770c966f450ae0825dba17d885389cb783d4c2cce0edb9799073973bbd3f6f41",
+        "output_bytes": 4357488
+      },
+      "durable_model_batches": 50,
+      "registration_to_durable_seconds": 8.454789943003561,
+      "model_output_to_durable_seconds": 16.733191680003074
+    },
+    {
+      "dataset": "t2retrieval",
+      "points": 470,
+      "queries_per_plan": 32,
+      "fixture_sha256": "a0f9dcc584a8c9db88548ad629e4ab64f112ae4a4ab9c6826643ce5f71c45e28",
+      "aggregate_by_plan": {
+        "text": {
+          "recall_at_10": 0.8986945346320346,
+          "ndcg_at_10": 0.9028851971933058,
+          "mrr_at_10": 0.953125,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.16273198800263344,
+          "latency_p95_seconds": 0.17591693100257544
+        },
+        "dense": {
+          "recall_at_10": 0.8453463203463204,
+          "ndcg_at_10": 0.775464469444366,
+          "mrr_at_10": 0.8072916666666666,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.18045890299981693,
+          "latency_p95_seconds": 0.26753281799756223
+        },
+        "rrf": {
+          "recall_at_10": 0.9158820346320347,
+          "ndcg_at_10": 0.9042365173405905,
+          "mrr_at_10": 0.9322916666666666,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.21793746050389018,
+          "latency_p95_seconds": 0.2965121140005067
+        },
+        "dbsf": {
+          "recall_at_10": 0.9190070346320346,
+          "ndcg_at_10": 0.9330887535167511,
+          "mrr_at_10": 0.96875,
+          "queries": 32,
+          "zero_results": 0,
+          "latency_p50_seconds": 0.215339058504469,
+          "latency_p95_seconds": 0.3102290509996237
+        }
+      },
+      "encoding": {
+        "dataset": "t2retrieval",
+        "inputs": 502,
+        "truncated_inputs": 399,
+        "untruncated_tokens": 294686,
+        "encoded_tokens": 56984,
+        "fixture_sha256": "a0f9dcc584a8c9db88548ad629e4ab64f112ae4a4ab9c6826643ce5f71c45e28",
+        "encoding_seconds": 18.537783873005537,
+        "output_sha256": "4858968b39f97c450de4c35d939ae6ea96753851fe7cb941028416ad9211fd6b",
+        "output_bytes": 4111388
+      },
+      "durable_model_batches": 47,
+      "registration_to_durable_seconds": 8.76881790200423,
+      "model_output_to_durable_seconds": 17.570747983001638
+    }
+  ],
+  "latency_scope": "one psql process plus SQL/native query/source JOIN/result JSON per query, sequential, no warmup or repeats; not engine-only latency or production p95",
+  "metric_scope": "deterministic bounded subset, all selected query positive judgments retained; unjudged documents treated as non-relevant",
+  "absent_ablations": [
+    "learned_sparse",
+    "standalone_Qdrant",
+    "pgvector",
+    "pg_search",
+    "VectorChord"
+  ],
+  "unmeasured": [
+    "identifier_false_matches",
+    "authorized_filter_fill",
+    "document_diversity",
+    "representation_coverage",
+    "native_RSS",
+    "disk",
+    "update_optimize_recovery_durations"
+  ],
+  "cgroup_limits": {
+    "memory.max": "2147483648",
+    "memory.swap.max": "0",
+    "cpu.max": "200000 100000",
+    "pids.max": "128"
+  },
+  "removed_containers": [
+    "566af1e925b45ce4e114bb84855304255c4cff25fa1c00455e9b46af408f5132",
+    "8a87844dd1a0b944849d1b647fec3f795f271feb7a492e4393c8faac5282619e"
+  ],
+  "measurement_input_retention": {
+    "retired_files": 46,
+    "retired_bytes": 599093832,
+    "sha256": {
+      "fixtures/scifact.json": "9db1f40f57b2a553020a6c713bf97ae2405095ac6ae182671b850e040c8ff627",
+      "fixtures/t2retrieval.json": "a0f9dcc584a8c9db88548ad629e4ab64f112ae4a4ab9c6826643ce5f71c45e28",
+      "model-assets/minilm/onnx/model.onnx": "10f7a088420252b26caf819236ca2c9d2987afd0fc06fec7553b542a5655a05a",
+      "model-assets/minilm/tokenizer.json": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8",
+      "model-assets/minilm/config.json": "6300193cb75e01cf80c96decef7187dfb33094d97cc1490b7ead6ff134476e4e",
+      "model-assets/minilm/1_Pooling/config.json": "4be450dde3b0273bb9787637cfbd28fe04a7ba6ab9d36ac48e92b11e350ffc23",
+      "model-assets/minilm/sentence_bert_config.json": "70f4448f31320443fe3557cacea5abf2dcc4915dda8c80646bec9f3bb0aa5a1f",
+      "model-assets/minilm/README.md": "1e98ea05b0de579fcaad3d625b62ea55647142ed674d5f5ebf1440e4bbbb6f23",
+      "model-assets/minilm/tokenizer_config.json": "5036ea374ffedd706e3bef33e2e0d6953cb868ef8a490e76e32ba0faa37a6b9b",
+      "model-assets/minilm/special_tokens_map.json": "378eb3bf733eb16e65792d7e3fda5b8a4631387ca04d2015199c4d4f22ae554d",
+      "model-assets/wheels/certifi-2026.7.22-py3-none-any.whl": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+      "model-assets/wheels/charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": "3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649",
+      "model-assets/wheels/colorama-0.4.6-py2.py3-none-any.whl": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+      "model-assets/wheels/coloredlogs-15.0.1-py2.py3-none-any.whl": "612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934",
+      "model-assets/wheels/filelock-4.0.12-py3-none-any.whl": "5f17ee83ecee8a6f3e389c75822fb70a1c2f0506b99438a6dffa1d56793588c8",
+      "model-assets/wheels/flatbuffers-25.12.19-py2.py3-none-any.whl": "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "model-assets/wheels/fsspec-2026.9.0-py3-none-any.whl": "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
+      "model-assets/wheels/huggingface_hub-0.35.3-py3-none-any.whl": "0e3a01829c19d86d03793e4577816fe3bdfc1602ac62c7fb220d593d351224ba",
+      "model-assets/wheels/humanfriendly-10.0-py2.py3-none-any.whl": "1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477",
+      "model-assets/wheels/idna-3.20-py3-none-any.whl": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "model-assets/wheels/mpmath-1.3.0-py3-none-any.whl": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+      "model-assets/wheels/numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "675d61ffbfa78604709862923189bad94014bef562cc35cf61d3a07bba02a7ed",
+      "model-assets/wheels/onnxruntime-1.19.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl": "477b93df4db467e9cbf34051662a4b27c18e131fa1836e05974eae0d6e4cf29b",
+      "model-assets/wheels/packaging-26.3-py3-none-any.whl": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "model-assets/wheels/pip-25.2-py3-none-any.whl": "6d67a2b4e7f14d8b31b8b52648866fa717f45a1eb70e83002f4331d07e953717",
+      "model-assets/wheels/protobuf-7.36.2-cp310-abi3-manylinux2014_x86_64.whl": "89f23aa53c24553a2416fd4fd1ec06f74fa42b14b546d8883128813f775bbfd2",
+      "model-assets/wheels/pyreadline3-3.5.6-py3-none-any.whl": "8449b734232e42a5dcd74048e39b60db2839a4c38cf3ae2bf7707d58b5389c0d",
+      "model-assets/wheels/pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
+      "model-assets/wheels/requests-2.34.2-py3-none-any.whl": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+      "model-assets/wheels/sympy-1.14.0-py3-none-any.whl": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+      "model-assets/wheels/tokenizers-0.22.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "e2ef6063d7a84994129732b47e7915e8710f27f99f3a3260b8a38fc7ccd083f4",
+      "model-assets/wheels/tqdm-4.70.1-py3-none-any.whl": "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+      "model-assets/wheels/typing_extensions-4.16.0-py3-none-any.whl": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "model-assets/wheels/urllib3-2.8.0-py3-none-any.whl": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+      "model-assets/colbert17m/model.onnx": "a2fb3ad410f1b68479caa31e9d6821213050ef25804cb9a3c9ba963e72503f46",
+      "model-assets/colbert17m/tokenizer.json": "594291000b476c98ed600cbb1914ff128c79642a9433aac86213c7a5562d7c1a",
+      "model-assets/colbert17m/config_sentence_transformers.json": "629c4f00d1ac23abe86fec195dc90a7799ee33ceae236df6a3c026d8db018816",
+      "model-assets/colbert17m/onnx_config.json": "e12026a07eb05b45dbe2a5677390c6b968c511cdfb2281a2156589bf48e27750",
+      "model-assets/colbert17m/README.md": "0d177ea3615e2842ea6523d144d60d35c0cbc9d0e534012c319b4eb6bf7b2fb6",
+      "model-assets/colbert17m/config.json": "8dfe2360cfa456796f9f2f27d87dbbda083d0329320542b871cea6d34d2c5e8c",
+      "model-assets/colbert17m/1_Dense/config.json": "fdedbe7da07dafae623a002bcde227e767b8129da964fd90a3da301e3c7f929f",
+      "model-assets/colbert17m/2_Dense/config.json": "d0e3d51270eb8bef21c3f321b2848ebfc2894d5e93fde02f7f09a8c7308748f0",
+      "model-assets/colbert17m/modules.json": "930b80c6d74f342665da7c56d01a9d906176ba3c74dd9f332cea8922121c4bbf",
+      "model-assets/colbert17m/sentence_bert_config.json": "418d0ad8b3489d2505453940b1d635e2ec7099fad599ea97d64cd116eb468e76",
+      "model-assets/colbert17m/tokenizer_config.json": "cf6fbfaeb7553a572debf790d8b8bac09686648b83827e01b3efed0470e9f338",
+      "model-assets/colbert17m/special_tokens_map.json": "6edfb9d64c0d7e5cbaa53516e90280fe1f42ba5ea7923d005a5f9b6e082142cf"
+    }
+  },
+  "image_capacity": {
+    "removed": [],
+    "retained": [],
+    "errors": [],
+    "bytes": 24227572336,
+    "limit_bytes": 85899345920,
+    "reserved_bytes": 0
+  },
+  "prior_failed_run": {
+    "run_id": "d7ae4a133f1f430f",
+    "status": "failed",
+    "outer_report_sha256": "e34459a4341a338d2ebba2683fb4c2e17ec5b5ce6e3b44cf78ddb2a66c4f7ad8",
+    "reason": "Freshness fixture incorrectly required a new encoding request after exact content restoration. Corrected fixture explicitly clears both outputs before restoring content; stale query and late old output refusal requirements remain unchanged.",
+    "failure_diagnostics_preserved": true
+  },
+  "published_scope": "Bounded development SQL quality measurement. Exact executable/model contract hashes identify the tested harness; the complete frozen input view is separately hashed. Publication adds documentation and aggregate evidence. The precompiled native product has its own source commit and installed hashes. Unchanged baseline checkout files with CRLF have canonical LF Git blobs; full-view byte identity with the published tree is not claimed.",
+  "token_latency_notes": "Precision SQL interval includes native candidate recall and source JOIN; separate candidate-inspection, explain and independent scoring calls are excluded. One sequential call per query; no warmup or repeats.",
+  "remaining_scope": [
+    "Chinese token quality",
+    "publisher PyTorch/PyLate parity",
+    "full-document and full-corpus quality",
+    "learned sparse ablation",
+    "external comparators",
+    "complete P2-QUALITY and P2-HYBRID acceptance",
+    "all formal P1-P5 stage gates"
+  ],
+  "model_contract_tests": {
+    "dense": 19,
+    "token": 11,
+    "total": 30,
+    "skipped": 0
+  },
+  "prior_qualified_run": {
+    "run_id": "791965ea88279985",
+    "status": "verified",
+    "outer_report_sha256": "a8c5b1ca619b881fb6bd344e7220f22b41f7436586e46865befc8cfc98612211",
+    "source_sha256": "d4bd6219773570b2930e8b1a11bb5346946aeab5db28cec027af03041b30868d",
+    "model_contract_sha256": "baf771d5149a19a2de54187d97b30c33cc1a37dd1d74ab0b38434dcee1670b80",
+    "reason_for_rerun": "Normalize the model contract to repository LF. Parsed JSON is identical; the final run tests the exact published bytes.",
+    "identical_encoded_dense_and_token_bytes": true,
+    "changed_rankings": 29,
+    "changed_rankings_by_plan": {
+      "rrf": 29
+    },
+    "scope": "Two fresh-index observations; fixed inputs do not establish native fusion tie-order repeatability. Earlier success and original failure evidence remain preserved.",
+    "changed_top_ten_membership": 3,
+    "changed_maxsim_rrf_candidate_sets": 6,
+    "changed_maxsim_rankings": 0,
+    "rank_score_absolute_tolerance": 1e-08,
+    "common_hit_score_changes": 0,
+    "rank_score_sequence_changes": 0
+  }
+}

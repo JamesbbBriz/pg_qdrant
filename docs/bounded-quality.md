@@ -196,3 +196,113 @@ remain available for reuse. An earlier run completed retrieval but failed on
 multi-tag image retirement; its original failure evidence was preserved before
 the retention fix and successful retry. The completed retry includes resource
 retirement in its success condition.
+
+## Optional trained token-vector measurement
+
+The same measurement accepts `--tokens` with the pinned dense inputs. It adds
+[Mixedbread's English 17M ColBERT model](https://huggingface.co/mixedbread-ai/mxbai-edge-colbert-v0-17m/tree/592c6417c1c6687572043408ed1ae5196bce16b1)
+at revision `592c6417c1c6687572043408ed1ae5196bce16b1`, using the publisher's
+float32 ONNX export and 48-dimensional token projection. The publisher declares
+Apache-2.0. Models and corpus contents remain optional evaluation inputs and are
+not part of the extension or its default offline BM25 path.
+
+```sh
+python3 scripts/prepare_dense_quality.py --root artifacts/quality-model --tokens --download
+python3 scripts/local_quality.py --image <installed-product-image> \
+  --model-inputs artifacts/quality-model --tokens
+```
+
+The fixed model contract pins all twelve files and their checksums, totaling
+71,649,484 bytes. Combined with the existing dense model and runtime wheels,
+declared assets total 597,249,710 bytes inside the existing 1 GiB admission limit.
+Old files and partial downloads count toward that limit. The two encoders run
+sequentially and exit before PostgreSQL starts; the measurement retains its
+two-CPU, 2 GiB memory, no-swap and offline execution limits.
+
+Token encoding lowercases inputs, inserts the publisher's query/document marker
+after CLS, retains SEP on right truncation, excludes document punctuation and
+padding from scoring, and keeps valid query tokens. Query expansion is disabled
+as declared by the publisher. Query length remains 48; document length is reduced
+from the publisher's 512 to the installed slot's maximum of 128. The receipt
+records truncation, token counts, encoding time and peak encoder RSS. Native
+batch-padding checks and scalar token-policy goldens do not establish parity with
+PyTorch/PyLate or the publisher's benchmark scores.
+
+SciFact adds three plans: BM25 then MaxSim, BM25+dense RRF then MaxSim, and
+BM25+dense DBSF then MaxSim. Each recall branch and the fused candidate domain
+are capped at 64. The worst declared scalar work is
+`48 * 128 * 48 * 64 = 18,874,368`, below the existing 20,000,000 limit.
+Fusion only selects candidates; native MaxSim supplies the final scores. Every
+rerank records its candidate identities and independently checks dot/max/sum
+scores and top-ten membership within that domain. Equal scores permit either
+order. This does not promise whole-corpus exact top-k. Dense/fusion controls keep
+their previous candidate limit of 100, so their final results are separate plans.
+
+Token outputs use ordinary guarded source updates and committed durable tickets.
+An actual source edit must invalidate the query and reject late output; restoring
+the original source and reinstalling both representations must become durable
+before measurement. The fixture clears both outputs before restoration so that
+it consumes actual missing-output requests. Restoring identical content alone
+can make matching outputs ready again under the content-fingerprint contract.
+Exact text identity, little-endian float32 ranges, unit
+vectors, fixed query sets, output hashes and successful resource retirement are
+required. Chinese MaxSim, full-document quality, learned sparse and external
+comparators remain unmeasured. This partial P2-QUALITY/P2-HYBRID evidence does not
+close a formal stage gate.
+
+Latency covers the precision SQL call, including its native candidate recall and
+source JOIN. The separate candidate-inspection query, independent oracle and
+explain call are outside that interval. Measurements use one sequential call per
+query with no warmup or repeats; they do not establish production latency.
+
+### Completed development measurement
+
+Local run `quality-3f43dc40f6f67425` completed 352 ranked SQL queries: 224 English
+queries across seven plans and the existing 128 Chinese control queries. The
+[aggregate receipt](evidence/bounded-token-quality.json) records the frozen
+measurement source (`af63c36` plus its recorded working diff and executable
+hashes) separately from the reused native product (`46389c1`). Independent
+recomputation checked all metrics, 1,034 dense vectors, 532 token matrices and
+6,117 candidate scores across 96 MaxSim queries. The largest native score error
+was `8.878469010653589e-06`, below the fixed absolute tolerance of `5e-5`.
+
+| SciFact subset plan | Recall@10 | NDCG@10 | MRR@10 | SQL p50 / p95 ms |
+|---|---:|---:|---:|---:|
+| BM25 | 0.906250 | 0.826365 | 0.805208 | 191.49 / 206.83 |
+| Dense | 0.859375 | 0.779364 | 0.776042 | 216.12 / 279.53 |
+| RRF | 0.968750 | 0.853580 | 0.819010 | 242.27 / 297.59 |
+| DBSF | 0.937500 | 0.846968 | 0.820312 | 248.77 / 265.94 |
+| BM25 then MaxSim | 0.875000 | 0.838796 | 0.832589 | 284.42 / 337.05 |
+| RRF then MaxSim | 0.906250 | 0.849928 | 0.837798 | 310.05 / 359.74 |
+| DBSF then MaxSim | 0.906250 | 0.849928 | 0.837798 | 312.34 / 374.63 |
+
+Each row covers the same 32 selected English queries, with no zero-hit results.
+Mean candidate recall before reranking was 0.937500 for BM25 and 0.968750 for
+both fusion routes. MaxSim improved MRR in this run but reduced Recall@10 for
+all three routes; RRF NDCG also decreased slightly. Candidate budgets differ
+between controls and reranks, and this small, truncated subset does not justify
+a general model improvement or a default-plan change. Chinese controls retain
+their measured quality values in the receipt; no Chinese token model ran.
+
+The token encoder used 4.0064 seconds including loading, with peak process RSS
+206,440 KiB. It truncated 488 of 532 inputs and stored 58,509 token vectors in an
+11,233,728-byte float32 file. These are encoder/input figures, not native index
+disk or memory measurements. All 500 token outputs became ready through 500
+committed durable batches. The source-edit, stale-query, late-output and restored
+representation checks also passed before retrieval.
+
+The first run failed because its fixture assumed exact content restoration
+still required a new encoding request. Its original failure and cluster evidence
+remain preserved. The completed retry explicitly clears both outputs first and
+passes the same refusal/durability requirements. Both owned test containers and
+runner volumes, the materialized source view and 46 verified input copies
+(599,093,832 bytes) were retired. The original reusable assets remain inside the
+1 GiB admission policy. No model or corpus bytes are included in this repository.
+
+A second successful run uses the exact LF model-contract bytes committed with
+the harness. Encoded dense and token bytes match the earlier successful run.
+The receipt records 29 changed RRF rankings, including three changes in top-ten
+membership. Their score sequences and common-hit scores match within `1e-8`.
+Six RRF candidate sets used by MaxSim also changed; the final MaxSim rankings
+matched in these two runs. These observations do not establish native fusion
+tie-order or candidate-set repeatability.

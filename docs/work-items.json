@@ -3751,6 +3751,15 @@
         "release_supported": false,
         "remaining_scope": "All original acceptance, budgets, authorization, model/source lifecycle, quality and release conditions remain required; evidence below applies only to its named probe.",
         "latest_scoped_evidence": "docs/evidence/p0-negative-inputs-local.json"
+      },
+      "development_token_quality_evidence": {
+        "source": "docs/evidence/bounded-token-quality.json",
+        "contract": "docs/bounded-quality.md",
+        "local_act_run": "quality-3f43dc40f6f67425",
+        "status": "passed",
+        "scope": "Fixed English mxbai-edge-colbert-v0-17m ONNX on a bounded SciFact subset: 96 installed SQL MaxSim reranks over at most 64 candidates, 6117 independently checked scores, 500 ordinary guarded source updates with exact durable tickets, stale query/late output refusals and restored representations. 352 ranked SQL queries include dense/fusion and Chinese controls. Recall regressions, 128-token document truncation and unknown publisher parity are recorded; Chinese token, full-corpus/comparator quality and complete formal acceptance remain open.",
+        "full_capability_acceptance": false,
+        "release_supported": false
       }
     },
     {
@@ -10383,6 +10392,15 @@
           "observed_result",
           "limits_and_failures"
         ]
+      },
+      "development_token_quality_evidence": {
+        "source": "docs/evidence/bounded-token-quality.json",
+        "contract": "docs/bounded-quality.md",
+        "local_act_run": "quality-3f43dc40f6f67425",
+        "status": "passed",
+        "scope": "Fixed English mxbai-edge-colbert-v0-17m ONNX on a bounded SciFact subset: 96 installed SQL MaxSim reranks over at most 64 candidates, 6117 independently checked scores, 500 ordinary guarded source updates with exact durable tickets, stale query/late output refusals and restored representations. 352 ranked SQL queries include dense/fusion and Chinese controls. Recall regressions, 128-token document truncation and unknown publisher parity are recorded; Chinese token, full-corpus/comparator quality and complete formal acceptance remain open.",
+        "full_capability_acceptance": false,
+        "release_supported": false
       }
     },
     {
