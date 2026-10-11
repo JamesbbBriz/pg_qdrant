@@ -126,6 +126,9 @@ def main():
                    "log": log.name, "log_sha256": digest(log), "target_cache": cache_id,
                    "rust_input_sha256": digest(protocol), "readme_sha256": digest(context / "README.md")}
             row.update(native_metrics(log.read_text(errors="replace")))
+            workspace = {"pg-qdrant-protocol", "pg-qdrant-edge-probe", "pg-qdrant-helper", "pg_qdrant"}
+            row["dependency_crates_recompiled"] = [name for name in row["compiled_crates"]
+                if name.split()[0] not in workspace]
             report["runs"].append(row)
             report_path.write_text(json.dumps(report, indent=2) + "\n")
             print(json.dumps(row), flush=True)
@@ -134,6 +137,12 @@ def main():
                 return code
             if step in ("warm_1", "warm_2", "docs_only") and not row["native_layer_cached"]:
                 report.update(status="failed", reason="unchanged native inputs missed their verified build layer")
+                return 1
+            if step.startswith("cold_") and (row["native_layer_cached"] or not row["dependency_crates_recompiled"]):
+                report.update(status="failed", reason="empty-target build did not compile locked dependencies")
+                return 1
+            if step == "rust_change" and row["dependency_crates_recompiled"]:
+                report.update(status="failed", reason="source change lost the reusable dependency artifacts")
                 return 1
             if step == "rust_change":
                 row["image_id"] = json.loads(docker("image", "inspect", image))[0]["Id"]
