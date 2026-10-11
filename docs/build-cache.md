@@ -2,7 +2,8 @@
 
 The native Docker build copies Cargo manifests, the lockfile, the pinned Rust
 toolchain and crate inputs before compilation. Repository documentation and
-Python verification tools are copied afterwards. A documentation-only change
+top-level Python verification tools are copied afterwards. Crate-local test
+scripts remain part of the crate inputs. A documentation-only change
 therefore reuses the compiled native layer. Cargo's target and registry caches
 survive source changes through locked BuildKit cache mounts. Cargo still checks
 compiler version, flags, features, profiles and dependency fingerprints.
@@ -79,7 +80,11 @@ parallel frontend, and the same dated nightly with Cranelift. The existing
 ID is recorded, and derived compiler inputs are saved and hash-verified locally.
 
 Each candidate runs two empty-target builds, two unchanged builds, a README
-change and one declared protocol-source change, then installed P0/P1 SQL.
+change and one declared protocol-source change, then installed P0 SQL.
+Compiler measurement does not repeat the full transaction/recovery workload for
+every candidate. Reports explicitly leave qualification pending. The selected
+configuration must pass all 37 product gates, including P1 transactions and
+native crash/storage/OOM recovery, before becoming the qualified default.
 Timings include cache checks; complete Cargo/BuildKit logs separately record the
 native build layer and distinguish compiler work from layer reuse. Intermediate
 measurements use cache-only output; only the final image is loaded for SQL tests.

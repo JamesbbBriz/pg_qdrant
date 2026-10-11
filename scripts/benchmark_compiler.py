@@ -53,7 +53,8 @@ def main():
     shutil.copytree(ROOT, context, ignore=shutil.ignore_patterns("artifacts", ".git", "__pycache__"))
     tools = os.environ.get("PGQ_BENCHMARK_TOOLS", "pg-qdrant-build-tools:1.96")
     report = {"status": "running", "candidate": candidate, "runs": [], "sql": [],
-              "snapshot": json.loads((ROOT / "ci-input.json").read_text()), "release_supported": False}
+              "snapshot": json.loads((ROOT / "ci-input.json").read_text()),
+              "qualification": "pending_full_regression", "release_supported": False}
     report_path = directory / "report.json"
     report["tools_image_id"] = json.loads(docker("image", "inspect", tools))[0]["Id"]
     report["native_inputs"] = {item["path"]: item["sha256"] for item in report["snapshot"]["files"]
@@ -157,7 +158,9 @@ def main():
                 return 1
             if step == "rust_change":
                 row["image_id"] = json.loads(docker("image", "inspect", image))[0]["Id"]
-        for name, script in (("p0", "run-p0.sh"), ("p1", "run-p1.sh")):
+        # Measure compiler candidates without duplicating the complete recovery
+        # workload. The selected default still requires the full product gates.
+        for name, script in (("p0", "run-p0.sh"),):
             container = docker("create", "--network=none", "--memory=5g", "--memory-swap=5g", "--cpus=2",
                 "--label", MANAGED + "=1", "--label", "io.pg_qdrant.ci=" + run_id,
                 image, "bash", "crates/pg_qdrant/tests/" + script)
